@@ -130,7 +130,7 @@ A "Sell Food" button at the top right of the page toggles an inline creation for
 
 Add "Food" to `app/(dashboard)/layout.tsx` main sidebar nav with the `UtensilsCrossed` icon from lucide-react, between Marketplace and Games.
 
-Also add to `bottomNavItems` (mobile), replacing Leaderboard (lower priority on mobile):
+Also add to `bottomNavItems` (mobile), replacing Games (lower priority on mobile than food):
 ```
 Home | Feed | Missions | Food | Marketplace
 ```

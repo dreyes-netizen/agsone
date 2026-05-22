@@ -110,6 +110,9 @@ export default function ProfilePage() {
     ]).then(([me, pts]) => {
       setProfile(me.data);
       setPointsData(pts.data);
+    }).catch(() => {
+      // intentional: stop loading spinner on fetch failure
+    }).finally(() => {
       setLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,7 +197,7 @@ export default function ProfilePage() {
         {(["overview", "points", "badges"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => { setActiveTab(tab); setVisibleCount(10); }}
             className={`flex-1 py-1.5 text-sm font-semibold rounded-lg capitalize transition-colors ${
               activeTab === tab
                 ? "bg-white text-zinc-900 shadow-sm"

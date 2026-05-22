@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       select: { pointsBalance: true, level: true },
     }),
     prisma.pointTransaction.findMany({
-      where: { toUserId: user.id },
+      where: { toUserId: user.id, type: { not: "REDEMPTION" } },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {

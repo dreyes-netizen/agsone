@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     prisma.redemption.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
+      take: 100,
       select: {
         id: true,
         pointsSpent: true,
@@ -39,6 +40,8 @@ export async function GET(req: NextRequest) {
       _sum: { amount: true },
     }),
   ]);
+
+  if (!userData) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   return NextResponse.json({
     data: {

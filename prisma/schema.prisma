@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+  HR_ADMIN
+}
+
+enum PointTransactionType {
+  MANUAL_AWARD
+  ATTENDANCE
+  TASK
+  KPI
+  CONTEST
+  REDEMPTION
+  GAME_WIN
+  GAME_SPEND
+  REFUND
+}
+
+enum RewardCategory {
+  PHYSICAL
+  VOUCHER
+  PRIVILEGE
+  DIGITAL
+}
+
+enum RedemptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FULFILLED
+}
+
+enum BadgeCriteriaType {
+  MANUAL
+  AUTO_RULE
+}
+
+enum MissionCompletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MissionType {
+  INDIVIDUAL
+  TEAM
+}
+
+enum GameType {
+  SPIN_WHEEL
+  RAFFLE
+  MYSTERY_BOX
+  QUIZ
+  PREDICTION
+}
+
+enum PostType {
+  UPDATE
+  ACHIEVEMENT
+  CELEBRATION
+  ANNOUNCEMENT
+  POLL
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  users User[]
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  firebaseUid        String    @unique
+  email              String    @unique
+  displayName        String
+  avatarUrl          String?
+  role               Role      @default(EMPLOYEE)
+  departmentId       String?
+  managerId          String?
+  pointsBalance      Int       @default(0)
+  level              Int       @default(1)
+  streakDays         Int       @default(0)
+  lastActiveAt       DateTime?
+  birthday           DateTime?
+  onboardingComplete Boolean   @default(false)
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  manager    User?       @relation("ManagerReports", fields: [managerId], references: [id])
+  reports    User[]      @relation("ManagerReports")
+
+  pointsReceived    PointTransaction[] @relation("PointsReceived")
+  pointsGiven       PointTransaction[] @relation("PointsGiven")
+  pointsCreatedBy   PointTransaction[] @relation("PointsCreatedBy")
+  redemptions       Redemption[]
+  redemptionsProcessed Redemption[]   @relation("ProcessedBy")
+  userBadges        UserBadge[]
+  badgesAwarded     UserBadge[]        @relation("BadgeAwardedBy")
+  missionsCreated   Mission[]
+  missionCompletions MissionCompletion[]
+  missionsVerified  MissionCompletion[] @relation("MissionVerifiedBy")
+  rewardsCreated    Reward[]
+  gamesCreated      Game[]
+  gamePlays         GamePlay[]
+  posts             SocialPost[]
+  reactions         SocialReaction[]
+  comments          SocialComment[]
+  pollVotes         PollVote[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+}
+
+model PointTransaction {
+  id                String               @id @default(uuid())
+  fromUserId        String?
+  toUserId          String
+  amount            Int
+  type              PointTransactionType
+  sourceReferenceId String?
+  note              String?
+  createdById       String
+  createdAt         DateTime             @default(now())
+
+  fromUser    User? @relation("PointsGiven", fields: [fromUserId], references: [id])
+  toUser      User  @relation("PointsReceived", fields: [toUserId], references: [id])
+  createdBy   User  @relation("PointsCreatedBy", fields: [createdById], references: [id])
+}
+
+model Reward {
+  id            String         @id @default(uuid())
+  name          String
+  description   String?
+  imageUrl      String?
+  pointCost     Int
+  stockQuantity Int            @default(-1)
+  category      RewardCategory
+  isActive      Boolean        @default(true)
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  redemptions Redemption[]
+}
+
+model Redemption {
+  id           String           @id @default(uuid())
+  userId       String
+  rewardId     String
+  pointsSpent  Int
+  status       RedemptionStatus @default(PENDING)
+  adminNote    String?
+  processedById String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user        User    @relation(fields: [userId], references: [id])
+  reward      Reward  @relation(fields: [rewardId], references: [id])
+  processedBy User?   @relation("ProcessedBy", fields: [processedById], references: [id])
+}
+
+model Badge {
+  id             String            @id @default(uuid())
+  name           String            @unique
+  description    String?
+  iconUrl        String?
+  criteriaType   BadgeCriteriaType @default(MANUAL)
+  criteriaConfig Json?
+  createdAt      DateTime          @default(now())
+
+  userBadges UserBadge[]
+}
+
+model UserBadge {
+  id          String   @id @default(uuid())
+  userId      String
+  badgeId     String
+  awardedById String?
+  awardedAt   DateTime @default(now())
+  note        String?
+
+  user      User   @relation(fields: [userId], references: [id])
+  badge     Badge  @relation(fields: [badgeId], references: [id])
+  awardedBy User?  @relation("BadgeAwardedBy", fields: [awardedById], references: [id])
+
+  @@unique([userId, badgeId])
+}
+
+model Mission {
+  id             String      @id @default(uuid())
+  title          String
+  description    String?
+  pointsReward   Int
+  startDate      DateTime?
+  endDate        DateTime?
+  type           MissionType @default(INDIVIDUAL)
+  criteriaConfig Json?
+  isActive       Boolean     @default(true)
+  createdById    String
+  createdAt      DateTime    @default(now())
+
+  createdBy   User                @relation(fields: [createdById], references: [id])
+  completions MissionCompletion[]
+}
+
+model MissionCompletion {
+  id           String   @id @default(uuid())
+  missionId    String
+  userId       String
+  completedAt  DateTime @default(now())
+  verifiedById String?
+  status       MissionCompletionStatus @default(PENDING)
+  adminNote    String?
+  verifiedAt   DateTime?
+
+  mission    Mission @relation(fields: [missionId], references: [id])
+  user       User    @relation(fields: [userId], references: [id])
+  verifiedBy User?   @relation("MissionVerifiedBy", fields: [verifiedById], references: [id])
+
+  @@unique([missionId, userId])
+}
+
+model Game {
+  id              String   @id @default(uuid())
+  type            GameType
+  name            String
+  description     String?
+  config          Json
+  entryCostPoints Int      @default(0)
+  isActive        Boolean  @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  dailyPlaysLimit Int      @default(1)
+  createdById     String
+  createdAt       DateTime @default(now())
+
+  createdBy User       @relation(fields: [createdById], references: [id])
+  plays     GamePlay[]
+}
+
+model GamePlay {
+  id          String   @id @default(uuid())
+  gameId      String
+  userId      String
+  pointsSpent Int
+  outcome     Json
+  pointsWon   Int      @default(0)
+  playedAt    DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SocialPost {
+  id          String   @id @default(uuid())
+  authorId    String
+  type        PostType @default(UPDATE)
+  content     String
+  referenceId String?
+  imageUrl    String?
+  imageUrls   String[]
+  isPinned    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User             @relation(fields: [authorId], references: [id])
+  reactions   SocialReaction[]
+  comments    SocialComment[]
+  pollOptions PollOption[]
+  pollVotes   PollVote[]
+}
+
+model SocialReaction {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  post SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId, emoji])
+}
+
+model SocialComment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  parentId  String?
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post    SocialPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User            @relation(fields: [authorId], references: [id])
+  parent  SocialComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies SocialComment[] @relation("CommentReplies")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String
+  action      String
+  entityType  String
+  entityId    String
+  beforeState Json?
+  afterState  Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+}
+
+model PollOption {
+  id        String   @id @default(uuid())
+  postId    String
+  text      String
+  createdAt DateTime @default(now())
+
+  post  SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+}
+
+model PollVote {
+  id        String   @id @default(uuid())
+  postId    String
+  optionId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post   SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+}

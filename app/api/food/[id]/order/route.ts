@@ -28,6 +28,9 @@ export async function POST(
   if (!listing.isActive || listing.cutoffAt <= new Date()) {
     return NextResponse.json({ error: "Orders closed" }, { status: 410 });
   }
+  if (listing.createdById === authUser.id) {
+    return NextResponse.json({ error: "Cannot order your own listing" }, { status: 403 });
+  }
 
   const existing = await prisma.foodOrder.findUnique({
     where: { listingId_userId: { listingId: id, userId: authUser.id } },

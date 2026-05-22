@@ -264,6 +264,7 @@ export default function FoodPage() {
                 <label className="block text-xs font-medium text-zinc-600 mb-1">Order cutoff</label>
                 <input
                   required type="datetime-local" value={newCutoff} onChange={(e) => setNewCutoff(e.target.value)}
+                  min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>

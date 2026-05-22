@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2 } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2, Target } from "lucide-react";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/employees", label: "Employees", icon: Users },
   { href: "/admin/departments", label: "Departments", icon: Building2 },
+  { href: "/admin/missions", label: "Missions", icon: Target },
   { href: "/admin/points", label: "Award Points", icon: Award },
   { href: "/admin/rewards", label: "Rewards", icon: ShoppingBag },
   { href: "/admin/redemptions", label: "Redemptions", icon: ClipboardList },

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu,
+  Rss, Gamepad2, Menu, Target,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -15,6 +15,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 const mainNav = [
   { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
+  { href: "/missions",    label: "Missions",    icon: Target },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/games",       label: "Games",       icon: Gamepad2 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
@@ -24,9 +25,9 @@ const mainNav = [
 const bottomNavItems = [
   { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
+  { href: "/missions",    label: "Missions",    icon: Target },
   { href: "/games",       label: "Games",       icon: Gamepad2 },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
-  { href: "/profile",     label: "Profile",     icon: User },
 ];
 
 function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {

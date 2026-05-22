@@ -99,11 +99,13 @@ export default function FoodPage() {
   function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     const combined = [...newImages, ...files].slice(0, 3);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setNewImages(combined);
     setImagePreviews(combined.map((f) => URL.createObjectURL(f)));
   }
 
   function removeImage(idx: number) {
+    URL.revokeObjectURL(imagePreviews[idx]);
     const updated = newImages.filter((_, i) => i !== idx);
     setNewImages(updated);
     setImagePreviews(updated.map((f) => URL.createObjectURL(f)));
@@ -127,6 +129,7 @@ export default function FoodPage() {
       });
       setShowForm(false);
       setNewTitle(""); setNewDesc(""); setNewPrice(""); setNewCutoff("");
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
       setNewImages([]); setImagePreviews([]);
       await load();
     } catch (err) {

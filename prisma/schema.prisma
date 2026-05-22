@@ -126,6 +126,8 @@ model User {
   pollVotes         PollVote[]
   notifications     Notification[]
   auditLogs         AuditLog[]
+  foodListings FoodListing[] @relation("FoodListingsCreated")
+  foodOrders   FoodOrder[]   @relation("FoodOrdersPlaced")
 }
 
 model PointTransaction {
@@ -365,4 +367,34 @@ model PollVote {
   user   User       @relation(fields: [userId], references: [id])
 
   @@unique([postId, userId])
+}
+
+model FoodListing {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  imageUrls   String[]
+  cutoffAt    DateTime
+  isActive    Boolean     @default(true)
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy User        @relation("FoodListingsCreated", fields: [createdById], references: [id])
+  orders    FoodOrder[]
+}
+
+model FoodOrder {
+  id        String      @id @default(cuid())
+  listingId String
+  userId    String
+  quantity  Int
+  note      String?
+  createdAt DateTime    @default(now())
+
+  listing FoodListing @relation(fields: [listingId], references: [id])
+  user    User        @relation("FoodOrdersPlaced", fields: [userId], references: [id])
+
+  @@unique([listingId, userId])
 }

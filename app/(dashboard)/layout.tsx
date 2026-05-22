@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -17,6 +17,7 @@ const mainNav = [
   { href: "/feed",        label: "Feed",        icon: Rss },
   { href: "/missions",    label: "Missions",    icon: Target },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
+  { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/games",       label: "Games",       icon: Gamepad2 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/profile",     label: "Profile",     icon: User },
@@ -26,7 +27,7 @@ const bottomNavItems = [
   { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
   { href: "/missions",    label: "Missions",    icon: Target },
-  { href: "/games",       label: "Games",       icon: Gamepad2 },
+  { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
 ];
 

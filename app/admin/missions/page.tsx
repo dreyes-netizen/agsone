@@ -46,6 +46,7 @@ export default function AdminMissionsPage() {
   const { apiFetch } = useApiClient();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [completions, setCompletions] = useState<Completion[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -64,12 +65,18 @@ export default function AdminMissionsPage() {
   }, [authLoading, user]);
 
   async function load() {
-    const [m, c] = await Promise.all([
-      apiFetch<{ data: Mission[] }>("/api/admin/missions"),
-      apiFetch<{ data: Completion[] }>("/api/admin/missions/completions"),
-    ]);
-    setMissions(m.data);
-    setCompletions(c.data);
+    try {
+      const [m, c] = await Promise.all([
+        apiFetch<{ data: Mission[] }>("/api/admin/missions"),
+        apiFetch<{ data: Completion[] }>("/api/admin/missions/completions"),
+      ]);
+      setMissions(m.data);
+      setCompletions(c.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -89,17 +96,25 @@ export default function AdminMissionsPage() {
       setShowForm(false);
       setTitle(""); setDescription(""); setPointsReward("100"); setType("INDIVIDUAL"); setEndDate("");
       await load();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create mission");
     } finally {
       setSubmitting(false);
     }
   }
 
   async function toggleActive(mission: Mission) {
-    await apiFetch(`/api/admin/missions/${mission.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ isActive: !mission.isActive }),
-    });
-    await load();
+    try {
+      await apiFetch(`/api/admin/missions/${mission.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: !mission.isActive }),
+      });
+      await load();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update mission status");
+    }
   }
 
   async function handleApprove(id: string) {
@@ -110,6 +125,9 @@ export default function AdminMissionsPage() {
         body: JSON.stringify({ action: "approve" }),
       });
       await load();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to approve completion");
     } finally {
       setProcessing(null);
     }
@@ -126,6 +144,9 @@ export default function AdminMissionsPage() {
       setRejectId(null);
       setRejectNote("");
       await load();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to reject completion");
     } finally {
       setProcessing(null);
     }
@@ -188,6 +209,9 @@ export default function AdminMissionsPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">All Missions</CardTitle></CardHeader>
         <CardContent className="p-0">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Loading...</div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -229,6 +253,7 @@ export default function AdminMissionsPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

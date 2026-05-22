@@ -69,6 +69,16 @@ export async function PATCH(
       body: `'${completion.mission.title}' — +${completion.mission.pointsReward} pts`,
     });
 
+    await prisma.auditLog.create({
+      data: {
+        actorId: authUser!.id,
+        action: "APPROVE_MISSION",
+        entityType: "MissionCompletion",
+        entityId: id,
+        afterState: { missionId: completion.missionId, userId: completion.userId, pointsAwarded: completion.mission.pointsReward },
+      },
+    });
+
     prisma.pointTransaction
       .aggregate({ where: { toUserId: completion.userId, amount: { gt: 0 } }, _sum: { amount: true } })
       .then((agg) => checkAndAwardBadges({ userId: completion.userId, totalEarned: agg._sum.amount ?? 0 }))
@@ -89,6 +99,16 @@ export async function PATCH(
       type: "MISSION_REJECTED",
       title: "Mission not approved",
       body: `'${completion.mission.title}' — ${adminNote.trim()}`,
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: authUser!.id,
+        action: "REJECT_MISSION",
+        entityType: "MissionCompletion",
+        entityId: id,
+        afterState: { missionId: completion.missionId, userId: completion.userId, adminNote: adminNote.trim() },
+      },
     });
   }
 

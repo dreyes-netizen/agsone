@@ -6,7 +6,7 @@ import { z } from "zod";
 const createSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
-  price: z.number().positive(),
+  price: z.number().positive().multipleOf(0.01),
   imageUrls: z.array(z.string().url()).max(3).default([]),
   cutoffAt: z.string().datetime(),
 });
@@ -16,6 +16,13 @@ export async function GET(req: NextRequest) {
   if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const listings = await prisma.foodListing.findMany({
+    where: {
+      OR: [
+        { isActive: true },
+        { createdById: authUser.id },
+        { orders: { some: { userId: authUser.id } } },
+      ],
+    },
     include: {
       createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
       orders: {

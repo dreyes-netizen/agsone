@@ -370,7 +370,7 @@ model PollVote {
 }
 
 model FoodListing {
-  id          String      @id @default(cuid())
+  id          String      @id @default(uuid())
   title       String
   description String?
   price       Decimal     @db.Decimal(10, 2)
@@ -386,7 +386,7 @@ model FoodListing {
 }
 
 model FoodOrder {
-  id        String      @id @default(cuid())
+  id        String      @id @default(uuid())
   listingId String
   userId    String
   quantity  Int

@@ -34,13 +34,8 @@ export async function PATCH(
   }
 
   if (action === "approve") {
-    const recipient = await prisma.user.findUnique({
-      where: { id: completion.userId },
-      select: { pointsBalance: true },
-    });
-    const newBalance = (recipient?.pointsBalance ?? 0) + completion.mission.pointsReward;
-
-    await prisma.$transaction(async (tx) => {
+    // Read the updated balance from the transaction result to avoid a stale pre-fetch
+    const updatedUser = await prisma.$transaction(async (tx) => {
       await tx.missionCompletion.update({
         where: { id },
         data: { status: "APPROVED", verifiedById: authUser!.id, verifiedAt: new Date() },
@@ -56,34 +51,38 @@ export async function PATCH(
           sourceReferenceId: completion.id,
         },
       });
-      await tx.user.update({
+      return tx.user.update({
         where: { id: completion.userId },
         data: { pointsBalance: { increment: completion.mission.pointsReward } },
+        select: { pointsBalance: true },
       });
     });
 
-    await createNotification({
-      userId: completion.userId,
-      type: "MISSION_APPROVED",
-      title: "Mission approved",
-      body: `'${completion.mission.title}' — +${completion.mission.pointsReward} pts`,
-    });
+    // Notification and audit log are independent — run in parallel
+    await Promise.all([
+      createNotification({
+        userId: completion.userId,
+        type: "MISSION_APPROVED",
+        title: "Mission approved",
+        body: `'${completion.mission.title}' — +${completion.mission.pointsReward} pts`,
+      }),
+      prisma.auditLog.create({
+        data: {
+          actorId: authUser!.id,
+          action: "APPROVE_MISSION",
+          entityType: "MissionCompletion",
+          entityId: id,
+          afterState: { missionId: completion.missionId, userId: completion.userId, pointsAwarded: completion.mission.pointsReward },
+        },
+      }),
+    ]);
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: authUser!.id,
-        action: "APPROVE_MISSION",
-        entityType: "MissionCompletion",
-        entityId: id,
-        afterState: { missionId: completion.missionId, userId: completion.userId, pointsAwarded: completion.mission.pointsReward },
-      },
-    });
-
+    // Fire-and-forget background checks using the confirmed post-transaction balance
     prisma.pointTransaction
       .aggregate({ where: { toUserId: completion.userId, amount: { gt: 0 } }, _sum: { amount: true } })
       .then((agg) => checkAndAwardBadges({ userId: completion.userId, totalEarned: agg._sum.amount ?? 0 }))
       .catch(() => {});
-    checkLevelUp(completion.userId, newBalance).catch(() => {});
+    checkLevelUp(completion.userId, updatedUser.pointsBalance).catch(() => {});
   } else {
     await prisma.missionCompletion.update({
       where: { id },
@@ -94,22 +93,25 @@ export async function PATCH(
         verifiedAt: new Date(),
       },
     });
-    await createNotification({
-      userId: completion.userId,
-      type: "MISSION_REJECTED",
-      title: "Mission not approved",
-      body: `'${completion.mission.title}' — ${adminNote.trim()}`,
-    });
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: authUser!.id,
-        action: "REJECT_MISSION",
-        entityType: "MissionCompletion",
-        entityId: id,
-        afterState: { missionId: completion.missionId, userId: completion.userId, adminNote: adminNote.trim() },
-      },
-    });
+    // Notification and audit log are independent — run in parallel
+    await Promise.all([
+      createNotification({
+        userId: completion.userId,
+        type: "MISSION_REJECTED",
+        title: "Mission not approved",
+        body: `'${completion.mission.title}' — ${adminNote.trim()}`,
+      }),
+      prisma.auditLog.create({
+        data: {
+          actorId: authUser!.id,
+          action: "REJECT_MISSION",
+          entityType: "MissionCompletion",
+          entityId: id,
+          afterState: { missionId: completion.missionId, userId: completion.userId, adminNote: adminNote.trim() },
+        },
+      }),
+    ]);
   }
 
   return NextResponse.json({ success: true });

@@ -49,7 +49,7 @@ export default function MissionsPage() {
       setMissions((prev) =>
         prev.map((m) =>
           m.id === mission.id
-            ? { ...m, myCompletion: { id: "", status: "PENDING", adminNote: null, completedAt: new Date().toISOString() } }
+            ? { ...m, myCompletion: { id: "optimistic", status: "PENDING", adminNote: null, completedAt: new Date().toISOString() } }
             : m
         )
       );

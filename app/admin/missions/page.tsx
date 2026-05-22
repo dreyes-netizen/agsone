@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Power, CheckCircle2, XCircle } from "lucide-react";
+import { timeAgo } from "@/lib/helpers/timeAgo";
 
 type Mission = {
   id: string;
@@ -30,16 +31,6 @@ type Completion = {
   user: { id: string; displayName: string; avatarUrl: string | null };
   mission: { id: string; title: string; pointsReward: number };
 };
-
-function timeAgo(date: string) {
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 export default function AdminMissionsPage() {
   const { user, loading: authLoading } = useAuth();

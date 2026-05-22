@@ -17,6 +17,12 @@ export async function POST(
 
   const { id } = await params;
 
+  const body = await req.json();
+  const parsed = orderSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
   const listing = await prisma.foodListing.findUnique({ where: { id } });
   if (!listing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!listing.isActive || listing.cutoffAt <= new Date()) {
@@ -27,12 +33,6 @@ export async function POST(
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
   });
   if (existing) return NextResponse.json({ error: "Already ordered" }, { status: 409 });
-
-  const body = await req.json();
-  const parsed = orderSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
 
   const order = await prisma.foodOrder.create({
     data: {
@@ -68,5 +68,5 @@ export async function DELETE(
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
   });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ data: null });
 }

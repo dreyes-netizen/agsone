@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -225,7 +225,7 @@ export default function AdminMissionsPage() {
                     {m.description && <p className="text-xs text-gray-400 truncate max-w-xs">{m.description}</p>}
                   </TableCell>
                   <TableCell><Badge variant="secondary">{m.type}</Badge></TableCell>
-                  <TableCell className="font-semibold text-indigo-600">{m.pointsReward}</TableCell>
+                  <TableCell className="font-semibold text-navy-600">{m.pointsReward}</TableCell>
                   <TableCell className="text-sm text-gray-500">
                     {m.endDate ? new Date(m.endDate).toLocaleDateString() : "—"}
                   </TableCell>
@@ -267,7 +267,7 @@ export default function AdminMissionsPage() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.user.displayName}</TableCell>
                     <TableCell>{c.mission.title}</TableCell>
-                    <TableCell className="font-semibold text-indigo-600">+{c.mission.pointsReward}</TableCell>
+                    <TableCell className="font-semibold text-navy-600">+{c.mission.pointsReward}</TableCell>
                     <TableCell className="text-sm text-gray-400">{timeAgo(c.completedAt)}</TableCell>
                     <TableCell>
                       {rejectId === c.id ? (

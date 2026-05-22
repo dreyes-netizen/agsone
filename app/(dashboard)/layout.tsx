@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -41,7 +41,7 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
           : "text-white/45 hover:text-white/80 hover:bg-white/5"
       }`}
     >
-      <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-indigo-400" : "text-white/35 group-hover:text-white/60"}`} />
+      <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-navy-400" : "text-white/35 group-hover:text-white/60"}`} />
       {label}
     </Link>
   );
@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="px-4 pt-5 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-indigo-500 flex items-center justify-center overflow-hidden shadow-sm">
+            <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
               <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
             </div>
             <div>
@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   : "text-white/45 hover:text-white/80 hover:bg-white/5"
               }`}
             >
-              <ShieldCheck className={`w-4 h-4 shrink-0 ${pathname.startsWith("/admin") ? "text-indigo-400" : "text-white/35 group-hover:text-white/60"}`} />
+              <ShieldCheck className={`w-4 h-4 shrink-0 ${pathname.startsWith("/admin") ? "text-navy-400" : "text-white/35 group-hover:text-white/60"}`} />
               Admin Panel
             </Link>
           </>
@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="p-3">
         <div className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 transition-colors group cursor-default">
           <div className="relative shrink-0">
-            <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold text-white">
+            <div className="w-7 h-7 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white">
               {initials}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-[1.5px] border-[#111827]" />
@@ -183,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </button>
 
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center overflow-hidden shadow-sm">
+          <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
             <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
           </div>
           <span className="text-white font-semibold text-sm">AGS One</span>
@@ -208,7 +208,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={href}
               href={href}
               className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors ${
-                active ? "text-indigo-400" : "text-white/35 hover:text-white/60"
+                active ? "text-navy-400" : "text-white/35 hover:text-white/60"
               }`}
             >
               <Icon className="w-5 h-5 shrink-0" />

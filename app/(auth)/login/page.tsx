@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -35,12 +35,12 @@ export default function LoginPage() {
           style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "40px 40px" }}
         />
         {/* Soft glow */}
-        <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-indigo-600/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-navy-600/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-violet-600/10 blur-3xl translate-x-1/2 translate-y-1/2" />
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-indigo-500 flex items-center justify-center overflow-hidden shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
             <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-1" />
           </div>
           <span className="text-white font-semibold text-lg tracking-tight">AGS One</span>
@@ -51,7 +51,7 @@ export default function LoginPage() {
           <div>
             <h2 className="text-4xl font-bold text-white leading-tight tracking-tight">
               Work hard.<br />Play harder.<br />
-              <span className="text-indigo-400">Get rewarded.</span>
+              <span className="text-navy-400">Get rewarded.</span>
             </h2>
             <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-sm">
               Earn points for your contributions, redeem them for rewards, and compete with your colleagues.
@@ -77,7 +77,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center overflow-hidden shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
               <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-1" />
             </div>
             <span className="text-zinc-900 font-semibold text-lg">AGS One</span>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -80,7 +80,7 @@ export default function MissionsPage() {
             onClick={() => setFilter(f)}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all ${
               filter === f
-                ? "bg-indigo-600 text-white border-indigo-600"
+                ? "bg-navy-600 text-white border-navy-600"
                 : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
@@ -116,12 +116,12 @@ export default function MissionsPage() {
 
             return (
               <div key={mission.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow">
-                <div className={`h-1 ${comp?.status === "APPROVED" ? "bg-emerald-500" : comp?.status === "REJECTED" ? "bg-red-400" : comp?.status === "PENDING" ? "bg-amber-400" : "bg-indigo-500"}`} />
+                <div className={`h-1 ${comp?.status === "APPROVED" ? "bg-emerald-500" : comp?.status === "REJECTED" ? "bg-red-400" : comp?.status === "PENDING" ? "bg-amber-400" : "bg-navy-500"}`} />
 
                 <div className="p-5 flex flex-col flex-1 gap-3">
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-                      <Target className="w-5 h-5 text-indigo-500" />
+                    <div className="w-10 h-10 rounded-xl bg-navy-50 flex items-center justify-center">
+                      <Target className="w-5 h-5 text-navy-500" />
                     </div>
                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
                       {mission.type === "INDIVIDUAL" ? "Individual" : "Team"}
@@ -149,7 +149,7 @@ export default function MissionsPage() {
                   )}
 
                   <div className="flex items-center justify-between pt-3 border-t border-zinc-100 mt-auto">
-                    <p className="font-bold text-lg text-indigo-600 tabular-nums leading-none">
+                    <p className="font-bold text-lg text-navy-600 tabular-nums leading-none">
                       {mission.pointsReward.toLocaleString()}
                       <span className="text-sm font-medium ml-1 text-zinc-400">pts</span>
                     </p>
@@ -158,7 +158,7 @@ export default function MissionsPage() {
                       <button
                         onClick={() => handleMarkComplete(mission)}
                         disabled={busy}
-                        className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1.5 bg-navy-600 hover:bg-navy-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                       >
                         {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                         {busy ? "Submitting…" : "Mark Complete"}

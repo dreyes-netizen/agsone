@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -57,7 +57,7 @@ const txTypeLabel: Record<string, { label: string; color: string }> = {
   MANUAL_AWARD: { label: "Award",      color: "text-emerald-600" },
   ATTENDANCE:   { label: "Attendance", color: "text-blue-600" },
   TASK:         { label: "Task",       color: "text-purple-600" },
-  KPI:          { label: "KPI",        color: "text-indigo-600" },
+  KPI:          { label: "KPI",        color: "text-navy-600" },
   CONTEST:      { label: "Contest",    color: "text-yellow-600" },
   REDEMPTION:   { label: "Redemption", color: "text-rose-500" },
   GAME_WIN:     { label: "Game Win",   color: "text-emerald-500" },
@@ -84,7 +84,7 @@ function PlayerAvatar({ name, url }: { name: string; url: string | null }) {
     return <img src={url} alt={name} className="w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-md" />;
   }
   return (
-    <div className="w-20 h-20 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-3xl ring-4 ring-white shadow-md">
+    <div className="w-20 h-20 rounded-full bg-navy-500 flex items-center justify-center text-white font-bold text-3xl ring-4 ring-white shadow-md">
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -149,7 +149,7 @@ export default function ProfilePage() {
       {/* ── Profile card ── */}
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
         {/* Top accent */}
-        <div className="h-24 bg-gradient-to-br from-indigo-500 to-violet-600 relative">
+        <div className="h-24 bg-gradient-to-br from-navy-500 to-violet-600 relative">
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
         </div>
 
@@ -184,7 +184,7 @@ export default function ProfilePage() {
             </div>
             <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 rounded-full transition-all"
+                className="h-full bg-navy-500 rounded-full transition-all"
                 style={{ width: `${levelPct}%` }}
               />
             </div>
@@ -215,7 +215,7 @@ export default function ProfilePage() {
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { icon: Coins,  value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-indigo-600", bg: "bg-indigo-50" },
+              { icon: Coins,  value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600", bg: "bg-navy-50" },
               { icon: Star,   value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50" },
               { icon: Flame,  value: profile.streakDays,                     label: "Streak (days)",  color: "text-orange-500", bg: "bg-orange-50" },
               { icon: Medal,  value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50" },
@@ -251,12 +251,12 @@ export default function ProfilePage() {
                   type="date"
                   value={birthdayEdit}
                   onChange={(e) => setBirthdayEdit(e.target.value)}
-                  className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition"
+                  className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
                 />
                 <button
                   onClick={handleBirthdaySave}
                   disabled={birthdaySaving || !birthdayEdit}
-                  className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm bg-navy-600 hover:bg-navy-700 text-white font-medium px-4 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {birthdaySaving ? "Saving…" : "Save"}
                 </button>
@@ -275,7 +275,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <p className="text-xs text-zinc-400 font-medium uppercase tracking-wide">Current Balance</p>
-                <p className="text-4xl font-black text-indigo-600 leading-none mt-1">
+                <p className="text-4xl font-black text-navy-600 leading-none mt-1">
                   {pointsData.balance.toLocaleString()}
                   <span className="text-lg font-semibold text-zinc-400 ml-1">pts</span>
                 </p>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
                     <div className="px-5 py-3 border-t border-zinc-100">
                       <button
                         onClick={() => setVisibleCount((c) => c + 10)}
-                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                        className="text-sm text-navy-600 hover:text-navy-700 font-medium transition-colors"
                       >
                         Load more ({entries.length - visibleCount} remaining)
                       </button>

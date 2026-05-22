@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -224,7 +224,7 @@ export default function FoodPage() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-navy-600 hover:bg-navy-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
         >
           <UtensilsCrossed className="w-4 h-4" />
           Sell Food
@@ -242,14 +242,14 @@ export default function FoodPage() {
                 <input
                   required value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Homemade Lumpia"
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-zinc-600 mb-1">Description <span className="text-zinc-400 font-normal">(optional)</span></label>
                 <textarea
                   value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={2}
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                 />
               </div>
               <div>
@@ -257,7 +257,7 @@ export default function FoodPage() {
                 <input
                   required type="number" min="1" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)}
                   placeholder="120.00"
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
               <div>
@@ -265,7 +265,7 @@ export default function FoodPage() {
                 <input
                   required type="datetime-local" value={newCutoff} onChange={(e) => setNewCutoff(e.target.value)}
                   min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
             </div>
@@ -284,7 +284,7 @@ export default function FoodPage() {
                   </div>
                 ))}
                 {newImages.length < 3 && (
-                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
+                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 transition-colors">
                     <ImagePlus className="w-5 h-5 text-zinc-400" />
                     <span className="text-[10px] text-zinc-400 mt-0.5">Add</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleImagePick} multiple />
@@ -296,7 +296,7 @@ export default function FoodPage() {
             <div className="flex gap-2">
               <button
                 type="submit" disabled={creating}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 bg-navy-600 hover:bg-navy-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {creating ? "Creating…" : "Post Listing"}
@@ -316,7 +316,7 @@ export default function FoodPage() {
             key={t} onClick={() => setTab(t)}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all ${
               tab === t
-                ? "bg-indigo-600 text-white border-indigo-600"
+                ? "bg-navy-600 text-white border-navy-600"
                 : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
@@ -378,7 +378,7 @@ export default function FoodPage() {
                 <div className="p-4 flex flex-col flex-1 gap-2">
                   {/* Seller */}
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-navy-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                       {listing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
                     </div>
                     <span className="text-xs text-zinc-500">{listing.createdBy.displayName}</span>

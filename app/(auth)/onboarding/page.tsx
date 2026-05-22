@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -63,7 +63,7 @@ export default function OnboardingPage() {
 
           {/* Header */}
           <div className="flex items-center gap-2.5 mb-7">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center overflow-hidden shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
               <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-1" />
             </div>
             <span className="text-zinc-900 font-semibold">AGS One</span>
@@ -86,7 +86,7 @@ export default function OnboardingPage() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
                 minLength={2}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
                 placeholder="Your name"
               />
             </div>
@@ -105,7 +105,7 @@ export default function OnboardingPage() {
                   id="department"
                   value={departmentId}
                   onChange={(e) => setDepartmentId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition bg-white"
                 >
                   <option value="">Select your department…</option>
                   {departments.map((d) => (
@@ -125,7 +125,7 @@ export default function OnboardingPage() {
                 type="date"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
               />
             </div>
 
@@ -138,7 +138,7 @@ export default function OnboardingPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-navy-600 hover:bg-navy-700 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Saving…" : "Get Started"}
             </button>

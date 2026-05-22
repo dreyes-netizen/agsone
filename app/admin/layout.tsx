@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,10 +33,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-5 border-b border-gray-200">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-indigo-500 flex items-center justify-center overflow-hidden shadow-sm">
+            <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
               <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
             </div>
-            <span className="text-sm font-semibold text-indigo-600">AGS One Admin</span>
+            <span className="text-sm font-semibold text-navy-600">AGS One Admin</span>
           </div>
         </div>
 
@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               href={href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href))
-                  ? "bg-indigo-50 text-indigo-700"
+                  ? "bg-navy-50 text-navy-700"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >

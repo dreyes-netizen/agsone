@@ -73,6 +73,15 @@ export default function FeedbackPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
+  useEffect(() => {
+    if (!showModal) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") { setShowModal(false); resetForm(); }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showModal]);
+
   function resetForm() {
     setTitle("");
     setCategory("");
@@ -164,8 +173,8 @@ export default function FeedbackPage() {
 
       {/* Submit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setShowModal(false); resetForm(); }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900">New Feedback</h2>
               <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600">
@@ -182,6 +191,7 @@ export default function FeedbackPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Brief summary of your feedback"
+                  autoFocus
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/20"
                 />
               </div>

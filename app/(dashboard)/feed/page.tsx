@@ -992,14 +992,82 @@ export default function FeedPage() {
                   {openComments[post.id] && (
                     <div className="mt-1 pt-3 border-t border-black/5 space-y-4">
                       {(commentsCache[post.id] ?? []).map((c) => (
-                        <div key={c.id} className="flex gap-2.5">
-                          <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
-                          <div className="flex-1 min-w-0">
-                            <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                              <span className="text-xs font-semibold text-gray-900">{c.author.displayName}</span>
-                              <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                        <div key={c.id}>
+                          <div className="flex gap-2.5">
+                            <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
+                            <div className="flex-1 min-w-0">
+                              <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
+                                <span className="text-xs font-semibold text-gray-900">{c.author.displayName}</span>
+                                <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 pl-1">
+                                <span className="text-[11px] text-gray-400">{timeAgo(c.createdAt)}</span>
+                                <button
+                                  onClick={() =>
+                                    setReplyingTo(
+                                      replyingTo?.commentId === c.id
+                                        ? null
+                                        : { postId: post.id, commentId: c.id, displayName: c.author.displayName }
+                                    )
+                                  }
+                                  className="text-[11px] font-semibold text-gray-500 hover:text-navy-600 transition-colors"
+                                >
+                                  Reply
+                                </button>
+                                {c.replies.length > 0 && (
+                                  <button
+                                    onClick={() => setExpandedReplies((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
+                                    className="text-[11px] font-semibold text-navy-500 hover:text-navy-700 transition-colors"
+                                  >
+                                    {expandedReplies[c.id]
+                                      ? "Hide replies"
+                                      : `View ${c.replies.length} ${c.replies.length === 1 ? "reply" : "replies"}`}
+                                  </button>
+                                )}
+                              </div>
+                              {replyingTo?.commentId === c.id && (
+                                <div className="flex gap-2 mt-2">
+                                  <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
+                                  <div className="flex-1 flex gap-2">
+                                    <input
+                                      autoFocus
+                                      type="text"
+                                      placeholder={`Reply to ${c.author.displayName}…`}
+                                      value={replyDraft[c.id] ?? ""}
+                                      onChange={(e) => setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitReply(post.id, c.id); }
+                                        if (e.key === "Escape") setReplyingTo(null);
+                                      }}
+                                      className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all"
+                                    />
+                                    <button
+                                      onClick={() => submitReply(post.id, c.id)}
+                                      disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
+                                      className="flex items-center justify-center w-8 h-8 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50 shrink-0"
+                                    >
+                                      <Send className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              {expandedReplies[c.id] && c.replies.length > 0 && (
+                                <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
+                                  {c.replies.map((r) => (
+                                    <div key={r.id} className="flex gap-2">
+                                      <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="sm" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
+                                          <span className="text-xs font-semibold text-gray-900">{r.author.displayName}</span>
+                                          <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{r.content}</p>
+                                        </div>
+                                        <span className="text-[11px] text-gray-400 mt-1 pl-1 block">{timeAgo(r.createdAt)}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <span className="text-[11px] text-gray-400 mt-1 pl-1 block">{timeAgo(c.createdAt)}</span>
                           </div>
                         </div>
                       ))}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { createNotification } from "@/lib/helpers/createNotification";
 
 const PAGE_SIZE = 15;
 
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
     where: typeFilter ? { type: typeFilter as never } : undefined,
     include: {
       author: { select: { displayName: true, avatarUrl: true } },
+      recipient: { select: { id: true, displayName: true, avatarUrl: true } },
       reactions: { select: { emoji: true, userId: true } },
       _count: { select: { comments: true } },
       pollOptions: { include: { _count: { select: { votes: true } } } },
@@ -74,6 +76,11 @@ const postSchema = z.discriminatedUnion("type", [
     options: z.array(z.string().min(1).max(200)).min(2).max(4),
     imageUrls: z.array(z.string().url()).max(4).optional(),
   }),
+  z.object({
+    type: z.literal("SHOUTOUT"),
+    content: z.string().min(1).max(500),
+    recipientId: z.string().uuid(),
+  }),
 ]);
 
 export async function POST(req: NextRequest) {
@@ -101,6 +108,32 @@ export async function POST(req: NextRequest) {
       },
     });
     return NextResponse.json({ data: { ...post, myVoteOptionId: null } }, { status: 201 });
+  }
+
+  if (parsed.data.type === "SHOUTOUT") {
+    if (parsed.data.recipientId === user.id) {
+      return NextResponse.json({ error: "Cannot shoutout yourself" }, { status: 400 });
+    }
+    const post = await prisma.socialPost.create({
+      data: {
+        authorId: user.id,
+        content: parsed.data.content,
+        type: "SHOUTOUT",
+        imageUrls: [],
+        recipientId: parsed.data.recipientId,
+      },
+      include: {
+        author: { select: { displayName: true, avatarUrl: true } },
+        recipient: { select: { id: true, displayName: true, avatarUrl: true } },
+      },
+    });
+    createNotification({
+      userId: parsed.data.recipientId,
+      type: "SHOUTOUT_RECEIVED",
+      title: `${user.displayName} gave you a shoutout!`,
+      body: parsed.data.content.slice(0, 100),
+    });
+    return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
   }
 
   const post = await prisma.socialPost.create({

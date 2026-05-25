@@ -21,6 +21,7 @@ type FeedPost = {
   imageUrls: string[];
   createdAt: string;
   author: { displayName: string; avatarUrl: string | null };
+  recipient: { id: string; displayName: string; avatarUrl: string | null } | null;
   reactions: Record<string, number>;
   myReactions: string[];
   commentCount: number;
@@ -354,6 +355,11 @@ export default function FeedPage() {
   const [uploading, setUploading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showShoutoutForm, setShowShoutoutForm] = useState(false);
+  const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
+  const [shoutoutRecipientId, setShoutoutRecipientId] = useState("");
+  const [shoutoutContent, setShoutoutContent] = useState("");
+  const [shoutoutSubmitting, setShoutoutSubmitting] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -368,6 +374,14 @@ export default function FeedPage() {
     load(activeFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, activeFilter]);
+
+  useEffect(() => {
+    if (!showShoutoutForm || employees.length > 0) return;
+    apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
+      .then((res) => setEmployees(res.data))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showShoutoutForm]);
 
   async function load(filter = "ALL") {
     setLoading(true);
@@ -653,6 +667,25 @@ export default function FeedPage() {
     }
   }
 
+  async function handleShoutoutSubmit() {
+    if (!shoutoutRecipientId || !shoutoutContent.trim()) return;
+    setShoutoutSubmitting(true);
+    try {
+      const res = await apiFetch<{ data: FeedPost }>("/api/feed", {
+        method: "POST",
+        body: JSON.stringify({ type: "SHOUTOUT", content: shoutoutContent.trim(), recipientId: shoutoutRecipientId }),
+      });
+      setPosts((prev) => [res.data, ...prev]);
+      setShoutoutContent("");
+      setShoutoutRecipientId("");
+      setShowShoutoutForm(false);
+    } catch {
+      // silent — user sees no change
+    } finally {
+      setShoutoutSubmitting(false);
+    }
+  }
+
   async function toggleReaction(postId: string, emoji: string) {
     // Optimistic update
     setPosts((prev) =>
@@ -807,6 +840,80 @@ export default function FeedPage() {
         </form>
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 w-fit">
+        {(["All", "Updates", "Shoutouts"] as const).map((label) => {
+          const value = label === "All" ? "ALL" : label === "Updates" ? "UPDATE" : "SHOUTOUT";
+          return (
+            <button
+              key={label}
+              onClick={() => { setActiveFilter(value); setPosts([]); setNextCursor(null); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activeFilter === value
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Give Shoutout */}
+      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+        <div className="px-5 py-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-zinc-700">Recognize a colleague</span>
+          <button
+            onClick={() => setShowShoutoutForm((v) => !v)}
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            ✨ Give Shoutout
+          </button>
+        </div>
+
+        {showShoutoutForm && (
+          <div className="px-5 pb-4 border-t border-zinc-100 pt-3 space-y-3">
+            <select
+              value={shoutoutRecipientId}
+              onChange={(e) => setShoutoutRecipientId(e.target.value)}
+              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition bg-white"
+            >
+              <option value="">Select a colleague…</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>{e.displayName}</option>
+              ))}
+            </select>
+            <textarea
+              value={shoutoutContent}
+              onChange={(e) => setShoutoutContent(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="What did they do that deserves recognition?"
+              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 placeholder-zinc-400 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">{shoutoutContent.length}/500</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowShoutoutForm(false); setShoutoutContent(""); setShoutoutRecipientId(""); }}
+                  className="text-sm text-zinc-500 hover:text-zinc-700 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleShoutoutSubmit}
+                  disabled={shoutoutSubmitting || !shoutoutRecipientId || !shoutoutContent.trim()}
+                  className="text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {shoutoutSubmitting ? "Sending…" : "Send Shoutout"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Posts */}
       {loadError ? (
         <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
@@ -836,6 +943,95 @@ export default function FeedPage() {
         </div>
       ) : (
         posts.map((post) => {
+          if (post.type === "SHOUTOUT" && post.recipient) {
+            return (
+              <div key={post.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
+                <div className="px-5 py-4 space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <Avatar name={post.author.displayName} url={post.author.avatarUrl} size="sm" />
+                      <span className="text-sm font-semibold text-zinc-800">{post.author.displayName}</span>
+                    </div>
+                    <span className="text-sm text-amber-600 font-medium">✨ gave a shoutout to</span>
+                    <div className="flex items-center gap-1.5">
+                      <Avatar name={post.recipient.displayName} url={post.recipient.avatarUrl} size="sm" />
+                      <span className="text-sm font-semibold text-zinc-800">{post.recipient.displayName}</span>
+                    </div>
+                    <span className="text-xs text-zinc-400 ml-auto">{timeAgo(post.createdAt)}</span>
+                    {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
+                      <button
+                        onClick={() => deletePost(post.id)}
+                        className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                        title="Delete post"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-zinc-700 leading-relaxed">{post.content}</p>
+                  <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-3 flex-wrap">
+                    <ReactionBar
+                      postId={post.id}
+                      reactions={post.reactions}
+                      myReactions={post.myReactions}
+                      onReact={toggleReaction}
+                    />
+                    <button
+                      onClick={() => toggleComments(post.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                        openComments[post.id]
+                          ? "bg-navy-50 border-navy-200 text-navy-700"
+                          : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
+                      }`}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+                    </button>
+                  </div>
+                  {openComments[post.id] && (
+                    <div className="mt-1 pt-3 border-t border-black/5 space-y-4">
+                      {(commentsCache[post.id] ?? []).map((c) => (
+                        <div key={c.id} className="flex gap-2.5">
+                          <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
+                              <span className="text-xs font-semibold text-gray-900">{c.author.displayName}</span>
+                              <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                            </div>
+                            <span className="text-[11px] text-gray-400 mt-1 pl-1 block">{timeAgo(c.createdAt)}</span>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex gap-2.5 items-center pt-1">
+                        <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
+                        <div className="flex-1 flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Write a comment…"
+                            value={commentDraft[post.id] ?? ""}
+                            onChange={(e) => setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(post.id); }
+                            }}
+                            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all"
+                          />
+                          <button
+                            onClick={() => submitComment(post.id)}
+                            disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
+                            className="flex items-center justify-center w-8 h-8 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50 shrink-0"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
           const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
             <div key={post.id} className={`rounded-xl border overflow-hidden ${meta.bg}`}>

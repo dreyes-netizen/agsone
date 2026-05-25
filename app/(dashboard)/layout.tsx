@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -21,6 +21,7 @@ const mainNav = [
   { href: "/games",       label: "Games",       icon: Gamepad2 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/profile",     label: "Profile",     icon: User },
+  { href: "/feedback",    label: "Feedback",    icon: MessageSquare },
 ];
 
 const bottomNavItems = [
@@ -35,13 +36,14 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+      className={`group relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
         active
           ? "bg-white/10 text-white"
-          : "text-white/45 hover:text-white/80 hover:bg-white/5"
+          : "text-white/40 hover:text-white hover:bg-white/5"
       }`}
     >
-      <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-navy-400" : "text-white/35 group-hover:text-white/60"}`} />
+      {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-full" />}
+      <Icon className="w-4 h-4 shrink-0" />
       {label}
     </Link>
   );
@@ -84,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div>
               <p className="text-white font-semibold text-[13px] leading-tight">AGS One</p>
-              <p className="text-white/30 text-[10px] leading-tight">Alliance Global</p>
+              <p className="text-white text-[10px] leading-tight">Alliance Global</p>
             </div>
           </div>
           <NotificationBell />
@@ -95,23 +97,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-white/20 uppercase tracking-widest">Navigate</p>
+        <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-white uppercase tracking-widest">Navigate</p>
         {mainNav.map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
         ))}
 
         {(dbUser?.role === "MANAGER" || dbUser?.role === "HR_ADMIN") && (
           <>
-            <p className="px-3 pb-2 pt-4 text-[10px] font-semibold text-white/20 uppercase tracking-widest">Management</p>
+            <p className="px-3 pb-2 pt-4 text-[10px] font-semibold text-white uppercase tracking-widest">Management</p>
             <Link
               href="/admin"
-              className={`group flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+              className={`group relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
                 pathname.startsWith("/admin")
                   ? "bg-white/10 text-white"
-                  : "text-white/45 hover:text-white/80 hover:bg-white/5"
+                  : "text-white/40 hover:text-white hover:bg-white/5"
               }`}
             >
-              <ShieldCheck className={`w-4 h-4 shrink-0 ${pathname.startsWith("/admin") ? "text-navy-400" : "text-white/35 group-hover:text-white/60"}`} />
+              {pathname.startsWith("/admin") && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-full" />}
+              <ShieldCheck className="w-4 h-4 shrink-0" />
               Admin Panel
             </Link>
           </>
@@ -130,15 +133,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-[1.5px] border-[#111827]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white/85 text-xs font-semibold truncate leading-tight">{user?.displayName ?? "—"}</p>
-            <p className="text-white/30 text-[10px] truncate leading-tight mt-0.5">
+            <p className="text-white text-xs font-semibold truncate leading-tight">{user?.displayName ?? "—"}</p>
+            <p className="text-white text-[10px] truncate leading-tight mt-0.5">
               {dbUser ? roleBadge[dbUser.role] : user?.email}
             </p>
           </div>
           <button
             onClick={handleSignOut}
             title="Sign out"
-            className="text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+            className="text-white hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
@@ -177,7 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button
           onClick={() => setSidebarOpen(true)}
           aria-label="Open menu"
-          className="w-8 h-8 flex items-center justify-center text-white/50 hover:text-white transition-colors rounded-md hover:bg-white/8"
+          className="w-8 h-8 flex items-center justify-center text-white transition-colors rounded-md hover:bg-white/10"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -207,10 +210,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors ${
-                active ? "text-navy-400" : "text-white/35 hover:text-white/60"
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors relative ${
+                active ? "text-white" : "text-white/40"
               }`}
             >
+              {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-white rounded-full" />}
               <Icon className="w-5 h-5 shrink-0" />
               <span className="text-[9px] font-medium leading-none">{label}</span>
             </Link>

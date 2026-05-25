@@ -71,6 +71,7 @@ enum PostType {
   CELEBRATION
   ANNOUNCEMENT
   POLL
+  SHOUTOUT
 }
 
 // ─── Models ───────────────────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ model User {
   gamesCreated      Game[]
   gamePlays         GamePlay[]
   posts             SocialPost[]
+  shoutoutsReceived SocialPost[] @relation("ShoutoutsReceived")
   reactions         SocialReaction[]
   comments          SocialComment[]
   pollVotes         PollVote[]
@@ -280,10 +282,12 @@ model SocialPost {
   imageUrl    String?
   imageUrls   String[]
   isPinned    Boolean  @default(false)
+  recipientId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   author      User             @relation(fields: [authorId], references: [id])
+  recipient   User?            @relation("ShoutoutsReceived", fields: [recipientId], references: [id])
   reactions   SocialReaction[]
   comments    SocialComment[]
   pollOptions PollOption[]

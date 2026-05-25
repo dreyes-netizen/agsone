@@ -32,9 +32,11 @@ export async function POST(
     },
   });
 
-  // Auto-advance status from OPEN to IN_REVIEW
+  // Auto-advance status from OPEN to IN_REVIEW, always bump updatedAt
   if (feedback.status === "OPEN") {
-    await prisma.feedback.update({ where: { id }, data: { status: "IN_REVIEW" } });
+    await prisma.feedback.update({ where: { id }, data: { status: "IN_REVIEW", updatedAt: new Date() } });
+  } else {
+    await prisma.feedback.update({ where: { id }, data: { updatedAt: new Date() } });
   }
 
   // Notify the employee

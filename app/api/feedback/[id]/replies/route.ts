@@ -33,6 +33,8 @@ export async function POST(
     },
   });
 
+  await prisma.feedback.update({ where: { id }, data: { updatedAt: new Date() } });
+
   // Notify the HR admin who last replied, if any
   const lastHrReply = await prisma.feedbackReply.findFirst({
     where: { feedbackId: id, id: { not: reply.id }, author: { role: "HR_ADMIN" } },

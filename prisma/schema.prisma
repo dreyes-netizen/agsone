@@ -74,6 +74,22 @@ enum PostType {
   SHOUTOUT
 }
 
+enum FeedbackCategory {
+  COMPENSATION_BENEFITS
+  WORK_LIFE_BALANCE
+  COMPANY_CULTURE
+  TEAM_DYNAMICS
+  PROCESSES_TOOLS
+  RECOGNITION
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Department {
@@ -130,6 +146,8 @@ model User {
   auditLogs         AuditLog[]
   foodListings FoodListing[] @relation("FoodListingsCreated")
   foodOrders   FoodOrder[]   @relation("FoodOrdersPlaced")
+  feedbacks       Feedback[]
+  feedbackReplies FeedbackReply[]
 }
 
 model PointTransaction {
@@ -401,4 +419,30 @@ model FoodOrder {
   user    User        @relation("FoodOrdersPlaced", fields: [userId], references: [id])
 
   @@unique([listingId, userId])
+}
+
+model Feedback {
+  id          String           @id @default(uuid())
+  authorId    String?
+  isAnonymous Boolean          @default(false)
+  category    FeedbackCategory
+  title       String
+  body        String
+  status      FeedbackStatus   @default(OPEN)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  author  User?           @relation(fields: [authorId], references: [id])
+  replies FeedbackReply[]
+}
+
+model FeedbackReply {
+  id         String   @id @default(uuid())
+  feedbackId String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id])
 }

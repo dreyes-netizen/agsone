@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
       streakDays: true,
       onboardingComplete: true,
       birthday: true,
+      hireDate: true,
       department: { select: { id: true, name: true } },
       userBadges: {
         orderBy: { awardedAt: "desc" },

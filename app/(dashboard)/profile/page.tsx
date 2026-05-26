@@ -21,6 +21,7 @@ type UserProfile = {
   level: number;
   streakDays: number;
   birthday: string | null;
+  hireDate: string | null;
   department: { id: string; name: string } | null;
   userBadges: UserBadge[];
 };
@@ -63,6 +64,7 @@ const txTypeLabel: Record<string, { label: string; color: string }> = {
   GAME_WIN:     { label: "Game Win",   color: "text-emerald-500" },
   GAME_SPEND:   { label: "Game",       color: "text-orange-500" },
   REFUND:       { label: "Refund",     color: "text-teal-600" },
+  MILESTONE:    { label: "Milestone",  color: "text-amber-600" },
 };
 
 const POINTS_PER_LEVEL = 1000;
@@ -319,6 +321,21 @@ export default function ProfilePage() {
             </div>
             {birthdayError && <p className="mt-2 text-xs text-red-500">{birthdayError}</p>}
           </div>
+          {profile.hireDate && (
+            <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Trophy className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-400 font-medium">Hire Date</p>
+                  <p className="text-sm font-semibold text-zinc-800">
+                    {new Date(profile.hireDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 

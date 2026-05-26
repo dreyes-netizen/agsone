@@ -25,6 +25,7 @@ enum PointTransactionType {
   GAME_WIN
   GAME_SPEND
   REFUND
+  MILESTONE
 }
 
 enum RewardCategory {
@@ -90,6 +91,14 @@ enum FeedbackStatus {
   RESOLVED
 }
 
+enum MilestoneType {
+  BIRTHDAY
+  WORK_ANNIVERSARY_1
+  WORK_ANNIVERSARY_3
+  WORK_ANNIVERSARY_5
+  WORK_ANNIVERSARY_10
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Department {
@@ -115,6 +124,7 @@ model User {
   streakDays         Int       @default(0)
   lastActiveAt       DateTime?
   birthday           DateTime?
+  hireDate           DateTime?
   onboardingComplete Boolean   @default(false)
   isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
@@ -148,6 +158,8 @@ model User {
   foodOrders   FoodOrder[]   @relation("FoodOrdersPlaced")
   feedbacks       Feedback[]
   feedbackReplies FeedbackReply[]
+  milestoneAwards  MilestoneAward[]
+  milestoneConfigs MilestoneConfig[]
 }
 
 model PointTransaction {
@@ -445,4 +457,29 @@ model FeedbackReply {
 
   feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
   author   User     @relation(fields: [authorId], references: [id])
+}
+
+model MilestoneConfig {
+  id           String        @id @default(uuid())
+  type         MilestoneType
+  pointsReward Int
+  isActive     Boolean       @default(true)
+  updatedAt    DateTime      @updatedAt
+  updatedById  String
+
+  updatedBy User @relation(fields: [updatedById], references: [id])
+
+  @@unique([type])
+}
+
+model MilestoneAward {
+  id        String        @id @default(uuid())
+  userId    String
+  type      MilestoneType
+  year      Int
+  awardedAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type, year])
 }

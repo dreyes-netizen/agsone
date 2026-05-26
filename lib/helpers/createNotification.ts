@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { sendMail } from "@/lib/email/mailer";
+import { notificationEmail } from "@/lib/email/templates";
 
 type CreateNotificationParams = {
   userId: string;
@@ -21,10 +23,19 @@ export async function createNotification(params: CreateNotificationParams) {
     try {
       const user = await prisma.user.findUnique({
         where: { id: params.userId },
-        select: { notificationPrefs: true },
+        select: { notificationPrefs: true, email: true, displayName: true },
       });
       const prefs = (user?.notificationPrefs ?? {}) as Record<string, boolean>;
+
+      // In-app opt-out check (default true — only skip if explicitly false)
       if (prefs[params.type] === false) return null;
+
+      // Email opt-in check (default false — only send if explicitly true)
+      const emailKey = `${params.type}_EMAIL`;
+      if (prefs[emailKey] === true && user?.email && user?.displayName) {
+        const { subject, html } = notificationEmail(user.displayName, params.title, params.body);
+        sendMail({ to: user.email, subject, html }).catch(() => {});
+      }
     } catch {
       // fail open — if pref check errors, still send notification
     }

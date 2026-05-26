@@ -7,6 +7,10 @@ const TOGGLEABLE_TYPES = [
   "MISSION_COMPLETED",
   "POINTS_AWARDED",
   "MILESTONE_REWARD",
+  "SHOUTOUT_RECEIVED_EMAIL",
+  "MISSION_COMPLETED_EMAIL",
+  "POINTS_AWARDED_EMAIL",
+  "MILESTONE_REWARD_EMAIL",
 ] as const;
 
 type PrefKey = (typeof TOGGLEABLE_TYPES)[number];
@@ -16,6 +20,10 @@ const DEFAULTS: Record<PrefKey, boolean> = {
   MISSION_COMPLETED: true,
   POINTS_AWARDED: true,
   MILESTONE_REWARD: true,
+  SHOUTOUT_RECEIVED_EMAIL: false,
+  MISSION_COMPLETED_EMAIL: false,
+  POINTS_AWARDED_EMAIL: false,
+  MILESTONE_REWARD_EMAIL: false,
 };
 
 export async function GET(req: NextRequest) {

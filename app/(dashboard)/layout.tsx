@@ -11,6 +11,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const mainNav = [
   { href: "/dashboard",   label: "Home",        icon: Home },
@@ -55,6 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router   = useRouter();
   const { user, dbUser } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
@@ -63,6 +65,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push("/onboarding");
     }
   }, [dbUser, pathname, router]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   async function handleSignOut() {
     await signOut(auth);
@@ -157,6 +170,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-zinc-50">
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-[216px] bg-[#111827] flex-col fixed h-full z-10 border-r border-white/[0.05]">
         {sidebarContent}

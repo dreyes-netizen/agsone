@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -20,6 +20,7 @@ const mainNav = [
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/games",       label: "Games",       icon: Gamepad2 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/shoutouts",   label: "Shoutouts",   icon: Sparkles },
   { href: "/profile",     label: "Profile",     icon: User },
   { href: "/feedback",    label: "Feedback",    icon: MessageSquare },
 ];
@@ -127,9 +128,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="p-3">
         <div className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 transition-colors group cursor-default">
           <div className="relative shrink-0">
-            <div className="w-7 h-7 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white">
-              {initials}
-            </div>
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt={user.displayName ?? ""} className="w-7 h-7 rounded-full object-cover" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white">
+                {initials}
+              </div>
+            )}
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-[1.5px] border-[#111827]" />
           </div>
           <div className="flex-1 min-w-0">

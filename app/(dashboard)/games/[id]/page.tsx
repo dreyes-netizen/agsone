@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Ticket, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useConfetti } from "@/lib/hooks/useConfetti";
 
 type Segment = { label: string; pointsReward: number; weight: number; color: string };
 type QuizQuestion = { id: string; question: string; options: string[]; correctIndex: number; pointsReward: number };
@@ -89,7 +90,7 @@ function RaffleView({ game, onBuy, buying, result }: {
 }) {
   return (
     <div className="flex flex-col items-center gap-6 py-8">
-      <span className="text-7xl">🎟️</span>
+      <Ticket className="w-20 h-20 text-amber-400" />
       <div className="text-center">
         <h2 className="text-2xl font-bold text-white">{game.name}</h2>
         {game.description && <p className="text-white/60 mt-1">{game.description}</p>}
@@ -296,6 +297,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string 
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [quizSubmitting, setQuizSubmitting] = useState(false);
   const [quizKey, setQuizKey] = useState(0);
+  const { fire: fireConfetti } = useConfetti();
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -329,6 +331,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string 
         setShowResult(true);
         setSpinning(false);
         setGame((g) => g ? { ...g, playsToday: g.playsToday + 1, canPlay: g.playsToday + 1 < g.dailyPlaysLimit } : g);
+        if (pointsWon > 0) fireConfetti();
       }, 4200);
     } catch {
       setSpinning(false);
@@ -358,6 +361,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string 
         correctAnswers: res.data.play.outcome.correctAnswers,
       });
       setGame((g) => g ? { ...g, playsToday: g.playsToday + 1, canPlay: g.playsToday + 1 < g.dailyPlaysLimit } : g);
+      if (res.data.pointsWon > 0) fireConfetti();
     } finally {
       setQuizSubmitting(false);
     }
@@ -408,7 +412,7 @@ export default function GamePlayPage({ params }: { params: Promise<{ id: string 
             <div className="text-center space-y-3">
               {showResult && result && (
                 <div className={`inline-block px-6 py-3 rounded-xl font-bold text-lg ${result.pointsWon > 0 ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-white/5 text-white/50 border border-white/10"}`}>
-                  {result.pointsWon > 0 ? `🎉 You won ${result.pointsWon.toLocaleString()} points!` : "😅 Better luck next time!"}
+                  {result.pointsWon > 0 ? `You won ${result.pointsWon.toLocaleString()} points!` : "Better luck next time!"}
                   <p className="text-sm font-normal mt-1 opacity-75">Balance: {result.newBalance.toLocaleString()} pts</p>
                 </div>
               )}

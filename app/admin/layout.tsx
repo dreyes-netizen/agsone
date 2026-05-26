@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2, Target, MessageSquare, Gift } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2, Target, MessageSquare, Gift, Swords } from "lucide-react";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -12,8 +12,9 @@ const navItems = [
   { href: "/admin/employees", label: "Employees", icon: Users },
   { href: "/admin/departments", label: "Departments", icon: Building2 },
   { href: "/admin/missions",    label: "Missions",    icon: Target },
-  { href: "/admin/milestones",  label: "Milestones",  icon: Gift },
-  { href: "/admin/points",      label: "Award Points", icon: Award },
+  { href: "/admin/milestones",   label: "Milestones",   icon: Gift },
+  { href: "/admin/challenges",   label: "Challenges",   icon: Swords },
+  { href: "/admin/points",       label: "Award Points", icon: Award },
   { href: "/admin/rewards", label: "Rewards", icon: ShoppingBag },
   { href: "/admin/redemptions", label: "Redemptions", icon: ClipboardList },
   { href: "/admin/games", label: "Games", icon: Gamepad2 },

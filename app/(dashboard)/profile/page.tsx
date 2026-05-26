@@ -524,7 +524,9 @@ export default function ProfilePage() {
         <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center gap-2">
             <Bell className="w-4 h-4 text-zinc-400" />
-            <h2 className="text-sm font-bold text-zinc-800">Notification Preferences</h2>
+            <h2 className="text-sm font-bold text-zinc-800 flex-1">Notification Preferences</h2>
+            <span className="text-xs text-zinc-400 w-9 text-center">In-App</span>
+            <span className="text-xs text-zinc-400 w-7 text-center">Email</span>
           </div>
 
           {notifLoading ? (
@@ -540,17 +542,18 @@ export default function ProfilePage() {
                 { type: "MILESTONE_REWARD",  label: "Milestone reward", description: "On your birthday or work anniversary" },
               ].map(({ type, label, description }) => {
                 const enabled = notifPrefs[type] !== false;
-                const saving = notifSaving === type;
                 return (
-                  <li key={type} className="flex items-center justify-between gap-4 px-5 py-4">
-                    <div>
+                  <li key={type} className="flex items-center gap-4 px-5 py-4">
+                    <div className="flex-1">
                       <p className="text-sm font-medium text-zinc-800">{label}</p>
                       <p className="text-xs text-zinc-400 mt-0.5">{description}</p>
                     </div>
+                    {/* In-app toggle */}
                     <button
                       role="switch"
+                      aria-label={`${label} in-app notifications`}
                       aria-checked={enabled}
-                      disabled={saving}
+                      disabled={notifSaving === type}
                       onClick={() => handleNotifToggle(type, !enabled)}
                       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
                         enabled ? "bg-navy-500" : "bg-zinc-200"
@@ -562,6 +565,30 @@ export default function ProfilePage() {
                         }`}
                       />
                     </button>
+                    {/* Email toggle */}
+                    {(() => {
+                      const emailKey = `${type}_EMAIL`;
+                      const emailEnabled = notifPrefs[emailKey] === true;
+                      const emailSaving = notifSaving === emailKey;
+                      return (
+                        <button
+                          role="switch"
+                          aria-label={`${label} email notifications`}
+                          aria-checked={emailEnabled}
+                          disabled={emailSaving}
+                          onClick={() => handleNotifToggle(emailKey, !emailEnabled)}
+                          className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                            emailEnabled ? "bg-navy-500" : "bg-zinc-200"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                              emailEnabled ? "translate-x-3" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })()}
                   </li>
                 );
               })}

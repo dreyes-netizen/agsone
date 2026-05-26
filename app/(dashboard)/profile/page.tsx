@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award } from "lucide-react";
+import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award, Bell } from "lucide-react";
 
 type UserBadge = {
   id: string;
@@ -152,7 +152,11 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pointsData, setPointsData] = useState<PointsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "points" | "badges">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "points" | "badges" | "notifications">("overview");
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean> | null>(null);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSaving, setNotifSaving] = useState<string | null>(null);
+  const [notifError, setNotifError] = useState("");
   const [visibleCount, setVisibleCount] = useState(10);
   const [birthdayEdit, setBirthdayEdit] = useState("");
   const [birthdaySaving, setBirthdaySaving] = useState(false);
@@ -189,6 +193,35 @@ export default function ProfilePage() {
       setBirthdayError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setBirthdaySaving(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab !== "notifications" || notifPrefs !== null) return;
+    setNotifLoading(true);
+    apiFetch<{ data: Record<string, boolean> }>("/api/me/notification-preferences")
+      .then((res) => setNotifPrefs(res.data))
+      .catch(() => setNotifError("Failed to load preferences"))
+      .finally(() => setNotifLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  async function handleNotifToggle(type: string, value: boolean) {
+    if (!notifPrefs) return;
+    const previous = notifPrefs;
+    setNotifPrefs({ ...notifPrefs, [type]: value });
+    setNotifSaving(type);
+    try {
+      const res = await apiFetch<{ data: Record<string, boolean> }>(
+        "/api/me/notification-preferences",
+        { method: "PUT", body: JSON.stringify({ [type]: value }) }
+      );
+      setNotifPrefs(res.data);
+    } catch {
+      setNotifPrefs(previous);
+      setNotifError("Failed to save preference");
+    } finally {
+      setNotifSaving(null);
     }
   }
 
@@ -250,7 +283,7 @@ export default function ProfilePage() {
 
       {/* ── Tab bar ── */}
       <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
-        {(["overview", "points", "badges"] as const).map((tab) => (
+        {(["overview", "points", "badges", "notifications"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => { setActiveTab(tab); setVisibleCount(10); }}
@@ -260,7 +293,7 @@ export default function ProfilePage() {
                 : "text-zinc-500 hover:text-zinc-700"
             }`}
           >
-            {tab === "points" ? "Points" : tab === "badges" ? "Badges" : "Overview"}
+            {tab === "points" ? "Points" : tab === "badges" ? "Badges" : tab === "notifications" ? "Notifs" : "Overview"}
           </button>
         ))}
       </div>
@@ -483,6 +516,57 @@ export default function ProfilePage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Notifications tab ── */}
+      {activeTab === "notifications" && (
+        <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center gap-2">
+            <Bell className="w-4 h-4 text-zinc-400" />
+            <h2 className="text-sm font-bold text-zinc-800">Notification Preferences</h2>
+          </div>
+
+          {notifLoading ? (
+            <div className="p-8 text-center text-zinc-400 text-sm">Loading…</div>
+          ) : notifError ? (
+            <div className="p-8 text-center text-red-400 text-sm">{notifError}</div>
+          ) : notifPrefs ? (
+            <ul className="divide-y divide-zinc-100">
+              {[
+                { type: "SHOUTOUT_RECEIVED", label: "Shoutout received", description: "When a colleague shouts you out" },
+                { type: "MISSION_COMPLETED", label: "Mission approved", description: "When your mission completion is approved" },
+                { type: "POINTS_AWARDED",    label: "Points awarded",   description: "When an admin manually awards you points" },
+                { type: "MILESTONE_REWARD",  label: "Milestone reward", description: "On your birthday or work anniversary" },
+              ].map(({ type, label, description }) => {
+                const enabled = notifPrefs[type] !== false;
+                const saving = notifSaving === type;
+                return (
+                  <li key={type} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-800">{label}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">{description}</p>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={enabled}
+                      disabled={saving}
+                      onClick={() => handleNotifToggle(type, !enabled)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                        enabled ? "bg-navy-500" : "bg-zinc-200"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                          enabled ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
         </div>
       )}
     </div>

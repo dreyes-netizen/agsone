@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Flame, Medal, Coins, CalendarDays } from "lucide-react";
+import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award } from "lucide-react";
 
 type UserBadge = {
   id: string;
@@ -78,6 +78,60 @@ const roleBadgeStyle: Record<string, string> = {
   MANAGER:  "bg-blue-50 text-blue-700",
   HR_ADMIN: "bg-violet-50 text-violet-700",
 };
+
+function CompletenessBar({ profile }: { profile: UserProfile }) {
+  const items = [
+    { label: "Display name", done: !!profile.displayName },
+    { label: "Profile photo", done: !!profile.avatarUrl },
+    { label: "Birthday", done: !!profile.birthday, hint: "Set it on this page" },
+    { label: "Department", done: !!profile.department, hint: "Contact HR to assign" },
+  ];
+  const doneCount = items.filter((i) => i.done).length;
+  const pct = Math.round((doneCount / items.length) * 100);
+  if (pct === 100) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-zinc-200 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-zinc-700">Profile completeness</p>
+        <span className="text-sm font-bold text-navy-600">{pct}%</span>
+      </div>
+      <div className="w-full bg-zinc-100 rounded-full h-1.5">
+        <div
+          className="bg-navy-500 h-1.5 rounded-full transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span
+            key={item.label}
+            className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${
+              item.done
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : "bg-zinc-50 border-zinc-200 text-zinc-500"
+            }`}
+            title={!item.done && item.hint ? item.hint : undefined}
+          >
+            {item.done ? (
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            {item.label}
+          </span>
+        ))}
+      </div>
+      <p className="text-xs text-zinc-400">
+        Complete your profile to unlock features like milestone rewards and birthday bonuses.
+      </p>
+    </div>
+  );
+}
 
 function PlayerAvatar({ name, url }: { name: string; url: string | null }) {
   if (url) {
@@ -212,6 +266,7 @@ export default function ProfilePage() {
       {/* ── Overview tab ── */}
       {activeTab === "overview" && (
         <>
+          <CompletenessBar profile={profile} />
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -256,7 +311,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleBirthdaySave}
                   disabled={birthdaySaving || !birthdayEdit}
-                  className="text-sm bg-navy-600 hover:bg-navy-700 text-white font-medium px-4 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm bg-[#111827] hover:bg-gray-800 text-white font-medium px-4 py-1.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {birthdaySaving ? "Saving…" : "Save"}
                 </button>
@@ -312,7 +367,7 @@ export default function ProfilePage() {
               if (entries.length === 0) {
                 return (
                   <div className="flex flex-col items-center py-10 gap-2 text-center px-4">
-                    <span className="text-3xl">🏆</span>
+                    <Trophy className="w-8 h-8 text-zinc-300" />
                     <p className="text-sm font-medium text-zinc-500">No points yet</p>
                     <p className="text-xs text-zinc-400">Complete missions or wait for your manager to recognize you!</p>
                   </div>
@@ -389,20 +444,19 @@ export default function ProfilePage() {
           </h2>
           {profile.userBadges.length === 0 ? (
             <div className="flex flex-col items-center py-8 gap-2 text-center">
-              <span className="text-4xl">🎖️</span>
+              <Award className="w-10 h-10 text-zinc-300" />
               <p className="text-sm text-zinc-500 font-medium">No badges yet</p>
               <p className="text-xs text-zinc-400">Keep earning points to unlock your first badge!</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {profile.userBadges.map((ub) => {
-                const icon = ub.badge.description?.split(" ")[0] ?? "🏅";
                 return (
                   <div
                     key={ub.id}
                     className="flex flex-col items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-center"
                   >
-                    <span className="text-2xl">{icon}</span>
+                    <Award className="w-6 h-6 text-amber-500" />
                     <p className="text-xs font-semibold text-zinc-800">{ub.badge.name}</p>
                     {ub.badge.description && (
                       <p className="text-xs text-zinc-400 line-clamp-2">{ub.badge.description}</p>

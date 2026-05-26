@@ -126,6 +126,7 @@ model User {
   birthday           DateTime?
   hireDate           DateTime?
   onboardingComplete Boolean   @default(false)
+  notificationPrefs  Json?
   isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt

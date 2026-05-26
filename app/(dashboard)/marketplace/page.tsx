@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { ShoppingBag, CheckCircle, AlertCircle, Coins } from "lucide-react";
+import React from "react";
+import { ShoppingBag, CheckCircle, AlertCircle, Coins, Package, Ticket, Star, Monitor } from "lucide-react";
+import { useConfetti } from "@/lib/hooks/useConfetti";
 
 type Reward = {
   id: string;
@@ -14,11 +16,11 @@ type Reward = {
   category: string;
 };
 
-const categoryConfig: Record<string, { emoji: string; label: string; accent: string; badge: string }> = {
-  PHYSICAL:  { emoji: "📦", label: "Physical",  accent: "from-orange-400 to-amber-400",  badge: "bg-orange-50 text-orange-700 border-orange-200" },
-  VOUCHER:   { emoji: "🎟️", label: "Voucher",   accent: "from-blue-500 to-cyan-400",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  PRIVILEGE: { emoji: "⭐", label: "Privilege", accent: "from-violet-500 to-purple-500", badge: "bg-violet-50 text-violet-700 border-violet-200" },
-  DIGITAL:   { emoji: "💻", label: "Digital",   accent: "from-emerald-500 to-teal-400",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+const categoryConfig: Record<string, { icon: React.ElementType; iconClass: string; label: string; accent: string; badge: string }> = {
+  PHYSICAL:  { icon: Package,  iconClass: "text-orange-600", label: "Physical",  accent: "from-orange-400 to-amber-400",  badge: "bg-orange-50 text-orange-700 border-orange-200" },
+  VOUCHER:   { icon: Ticket,   iconClass: "text-blue-600",   label: "Voucher",   accent: "from-blue-500 to-cyan-400",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  PRIVILEGE: { icon: Star,     iconClass: "text-violet-600", label: "Privilege", accent: "from-violet-500 to-purple-500", badge: "bg-violet-50 text-violet-700 border-violet-200" },
+  DIGITAL:   { icon: Monitor,  iconClass: "text-emerald-600",label: "Digital",   accent: "from-emerald-500 to-teal-400",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
 export default function MarketplacePage() {
@@ -29,6 +31,7 @@ export default function MarketplacePage() {
   const [filter, setFilter] = useState("ALL");
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const { fire: fireConfetti } = useConfetti();
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -45,6 +48,7 @@ export default function MarketplacePage() {
       await apiFetch("/api/redemptions", { method: "POST", body: JSON.stringify({ rewardId: reward.id }) });
       setBalance((b) => b - reward.pointCost);
       setToast({ type: "success", msg: `"${reward.name}" redeemed! Pending HR approval.` });
+      fireConfetti();
     } catch (err) {
       setToast({ type: "error", msg: err instanceof Error ? err.message : "Failed to redeem" });
     } finally {
@@ -65,7 +69,7 @@ export default function MarketplacePage() {
           <h1 className="text-2xl font-bold text-zinc-900">Marketplace</h1>
           <p className="text-zinc-500 text-sm mt-1">Spend your points on something nice</p>
         </div>
-        <div className="flex items-center gap-2 bg-navy-600 text-white px-3.5 py-2 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 bg-[#111827] text-white px-3.5 py-2 rounded-lg shadow-sm">
           <Coins className="w-4 h-4 text-navy-200" />
           <span className="font-bold text-sm tabular-nums">{balance.toLocaleString()}</span>
           <span className="text-navy-300 text-xs">pts</span>
@@ -97,11 +101,11 @@ export default function MarketplacePage() {
               onClick={() => setFilter(cat)}
               className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${
                 active
-                  ? "bg-navy-600 text-white border-navy-600"
+                  ? "bg-[#111827] text-white border-[#111827]"
                   : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
               }`}
             >
-              {cat === "ALL" ? "All Rewards" : `${config.emoji} ${config.label}`}
+              {cat === "ALL" ? "All Rewards" : <span className="flex items-center gap-1.5"><config.icon className={`w-3.5 h-3.5 ${config.iconClass}`} />{config.label}</span>}
             </button>
           );
         })}
@@ -132,7 +136,7 @@ export default function MarketplacePage() {
 
                 <div className="p-5 flex flex-col flex-1 gap-3">
                   <div className="flex items-start justify-between">
-                    <span className="text-3xl">{cfg.emoji}</span>
+                    <cfg.icon className={`w-7 h-7 ${cfg.iconClass}`} />
                     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>
                       {cfg.label}
                     </span>
@@ -161,7 +165,7 @@ export default function MarketplacePage() {
                       className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                         outOfStock || !canAfford
                           ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                          : "bg-navy-600 text-white hover:bg-navy-700"
+                          : "bg-[#111827] text-white hover:bg-gray-800"
                       }`}
                     >
                       {busy ? "…" : outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}

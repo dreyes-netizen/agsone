@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       role: true,
       pointsBalance: true,
       isActive: true,
+      hireDate: true,
       createdAt: true,
       department: { select: { id: true, name: true } },
     },

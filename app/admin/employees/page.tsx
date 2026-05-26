@@ -11,6 +11,7 @@ type Employee = {
   role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
   pointsBalance: number;
   isActive: boolean;
+  hireDate: string | null;
   department: { id: string; name: string } | null;
 };
 
@@ -40,6 +41,8 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [updatingDeptId, setUpdatingDeptId] = useState<string | null>(null);
+  const [updatingHireDateId, setUpdatingHireDateId] = useState<string | null>(null);
+  const [hireDateEdits, setHireDateEdits] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -100,6 +103,30 @@ export default function EmployeesPage() {
     }
   }
 
+  async function handleHireDateSave(employeeId: string) {
+    const value = hireDateEdits[employeeId];
+    if (value === undefined) return;
+    setUpdatingHireDateId(employeeId);
+    try {
+      await apiFetch(`/api/admin/employees/${employeeId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ hireDate: value || null }),
+      });
+      setEmployees((prev) =>
+        prev.map((e) => (e.id === employeeId ? { ...e, hireDate: value || null } : e))
+      );
+      setHireDateEdits((prev) => {
+        const next = { ...prev };
+        delete next[employeeId];
+        return next;
+      });
+    } catch {
+      alert("Failed to update hire date");
+    } finally {
+      setUpdatingHireDateId(null);
+    }
+  }
+
   async function handleBootstrap() {
     try {
       const res = await apiFetch<{ message: string }>("/api/admin/bootstrap", {
@@ -150,7 +177,7 @@ export default function EmployeesPage() {
             <p className="text-gray-400">No employees found. You may need to set up the first admin.</p>
             <button
               onClick={handleBootstrap}
-              className="bg-navy-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-navy-700"
+              className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800"
             >
               Make me HR Admin
             </button>
@@ -165,6 +192,7 @@ export default function EmployeesPage() {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Role</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Hire Date</th>
               </tr>
             </thead>
             <tbody>
@@ -208,6 +236,25 @@ export default function EmployeesPage() {
                       <option value="MANAGER">Manager</option>
                       <option value="HR_ADMIN">HR Admin</option>
                     </select>
+                  </td>
+                  <td className="px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={hireDateEdits[employee.id] ?? (employee.hireDate ? employee.hireDate.slice(0, 10) : "")}
+                        onChange={(e) => setHireDateEdits((prev) => ({ ...prev, [employee.id]: e.target.value }))}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
+                      />
+                      {hireDateEdits[employee.id] !== undefined && (
+                        <button
+                          onClick={() => handleHireDateSave(employee.id)}
+                          disabled={updatingHireDateId === employee.id}
+                          className="text-xs bg-[#111827] text-white px-2.5 py-1.5 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                        >
+                          {updatingHireDateId === employee.id ? "…" : "Save"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

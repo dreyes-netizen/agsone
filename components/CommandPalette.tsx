@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 
 type SearchResult = {
@@ -45,6 +46,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const { apiFetch } = useApiClient();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -160,9 +162,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             </p>
           ) : (
             results.map((r, i) => (
-              <div
+              <button
                 key={r.id}
-                className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 transition-colors ${
+                onClick={() => { onClose(); router.push(`/employees/${r.id}`); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 transition-colors text-left ${
                   focusIndex === i ? "bg-gray-50" : "hover:bg-gray-50/60"
                 }`}
               >
@@ -185,7 +188,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                     {roleLabel[r.role]}
                   </span>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>

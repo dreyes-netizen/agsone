@@ -1,9 +1,9 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, ZoomIn, MessageCircle, SmilePlus, Trash2, ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
+import { Send, ImagePlus, X, ZoomIn, MessageCircle, SmilePlus, Trash2, ChevronLeft, ChevronRight, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 
@@ -169,12 +169,12 @@ function ReactionBar({
   );
 }
 
-const postTypeMeta: Record<string, { bg: string; chip: string; label: string }> = {
-  CELEBRATION:  { bg: "bg-amber-50 border-amber-200",   chip: "bg-amber-100 text-amber-700",   label: "🎉 Celebration" },
-  ANNOUNCEMENT: { bg: "bg-navy-50 border-navy-200", chip: "bg-navy-100 text-navy-700", label: "📢 Announcement" },
-  ACHIEVEMENT:  { bg: "bg-violet-50 border-violet-200", chip: "bg-violet-100 text-violet-700", label: "🏆 Achievement" },
+const postTypeMeta: Record<string, { bg: string; chip: string; label: string; icon?: React.ElementType }> = {
+  CELEBRATION:  { bg: "bg-amber-50 border-amber-200",   chip: "bg-amber-100 text-amber-700",   label: "Celebration", icon: PartyPopper },
+  ANNOUNCEMENT: { bg: "bg-navy-50 border-navy-200",     chip: "bg-navy-100 text-navy-700",     label: "Announcement", icon: Megaphone },
+  ACHIEVEMENT:  { bg: "bg-violet-50 border-violet-200", chip: "bg-violet-100 text-violet-700", label: "Achievement", icon: Trophy },
   UPDATE:       { bg: "bg-white border-zinc-200",        chip: "",                              label: "" },
-  POLL:         { bg: "bg-white border-zinc-200",        chip: "bg-navy-100 text-navy-700", label: "📊 Poll" },
+  POLL:         { bg: "bg-white border-zinc-200",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
 };
 
 function PollBlock({
@@ -216,7 +216,7 @@ function PollBlock({
               }}
             />
             <span className="relative flex items-center justify-between">
-              <span>{opt.text}{voted && <span className="ml-1.5 text-navy-600 text-xs">✓ Voted</span>}</span>
+              <span>{opt.text}{voted && <span className="ml-1.5 text-navy-600 text-xs flex items-center gap-0.5 inline-flex"><Check className="w-3 h-3" /> Voted</span>}</span>
               <span className="text-xs text-gray-400 font-normal ml-3 shrink-0">{pct}% · {opt._count.votes}</span>
             </span>
           </button>
@@ -778,13 +778,13 @@ export default function FeedPage() {
                 setPollMode((v) => !v);
                 if (pollMode) setPollOptions(["", ""]);
               }}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
                 pollMode
-                  ? "bg-navy-600 border-navy-600 text-white"
+                  ? "bg-[#111827] border-[#111827] text-white"
                   : "bg-white border-gray-200 text-gray-600 hover:border-navy-300 hover:text-navy-600"
               }`}
             >
-              📊 Add Poll
+              <BarChart2 className="w-3.5 h-3.5" /> Add Poll
             </button>
           </div>
 
@@ -808,7 +808,7 @@ export default function FeedPage() {
                       className="text-gray-400 hover:text-red-500 text-sm transition-colors"
                       aria-label="Remove option"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -830,7 +830,7 @@ export default function FeedPage() {
               <button
                 type="submit"
                 disabled={posting || (pollMode && pollOptions.filter((o) => o.trim()).length < 2)}
-                className="flex items-center gap-2 bg-navy-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 bg-[#111827] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
                 {uploading ? "Uploading…" : posting ? "Posting…" : "Post"}
@@ -868,7 +868,7 @@ export default function FeedPage() {
             onClick={() => setShowShoutoutForm((v) => !v)}
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
           >
-            ✨ Give Shoutout
+            <Sparkles className="w-3.5 h-3.5" /> Give Shoutout
           </button>
         </div>
 
@@ -937,7 +937,7 @@ export default function FeedPage() {
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-5xl mb-4">📣</div>
+          <div className="mb-4 flex items-center justify-center"><Megaphone className="w-10 h-10 text-gray-300" /></div>
           <p className="text-gray-600 font-medium">No posts yet</p>
           <p className="text-gray-400 text-sm mt-1">Award points to an employee to generate the first post!</p>
         </div>
@@ -953,7 +953,7 @@ export default function FeedPage() {
                       <Avatar name={post.author.displayName} url={post.author.avatarUrl} size="sm" />
                       <span className="text-sm font-semibold text-zinc-800">{post.author.displayName}</span>
                     </div>
-                    <span className="text-sm text-amber-600 font-medium">✨ gave a shoutout to</span>
+                    <span className="text-sm text-amber-600 font-medium flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> gave a shoutout to</span>
                     <div className="flex items-center gap-1.5">
                       <Avatar name={post.recipient.displayName} url={post.recipient.avatarUrl} size="sm" />
                       <span className="text-sm font-semibold text-zinc-800">{post.recipient.displayName}</span>
@@ -1044,7 +1044,7 @@ export default function FeedPage() {
                                     <button
                                       onClick={() => submitReply(post.id, c.id)}
                                       disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                                      className="flex items-center justify-center w-8 h-8 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50 shrink-0"
+                                      className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                                     >
                                       <Send className="w-3.5 h-3.5" />
                                     </button>
@@ -1087,7 +1087,7 @@ export default function FeedPage() {
                           <button
                             onClick={() => submitComment(post.id)}
                             disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
-                            className="flex items-center justify-center w-8 h-8 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50 shrink-0"
+                            className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -1106,7 +1106,8 @@ export default function FeedPage() {
               <div className="p-5">
                 {/* Post type chip */}
                 {meta.label && (
-                  <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full mb-3 ${meta.chip}`}>
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-3 ${meta.chip}`}>
+                    {meta.icon && <meta.icon className="w-3 h-3" />}
                     {meta.label}
                   </span>
                 )}
@@ -1228,7 +1229,7 @@ export default function FeedPage() {
                                   <button
                                     onClick={() => submitReply(post.id, c.id)}
                                     disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                                    className="flex items-center justify-center w-8 h-8 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50 shrink-0"
+                                    className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                                   >
                                     <Send className="w-3.5 h-3.5" />
                                   </button>
@@ -1275,7 +1276,7 @@ export default function FeedPage() {
                         <button
                           onClick={() => submitComment(post.id)}
                           disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
-                          className="flex items-center justify-center w-8 h-8 bg-navy-600 text-white rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50 shrink-0"
+                          className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>

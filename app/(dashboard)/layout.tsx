@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -39,13 +39,12 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
   return (
     <Link
       href={href}
-      className={`group relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
         active
-          ? "bg-white/10 text-white"
-          : "text-white/40 hover:text-white hover:bg-white/5"
+          ? "bg-white/25 text-white"
+          : "text-white hover:bg-white/[0.10]"
       }`}
     >
-      {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-full" />}
       <Icon className="w-4 h-4 shrink-0" />
       {label}
     </Link>
@@ -66,17 +65,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push("/onboarding");
     }
   }, [dbUser, pathname, router]);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setPaletteOpen(true);
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   async function handleSignOut() {
     await signOut(auth);
@@ -110,8 +98,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="mx-4 border-t border-white/[0.07]" />
 
+      {/* Search button */}
+      <div className="px-3 pt-3 pb-1">
+        <button
+          onClick={() => setPaletteOpen(true)}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md bg-white/5 hover:bg-white/10 transition-colors text-white/50 hover:text-white/80 text-[13px]"
+        >
+          <Search className="w-3.5 h-3.5 shrink-0" />
+          <span>Search employees…</span>
+        </button>
+      </div>
+
       {/* Nav */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-white uppercase tracking-widest">Navigate</p>
         {mainNav.map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
@@ -122,13 +121,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="px-3 pb-2 pt-4 text-[10px] font-semibold text-white uppercase tracking-widest">Management</p>
             <Link
               href="/admin"
-              className={`group relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
                 pathname.startsWith("/admin")
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white hover:bg-white/5"
+                  ? "bg-white/25 text-white"
+                  : "text-white hover:bg-white/[0.10]"
               }`}
             >
-              {pathname.startsWith("/admin") && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-full" />}
               <ShieldCheck className="w-4 h-4 shrink-0" />
               Admin Panel
             </Link>
@@ -212,7 +210,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="text-white font-semibold text-sm">AGS One</span>
         </div>
 
-        <NotificationBell />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Search"
+            className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white transition-colors rounded-md hover:bg-white/10"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+          <NotificationBell />
+        </div>
       </div>
 
       {/* Main content */}

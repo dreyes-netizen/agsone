@@ -111,7 +111,7 @@ export default function DepartmentsPage() {
         {!showCreateForm && (
           <button
             onClick={() => { setShowCreateForm(true); setCreateError(""); }}
-            className="bg-navy-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-700 transition-colors"
+            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
           >
             New Department
           </button>
@@ -148,7 +148,7 @@ export default function DepartmentsPage() {
             <button
               onClick={handleCreate}
               disabled={saving}
-              className="bg-navy-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-700 disabled:opacity-50 transition-colors"
+              className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -202,7 +202,7 @@ export default function DepartmentsPage() {
                           <button
                             onClick={() => handleEdit(dept.id)}
                             disabled={saving}
-                            className="bg-navy-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-700 disabled:opacity-50 transition-colors"
+                            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
                           >
                             {saving ? "Saving..." : "Save"}
                           </button>

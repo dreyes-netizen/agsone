@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Users, TrendingUp, ShoppingCart, Gamepad2, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { Users, TrendingUp, ShoppingCart, Gamepad2, ArrowUpRight, ArrowDownRight, Minus, Cake } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -12,6 +12,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
+type UpcomingBirthday = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  department: string | null;
+  birthday: string;
+  daysUntil: number;
+};
 
 type Analytics = {
   totalEmployees: number;
@@ -79,12 +88,16 @@ export default function AdminDashboardPage() {
   const { apiFetch } = useApiClient();
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
 
   useEffect(() => {
     apiFetch<{ data: Analytics }>("/api/admin/analytics")
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
+    apiFetch<{ data: UpcomingBirthday[] }>("/api/birthdays/upcoming")
+      .then((r) => setBirthdays(r.data))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -196,6 +209,38 @@ export default function AdminDashboardPage() {
             {data.topEarners.length === 0 && <p className="text-sm text-gray-400">No employees yet</p>}
           </div>
         </div>
+      </div>
+
+      {/* Upcoming Birthdays */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
+          <Cake className="w-4 h-4 text-pink-400" />
+          <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>
+          <span className="text-xs text-gray-400 ml-auto">Next 14 days</span>
+        </div>
+        {birthdays.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-400">No birthdays in the next 14 days</div>
+        ) : (
+          <ul className="divide-y divide-gray-50">
+            {birthdays.map((b) => {
+              const bDate = new Date(b.birthday);
+              const label = b.daysUntil === 0 ? "Today! 🎂" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`;
+              const labelColor = b.daysUntil === 0 ? "text-pink-600 bg-pink-50" : b.daysUntil <= 3 ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50";
+              return (
+                <li key={b.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/60 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                    {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{b.displayName}</p>
+                    <p className="text-xs text-gray-400">{b.department ?? "No department"} · {bDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                  </div>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${labelColor}`}>{label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {/* Recent Transactions */}

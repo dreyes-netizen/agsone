@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useRouter } from "next/navigation";
-import { Lock } from "lucide-react";
+import React from "react";
+import { Lock, RotateCw, Ticket, Package, Brain, Eye, Gamepad2 } from "lucide-react";
 
 type Game = {
   id: string;
@@ -19,42 +20,48 @@ type Game = {
 };
 
 const gameConfig: Record<string, {
-  emoji: string;
+  icon: React.ElementType;
+  iconClass: string;
   label: string;
   gradient: string;
   badge: string;
   iconBg: string;
 }> = {
   SPIN_WHEEL: {
-    emoji: "🎡",
+    icon: RotateCw,
+    iconClass: "text-violet-600",
     label: "Spin the Wheel",
     gradient: "from-violet-500 to-navy-500",
     badge: "bg-violet-50 text-violet-700 border border-violet-200",
     iconBg: "bg-violet-50",
   },
   RAFFLE: {
-    emoji: "🎟️",
+    icon: Ticket,
+    iconClass: "text-amber-600",
     label: "Lucky Draw",
     gradient: "from-amber-400 to-orange-500",
     badge: "bg-amber-50 text-amber-700 border border-amber-200",
     iconBg: "bg-amber-50",
   },
   MYSTERY_BOX: {
-    emoji: "📦",
+    icon: Package,
+    iconClass: "text-pink-600",
     label: "Mystery Box",
     gradient: "from-pink-500 to-rose-500",
     badge: "bg-pink-50 text-pink-700 border border-pink-200",
     iconBg: "bg-pink-50",
   },
   QUIZ: {
-    emoji: "🧠",
+    icon: Brain,
+    iconClass: "text-cyan-600",
     label: "Quiz",
     gradient: "from-cyan-500 to-blue-500",
     badge: "bg-cyan-50 text-cyan-700 border border-cyan-200",
     iconBg: "bg-cyan-50",
   },
   PREDICTION: {
-    emoji: "🔮",
+    icon: Eye,
+    iconClass: "text-emerald-600",
     label: "Prediction",
     gradient: "from-emerald-500 to-teal-500",
     badge: "bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -63,7 +70,8 @@ const gameConfig: Record<string, {
 };
 
 const fallbackConfig = {
-  emoji: "🎮",
+  icon: Gamepad2,
+  iconClass: "text-navy-600",
   label: "Game",
   gradient: "from-navy-500 to-violet-500",
   badge: "bg-navy-50 text-navy-700 border border-navy-200",
@@ -110,7 +118,7 @@ export default function GamesPage() {
         </div>
       ) : games.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 rounded-xl border border-zinc-200 bg-white text-center">
-          <span className="text-5xl mb-4">🎮</span>
+          <Gamepad2 className="w-12 h-12 text-zinc-300 mb-4" />
           <p className="text-zinc-900 font-semibold text-lg">No games available</p>
           <p className="text-zinc-400 text-sm mt-1">Check back soon — HR will drop new games!</p>
         </div>
@@ -133,8 +141,8 @@ export default function GamesPage() {
                 <div className="p-5 flex flex-col flex-1">
                   {/* Icon + type badge */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-xl ${cfg.iconBg} flex items-center justify-center text-2xl`}>
-                      {cfg.emoji}
+                    <div className={`w-12 h-12 rounded-xl ${cfg.iconBg} flex items-center justify-center`}>
+                      <cfg.icon className={`w-6 h-6 ${cfg.iconClass}`} />
                     </div>
                     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${cfg.badge}`}>
                       {cfg.label}
@@ -171,7 +179,7 @@ export default function GamesPage() {
                     {game.canPlay ? (
                       <button
                         onClick={() => router.push(`/games/${game.id}`)}
-                        className="w-full bg-navy-600 hover:bg-navy-700 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors"
+                        className="w-full bg-[#111827] hover:bg-gray-800 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors"
                       >
                         Play Now
                       </button>

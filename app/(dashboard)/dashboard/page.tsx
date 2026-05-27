@@ -25,6 +25,13 @@ type UserProfile = {
   displayName: string;
 };
 
+type BirthdayPerson = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  department: string | null;
+};
+
 const typeConfig: Record<string, { label: string; color: string; bg: string }> = {
   MANUAL_AWARD: { label: "Points Awarded",  color: "text-emerald-600", bg: "bg-emerald-50" },
   ATTENDANCE:   { label: "Streak Bonus",    color: "text-sky-600",     bg: "bg-sky-50" },
@@ -35,6 +42,7 @@ const typeConfig: Record<string, { label: string; color: string; bg: string }> =
   CONTEST:      { label: "Contest",         color: "text-navy-600",  bg: "bg-navy-50" },
   KPI:          { label: "KPI Bonus",       color: "text-emerald-600", bg: "bg-emerald-50" },
   TASK:         { label: "Task Completion", color: "text-emerald-600", bg: "bg-emerald-50" },
+  MILESTONE:    { label: "Milestone Reward", color: "text-violet-600",  bg: "bg-violet-50" },
 };
 
 const quickLinks = [
@@ -84,11 +92,15 @@ export default function DashboardPage() {
   const { apiFetch } = useApiClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [todayBirthdays, setTodayBirthdays] = useState<BirthdayPerson[]>([]);
 
   useEffect(() => {
     if (authLoading || !user) return;
     apiFetch<{ data: UserProfile }>("/api/me").then((r) => setProfile(r.data)).catch(() => {});
     apiFetch<{ data: Transaction[] }>("/api/points/history").then((r) => setTransactions(r.data.slice(0, 6))).catch(() => {});
+    apiFetch<{ data: (BirthdayPerson & { daysUntil: number })[] }>("/api/birthdays/upcoming")
+      .then((r) => setTodayBirthdays(r.data.filter((b) => b.daysUntil === 0)))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -104,7 +116,7 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </p>
           <h1 className="text-2xl font-bold text-zinc-900 mt-0.5">
-            {getGreeting()}, {firstName} 👋
+            {getGreeting()}, {firstName}
           </h1>
         </div>
       </div>
@@ -146,6 +158,26 @@ export default function DashboardPage() {
           <p className="text-xs text-zinc-400 mt-1.5">days active</p>
         </div>
       </div>
+
+      {/* ── Celebrating Today ── */}
+      {todayBirthdays.length > 0 && (
+        <div className="bg-gradient-to-r from-pink-50 to-violet-50 border border-pink-100 rounded-xl px-5 py-4">
+          <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-3">🎂 Celebrating Today</p>
+          <div className="flex flex-wrap gap-3">
+            {todayBirthdays.map((b) => (
+              <div key={b.id} className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                  {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900 leading-tight">{b.displayName}</p>
+                  {b.department && <p className="text-xs text-zinc-400">{b.department}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Quick links ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

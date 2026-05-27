@@ -1,0 +1,93 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
+
+type DbProfile = {
+  id: string;
+  displayName: string;
+  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
+  pointsBalance: number;
+  level: number;
+  streakDays: number;
+  onboardingComplete: boolean;
+  department: { id: string; name: string } | null;
+};
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  token: string | null;
+  dbUser: DbProfile | null;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  token: null,
+  dbUser: null,
+  refreshProfile: async () => {},
+});
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dbUser, setDbUser] = useState<DbProfile | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const idToken = await firebaseUser.getIdToken();
+        setUser(firebaseUser);
+        setToken(idToken);
+
+        document.cookie = `firebase-token=${idToken}; path=/; max-age=3600; SameSite=Strict`;
+
+        await fetch("/api/auth/sync", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+
+        const meRes = await fetch("/api/me", {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (meRes.ok) {
+          const meJson = await meRes.json();
+          setDbUser(meJson.data as DbProfile);
+        }
+      } else {
+        setUser(null);
+        setToken(null);
+        setDbUser(null);
+        document.cookie = "firebase-token=; path=/; max-age=0";
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  async function refreshProfile() {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
+    const idToken = await firebaseUser.getIdToken();
+    const meRes = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (meRes.ok) {
+      const meJson = await meRes.json();
+      setDbUser(meJson.data as DbProfile);
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, loading, token, dbUser, refreshProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);

@@ -39,40 +39,6 @@ export async function GET(req: NextRequest) {
   let awarded = 0;
 
   for (const user of users) {
-    // Birthday
-    if (user.birthday && configMap["BIRTHDAY"]) {
-      const bMonth = user.birthday.getMonth();
-      const bDay = user.birthday.getDate();
-      if (bMonth === todayMonth && bDay === todayDay) {
-        const existing = await prisma.milestoneAward.findUnique({
-          where: { userId_type_year: { userId: user.id, type: "BIRTHDAY", year: todayYear } },
-        });
-        if (!existing) {
-          const cfg = configMap["BIRTHDAY"];
-          await prisma.$transaction(async (tx) => {
-            await tx.user.update({ where: { id: user.id }, data: { pointsBalance: { increment: cfg.pointsReward } } });
-            await tx.pointTransaction.create({
-              data: {
-                toUserId: user.id,
-                amount: cfg.pointsReward,
-                type: "MILESTONE",
-                note: `Happy Birthday! You've earned ${cfg.pointsReward} pts.`,
-                createdById: cfg.updatedById,
-              },
-            });
-            await tx.milestoneAward.create({ data: { userId: user.id, type: "BIRTHDAY", year: todayYear } });
-          });
-          await createNotification({
-            userId: user.id,
-            type: "MILESTONE",
-            title: "Happy Birthday!",
-            body: `You've received ${cfg.pointsReward} pts for your birthday!`,
-          });
-          awarded++;
-        }
-      }
-    }
-
     // Work anniversaries
     if (user.hireDate) {
       const hMonth = user.hireDate.getMonth();

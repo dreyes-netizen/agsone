@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { sendMail } from "@/lib/email/mailer";
+import { newFeedbackEmail } from "@/lib/email/templates";
+
+const HR_EMAILS = "hr.ags@allianceglobalsolutions.com, hr@allianceglobalsolutions.com";
 
 const createSchema = z.object({
   category: z.enum([
@@ -56,7 +60,14 @@ export async function POST(req: NextRequest) {
       body: parsed.data.body,
       isAnonymous: parsed.data.isAnonymous,
     },
+    include: { author: { select: { displayName: true } } },
   });
+
+  const submitterName = parsed.data.isAnonymous ? null : (feedback.author?.displayName ?? null);
+  sendMail({
+    to: HR_EMAILS,
+    ...newFeedbackEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
+  }).catch(() => {});
 
   return NextResponse.json({ data: feedback }, { status: 201 });
 }

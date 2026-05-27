@@ -1,9 +1,11 @@
 ﻿"use client";
 
+import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/client";
+import { Trophy, Gift, RotateCw } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,9 +61,13 @@ export default function LoginPage() {
           </div>
 
           <div className="flex gap-6">
-            {[["🏆", "Leaderboards"], ["🎁", "Rewards"], ["🎡", "Mini Games"]].map(([icon, label]) => (
+            {([
+              { icon: Trophy, label: "Leaderboards" },
+              { icon: Gift, label: "Rewards" },
+              { icon: RotateCw, label: "Mini Games" },
+            ] as { icon: React.ElementType; label: string }[]).map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-2">
-                <span className="text-lg">{icon}</span>
+                <Icon className="w-4 h-4 text-white/50" />
                 <span className="text-white/40 text-xs font-medium">{label}</span>
               </div>
             ))}

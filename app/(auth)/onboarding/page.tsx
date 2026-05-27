@@ -138,7 +138,7 @@ export default function OnboardingPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-navy-600 hover:bg-navy-700 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#111827] hover:bg-gray-800 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Saving…" : "Get Started"}
             </button>

@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { Medal } from "lucide-react";
 
 type Entry = {
   rank: number;
@@ -25,10 +26,10 @@ const rankColors: Record<number, string> = {
 
 const podiumOrder = [1, 0, 2];
 
-const podiumStyle: Record<number, { bg: string; height: string; medal: string }> = {
-  0: { bg: "bg-zinc-100 border border-zinc-200",             height: "pt-10", medal: "🥈" },
-  1: { bg: "bg-yellow-50 border border-yellow-200",          height: "pt-4",  medal: "🥇" },
-  2: { bg: "bg-orange-50 border border-orange-200",          height: "pt-14", medal: "🥉" },
+const podiumStyle: Record<number, { bg: string; height: string; medal: React.ElementType; medalClass: string }> = {
+  0: { bg: "bg-zinc-100 border border-zinc-200",        height: "pt-10", medal: Medal, medalClass: "text-zinc-400" },
+  1: { bg: "bg-yellow-50 border border-yellow-200",     height: "pt-4",  medal: Medal, medalClass: "text-yellow-500" },
+  2: { bg: "bg-orange-50 border border-orange-200",     height: "pt-14", medal: Medal, medalClass: "text-orange-500" },
 };
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" | "lg" }) {
@@ -98,13 +99,13 @@ export default function LeaderboardPage() {
         )}
         <div className="flex rounded-lg border border-zinc-200 overflow-hidden bg-white text-sm">
           <button
-            className={`px-4 py-1.5 font-medium transition-colors ${period === "monthly" ? "bg-navy-600 text-white" : "text-zinc-600 hover:bg-zinc-50"}`}
+            className={`px-4 py-1.5 font-medium transition-colors ${period === "monthly" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"}`}
             onClick={() => setPeriod("monthly")}
           >
             This Month
           </button>
           <button
-            className={`px-4 py-1.5 font-medium transition-colors ${period === "alltime" ? "bg-navy-600 text-white" : "text-zinc-600 hover:bg-zinc-50"}`}
+            className={`px-4 py-1.5 font-medium transition-colors ${period === "alltime" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"}`}
             onClick={() => setPeriod("alltime")}
           >
             All Time
@@ -141,7 +142,7 @@ export default function LeaderboardPage() {
                 className={`flex-1 rounded-xl text-center ${style.bg} ${style.height} ${e.isCurrentUser ? "ring-2 ring-navy-400 ring-offset-1" : ""}`}
               >
                 <div className={`flex flex-col items-center gap-1 px-2 pb-4 ${isFirst ? "pt-4" : "pt-3"}`}>
-                  <span className={isFirst ? "text-4xl" : "text-3xl"}>{style.medal}</span>
+                  <style.medal className={`${isFirst ? "w-10 h-10" : "w-8 h-8"} ${style.medalClass}`} />
                   <Avatar name={e.displayName} url={e.avatarUrl} size={isFirst ? "lg" : "md"} />
                   <p className={`font-semibold text-zinc-800 mt-1 truncate w-full px-1 ${isFirst ? "text-sm" : "text-xs"}`}>
                     {e.isCurrentUser ? "You" : e.displayName}
@@ -174,7 +175,7 @@ export default function LeaderboardPage() {
                 }`}
               >
                 <span className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-zinc-400"}`}>
-                  {e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : e.rank === 3 ? "🥉" : `#${e.rank}`}
+                  {`#${e.rank}`}
                 </span>
                 <Avatar name={e.displayName} url={e.avatarUrl} />
                 <div className="flex-1 min-w-0">

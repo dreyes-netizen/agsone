@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
@@ -17,11 +17,6 @@ type Employee = {
   department: { id: string; name: string } | null;
 };
 
-type Department = {
-  id: string;
-  name: string;
-};
-
 const roleLabel = {
   EMPLOYEE: "Employee",
   MANAGER: "Manager",
@@ -38,28 +33,21 @@ export default function EmployeesPage() {
   const { apiFetch } = useApiClient();
   const { user, loading: authLoading } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [updatingDeptId, setUpdatingDeptId] = useState<string | null>(null);
-  const [updatingHireDateId, setUpdatingHireDateId] = useState<string | null>(null);
-  const [hireDateEdits, setHireDateEdits] = useState<Record<string, string>>({});
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } | null>(null);
   const [syncError, setSyncError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    Promise.all([
-      apiFetch<{ data: Employee[] }>("/api/admin/employees"),
-      apiFetch<{ data: Department[] }>("/api/departments"),
-    ])
-      .then(([empRes, deptRes]) => {
-        setEmployees(empRes.data);
-        setDepartments(deptRes.data);
-      })
+    apiFetch<{ data: Employee[] }>("/api/admin/employees")
+      .then((res) => setEmployees(res.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,54 +73,6 @@ export default function EmployeesPage() {
     }
   }
 
-  async function handleDepartmentChange(employeeId: string, departmentId: string) {
-    setUpdatingDeptId(employeeId);
-    try {
-      const value = departmentId === "__none__" ? null : departmentId;
-      await apiFetch(`/api/admin/users/${employeeId}/department`, {
-        method: "PATCH",
-        body: JSON.stringify({ departmentId: value }),
-      });
-      const dept = departments.find((d) => d.id === value) ?? null;
-      setEmployees((prev) =>
-        prev.map((e) =>
-          e.id === employeeId
-            ? { ...e, department: dept ? { id: dept.id, name: dept.name } : null }
-            : e
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update department");
-    } finally {
-      setUpdatingDeptId(null);
-    }
-  }
-
-  async function handleHireDateSave(employeeId: string) {
-    const value = hireDateEdits[employeeId];
-    if (value === undefined) return;
-    setUpdatingHireDateId(employeeId);
-    try {
-      await apiFetch(`/api/admin/employees/${employeeId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ hireDate: value || null }),
-      });
-      setEmployees((prev) =>
-        prev.map((e) => (e.id === employeeId ? { ...e, hireDate: value || null } : e))
-      );
-      setHireDateEdits((prev) => {
-        const next = { ...prev };
-        delete next[employeeId];
-        return next;
-      });
-    } catch {
-      alert("Failed to update hire date");
-    } finally {
-      setUpdatingHireDateId(null);
-    }
-  }
-
   async function handleBootstrap() {
     try {
       const res = await apiFetch<{ message: string }>("/api/admin/bootstrap", {
@@ -155,12 +95,11 @@ export default function EmployeesPage() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await apiFetch<{ data: { deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number } }>(
+      const res = await apiFetch<{ data: { deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } }>(
         "/api/admin/employees/sync",
         { method: "POST", body: form }
       );
       setSyncResult(res.data);
-      // Refresh employee list to reflect changes
       const empRes = await apiFetch<{ data: Employee[] }>("/api/admin/employees");
       setEmployees(empRes.data);
     } catch (err) {
@@ -170,14 +109,32 @@ export default function EmployeesPage() {
     }
   }
 
-  const filtered = employees.filter(
-    (e) =>
-      e.displayName.toLowerCase().includes(search.toLowerCase()) ||
-      e.email.toLowerCase().includes(search.toLowerCase())
-  );
+  // Unique department names for the department filter dropdown
+  const deptOptions = Array.from(
+    new Set(employees.map((e) => e.department?.name).filter(Boolean))
+  ).sort() as string[];
+
+  const filtered = employees.filter((e) => {
+    if (search && !e.displayName.toLowerCase().includes(search.toLowerCase()) && !e.email.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterDept && (e.department?.name ?? "") !== filterDept) return false;
+    if (filterRole && e.role !== filterRole) return false;
+    if (filterStatus === "active" && !e.isActive) return false;
+    if (filterStatus === "inactive" && e.isActive) return false;
+    return true;
+  });
+
+  const hasActiveFilters = filterDept || filterRole || filterStatus;
 
   const selectClass =
     "text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white disabled:opacity-50";
+
+  const filterSelectClass =
+    "text-xs border-0 bg-transparent font-semibold text-gray-500 uppercase tracking-wide focus:outline-none cursor-pointer pr-1 appearance-none";
+
+  const formatDate = (value: string | null) =>
+    value
+      ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : null;
 
   return (
     <div className="space-y-6">
@@ -189,15 +146,25 @@ export default function EmployeesPage() {
       </div>
 
       {syncResult && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 flex items-center justify-between">
-          <span>
-            Sync complete —{" "}
-            {syncResult.imported > 0 && <><strong>{syncResult.imported}</strong> new account{syncResult.imported !== 1 ? "s" : ""} created, </>}
-            <strong>{syncResult.deactivated}</strong> deactivated
-            {syncResult.reactivated > 0 && <>, <strong>{syncResult.reactivated}</strong> reactivated</>}
-            {syncResult.birthdaysUpdated > 0 && <>, <strong>{syncResult.birthdaysUpdated}</strong> birthday{syncResult.birthdaysUpdated !== 1 ? "s" : ""} updated</>}.
-          </span>
-          <button onClick={() => setSyncResult(null)} className="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Dismiss</button>
+        <div className="space-y-2">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 flex items-center justify-between">
+            <span>
+              Sync complete — <strong>{syncResult.activeInFile}</strong> active, <strong>{syncResult.resignedInFile}</strong> resigned in file.{" "}
+              {syncResult.imported > 0 && <><strong>{syncResult.imported}</strong> new account{syncResult.imported !== 1 ? "s" : ""} created, </>}
+              <strong>{syncResult.deactivated}</strong> deactivated
+              {syncResult.reactivated > 0 && <>, <strong>{syncResult.reactivated}</strong> reactivated</>}
+              {syncResult.birthdaysUpdated > 0 && <>, <strong>{syncResult.birthdaysUpdated}</strong> birthday{syncResult.birthdaysUpdated !== 1 ? "s" : ""} updated</>}.
+            </span>
+            <button onClick={() => setSyncResult(null)} className="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Dismiss</button>
+          </div>
+          {syncResult.failedImports > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold mb-1">{syncResult.failedImports} employee{syncResult.failedImports !== 1 ? "s" : ""} could not be imported (already exist with a different email format):</p>
+              <ul className="list-disc list-inside space-y-0.5 text-xs font-mono">
+                {syncResult.failedEmails.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
@@ -218,9 +185,19 @@ export default function EmployeesPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-700">
-            {employees.length} total employees
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-gray-700">
+              {filtered.length} of {employees.length} employees
+            </span>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setFilterDept(""); setFilterRole(""); setFilterStatus(""); }}
+                className="text-xs text-navy-600 hover:text-navy-800 font-medium underline underline-offset-2"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -257,33 +234,60 @@ export default function EmployeesPage() {
               <tr>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
+                <th className="text-left px-6 py-3">
+                  <select
+                    value={filterDept}
+                    onChange={(e) => setFilterDept(e.target.value)}
+                    className={filterSelectClass + (filterDept ? " text-navy-600" : "")}
+                  >
+                    <option value="">Department ▾</option>
+                    {deptOptions.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</th>
+                <th className="text-left px-6 py-3">
+                  <select
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value)}
+                    className={filterSelectClass + (filterRole ? " text-navy-600" : "")}
+                  >
+                    <option value="">Role ▾</option>
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="HR_ADMIN">HR Admin</option>
+                  </select>
+                </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Role</th>
+                <th className="text-left px-6 py-3">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className={filterSelectClass + (filterStatus ? " text-navy-600" : "")}
+                  >
+                    <option value="">Status ▾</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Birthday</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Hire Date</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((employee) => (
-                <tr key={employee.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-400 text-sm">
+                    No employees match the current filters.
+                  </td>
+                </tr>
+              ) : filtered.map((employee) => (
+                <tr key={employee.id} className={`hover:bg-gray-50/60 transition-colors border-b border-gray-50 ${!employee.isActive ? "opacity-50" : ""}`}>
                   <td className="px-6 py-3 font-medium text-gray-900">{employee.displayName}</td>
                   <td className="px-6 py-3 text-gray-500">{employee.email}</td>
-                  <td className="px-6 py-3">
-                    <select
-                      value={employee.department?.id ?? "__none__"}
-                      onChange={(e) => e.target.value && handleDepartmentChange(employee.id, e.target.value)}
-                      disabled={updatingDeptId === employee.id}
-                      className={selectClass + " w-40"}
-                    >
-                      <option value="__none__">No department</option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
+                  <td className="px-6 py-3 text-gray-500 text-sm">
+                    {employee.department?.name ?? <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-6 py-3">
                     <span className="font-semibold text-navy-600">
@@ -308,26 +312,16 @@ export default function EmployeesPage() {
                     </select>
                   </td>
                   <td className="px-6 py-3 text-gray-500 text-sm">
-                    {employee.birthday ? new Date(employee.birthday).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : <span className="text-gray-300">—</span>}
+                    {employee.isActive
+                      ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
+                      : <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
+                    }
                   </td>
-                  <td className="px-6 py-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="date"
-                        value={hireDateEdits[employee.id] ?? (employee.hireDate ? employee.hireDate.slice(0, 10) : "")}
-                        onChange={(e) => setHireDateEdits((prev) => ({ ...prev, [employee.id]: e.target.value }))}
-                        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
-                      />
-                      {hireDateEdits[employee.id] !== undefined && (
-                        <button
-                          onClick={() => handleHireDateSave(employee.id)}
-                          disabled={updatingHireDateId === employee.id}
-                          className="text-xs bg-[#111827] text-white px-2.5 py-1.5 rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                        >
-                          {updatingHireDateId === employee.id ? "…" : "Save"}
-                        </button>
-                      )}
-                    </div>
+                  <td className="px-6 py-3 text-gray-500 text-sm">
+                    {formatDate(employee.birthday) ?? <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="px-6 py-3 text-gray-500 text-sm">
+                    {formatDate(employee.hireDate) ?? <span className="text-gray-300">—</span>}
                   </td>
                 </tr>
               ))}

@@ -224,7 +224,7 @@ export default function FoodPage() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-2 bg-navy-600 hover:bg-navy-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
         >
           <UtensilsCrossed className="w-4 h-4" />
           Sell Food
@@ -296,7 +296,7 @@ export default function FoodPage() {
             <div className="flex gap-2">
               <button
                 type="submit" disabled={creating}
-                className="flex items-center gap-2 bg-navy-600 hover:bg-navy-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {creating ? "Creating…" : "Post Listing"}
@@ -316,7 +316,7 @@ export default function FoodPage() {
             key={t} onClick={() => setTab(t)}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all ${
               tab === t
-                ? "bg-navy-600 text-white border-navy-600"
+                ? "bg-[#111827] text-white border-[#111827]"
                 : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >

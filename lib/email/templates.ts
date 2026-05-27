@@ -16,8 +16,19 @@ function layout(content: string) {
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
         <!-- Header -->
         <tr>
-          <td style="background:${BRAND_COLOR};padding:24px 32px;">
-            <span style="color:#ffffff;font-size:20px;font-weight:700;">🎮 ${APP_NAME}</span>
+          <td style="background:${BRAND_COLOR};padding:20px 32px;">
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="vertical-align:middle;padding-right:10px;">
+                  <img src="${process.env.NEXT_PUBLIC_APP_URL ?? ""}/agslogo.png" alt="${APP_NAME}" width="36" height="36"
+                       style="display:block;border-radius:6px;background:#ffffff;" />
+                </td>
+                <td style="vertical-align:middle;">
+                  <span style="color:#ffffff;font-size:18px;font-weight:700;line-height:1;">${APP_NAME}</span><br/>
+                  <span style="color:rgba(255,255,255,0.7);font-size:11px;">Alliance Global Solutions</span>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
         <!-- Body -->
@@ -170,6 +181,62 @@ export function redemptionStatusEmail(
       <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/marketplace"
          style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
         View Marketplace →
+      </a>
+    `),
+  };
+}
+
+const categoryLabel: Record<string, string> = {
+  COMPENSATION_BENEFITS: "Compensation & Benefits",
+  WORK_LIFE_BALANCE:     "Work-Life Balance",
+  COMPANY_CULTURE:       "Company Culture",
+  TEAM_DYNAMICS:         "Team Dynamics",
+  PROCESSES_TOOLS:       "Processes & Tools",
+  RECOGNITION:           "Recognition",
+  OTHER:                 "Other",
+};
+
+export function newFeedbackEmail(
+  category: string,
+  title: string,
+  body: string,
+  isAnonymous: boolean,
+  submitterName: string | null,
+) {
+  const catLabel = categoryLabel[category] ?? category;
+  const fromLine = isAnonymous
+    ? `<span style="font-size:13px;color:#6b7280;font-style:italic;">Anonymous submission</span>`
+    : `<span style="font-size:13px;color:#111827;font-weight:500;">${submitterName ?? "Unknown"}</span>`;
+
+  return {
+    subject: `New Feedback: ${title}`,
+    html: layout(`
+      <h1 style="margin:0 0 8px;font-size:22px;color:#111827;">📬 New Employee Feedback</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">A new feedback submission has been received on AGS One.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;width:120px;">Category</td>
+          <td style="padding:10px 16px;font-size:13px;color:#111827;">${catLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid #e5e7eb;">From</td>
+          <td style="padding:10px 16px;border-top:1px solid #e5e7eb;">${fromLine}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid #e5e7eb;">Title</td>
+          <td style="padding:10px 16px;font-size:13px;color:#111827;font-weight:600;border-top:1px solid #e5e7eb;">${title}</td>
+        </tr>
+      </table>
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Message</p>
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;">${body}</p>
+      </div>
+
+      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/admin/feedback"
+         style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
+        View in Admin Panel →
       </a>
     `),
   };

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import React from "react";
+import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor } from "lucide-react";
 
 type Reward = {
   id: string;
@@ -16,7 +17,8 @@ type Reward = {
 };
 
 const categoryOptions = ["PHYSICAL", "VOUCHER", "PRIVILEGE", "DIGITAL"];
-const categoryEmoji: Record<string, string> = { PHYSICAL: "📦", VOUCHER: "🎟️", PRIVILEGE: "⭐", DIGITAL: "💻" };
+const categoryIcon: Record<string, React.ElementType> = { PHYSICAL: Package, VOUCHER: Ticket, PRIVILEGE: Star, DIGITAL: Monitor };
+const categoryIconClass: Record<string, string> = { PHYSICAL: "text-orange-600", VOUCHER: "text-blue-600", PRIVILEGE: "text-violet-600", DIGITAL: "text-emerald-600" };
 
 const emptyForm = { name: "", description: "", pointCost: "", stockQuantity: "-1", category: "PHYSICAL" };
 
@@ -106,7 +108,7 @@ export default function AdminRewardsPage() {
         </div>
         <button
           onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}
-          className="bg-navy-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-navy-700 flex items-center gap-2"
+          className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Add Reward
         </button>
@@ -172,7 +174,7 @@ export default function AdminRewardsPage() {
                   className={selectClass}
                 >
                   {categoryOptions.map((c) => (
-                    <option key={c} value={c}>{categoryEmoji[c]} {c}</option>
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
@@ -181,7 +183,7 @@ export default function AdminRewardsPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="bg-navy-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-navy-700 disabled:opacity-50"
+                  className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
                 >
                   {submitting ? "Saving..." : editingId ? "Save Changes" : "Add Reward"}
                 </button>
@@ -221,8 +223,8 @@ export default function AdminRewardsPage() {
                   {r.description && <p className="text-xs text-gray-400 truncate max-w-xs">{r.description}</p>}
                 </td>
                 <td className={tdClass}>
-                  <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                    {categoryEmoji[r.category]} {r.category}
+                  <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                    {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} /> : null; })()} {r.category}
                   </span>
                 </td>
                 <td className={tdClass}>

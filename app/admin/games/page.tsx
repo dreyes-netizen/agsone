@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Power, Trophy } from "lucide-react";
+import { Plus, Trash2, Power, Trophy, RotateCw, Ticket, Brain } from "lucide-react";
 
 type Segment = { label: string; pointsReward: number; weight: number; color: string };
 type QuizQuestion = { id: string; question: string; options: [string, string, string, string]; correctIndex: number; pointsReward: number };
@@ -176,9 +176,9 @@ export default function AdminGamesPage() {
                   <Select value={gameType} onValueChange={(v) => v && setGameType(v as "SPIN_WHEEL" | "RAFFLE" | "QUIZ")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SPIN_WHEEL">🎡 Spin the Wheel</SelectItem>
-                      <SelectItem value="RAFFLE">🎟️ Lucky Draw / Raffle</SelectItem>
-                      <SelectItem value="QUIZ">🧠 Quiz</SelectItem>
+                      <SelectItem value="SPIN_WHEEL">Spin the Wheel</SelectItem>
+                      <SelectItem value="RAFFLE">Lucky Draw / Raffle</SelectItem>
+                      <SelectItem value="QUIZ">Quiz</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -338,7 +338,9 @@ export default function AdminGamesPage() {
                     <p className="font-medium">{g.name}</p>
                     {g.description && <p className="text-xs text-gray-400 truncate max-w-xs">{g.description}</p>}
                   </TableCell>
-                  <TableCell><Badge variant="secondary">{g.type === "SPIN_WHEEL" ? "🎡 Spin Wheel" : g.type === "RAFFLE" ? "🎟️ Raffle" : "🧠 Quiz"}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary" className="flex items-center gap-1">
+                    {g.type === "SPIN_WHEEL" ? <><RotateCw className="w-3 h-3" /> Spin Wheel</> : g.type === "RAFFLE" ? <><Ticket className="w-3 h-3" /> Raffle</> : <><Brain className="w-3 h-3" /> Quiz</>}
+                  </Badge></TableCell>
                   <TableCell>{g.entryCostPoints > 0 ? `${g.entryCostPoints} pts` : "Free"}</TableCell>
                   <TableCell>{g._count.plays}</TableCell>
                   <TableCell>

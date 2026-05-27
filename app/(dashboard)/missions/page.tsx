@@ -80,7 +80,7 @@ export default function MissionsPage() {
             onClick={() => setFilter(f)}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all ${
               filter === f
-                ? "bg-navy-600 text-white border-navy-600"
+                ? "bg-[#111827] text-white border-[#111827]"
                 : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
             }`}
           >
@@ -158,7 +158,7 @@ export default function MissionsPage() {
                       <button
                         onClick={() => handleMarkComplete(mission)}
                         disabled={busy}
-                        className="flex items-center gap-1.5 bg-navy-600 hover:bg-navy-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1.5 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                       >
                         {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                         {busy ? "Submitting…" : "Mark Complete"}

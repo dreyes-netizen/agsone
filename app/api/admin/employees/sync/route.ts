@@ -56,7 +56,9 @@ export async function POST(req: NextRequest) {
       if (!email) continue;
 
       const sep = row["Separation Date"];
-      const isResigned = sep && sep !== "Not yet set" && sep !== "";
+      // Only treat as resigned when the cell contains an actual date (Date object).
+      // Text placeholders like "Not yet set", "N/A", "-", etc. are treated as active.
+      const isResigned = sep instanceof Date;
 
       if (isResigned) {
         resignedEmails.push(email);
@@ -73,20 +75,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Upsert departments from the file so new department names are created automatically
+    const uniqueDeptNames = [...new Set(
+      activeRows.map((r) => r.departmentName).filter((n): n is string => !!n)
+    )];
+    for (const name of uniqueDeptNames) {
+      await prisma.department.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      });
+    }
+
     // Load all departments for name matching
     const departments = await prisma.department.findMany({ select: { id: true, name: true } });
     const deptByName = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
 
-    // Find which active emails already exist in DB
+    // Find which active emails already exist in DB (trim DB emails to avoid whitespace mismatches)
     const existingUsers = await prisma.user.findMany({
       where: { email: { in: activeRows.map((r) => r.email), mode: "insensitive" } },
       select: { id: true, email: true },
     });
-    const existingByEmail = new Map(existingUsers.map((u) => [u.email.toLowerCase(), u.id]));
+    const existingByEmail = new Map(existingUsers.map((u) => [u.email.toLowerCase().trim(), u.id]));
 
     // Create pending accounts for new employees not yet in DB
     const newRows = activeRows.filter((r) => !existingByEmail.has(r.email));
     let imported = 0;
+    const failedEmails: string[] = [];
     for (const row of newRows) {
       const departmentId = row.departmentName
         ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
@@ -107,11 +122,12 @@ export async function POST(req: NextRequest) {
         });
         imported++;
       } catch (e) {
-        console.warn("Skipping user create for", row.email, e);
+        console.warn("Failed to create user for", row.email, e);
+        failedEmails.push(row.email);
       }
     }
 
-    // Update birthday and department on existing employees
+    // Update birthday, hireDate, and department on existing employees
     let birthdaysUpdated = 0;
     for (const row of activeRows) {
       const userId = existingByEmail.get(row.email);
@@ -121,6 +137,7 @@ export async function POST(req: NextRequest) {
         : null;
       const updateData: Record<string, unknown> = { departmentId };
       if (row.birthday) { updateData.birthday = row.birthday; birthdaysUpdated++; }
+      if (row.hireDate) updateData.hireDate = row.hireDate;
       await prisma.user.update({ where: { id: userId }, data: updateData });
     }
 
@@ -150,6 +167,8 @@ export async function POST(req: NextRequest) {
         reactivated: reactivateResult.count,
         imported,
         birthdaysUpdated,
+        failedImports: failedEmails.length,
+        failedEmails,
       },
     });
   } catch (err) {

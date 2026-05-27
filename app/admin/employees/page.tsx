@@ -13,6 +13,7 @@ type Employee = {
   pointsBalance: number;
   isActive: boolean;
   hireDate: string | null;
+  birthday: string | null;
   department: { id: string; name: string } | null;
 };
 
@@ -260,6 +261,7 @@ export default function EmployeesPage() {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Role</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Birthday</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Hire Date</th>
               </tr>
             </thead>
@@ -304,6 +306,9 @@ export default function EmployeesPage() {
                       <option value="MANAGER">Manager</option>
                       <option value="HR_ADMIN">HR Admin</option>
                     </select>
+                  </td>
+                  <td className="px-6 py-3 text-gray-500 text-sm">
+                    {employee.birthday ? new Date(employee.birthday).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-2">

@@ -111,17 +111,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update birthday on existing employees where the file has a value
+    // Update birthday and department on existing employees
     let birthdaysUpdated = 0;
     for (const row of activeRows) {
-      if (!row.birthday) continue;
       const userId = existingByEmail.get(row.email);
       if (!userId) continue;
-      await prisma.user.update({
-        where: { id: userId },
-        data: { birthday: row.birthday },
-      });
-      birthdaysUpdated++;
+      const departmentId = row.departmentName
+        ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
+        : null;
+      const updateData: Record<string, unknown> = { departmentId };
+      if (row.birthday) { updateData.birthday = row.birthday; birthdaysUpdated++; }
+      await prisma.user.update({ where: { id: userId }, data: updateData });
     }
 
     // Deactivate resigned employees found in the DB

@@ -162,8 +162,8 @@ export default function EmployeesPage() {
       // Refresh employee list to reflect changes
       const empRes = await apiFetch<{ data: Employee[] }>("/api/admin/employees");
       setEmployees(empRes.data);
-    } catch {
-      setSyncError("Failed to sync employee list. Make sure the file is a valid Excel export.");
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Failed to sync employee list.");
     } finally {
       setSyncing(false);
     }

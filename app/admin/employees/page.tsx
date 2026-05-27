@@ -45,7 +45,7 @@ export default function EmployeesPage() {
   const [updatingHireDateId, setUpdatingHireDateId] = useState<string | null>(null);
   const [hireDateEdits, setHireDateEdits] = useState<Record<string, string>>({});
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number } | null>(null);
   const [syncError, setSyncError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -154,7 +154,7 @@ export default function EmployeesPage() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await apiFetch<{ data: { deactivated: number; reactivated: number; imported: number } }>(
+      const res = await apiFetch<{ data: { deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number } }>(
         "/api/admin/employees/sync",
         { method: "POST", body: form }
       );
@@ -193,7 +193,8 @@ export default function EmployeesPage() {
             Sync complete —{" "}
             {syncResult.imported > 0 && <><strong>{syncResult.imported}</strong> new account{syncResult.imported !== 1 ? "s" : ""} created, </>}
             <strong>{syncResult.deactivated}</strong> deactivated
-            {syncResult.reactivated > 0 && <>, <strong>{syncResult.reactivated}</strong> reactivated</>}.
+            {syncResult.reactivated > 0 && <>, <strong>{syncResult.reactivated}</strong> reactivated</>}
+            {syncResult.birthdaysUpdated > 0 && <>, <strong>{syncResult.birthdaysUpdated}</strong> birthday{syncResult.birthdaysUpdated !== 1 ? "s" : ""} updated</>}.
           </span>
           <button onClick={() => setSyncResult(null)} className="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Dismiss</button>
         </div>

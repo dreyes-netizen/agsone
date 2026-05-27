@@ -6,6 +6,7 @@ type ActiveRow = {
   email: string;
   displayName: string;
   hireDate: Date | null;
+  birthday: Date | null;
   departmentName: string | null;
 };
 
@@ -65,8 +66,10 @@ export async function POST(req: NextRequest) {
         const displayName = `${firstName} ${lastName}`.trim() || email;
         const hireDateRaw = row["Hire Date"];
         const hireDate = hireDateRaw instanceof Date ? hireDateRaw : null;
+        const birthdayRaw = row["Birthday"];
+        const birthday = birthdayRaw instanceof Date ? birthdayRaw : null;
         const departmentName = (row["Department"] as string | null)?.trim() ?? null;
-        activeRows.push({ email, displayName, hireDate, departmentName });
+        activeRows.push({ email, displayName, hireDate, birthday, departmentName });
       }
     }
 
@@ -77,12 +80,12 @@ export async function POST(req: NextRequest) {
     // Find which active emails already exist in DB
     const existingUsers = await prisma.user.findMany({
       where: { email: { in: activeRows.map((r) => r.email), mode: "insensitive" } },
-      select: { email: true },
+      select: { id: true, email: true },
     });
-    const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
+    const existingByEmail = new Map(existingUsers.map((u) => [u.email.toLowerCase(), u.id]));
 
     // Create pending accounts for new employees not yet in DB
-    const newRows = activeRows.filter((r) => !existingEmails.has(r.email));
+    const newRows = activeRows.filter((r) => !existingByEmail.has(r.email));
     let imported = 0;
     for (const row of newRows) {
       const departmentId = row.departmentName
@@ -95,6 +98,7 @@ export async function POST(req: NextRequest) {
             email: row.email,
             displayName: row.displayName,
             hireDate: row.hireDate,
+            birthday: row.birthday,
             departmentId,
             role: "EMPLOYEE",
             onboardingComplete: false,
@@ -103,9 +107,21 @@ export async function POST(req: NextRequest) {
         });
         imported++;
       } catch (e) {
-        // Skip duplicates (e.g. email already exists with different case)
         console.warn("Skipping user create for", row.email, e);
       }
+    }
+
+    // Update birthday on existing employees where the file has a value
+    let birthdaysUpdated = 0;
+    for (const row of activeRows) {
+      if (!row.birthday) continue;
+      const userId = existingByEmail.get(row.email);
+      if (!userId) continue;
+      await prisma.user.update({
+        where: { id: userId },
+        data: { birthday: row.birthday },
+      });
+      birthdaysUpdated++;
     }
 
     // Deactivate resigned employees found in the DB
@@ -133,6 +149,7 @@ export async function POST(req: NextRequest) {
         deactivated: deactivateResult.count,
         reactivated: reactivateResult.count,
         imported,
+        birthdaysUpdated,
       },
     });
   } catch (err) {

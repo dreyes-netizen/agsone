@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { Upload } from "lucide-react";
 
 type Employee = {
   id: string;
@@ -43,6 +44,10 @@ export default function EmployeesPage() {
   const [updatingDeptId, setUpdatingDeptId] = useState<string | null>(null);
   const [updatingHireDateId, setUpdatingHireDateId] = useState<string | null>(null);
   const [hireDateEdits, setHireDateEdits] = useState<Record<string, string>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number } | null>(null);
+  const [syncError, setSyncError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -139,6 +144,31 @@ export default function EmployeesPage() {
     }
   }
 
+  async function handleSyncFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setSyncing(true);
+    setSyncResult(null);
+    setSyncError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await apiFetch<{ data: { deactivated: number; reactivated: number } }>(
+        "/api/admin/employees/sync",
+        { method: "POST", body: form }
+      );
+      setSyncResult(res.data);
+      // Refresh employee list to reflect changes
+      const empRes = await apiFetch<{ data: Employee[] }>("/api/admin/employees");
+      setEmployees(empRes.data);
+    } catch {
+      setSyncError("Failed to sync employee list. Make sure the file is a valid Excel export.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   const filtered = employees.filter(
     (e) =>
       e.displayName.toLowerCase().includes(search.toLowerCase()) ||
@@ -157,17 +187,52 @@ export default function EmployeesPage() {
         </p>
       </div>
 
+      {syncResult && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 flex items-center justify-between">
+          <span>
+            Sync complete — <strong>{syncResult.deactivated}</strong> employee{syncResult.deactivated !== 1 ? "s" : ""} deactivated
+            {syncResult.reactivated > 0 && <>, <strong>{syncResult.reactivated}</strong> reactivated</>}.
+          </span>
+          <button onClick={() => setSyncResult(null)} className="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Dismiss</button>
+        </div>
+      )}
+
+      {syncError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>{syncError}</span>
+          <button onClick={() => setSyncError("")} className="text-red-500 hover:text-red-700 text-xs font-medium">Dismiss</button>
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        onChange={handleSyncFile}
+      />
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <span className="text-sm font-semibold text-gray-700">
             {employees.length} total employees
           </span>
-          <input
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white"
-          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={syncing}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              {syncing ? "Syncing…" : "Upload Employee List"}
+            </button>
+            <input
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white"
+            />
+          </div>
         </div>
 
         {loading ? (

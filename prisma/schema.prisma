@@ -118,7 +118,7 @@ model Department {
 
 model User {
   id                 String    @id @default(uuid())
-  firebaseUid        String    @unique
+  firebaseUid        String?   @unique
   email              String    @unique
   displayName        String
   avatarUrl          String?

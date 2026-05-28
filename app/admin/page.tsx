@@ -1,16 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Users, TrendingUp, ShoppingCart, Gamepad2, ArrowUpRight, ArrowDownRight, Minus, Cake } from "lucide-react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  Users, TrendingUp, ShoppingCart, Gamepad2,
+  ArrowUpRight, ArrowDownRight, Minus, Cake, Activity, AlertCircle,
+} from "lucide-react";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 
 type UpcomingBirthday = {
@@ -20,6 +17,22 @@ type UpcomingBirthday = {
   department: string | null;
   birthday: string;
   daysUntil: number;
+};
+
+type DisengagedEmployee = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  pointsBalance: number;
+  department: { name: string } | null;
+};
+
+type DeptRow = {
+  id: string;
+  name: string;
+  totalEmployees: number;
+  activeEmployees: number;
+  pointsThisMonth: number;
 };
 
 type Analytics = {
@@ -39,6 +52,10 @@ type Analytics = {
     fromUser: { displayName: string } | null;
   }[];
   dailyPoints: { date: string; points: number }[];
+  engagementRate: number;
+  engagedCount: number;
+  disengaged: DisengagedEmployee[];
+  departmentBreakdown: DeptRow[];
 };
 
 const typeLabel: Record<string, string> = {
@@ -48,12 +65,7 @@ const typeLabel: Record<string, string> = {
 };
 
 function KpiCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  iconColor,
-  growth,
+  label, value, sub, icon: Icon, iconColor, growth,
 }: {
   label: string;
   value: string | number;
@@ -84,6 +96,28 @@ function KpiCard({
   );
 }
 
+function EngagementRing({ rate }: { rate: number }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const dash = (rate / 100) * circ;
+  const color = rate >= 70 ? "#10b981" : rate >= 40 ? "#f59e0b" : "#ef4444";
+  return (
+    <svg width="72" height="72" viewBox="0 0 72 72">
+      <circle cx="36" cy="36" r={r} fill="none" stroke="#f3f4f6" strokeWidth="7" />
+      <circle
+        cx="36" cy="36" r={r} fill="none"
+        stroke={color} strokeWidth="7"
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        transform="rotate(-90 36 36)"
+      />
+      <text x="36" y="41" textAnchor="middle" fontSize="14" fontWeight="800" fill="#111827">
+        {rate}%
+      </text>
+    </svg>
+  );
+}
+
 export default function AdminDashboardPage() {
   const { apiFetch } = useApiClient();
   const [data, setData] = useState<Analytics | null>(null);
@@ -98,7 +132,7 @@ export default function AdminDashboardPage() {
     apiFetch<{ data: UpcomingBirthday[] }>("/api/birthdays/upcoming")
       .then((r) => setBirthdays(r.data))
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -119,6 +153,9 @@ export default function AdminDashboardPage() {
     date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     points: d.points,
   }));
+
+  const engagementColor =
+    data.engagementRate >= 70 ? "text-emerald-600" : data.engagementRate >= 40 ? "text-amber-600" : "text-red-500";
 
   return (
     <div className="space-y-6">
@@ -160,9 +197,8 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* Chart + Top Earners side by side */}
+      {/* Chart + Top Earners */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Area chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <p className="font-semibold text-gray-900 text-sm mb-4">Points Awarded — Last 30 Days</p>
           {chartData.length === 0 ? (
@@ -189,7 +225,6 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* Top Earners */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <p className="font-semibold text-gray-900 text-sm mb-4">Top Earners</p>
           <div className="space-y-3">
@@ -210,6 +245,102 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Engagement + Department Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Engagement card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-gray-400" />
+            <p className="font-semibold text-gray-900 text-sm">Engagement</p>
+            <span className="text-xs text-gray-400 ml-auto">Last 30 days</span>
+          </div>
+          <div className="flex items-center gap-5">
+            <EngagementRing rate={data.engagementRate} />
+            <div>
+              <p className={`text-3xl font-black tabular-nums ${engagementColor}`}>
+                {data.engagementRate}%
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {data.engagedCount} of {data.totalEmployees} active
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {data.disengaged.length > 0
+                  ? `${data.disengaged.length} employee${data.disengaged.length !== 1 ? "s" : ""} need follow-up`
+                  : "Everyone is active!"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Department breakdown */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-50">
+            <p className="font-semibold text-gray-900 text-sm">Department Activity — This Month</p>
+          </div>
+          {data.departmentBreakdown.length === 0 ? (
+            <div className="py-8 text-center text-sm text-gray-400">No department data</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
+                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employees</th>
+                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Active (30d)</th>
+                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.departmentBreakdown.map((d, i) => {
+                  const pct = d.totalEmployees === 0 ? 0 : Math.round((d.activeEmployees / d.totalEmployees) * 100);
+                  return (
+                    <tr key={d.id} className={`border-t border-gray-50 hover:bg-gray-50/60 transition-colors ${i === 0 ? "border-t-0" : ""}`}>
+                      <td className="px-5 py-3 font-medium text-gray-900">{d.name}</td>
+                      <td className="px-5 py-3 text-right text-gray-500 tabular-nums">{d.totalEmployees}</td>
+                      <td className="px-5 py-3 text-right tabular-nums">
+                        <span className={pct >= 70 ? "text-emerald-600 font-semibold" : pct >= 40 ? "text-amber-600" : "text-red-500"}>
+                          {d.activeEmployees}
+                        </span>
+                        <span className="text-gray-400 text-xs ml-1">({pct}%)</span>
+                      </td>
+                      <td className="px-5 py-3 text-right font-bold text-navy-600 tabular-nums">
+                        {d.pointsThisMonth.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Disengaged Employees */}
+      {data.disengaged.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
+            <AlertCircle className="w-4 h-4 text-amber-500" />
+            <p className="font-semibold text-gray-900 text-sm">No Activity in 30+ Days</p>
+            <span className="ml-auto text-xs bg-amber-50 text-amber-600 font-semibold px-2 py-0.5 rounded-full">
+              {data.disengaged.length} employee{data.disengaged.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <ul className="divide-y divide-gray-50">
+            {data.disengaged.map((e) => (
+              <li key={e.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/60 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                  {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{e.displayName}</p>
+                  <p className="text-xs text-gray-400">{e.department?.name ?? "No department"}</p>
+                </div>
+                <span className="text-xs text-gray-400 tabular-nums">{e.pointsBalance.toLocaleString()} pts</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Upcoming Birthdays */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">

@@ -242,6 +242,34 @@ export function newFeedbackEmail(
   };
 }
 
+export function hrReplyEmail(
+  displayName: string,
+  feedbackTitle: string,
+  replyBody: string,
+  feedbackId: string,
+) {
+  return {
+    subject: `HR responded to your feedback`,
+    html: layout(`
+      <h1 style="margin:0 0 8px;font-size:22px;color:#111827;">💬 HR has replied to your feedback</h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#4b5563;">Hi ${displayName},</p>
+
+      <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Your feedback</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#374151;font-weight:600;">${feedbackTitle}</p>
+
+      <div style="background:#f9fafb;border-left:4px solid ${BRAND_COLOR};padding:14px 18px;margin-bottom:24px;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">HR Team replied</p>
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;">${replyBody}</p>
+      </div>
+
+      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/feedback/${feedbackId}"
+         style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
+        View Thread →
+      </a>
+    `),
+  };
+}
+
 export function notificationEmail(displayName: string, title: string, body: string) {
   return {
     subject: title,

@@ -1,11 +1,11 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/client";
-import { Trophy, Gift, RotateCw } from "lucide-react";
+import { Trophy, Gamepad2, Gift, Target } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,50 +31,93 @@ export default function LoginPage() {
 
       {/* ── Left panel ── */}
       <div className="hidden lg:flex w-1/2 bg-[#111827] flex-col justify-between p-12 relative overflow-hidden">
-        {/* Subtle grid pattern */}
+        {/* Grid pattern */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "40px 40px" }}
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
         />
-        {/* Soft glow */}
-        <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-navy-600/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-violet-600/10 blur-3xl translate-x-1/2 translate-y-1/2" />
+        {/* Glows */}
+        <div className="absolute top-0 left-0 w-[28rem] h-[28rem] rounded-full bg-indigo-600/20 blur-3xl -translate-x-1/3 -translate-y-1/3" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-3xl translate-x-1/4 translate-y-1/4" />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
 
-        {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
-            <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-1" />
-          </div>
-          <span className="text-white font-semibold text-lg tracking-tight">AGS One</span>
+        {/* Large logo — decorative, pinned to the right */}
+        <div className="absolute right-10 top-1/2 -translate-y-1/2 z-[1] w-64 h-64 rounded-3xl bg-white shadow-2xl flex items-center justify-center overflow-hidden">
+          <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-4" />
         </div>
 
-        {/* Copy */}
-        <div className="relative z-10 space-y-8">
+        {/* Branding at top */}
+        <div className="relative z-10">
+          <p className="text-white font-bold text-base leading-tight">AGS One</p>
+          <p className="text-white/40 text-xs">Alliance Global Solutions</p>
+        </div>
+
+        {/* Tagline + feature cards */}
+        <div className="relative z-10 space-y-8 max-w-[52%]">
           <div>
             <h2 className="text-4xl font-bold text-white leading-tight tracking-tight">
               Work hard.<br />Play harder.<br />
-              <span className="text-navy-400">Get rewarded.</span>
+              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+                Get rewarded.
+              </span>
             </h2>
             <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-sm">
               Earn points for your contributions, redeem them for rewards, and compete with your colleagues.
             </p>
           </div>
 
-          <div className="flex gap-6">
-            {([
-              { icon: Trophy, label: "Leaderboards" },
-              { icon: Gift, label: "Rewards" },
-              { icon: RotateCw, label: "Mini Games" },
-            ] as { icon: React.ElementType; label: string }[]).map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2">
-                <Icon className="w-4 h-4 text-white/50" />
-                <span className="text-white/40 text-xs font-medium">{label}</span>
+          {/* Feature highlights */}
+          <div className="space-y-3">
+            {[
+              {
+                icon: Trophy,
+                color: "bg-amber-500/20",
+                iconColor: "text-amber-400",
+                label: "Leaderboard",
+                desc: "Compete with colleagues and climb the weekly rankings.",
+              },
+              {
+                icon: Target,
+                color: "bg-emerald-500/20",
+                iconColor: "text-emerald-400",
+                label: "Missions & Streaks",
+                desc: "Complete daily challenges to earn bonus points.",
+              },
+              {
+                icon: Gamepad2,
+                color: "bg-blue-500/20",
+                iconColor: "text-blue-400",
+                label: "Mini Games",
+                desc: "Play quick games between tasks and win extra points.",
+              },
+              {
+                icon: Gift,
+                color: "bg-violet-500/20",
+                iconColor: "text-violet-400",
+                label: "Rewards Marketplace",
+                desc: "Redeem your points for cash, gadgets & experiences.",
+              },
+            ].map(({ icon: Icon, color, iconColor, label, desc }) => (
+              <div key={label} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-4 h-4 ${iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-white text-sm font-semibold leading-tight">{label}</p>
+                  <p className="text-white/40 text-xs mt-0.5">{desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 text-white/15 text-xs">Alliance Global Solutions</div>
+        <div className="relative z-10 text-white/15 text-xs">
+          © {new Date().getFullYear()} Alliance Global Solutions
+        </div>
       </div>
 
       {/* ── Right panel ── */}
@@ -82,16 +125,18 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
 
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
-              <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-1" />
-            </div>
-            <span className="text-zinc-900 font-semibold text-lg">AGS One</span>
+          <div className="lg:hidden mb-8 flex flex-col items-center text-center">
+            <img src="/agslogo.png" alt="AGS One" className="w-28 h-28 object-contain mb-4" />
+            <p className="text-zinc-900 font-bold text-xl leading-tight">AGS One</p>
+            <p className="text-zinc-400 text-xs mb-3">Alliance Global Solutions</p>
+            <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">
+              Earn points, redeem rewards, and compete with your colleagues.
+            </p>
           </div>
 
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-8">
             <div className="mb-7">
-              <h1 className="text-xl font-bold text-zinc-900">Sign in</h1>
+              <h1 className="text-xl font-bold text-zinc-900">Welcome back</h1>
               <p className="text-zinc-400 text-sm mt-1">Use your company Google account to continue.</p>
             </div>
 
@@ -116,9 +161,19 @@ export default function LoginPage() {
             )}
 
             <p className="mt-6 text-xs text-zinc-400 text-center">
-              Use your <span className="text-zinc-600 font-medium">@allianceglobalsolutions.com</span> account
+              Use your{" "}
+              <span className="text-zinc-600 font-medium">@allianceglobalsolutions.com</span>{" "}
+              account
+            </p>
+
+            <p className="mt-4 text-[11px] text-zinc-400 text-center leading-relaxed">
+              By signing in, you acknowledge this is a company system.
             </p>
           </div>
+
+          <p className="mt-6 text-xs text-zinc-400 text-center">
+            © {new Date().getFullYear()} Alliance Global Solutions
+          </p>
         </div>
       </div>
     </div>

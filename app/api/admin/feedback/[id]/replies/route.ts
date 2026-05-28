@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { sendMail } from "@/lib/email/mailer";
+import { hrReplyEmail } from "@/lib/email/templates";
 
 const replySchema = z.object({
   body: z.string().min(1).max(1000),
@@ -17,7 +19,10 @@ export async function POST(
 
   const { id } = await params;
 
-  const feedback = await prisma.feedback.findUnique({ where: { id } });
+  const feedback = await prisma.feedback.findUnique({
+    where: { id },
+    include: { author: { select: { email: true, displayName: true } } },
+  });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (feedback.isAnonymous) return NextResponse.json({ error: "Cannot reply to anonymous feedback" }, { status: 400 });
 
@@ -39,14 +44,18 @@ export async function POST(
     await prisma.feedback.update({ where: { id }, data: { updatedAt: new Date() } });
   }
 
-  // Notify the employee
-  if (feedback.authorId) {
+  // Notify the employee — in-app + email
+  if (feedback.authorId && feedback.author) {
     createNotification({
       userId: feedback.authorId,
       type: "FEEDBACK_HR_REPLIED",
       title: "HR responded to your feedback",
       body: `HR has replied to your feedback: "${feedback.title}".`,
-    });
+    }).catch(() => {});
+    sendMail({
+      to: feedback.author.email,
+      ...hrReplyEmail(feedback.author.displayName, feedback.title, parsed.data.body, id),
+    }).catch(() => {});
   }
 
   return NextResponse.json({ data: reply }, { status: 201 });

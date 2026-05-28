@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search, Bot,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -25,6 +25,7 @@ const mainNav = [
   { href: "/challenges",  label: "Challenges",  icon: Swords },
   { href: "/profile",     label: "Profile",     icon: User },
   { href: "/feedback",    label: "Feedback",    icon: MessageSquare },
+  { href: "/assistant",   label: "Assistant",   icon: Bot },
 ];
 
 const bottomNavItems = [

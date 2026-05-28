@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2, Target, MessageSquare, Gift, Swords } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2, Target, MessageSquare, Gift, Swords, FileText } from "lucide-react";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ const navItems = [
   { href: "/admin/redemptions", label: "Redemptions", icon: ClipboardList },
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
   { href: "/admin/feedback",    label: "Feedback",    icon: MessageSquare },
+  { href: "/admin/documents",    label: "Documents",    icon: FileText },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

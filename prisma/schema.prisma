@@ -168,6 +168,7 @@ model User {
   milestoneAwards  MilestoneAward[]
   milestoneConfigs MilestoneConfig[]
   challengesCreated Challenge[]
+  policyDocuments PolicyDocument[]
 }
 
 model PointTransaction {
@@ -506,4 +507,17 @@ model Challenge {
   updatedAt   DateTime        @updatedAt
 
   createdBy User @relation(fields: [createdById], references: [id])
+}
+
+model PolicyDocument {
+  id           String   @id @default(uuid())
+  name         String
+  storagePath  String
+  fileName     String
+  fileSize     Int
+  isActive     Boolean  @default(true)
+  uploadedAt   DateTime @default(now())
+  uploadedById String
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
 }

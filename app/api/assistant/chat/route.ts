@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
-import { downloadPdf } from "@/lib/supabase/storageClient";
-import { generateChatReply } from "@/lib/gemini/client";
+import { generateChatReplyStream } from "@/lib/gemini/client";
 import { z } from "zod";
 import { Content } from "@google/generative-ai";
 
@@ -18,6 +17,12 @@ const bodySchema = z.object({
   history: historySchema,
 });
 
+const encoder = new TextEncoder();
+
+function sseChunk(data: object) {
+  return encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,20 +37,37 @@ export async function POST(req: NextRequest) {
 
   const documents = await prisma.policyDocument.findMany({
     where: { isActive: true },
-    select: { storagePath: true },
+    select: { content: true },
   });
 
-  if (documents.length === 0) {
-    return NextResponse.json({
-      reply: "No policy documents have been uploaded yet. Please contact HR directly.",
-    });
-  }
+  const documentTexts = documents
+    .map((doc) => doc.content)
+    .filter((c): c is string => !!c);
 
-  const pdfBuffers = await Promise.all(
-    documents.map((doc) => downloadPdf(doc.storagePath)),
-  );
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        if (documentTexts.length === 0) {
+          controller.enqueue(sseChunk({ chunk: "No policy documents have been uploaded yet. Please contact HR directly." }));
+        } else {
+          for await (const chunk of generateChatReplyStream(message, history as Content[], documentTexts)) {
+            controller.enqueue(sseChunk({ chunk }));
+          }
+        }
+      } catch {
+        controller.enqueue(sseChunk({ error: "Failed to generate response" }));
+      } finally {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    },
+  });
 
-  const reply = await generateChatReply(message, history as Content[], pdfBuffers);
-
-  return NextResponse.json({ reply });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
 }

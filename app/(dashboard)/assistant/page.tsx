@@ -17,7 +17,7 @@ const SUGGESTED = [
 ];
 
 export default function AssistantPage() {
-  const { apiFetch } = useApiClient();
+  const { streamFetch } = useApiClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,27 +32,59 @@ export default function AssistantPage() {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
+    const history = [...messages];
     const userMsg: Message = { role: "user", parts: [{ text: trimmed }] };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+
     setInput("");
     setLoading(true);
     setError("");
+    setMessages([...history, userMsg, { role: "model", parts: [{ text: "" }] }]);
 
     try {
-      const res = await apiFetch<{ reply: string }>("/api/assistant/chat", {
+      const res = await streamFetch("/api/assistant/chat", {
         method: "POST",
-        body: JSON.stringify({
-          message: trimmed,
-          history: messages,
-        }),
+        body: JSON.stringify({ message: trimmed, history }),
       });
 
-      const modelMsg: Message = { role: "model", parts: [{ text: res.reply }] };
-      setMessages([...newMessages, modelMsg]);
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) throw new Error(parsed.error);
+            if (parsed.chunk) {
+              setMessages((prev) => {
+                const msgs = [...prev];
+                const last = msgs[msgs.length - 1];
+                msgs[msgs.length - 1] = {
+                  ...last,
+                  parts: [{ text: last.parts[0].text + parsed.chunk }],
+                };
+                return msgs;
+              });
+            }
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message !== "Failed to generate response") continue;
+            throw parseErr;
+          }
+        }
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setMessages(newMessages.slice(0, -1));
+      setMessages(history);
     } finally {
       setLoading(false);
     }
@@ -126,7 +158,15 @@ export default function AssistantPage() {
                   : "bg-white border border-zinc-100 text-zinc-700 rounded-bl-sm shadow-sm"
               }`}
             >
-              {msg.parts[0].text}
+              {msg.role === "model" && loading && !msg.parts[0].text && i === messages.length - 1 ? (
+                <div className="flex gap-1 items-center h-4">
+                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                </div>
+              ) : (
+                msg.parts[0].text
+              )}
             </div>
             {msg.role === "user" && (
               <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center shrink-0 mt-0.5">
@@ -135,21 +175,6 @@ export default function AssistantPage() {
             )}
           </div>
         ))}
-
-        {loading && (
-          <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 text-indigo-600" />
-            </div>
-            <div className="bg-white border border-zinc-100 rounded-xl rounded-bl-sm px-4 py-3 shadow-sm">
-              <div className="flex gap-1 items-center h-4">
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
-              </div>
-            </div>
-          </div>
-        )}
 
         {error && (
           <p className="text-red-500 text-sm text-center">{error}</p>

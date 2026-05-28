@@ -8,29 +8,28 @@ If a question cannot be answered from the documents, respond with:
 "I don't have that information in the provided documents. Please contact HR directly."
 Do not make assumptions or answer questions outside the scope of the documents.`;
 
-export async function generateChatReply(
+export async function* generateChatReplyStream(
   message: string,
   history: Content[],
-  pdfBuffers: Buffer[],
-): Promise<string> {
+  documentTexts: string[],
+): AsyncGenerator<string> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    systemInstruction: SYSTEM_PROMPT,
+    model: "gemini-2.5-flash",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    generationConfig: { thinkingConfig: { thinkingBudget: 0 } } as any,
   });
 
-  const inlinePdfs = pdfBuffers.map((buf) => ({
-    inlineData: {
-      mimeType: "application/pdf" as const,
-      data: buf.toString("base64"),
-    },
-  }));
+  const docParts = documentTexts.map((text) => ({ text }));
 
   const chat = model.startChat({ history });
-
-  const result = await chat.sendMessage([
-    ...inlinePdfs,
+  const result = await chat.sendMessageStream([
+    { text: SYSTEM_PROMPT },
+    ...docParts,
     { text: message },
   ]);
 
-  return result.response.text();
+  for await (const chunk of result.stream) {
+    const text = chunk.text();
+    if (text) yield text;
+  }
 }

@@ -7,7 +7,7 @@ export function useApiClient() {
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
-    // Always get a fresh token — avoids stale/null token on first mount
+    await auth.authStateReady();
     const token = await auth.currentUser?.getIdToken();
 
     const isFormData = options.body instanceof FormData;
@@ -29,8 +29,30 @@ export function useApiClient() {
       throw new Error(msg);
     }
 
-    return res.json();
+    const text = await res.text();
+    return (text ? JSON.parse(text) : null) as T;
   }
 
-  return { apiFetch };
+  async function streamFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    await auth.authStateReady();
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token ?? ""}`,
+        ...options.headers,
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Request failed" }));
+      const msg = typeof err.error === "string"
+        ? err.error
+        : err.message ?? `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+    return res;
+  }
+
+  return { apiFetch, streamFetch };
 }

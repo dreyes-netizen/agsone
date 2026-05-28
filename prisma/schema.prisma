@@ -515,6 +515,7 @@ model PolicyDocument {
   storagePath  String
   fileName     String
   fileSize     Int
+  content      String?
   isActive     Boolean  @default(true)
   uploadedAt   DateTime @default(now())
   uploadedById String

@@ -3,6 +3,9 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { uploadPdf } from "@/lib/supabase/storageClient";
 import { randomUUID } from "crypto";
+// Import from lib path to avoid pdf-parse loading its test fixtures at import time
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require("pdf-parse/lib/pdf-parse");
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -43,7 +46,10 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(arrayBuffer);
   const storagePath = `${randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
 
-  await uploadPdf(storagePath, buffer);
+  const [, parsed] = await Promise.all([
+    uploadPdf(storagePath, buffer),
+    pdfParse(buffer) as Promise<{ text: string }>,
+  ]);
 
   const doc = await prisma.policyDocument.create({
     data: {
@@ -51,6 +57,7 @@ export async function POST(req: NextRequest) {
       storagePath,
       fileName: file.name,
       fileSize: file.size,
+      content: parsed.text,
       uploadedById: user!.id,
     },
     include: { uploadedBy: { select: { displayName: true } } },

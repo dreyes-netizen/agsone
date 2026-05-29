@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X } from "lucide-react";
+import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check } from "lucide-react";
 
 type PolicyDocument = {
   id: string;
@@ -30,6 +30,10 @@ export default function DocumentsPage() {
   const [docName, setDocName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [reindexing, setReindexing] = useState(false);
+  const [reindexResult, setReindexResult] = useState<string>("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   async function load() {
     setLoading(true);
@@ -77,6 +81,35 @@ export default function DocumentsPage() {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   }
 
+  async function handleReindex() {
+    if (!confirm("Re-index all active documents? This may take a moment.")) return;
+    setReindexing(true);
+    setReindexResult("");
+    try {
+      const res = await apiFetch<{ data: { name: string; status: string }[] }>(
+        "/api/admin/documents/reindex",
+        { method: "POST" },
+      );
+      const summary = res.data.map((r) => `${r.name}: ${r.status}`).join("\n");
+      setReindexResult(summary);
+    } catch (err) {
+      setReindexResult(err instanceof Error ? err.message : "Reindex failed");
+    } finally {
+      setReindexing(false);
+    }
+  }
+
+  async function handleRename(id: string) {
+    const name = renameValue.trim();
+    if (!name) return;
+    await apiFetch(`/api/admin/documents/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    setDocuments((prev) => prev.map((d) => (d.id === id ? { ...d, name } : d)));
+    setRenamingId(null);
+  }
+
   async function handleToggle(id: string, current: boolean) {
     await apiFetch(`/api/admin/documents/${id}`, {
       method: "PATCH",
@@ -93,17 +126,35 @@ export default function DocumentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Policy Documents</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Manage PDFs available to the AGS Assistant chatbot.
+            Manage PDFs available to Ally, the AGS HR assistant.
           </p>
         </div>
-        <button
-          onClick={() => { setModalOpen(true); setUploadError(""); setDocName(""); setFile(null); }}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          <Upload className="w-4 h-4" />
-          Upload Document
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleReindex}
+            disabled={reindexing}
+            title="Re-index all active documents for Ally"
+            className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${reindexing ? "animate-spin" : ""}`} />
+            {reindexing ? "Re-indexing…" : "Re-index Ally"}
+          </button>
+          <button
+            onClick={() => { setModalOpen(true); setUploadError(""); setDocName(""); setFile(null); }}
+            className="flex items-center gap-2 bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1f2937] transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Document
+          </button>
+        </div>
       </div>
+
+      {reindexResult && (
+        <div className="mb-4 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3">
+          <p className="text-xs font-semibold text-zinc-500 mb-1">Re-index result</p>
+          <pre className="text-xs text-zinc-700 whitespace-pre-wrap">{reindexResult}</pre>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>
@@ -129,7 +180,39 @@ export default function DocumentsPage() {
             <tbody className="divide-y divide-gray-50">
               {documents.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-gray-900">{doc.name}</td>
+                  <td className="px-5 py-3">
+                    {renamingId === doc.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleRename(doc.id);
+                            if (e.key === "Escape") setRenamingId(null);
+                          }}
+                          className="border border-indigo-300 rounded px-2 py-1 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48"
+                        />
+                        <button onClick={() => handleRename(doc.id)} className="text-emerald-500 hover:text-emerald-700">
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setRenamingId(null)} className="text-gray-400 hover:text-gray-600">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 group">
+                        <span className="font-medium text-gray-900">{doc.name}</span>
+                        <button
+                          onClick={() => { setRenamingId(doc.id); setRenameValue(doc.name); }}
+                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-500 transition-opacity"
+                          title="Rename"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-gray-500">{doc.fileName}</td>
                   <td className="px-5 py-3 text-gray-500">{formatBytes(doc.fileSize)}</td>
                   <td className="px-5 py-3">

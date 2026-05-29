@@ -5,8 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search, Bot,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search,
 } from "lucide-react";
+import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -25,7 +26,6 @@ const mainNav = [
   { href: "/challenges",  label: "Challenges",  icon: Swords },
   { href: "/profile",     label: "Profile",     icon: User },
   { href: "/feedback",    label: "Feedback",    icon: MessageSquare },
-  { href: "/assistant",   label: "Assistant",   icon: Bot },
 ];
 
 const bottomNavItems = [
@@ -222,6 +222,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <NotificationBell />
         </div>
       </div>
+
+      <AllyWidget />
 
       {/* Main content */}
       <main className="flex-1 lg:ml-[216px] min-h-screen">

@@ -355,9 +355,13 @@ export default function FeedPage() {
   const [uploading, setUploading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const shoutoutSearchRef = useRef<HTMLDivElement>(null);
   const [showShoutoutForm, setShowShoutoutForm] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
   const [shoutoutRecipientId, setShoutoutRecipientId] = useState("");
+  const [shoutoutRecipientName, setShoutoutRecipientName] = useState("");
+  const [shoutoutSearch, setShoutoutSearch] = useState("");
+  const [shoutoutSearchOpen, setShoutoutSearchOpen] = useState(false);
   const [shoutoutContent, setShoutoutContent] = useState("");
   const [shoutoutSubmitting, setShoutoutSubmitting] = useState(false);
 
@@ -367,6 +371,16 @@ export default function FeedPage() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (shoutoutSearchRef.current && !shoutoutSearchRef.current.contains(e.target as Node)) {
+        setShoutoutSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -678,6 +692,8 @@ export default function FeedPage() {
       setPosts((prev) => [res.data, ...prev]);
       setShoutoutContent("");
       setShoutoutRecipientId("");
+      setShoutoutRecipientName("");
+      setShoutoutSearch("");
       setShowShoutoutForm(false);
     } catch {
       // silent — user sees no change
@@ -874,16 +890,53 @@ export default function FeedPage() {
 
         {showShoutoutForm && (
           <div className="px-5 pb-4 border-t border-zinc-100 pt-3 space-y-3">
-            <select
-              value={shoutoutRecipientId}
-              onChange={(e) => setShoutoutRecipientId(e.target.value)}
-              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition bg-white"
-            >
-              <option value="">Select a colleague…</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>{e.displayName}</option>
-              ))}
-            </select>
+            <div ref={shoutoutSearchRef} className="relative">
+              {shoutoutRecipientId ? (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <span className="text-sm text-amber-800 font-medium flex-1">{shoutoutRecipientName}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setShoutoutRecipientId(""); setShoutoutRecipientName(""); setShoutoutSearch(""); }}
+                    className="text-amber-500 hover:text-amber-700 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={shoutoutSearch}
+                  onChange={(e) => { setShoutoutSearch(e.target.value); setShoutoutSearchOpen(true); }}
+                  onFocus={() => setShoutoutSearchOpen(true)}
+                  placeholder="Search colleague…"
+                  className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition"
+                />
+              )}
+              {shoutoutSearchOpen && !shoutoutRecipientId && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-zinc-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {employees
+                    .filter((e) => e.displayName.toLowerCase().includes(shoutoutSearch.toLowerCase()))
+                    .map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => {
+                          setShoutoutRecipientId(e.id);
+                          setShoutoutRecipientName(e.displayName);
+                          setShoutoutSearch("");
+                          setShoutoutSearchOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-amber-50 hover:text-amber-800 transition-colors"
+                      >
+                        {e.displayName}
+                      </button>
+                    ))}
+                  {employees.filter((e) => e.displayName.toLowerCase().includes(shoutoutSearch.toLowerCase())).length === 0 && (
+                    <p className="px-3 py-2 text-sm text-zinc-400">No results</p>
+                  )}
+                </div>
+              )}
+            </div>
             <textarea
               value={shoutoutContent}
               onChange={(e) => setShoutoutContent(e.target.value)}
@@ -896,7 +949,7 @@ export default function FeedPage() {
               <span className="text-xs text-zinc-400">{shoutoutContent.length}/500</span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setShowShoutoutForm(false); setShoutoutContent(""); setShoutoutRecipientId(""); }}
+                  onClick={() => { setShowShoutoutForm(false); setShoutoutContent(""); setShoutoutRecipientId(""); setShoutoutRecipientName(""); setShoutoutSearch(""); setShoutoutSearchOpen(false); }}
                   className="text-sm text-zinc-500 hover:text-zinc-700 px-3 py-1.5 rounded-lg transition-colors"
                 >
                   Cancel

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { uploadPdf } from "@/lib/supabase/storageClient";
+import { storeDocumentChunks } from "@/lib/rag/search";
 import { randomUUID } from "crypto";
-import { PDFParse } from "pdf-parse";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -44,11 +45,14 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(arrayBuffer);
   const storagePath = `${randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
 
-  const parser = new PDFParse({ data: buffer });
   const [, parsed] = await Promise.all([
     uploadPdf(storagePath, buffer),
-    parser.getText(),
+    getDocumentProxy(new Uint8Array(buffer)).then((pdf) =>
+      extractText(pdf, { mergePages: true })
+    ),
   ]);
+
+  const text = parsed.text as string;
 
   const doc = await prisma.policyDocument.create({
     data: {
@@ -56,11 +60,16 @@ export async function POST(req: NextRequest) {
       storagePath,
       fileName: file.name,
       fileSize: file.size,
-      content: parsed.text,
+      content: text,
       uploadedById: user!.id,
     },
     include: { uploadedBy: { select: { displayName: true } } },
   });
+
+  // Chunk and embed for RAG — runs in background, doesn't block response
+  storeDocumentChunks(doc.id, text).catch((err) =>
+    console.error(`[RAG] Failed to index document ${doc.id}:`, err)
+  );
 
   return NextResponse.json({ data: doc }, { status: 201 });
 }

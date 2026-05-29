@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
-import { prisma } from "@/lib/prisma/client";
-import { generateChatReplyStream } from "@/lib/gemini/client";
+import { generateChatReplyStream } from "@/lib/groq/client";
+import { searchRelevantChunks } from "@/lib/rag/search";
+import { isJailbreakAttempt } from "@/lib/guardrails/jailbreak";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
-import { Content } from "@google/generative-ai";
+
+const MAX_HISTORY_TURNS = 10;
+const STREAM_TIMEOUT_MS = 30_000;
 
 const historySchema = z.array(
   z.object({
@@ -30,33 +34,53 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: JSON.stringify(parsed.error.flatten()) }, { status: 400 });
   }
 
-  const { message, history } = parsed.data;
+  const { message, history: rawHistory } = parsed.data;
+  const history = rawHistory.slice(-MAX_HISTORY_TURNS) as typeof rawHistory;
 
-  const documents = await prisma.policyDocument.findMany({
-    where: { isActive: true },
-    select: { content: true },
-  });
+  if (isJailbreakAttempt(message)) {
+    return NextResponse.json(
+      { error: "I'm only here to help with company HR policies. Please ask a policy-related question." },
+      { status: 400 },
+    );
+  }
 
-  const documentTexts = documents
-    .map((doc) => doc.content)
-    .filter((c): c is string => !!c);
+  const { allowed } = checkRateLimit(user.id);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "You've reached the message limit (20/hour). Please try again later." },
+      { status: 429 },
+    );
+  }
+
+  let context = "";
+  try {
+    const relevantChunks = await searchRelevantChunks(message);
+    context = relevantChunks.join("\n\n---\n\n");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Internal server error";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
+      const timeoutId = setTimeout(() => {
+        controller.enqueue(sseChunk({ error: "Response timed out. Please try again." }));
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }, STREAM_TIMEOUT_MS);
+
       try {
-        if (documentTexts.length === 0) {
-          controller.enqueue(sseChunk({ chunk: "No policy documents have been uploaded yet. Please contact HR directly." }));
-        } else {
-          for await (const chunk of generateChatReplyStream(message, history as Content[], documentTexts)) {
-            controller.enqueue(sseChunk({ chunk }));
-          }
+        for await (const chunk of generateChatReplyStream(message, history as Parameters<typeof generateChatReplyStream>[1], context)) {
+          controller.enqueue(sseChunk({ chunk }));
         }
-      } catch {
-        controller.enqueue(sseChunk({ error: "Failed to generate response" }));
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to generate response";
+        controller.enqueue(sseChunk({ error: msg }));
       } finally {
+        clearTimeout(timeoutId);
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       }

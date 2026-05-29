@@ -8,18 +8,26 @@ export function useApiClient() {
     options: RequestInit = {}
   ): Promise<T> {
     await auth.authStateReady();
-    const token = await auth.currentUser?.getIdToken();
 
-    const isFormData = options.body instanceof FormData;
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        // Let the browser set Content-Type automatically for FormData (includes boundary)
-        ...(isFormData ? {} : { "Content-Type": "application/json" }),
-        Authorization: `Bearer ${token ?? ""}`,
-        ...options.headers,
-      },
-    });
+    async function doFetch(forceRefresh = false) {
+      const token = await auth.currentUser?.getIdToken(forceRefresh);
+      const isFormData = options.body instanceof FormData;
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          Authorization: `Bearer ${token ?? ""}`,
+          ...options.headers,
+        },
+      });
+    }
+
+    let res = await doFetch();
+
+    // On 401, force a token refresh and retry once
+    if (res.status === 401) {
+      res = await doFetch(true);
+    }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: "Request failed" }));
@@ -33,17 +41,33 @@ export function useApiClient() {
     return (text ? JSON.parse(text) : null) as T;
   }
 
-  async function streamFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  async function streamFetch(
+    url: string,
+    options: RequestInit = {},
+    signal?: AbortSignal,
+  ): Promise<Response> {
     await auth.authStateReady();
-    const token = await auth.currentUser?.getIdToken();
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token ?? ""}`,
-        ...options.headers,
-      },
-    });
+
+    async function doFetch(forceRefresh = false) {
+      const token = await auth.currentUser?.getIdToken(forceRefresh);
+      return fetch(url, {
+        ...options,
+        signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token ?? ""}`,
+          ...options.headers,
+        },
+      });
+    }
+
+    let res = await doFetch();
+
+    // On 401, force a token refresh and retry once
+    if (res.status === 401) {
+      res = await doFetch(true);
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: "Request failed" }));
       const msg = typeof err.error === "string"
@@ -51,6 +75,7 @@ export function useApiClient() {
         : err.message ?? `Request failed (${res.status})`;
       throw new Error(msg);
     }
+
     return res;
   }
 

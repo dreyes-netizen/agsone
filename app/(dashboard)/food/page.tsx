@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, Loader2, ImagePlus } from "lucide-react";
+import { ImageLightbox } from "@/components/ImageLightbox";
 
 type MyOrder = {
   id: string;
@@ -67,6 +68,8 @@ export default function FoodPage() {
   // Expanded seller view
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sellerOrders, setSellerOrders] = useState<Record<string, OrderRow[]>>({});
+
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
 
   // Create listing form
   const [showForm, setShowForm] = useState(false);
@@ -360,12 +363,23 @@ export default function FoodPage() {
                 {listing.imageUrls.length > 0 && (
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={listing.imageUrls[0]} alt={listing.title} className="w-full h-36 object-cover" />
+                    <img
+                      src={listing.imageUrls[0]}
+                      alt={listing.title}
+                      className="w-full h-36 object-cover cursor-zoom-in"
+                      onClick={() => setLightbox({ images: listing.imageUrls, index: 0 })}
+                    />
                     {listing.imageUrls.length > 1 && (
                       <div className="flex gap-1 absolute bottom-1.5 right-1.5">
                         {listing.imageUrls.slice(1).map((url, i) => (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img key={i} src={url} alt="" className="w-10 h-10 object-cover rounded border-2 border-white" />
+                          <img
+                            key={i}
+                            src={url}
+                            alt=""
+                            className="w-10 h-10 object-cover rounded border-2 border-white cursor-zoom-in"
+                            onClick={() => setLightbox({ images: listing.imageUrls, index: i + 1 })}
+                          />
                         ))}
                       </div>
                     )}
@@ -518,6 +532,15 @@ export default function FoodPage() {
             );
           })}
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          open={!!lightbox}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );

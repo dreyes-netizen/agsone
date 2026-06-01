@@ -105,6 +105,12 @@ enum ChallengeMetric {
   SHOUTOUTS_SENT
 }
 
+enum MedicineRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Department {
@@ -170,6 +176,9 @@ model User {
   challengesCreated Challenge[]
   policyDocuments PolicyDocument[]
   chatSessions    ChatSession[]
+  medicineItems    MedicineItem[]    @relation("MedicineItemsCreated")
+  medicineRequests MedicineRequest[] @relation("MedicineRequestsMade")
+  medicineApprovals MedicineRequest[] @relation("MedicineRequestsApproved")
 }
 
 model PointTransaction {
@@ -414,28 +423,31 @@ model PollVote {
 }
 
 model FoodListing {
-  id          String      @id @default(uuid())
-  title       String
-  description String?
-  price       Decimal     @db.Decimal(10, 2)
-  imageUrls   String[]
-  cutoffAt    DateTime
-  isActive    Boolean     @default(true)
-  createdById String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String      @id @default(uuid())
+  title        String
+  description  String?
+  price        Decimal     @db.Decimal(10, 2)
+  imageUrls    String[]
+  cutoffAt     DateTime
+  deliveryDate DateTime?
+  addOns       Json        @default("[]")
+  isActive     Boolean     @default(true)
+  createdById  String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   createdBy User        @relation("FoodListingsCreated", fields: [createdById], references: [id])
   orders    FoodOrder[]
 }
 
 model FoodOrder {
-  id        String      @id @default(uuid())
-  listingId String
-  userId    String
-  quantity  Int
-  note      String?
-  createdAt DateTime    @default(now())
+  id             String      @id @default(uuid())
+  listingId      String
+  userId         String
+  quantity       Int
+  note           String?
+  selectedAddOns Json        @default("[]")
+  createdAt      DateTime    @default(now())
 
   listing FoodListing @relation(fields: [listingId], references: [id])
   user    User        @relation("FoodOrdersPlaced", fields: [userId], references: [id])
@@ -543,4 +555,33 @@ model PolicyDocument {
   uploadedById String
 
   uploadedBy User @relation(fields: [uploadedById], references: [id])
+}
+
+model MedicineItem {
+  id            String   @id @default(uuid())
+  name          String
+  imageUrl      String
+  caption       String
+  stockQuantity Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdBy User              @relation("MedicineItemsCreated", fields: [createdById], references: [id])
+  requests  MedicineRequest[]
+}
+
+model MedicineRequest {
+  id           String                @id @default(uuid())
+  medicineId   String
+  userId       String
+  status       MedicineRequestStatus @default(PENDING)
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime              @default(now())
+
+  medicine   MedicineItem @relation(fields: [medicineId], references: [id])
+  user       User         @relation("MedicineRequestsMade", fields: [userId], references: [id])
+  approvedBy User?        @relation("MedicineRequestsApproved", fields: [approvedById], references: [id])
 }

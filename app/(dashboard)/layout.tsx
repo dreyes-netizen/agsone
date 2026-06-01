@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search,
+  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search, Pill,
 } from "lucide-react";
 import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
@@ -20,6 +20,7 @@ const mainNav = [
   { href: "/missions",    label: "Missions",    icon: Target },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
+  { href: "/medicine",    label: "Medicine",    icon: Pill },
   { href: "/games",       label: "Games",       icon: Gamepad2 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/shoutouts",   label: "Shoutouts",   icon: Sparkles },

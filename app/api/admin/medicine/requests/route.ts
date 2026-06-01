@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
 
   const requests = await prisma.medicineRequest.findMany({
     orderBy: { createdAt: "desc" },
+    take: 200,
     include: {
       medicine: { select: { id: true, name: true, imageUrl: true } },
       user: { select: { id: true, displayName: true, avatarUrl: true } },

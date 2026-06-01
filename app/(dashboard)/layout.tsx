@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div>
               <p className="text-white font-semibold text-[13px] leading-tight">AGS One</p>
-              <p className="text-white text-[10px] leading-tight">Alliance Global</p>
+              <p className="text-white text-[10px] leading-tight">Alliance Global Solutions</p>
             </div>
           </div>
           <NotificationBell />

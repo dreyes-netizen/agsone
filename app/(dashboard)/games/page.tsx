@@ -86,11 +86,15 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) return;
-    apiFetch<{ data: Game[] }>("/api/games").then((res) => {
-      setGames(res.data);
+    if (authLoading) return;
+    if (!user) {
       setLoading(false);
-    });
+      return;
+    }
+    apiFetch<{ data: Game[] }>("/api/games")
+      .then((res) => { setGames(res.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 

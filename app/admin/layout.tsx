@@ -6,6 +6,8 @@ import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Game
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useEffect } from "react";
 
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -25,6 +27,15 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { dbUser, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && dbUser?.role !== "HR_ADMIN") {
+      router.replace("/dashboard");
+    }
+  }, [loading, dbUser, router]);
+
+  if (loading || dbUser?.role !== "HR_ADMIN") return null;
 
   async function handleSignOut() {
     await signOut(auth);

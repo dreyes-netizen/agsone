@@ -1,11 +1,41 @@
 "use client";
 
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/client";
 import { Trophy, Gamepad2, Gift, Target } from "lucide-react";
+
+const FEATURES = [
+  {
+    icon: Trophy,
+    color: "bg-amber-500/20",
+    iconColor: "text-amber-400",
+    label: "Leaderboard",
+    desc: "Compete with colleagues and climb the weekly rankings.",
+  },
+  {
+    icon: Target,
+    color: "bg-emerald-500/20",
+    iconColor: "text-emerald-400",
+    label: "Missions & Streaks",
+    desc: "Complete daily challenges to earn bonus points.",
+  },
+  {
+    icon: Gamepad2,
+    color: "bg-sky-500/20",
+    iconColor: "text-sky-400",
+    label: "Mini Games",
+    desc: "Play quick games between tasks and win extra points.",
+  },
+  {
+    icon: Gift,
+    color: "bg-purple-500/20",
+    iconColor: "text-purple-400",
+    label: "Rewards Marketplace",
+    desc: "Redeem your points for cash, gadgets & experiences.",
+  },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,123 +57,122 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-zinc-50">
+    <div className="min-h-screen flex bg-white">
 
       {/* ── Left panel ── */}
-      <div className="hidden lg:flex w-1/2 bg-[#111827] flex-col justify-between p-12 relative overflow-hidden">
-        {/* Grid pattern */}
+      <div className="hidden lg:flex w-[52%] bg-[#111827] flex-col justify-between p-12 relative overflow-hidden">
+        {/* Subtle grid pattern */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.035]"
           style={{
             backgroundImage:
               "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
+            backgroundSize: "48px 48px",
           }}
         />
-        {/* Glows */}
-        <div className="absolute top-0 left-0 w-[28rem] h-[28rem] rounded-full bg-indigo-600/20 blur-3xl -translate-x-1/3 -translate-y-1/3" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-3xl translate-x-1/4 translate-y-1/4" />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
 
-        {/* Large logo — decorative, pinned to the right */}
-        <div className="absolute right-10 top-1/2 -translate-y-1/2 z-[1] w-64 h-64 rounded-3xl bg-white shadow-2xl flex items-center justify-center overflow-hidden">
-          <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-4" />
-        </div>
+        {/* Ambient glows — on-brand slate tones */}
+        <div className="absolute top-0 left-0 w-[32rem] h-[32rem] rounded-full bg-white/5 blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-white/5 blur-3xl translate-x-1/3 translate-y-1/3" />
 
-        {/* Branding at top */}
-        <div className="relative z-10">
-          <p className="text-white font-bold text-base leading-tight">AGS One</p>
-          <p className="text-white/40 text-xs">Alliance Global Solutions</p>
-        </div>
-
-        {/* Tagline + feature cards */}
-        <div className="relative z-10 space-y-8 max-w-[52%]">
+        {/* Branding */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow overflow-hidden">
+            <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
+          </div>
           <div>
-            <h2 className="text-4xl font-bold text-white leading-tight tracking-tight">
+            <p className="text-white font-bold text-sm leading-tight">AGS One</p>
+            <p className="text-white/35 text-[10px]">Alliance Global Solutions</p>
+          </div>
+        </div>
+
+        {/* Center content */}
+        <div className="relative z-10 space-y-10">
+          {/* Tagline */}
+          <div>
+            <h2 className="text-[2.6rem] font-bold text-white leading-[1.15] tracking-tight">
               Work hard.<br />Play harder.<br />
-              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-                Get rewarded.
-              </span>
+              <span className="text-white/50">Get rewarded.</span>
             </h2>
-            <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-sm">
+            <p className="text-white/35 mt-4 text-sm leading-relaxed max-w-xs">
               Earn points for your contributions, redeem them for rewards, and compete with your colleagues.
             </p>
           </div>
 
-          {/* Feature highlights */}
-          <div className="space-y-3">
-            {[
-              {
-                icon: Trophy,
-                color: "bg-amber-500/20",
-                iconColor: "text-amber-400",
-                label: "Leaderboard",
-                desc: "Compete with colleagues and climb the weekly rankings.",
-              },
-              {
-                icon: Target,
-                color: "bg-emerald-500/20",
-                iconColor: "text-emerald-400",
-                label: "Missions & Streaks",
-                desc: "Complete daily challenges to earn bonus points.",
-              },
-              {
-                icon: Gamepad2,
-                color: "bg-blue-500/20",
-                iconColor: "text-blue-400",
-                label: "Mini Games",
-                desc: "Play quick games between tasks and win extra points.",
-              },
-              {
-                icon: Gift,
-                color: "bg-violet-500/20",
-                iconColor: "text-violet-400",
-                label: "Rewards Marketplace",
-                desc: "Redeem your points for cash, gadgets & experiences.",
-              },
-            ].map(({ icon: Icon, color, iconColor, label, desc }) => (
-              <div key={label} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          {/* Feature cards */}
+          <div className="space-y-2.5">
+            {FEATURES.map(({ icon: Icon, color, iconColor, label, desc }) => (
+              <div
+                key={label}
+                className="flex items-center gap-3.5 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-3 hover:bg-white/[0.07] transition-colors"
+              >
                 <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center shrink-0`}>
                   <Icon className={`w-4 h-4 ${iconColor}`} />
                 </div>
                 <div>
                   <p className="text-white text-sm font-semibold leading-tight">{label}</p>
-                  <p className="text-white/40 text-xs mt-0.5">{desc}</p>
+                  <p className="text-white/35 text-xs mt-0.5 leading-relaxed">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 text-white/15 text-xs">
+        <div className="relative z-10 text-white/15 text-[11px]">
           © {new Date().getFullYear()} Alliance Global Solutions
         </div>
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
+      <div className="flex-1 flex items-center justify-center p-8 bg-zinc-50">
+        {/* Subtle background pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, #111827 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
 
-          {/* Mobile logo */}
+        <div className="relative w-full max-w-sm">
+
+          {/* Mobile branding */}
           <div className="lg:hidden mb-8 flex flex-col items-center text-center">
-            <img src="/agslogo.png" alt="AGS One" className="w-28 h-28 object-contain mb-4" />
+            <div className="w-16 h-16 rounded-2xl bg-[#111827] flex items-center justify-center shadow-lg overflow-hidden mb-4">
+              <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-2" />
+            </div>
             <p className="text-zinc-900 font-bold text-xl leading-tight">AGS One</p>
-            <p className="text-zinc-400 text-xs mb-3">Alliance Global Solutions</p>
+            <p className="text-zinc-400 text-xs mb-2">Alliance Global Solutions</p>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">
               Earn points, redeem rewards, and compete with your colleagues.
             </p>
           </div>
 
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-8">
-            <div className="mb-7">
-              <h1 className="text-xl font-bold text-zinc-900">Welcome back</h1>
-              <p className="text-zinc-400 text-sm mt-1">Use your company Google account to continue.</p>
+          {/* Login card */}
+          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xl shadow-zinc-200/60 p-8">
+
+            {/* Desktop logo inside card */}
+            <div className="hidden lg:flex items-center gap-2.5 mb-7">
+              <div className="w-8 h-8 rounded-lg bg-[#111827] flex items-center justify-center overflow-hidden">
+                <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
+              </div>
+              <div>
+                <p className="text-zinc-900 font-bold text-sm leading-tight">AGS One</p>
+                <p className="text-zinc-400 text-[10px]">Alliance Global Solutions</p>
+              </div>
             </div>
 
+            <div className="mb-7">
+              <h1 className="text-xl font-bold text-zinc-900">Welcome back</h1>
+              <p className="text-zinc-400 text-sm mt-1">Sign in with your company Google account.</p>
+            </div>
+
+            {/* Google sign-in button */}
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-white border border-zinc-200 rounded-lg px-5 py-2.5 text-sm text-zinc-700 font-medium hover:bg-zinc-50 hover:border-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="cursor-pointer w-full flex items-center justify-center gap-3 bg-white border border-zinc-200 rounded-xl px-5 py-3 text-sm text-zinc-700 font-medium hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -155,20 +184,21 @@ export default function LoginPage() {
             </button>
 
             {error && (
-              <div className="mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-100">
+              <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
 
-            <p className="mt-6 text-xs text-zinc-400 text-center">
-              Use your{" "}
-              <span className="text-zinc-600 font-medium">@allianceglobalsolutions.com</span>{" "}
-              account
-            </p>
-
-            <p className="mt-4 text-[11px] text-zinc-400 text-center leading-relaxed">
-              By signing in, you acknowledge this is a company system.
-            </p>
+            <div className="mt-6 pt-5 border-t border-zinc-100 space-y-2 text-center">
+              <p className="text-xs text-zinc-400">
+                Use your{" "}
+                <span className="text-zinc-600 font-medium">@allianceglobalsolutions.com</span>{" "}
+                account
+              </p>
+              <p className="text-[11px] text-zinc-300 leading-relaxed">
+                By signing in, you acknowledge this is a company system.
+              </p>
+            </div>
           </div>
 
           <p className="mt-6 text-xs text-zinc-400 text-center">

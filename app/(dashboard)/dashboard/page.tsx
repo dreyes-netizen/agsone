@@ -116,7 +116,11 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </p>
           <h1 className="text-2xl font-bold text-zinc-900 mt-0.5">
-            {getGreeting()}, {firstName}
+            {authLoading ? (
+              <span className="inline-block h-8 w-48 bg-zinc-100 animate-pulse rounded align-middle" />
+            ) : (
+              <>{getGreeting()}, {firstName}</>
+            )}
           </h1>
         </div>
       </div>

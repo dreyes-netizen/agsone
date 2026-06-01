@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import React from "react";
-import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X } from "lucide-react";
 
 type Reward = {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   pointCost: number;
   stockQuantity: number;
   category: string;
@@ -31,6 +33,8 @@ export default function AdminRewardsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -51,6 +55,7 @@ export default function AdminRewardsPage() {
       const payload = {
         name: form.name,
         description: form.description || undefined,
+        imageUrl: imageUrl || undefined,
         pointCost: Number(form.pointCost),
         stockQuantity: Number(form.stockQuantity),
         category: form.category,
@@ -63,6 +68,7 @@ export default function AdminRewardsPage() {
       }
 
       setForm(emptyForm);
+      setImageUrl("");
       setEditingId(null);
       setShowForm(false);
       await loadRewards();
@@ -81,8 +87,25 @@ export default function AdminRewardsPage() {
       stockQuantity: String(reward.stockQuantity),
       category: reward.category,
     });
+    setImageUrl(reward.imageUrl ?? "");
     setEditingId(reward.id);
     setShowForm(true);
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    try {
+      const url = await uploadToCloudinary(file);
+      setImageUrl(url);
+    } catch {
+      setError("Image upload failed — try again.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   }
 
   async function handleDelete(id: string) {
@@ -143,6 +166,46 @@ export default function AdminRewardsPage() {
                   className={inputClass + " resize-none"}
                 />
               </div>
+              {/* Photo */}
+              <div className="col-span-2 space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Photo <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                {imageUrl ? (
+                  <div className="relative w-24 h-24">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="Preview"
+                      className="w-24 h-24 object-cover rounded-xl border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl("")}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      aria-label="Remove photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    className={`flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 text-gray-500 w-fit ${
+                      uploading ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                  >
+                    <ImagePlus className="w-4 h-4" />
+                    {uploading ? "Uploading…" : "Upload photo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                      disabled={uploading}
+                    />
+                  </label>
+                )}
+              </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Point Cost</label>
                 <input
@@ -189,7 +252,7 @@ export default function AdminRewardsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowForm(false); setEditingId(null); }}
+                  onClick={() => { setShowForm(false); setEditingId(null); setImageUrl(""); }}
                   className="border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50"
                 >
                   Cancel

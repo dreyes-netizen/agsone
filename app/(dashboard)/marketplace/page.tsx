@@ -6,11 +6,13 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import React from "react";
 import { ShoppingBag, CheckCircle, AlertCircle, Coins, Package, Ticket, Star, Monitor } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
+import { ImageLightbox } from "@/components/ImageLightbox";
 
 type Reward = {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   pointCost: number;
   stockQuantity: number;
   category: string;
@@ -32,6 +34,7 @@ export default function MarketplacePage() {
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const { fire: fireConfetti } = useConfetti();
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -131,8 +134,24 @@ export default function MarketplacePage() {
                 key={reward.id}
                 className={`bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow ${outOfStock ? "opacity-55" : ""}`}
               >
-                {/* Color accent */}
-                <div className={`h-1 bg-gradient-to-r ${cfg.accent}`} />
+                {/* Photo or color accent */}
+                {reward.imageUrl ? (
+                  <button
+                    type="button"
+                    className="block w-full focus:outline-none cursor-zoom-in"
+                    onClick={() => setLightboxImg(reward.imageUrl!)}
+                    aria-label={`View photo of ${reward.name}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={reward.imageUrl}
+                      alt={reward.name}
+                      className="w-full h-40 object-cover"
+                    />
+                  </button>
+                ) : (
+                  <div className={`h-1 bg-gradient-to-r ${cfg.accent}`} />
+                )}
 
                 <div className="p-5 flex flex-col flex-1 gap-3">
                   <div className="flex items-start justify-between">
@@ -177,6 +196,11 @@ export default function MarketplacePage() {
           })}
         </div>
       )}
+      <ImageLightbox
+        images={lightboxImg ? [lightboxImg] : []}
+        open={!!lightboxImg}
+        onClose={() => setLightboxImg(null)}
+      />
     </div>
   );
 }

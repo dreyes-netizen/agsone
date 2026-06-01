@@ -29,19 +29,23 @@ export function ImageLightbox({ images, initialIndex = 0, open, onClose }: Props
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, images.length]);
+  }, [open, onClose, images]);
 
   if (!open || images.length === 0) return null;
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image lightbox"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       {/* Close */}
       <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+        autoFocus
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
         aria-label="Close"
       >
         <X className="w-5 h-5" />
@@ -51,7 +55,7 @@ export function ImageLightbox({ images, initialIndex = 0, open, onClose }: Props
       {images.length > 1 && index > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); setIndex((i) => i - 1); }}
-          className="absolute left-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+          className="absolute left-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
           aria-label="Previous"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -71,7 +75,7 @@ export function ImageLightbox({ images, initialIndex = 0, open, onClose }: Props
       {images.length > 1 && index < images.length - 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); setIndex((i) => i + 1); }}
-          className="absolute right-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+          className="absolute right-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
           aria-label="Next"
         >
           <ChevronRight className="w-6 h-6" />
@@ -81,11 +85,11 @@ export function ImageLightbox({ images, initialIndex = 0, open, onClose }: Props
       {/* Dot indicators — only for multi-image */}
       {images.length > 1 && (
         <div className="absolute bottom-4 flex gap-2">
-          {images.map((_, i) => (
+          {images.map((src, i) => (
             <button
-              key={i}
+              key={src}
               onClick={(e) => { e.stopPropagation(); setIndex(i); }}
-              className={`w-2 h-2 rounded-full transition-colors ${
+              className={`w-2 h-2 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none ${
                 i === index ? "bg-white" : "bg-white/40 hover:bg-white/60"
               }`}
               aria-label={`Image ${i + 1}`}

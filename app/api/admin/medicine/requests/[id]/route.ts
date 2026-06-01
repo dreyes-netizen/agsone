@@ -33,25 +33,33 @@ export async function PATCH(
   }
 
   if (parsed.data.action === "approve") {
-    const medicine = await prisma.medicineItem.findUnique({
-      where: { id: request.medicineId },
-      select: { stockQuantity: true },
-    });
-    if (!medicine || medicine.stockQuantity <= 0) {
-      return NextResponse.json({ error: "Out of stock" }, { status: 409 });
+    let updatedRequest: { id: string; status: string; approvedAt: Date | null; approvedById: string | null };
+    try {
+      updatedRequest = await prisma.$transaction(async (tx) => {
+        const medicine = await tx.medicineItem.findUnique({
+          where: { id: request.medicineId },
+          select: { stockQuantity: true },
+        });
+        if (!medicine || medicine.stockQuantity <= 0) {
+          throw new Error("OUT_OF_STOCK");
+        }
+        const updated = await tx.medicineRequest.update({
+          where: { id },
+          data: { status: "APPROVED", approvedById: user!.id, approvedAt: new Date() },
+          select: { id: true, status: true, approvedAt: true, approvedById: true },
+        });
+        await tx.medicineItem.update({
+          where: { id: request.medicineId },
+          data: { stockQuantity: { decrement: 1 } },
+        });
+        return updated;
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "OUT_OF_STOCK") {
+        return NextResponse.json({ error: "Out of stock" }, { status: 409 });
+      }
+      throw err;
     }
-
-    const [updatedRequest] = await prisma.$transaction([
-      prisma.medicineRequest.update({
-        where: { id },
-        data: { status: "APPROVED", approvedById: user!.id, approvedAt: new Date() },
-        select: { id: true, status: true, approvedAt: true, approvedById: true },
-      }),
-      prisma.medicineItem.update({
-        where: { id: request.medicineId },
-        data: { stockQuantity: { decrement: 1 } },
-      }),
-    ]);
 
     return NextResponse.json({ data: updatedRequest });
   }

@@ -1,11 +1,13 @@
 ﻿"use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, ZoomIn, MessageCircle, SmilePlus, Trash2, ChevronLeft, ChevronRight, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles } from "lucide-react";
+import { Send, ImagePlus, X, ZoomIn, MessageCircle, SmilePlus, Trash2, ChevronLeft, ChevronRight, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo } from "@/lib/helpers/timeAgo";
+import { FLAIRS, flairById } from "@/lib/flairs";
 
 type PollOption = {
   id: string;
@@ -20,6 +22,8 @@ type FeedPost = {
   content: string;
   imageUrls: string[];
   createdAt: string;
+  isPinned: boolean;
+  flair: string;
   author: { displayName: string; avatarUrl: string | null };
   recipient: { id: string; displayName: string; avatarUrl: string | null } | null;
   reactions: Record<string, number>;
@@ -328,6 +332,7 @@ function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; 
 }
 
 export default function FeedPage() {
+  const router = useRouter();
   const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -350,12 +355,18 @@ export default function FeedPage() {
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
   const [replySending, setReplySending] = useState<Record<string, boolean>>({});
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [selectedFlair, setSelectedFlair] = useState<string | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState(0);
+  const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const shoutoutSearchRef = useRef<HTMLDivElement>(null);
+  const mentionDropdownRef = useRef<HTMLDivElement>(null);
   const [showShoutoutForm, setShowShoutoutForm] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
   const [shoutoutRecipientId, setShoutoutRecipientId] = useState("");
@@ -390,12 +401,12 @@ export default function FeedPage() {
   }, [authLoading, user, activeFilter]);
 
   useEffect(() => {
-    if (!showShoutoutForm || employees.length > 0) return;
+    if (authLoading || !user || employees.length > 0) return;
     apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
       .then((res) => setEmployees(res.data))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showShoutoutForm]);
+  }, [authLoading, user]);
 
   async function load(filter = "ALL") {
     setLoading(true);
@@ -452,7 +463,7 @@ export default function FeedPage() {
 
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPost.trim()) return;
+    if (!newPost.trim() || !selectedFlair) return;
     setPosting(true);
     try {
       let imageUrls: string[] = [];
@@ -462,22 +473,25 @@ export default function FeedPage() {
         setUploading(false);
       }
 
+      const content = buildContent(newPost.trim());
       if (pollMode) {
         const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
         if (opts.length < 2) return;
         await apiFetch("/api/feed", {
           method: "POST",
-          body: JSON.stringify({ content: newPost.trim(), type: "POLL", options: opts, imageUrls }),
+          body: JSON.stringify({ content, type: "POLL", flair: selectedFlair, options: opts, imageUrls }),
         });
         setPollMode(false);
         setPollOptions(["", ""]);
       } else {
         await apiFetch("/api/feed", {
           method: "POST",
-          body: JSON.stringify({ content: newPost.trim(), type: "UPDATE", imageUrls }),
+          body: JSON.stringify({ content, type: "UPDATE", flair: selectedFlair, imageUrls }),
         });
       }
       setNewPost("");
+      setSelectedFlair(null);
+      setMentionMap({});
       clearImages();
       await load();
     } finally {
@@ -681,6 +695,21 @@ export default function FeedPage() {
     }
   }
 
+  async function togglePin(postId: string) {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    const newPinned = !post.isPinned;
+    setPosts((prev) => {
+      const updated = prev.map((p) => p.id === postId ? { ...p, isPinned: newPinned } : p);
+      return [...updated.filter((p) => p.isPinned), ...updated.filter((p) => !p.isPinned)];
+    });
+    try {
+      await apiFetch(`/api/feed/${postId}`, { method: "PATCH" });
+    } catch {
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, isPinned: !newPinned } : p));
+    }
+  }
+
   async function handleShoutoutSubmit() {
     if (!shoutoutRecipientId || !shoutoutContent.trim()) return;
     setShoutoutSubmitting(true);
@@ -701,6 +730,74 @@ export default function FeedPage() {
       setShoutoutSubmitting(false);
     }
   }
+
+  function handleComposerChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value;
+    setNewPost(value);
+    const cursor = e.target.selectionStart ?? value.length;
+    const textUpToCursor = value.slice(0, cursor);
+    // Allow spaces in names; stop only at another @ or an already-resolved mention (@[)
+    const match = textUpToCursor.match(/@(?!\[)([^@]*)$/);
+    if (match) {
+      setMentionQuery(match[1].toLowerCase().trim());
+      setMentionStart(cursor - match[0].length);
+    } else {
+      setMentionQuery(null);
+    }
+  }
+
+  function insertMention(emp: { id: string; displayName: string }) {
+    const cursor = composerRef.current?.selectionStart ?? newPost.length;
+    const before = newPost.slice(0, mentionStart);
+    const after = newPost.slice(cursor);
+    // Store human-readable @Name in textarea; track id separately
+    setNewPost(`${before}@${emp.displayName} ${after.trimStart()}`);
+    setMentionMap((prev) => ({ ...prev, [emp.displayName]: emp.id }));
+    setMentionQuery(null);
+    setTimeout(() => composerRef.current?.focus(), 0);
+  }
+
+  function buildContent(text: string): string {
+    // Replace @Name → @[Name|id] sorted longest-first to avoid partial matches
+    const entries = Object.entries(mentionMap).sort((a, b) => b[0].length - a[0].length);
+    let result = text;
+    for (const [name, id] of entries) {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      result = result.replace(new RegExp(`@${escaped}`, "g"), `@[${name}|${id}]`);
+    }
+    return result;
+  }
+
+  function renderContent(content: string) {
+    const parts = content.split(/(@\[[^\|]+\|[^\]]+\])/g);
+    return (
+      <>
+        {parts.map((part, i) => {
+          const match = part.match(/^@\[([^\|]+)\|([^\]]+)\]$/);
+          if (match) {
+            const [, name, id] = match;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => router.push(`/employees/${id}`)}
+                className="font-semibold text-blue-600 bg-blue-50 rounded-md px-1 py-0.5 hover:bg-blue-100 transition-colors cursor-pointer"
+              >
+                @{name}
+              </button>
+            );
+          }
+          return <React.Fragment key={i}>{part}</React.Fragment>;
+        })}
+      </>
+    );
+  }
+
+  const mentionResults = mentionQuery !== null
+    ? employees
+        .filter((e) => mentionQuery === "" || e.displayName.toLowerCase().includes(mentionQuery))
+        .slice(0, 6)
+    : [];
 
   async function toggleReaction(postId: string, emoji: string) {
     // Optimistic update
@@ -742,13 +839,34 @@ export default function FeedPage() {
         <form onSubmit={handlePost} className="space-y-3">
           <div className="flex gap-3">
             <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
-            <textarea
-              placeholder="Share something with the team…"
-              value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
-              rows={2}
-              className="flex-1 resize-none text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-400 transition-all"
-            />
+            <div className="flex-1 relative">
+              <textarea
+                ref={composerRef}
+                placeholder="Share something with the team… (type @ to mention)"
+                value={newPost}
+                onChange={handleComposerChange}
+                rows={2}
+                className="w-full resize-none text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-400 transition-all"
+              />
+              {mentionQuery !== null && mentionResults.length > 0 && (
+                <div
+                  ref={mentionDropdownRef}
+                  className="absolute z-30 top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                >
+                  {mentionResults.map((emp) => (
+                    <button
+                      key={emp.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); insertMention(emp); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <Avatar name={emp.displayName} url={emp.avatarUrl} size="sm" />
+                      <span className="text-sm font-medium text-gray-900">{emp.displayName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Image previews */}
@@ -768,6 +886,30 @@ export default function FeedPage() {
               ))}
             </div>
           )}
+
+          {/* Flair picker */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Flair <span className="text-red-400 font-bold">*</span>
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {FLAIRS.map((flair) => (
+                <button
+                  key={flair.id}
+                  type="button"
+                  onClick={() => setSelectedFlair(flair.id === selectedFlair ? null : flair.id)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border transition-all ${
+                    selectedFlair === flair.id
+                      ? `${flair.color} scale-105 shadow-sm`
+                      : "bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>{flair.emoji}</span>
+                  <span>{flair.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="flex items-center gap-2">
             {/* Hidden file input */}
@@ -842,15 +984,20 @@ export default function FeedPage() {
           )}
 
           {(newPost.trim() || imageFiles.length > 0) && (
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={posting || (pollMode && pollOptions.filter((o) => o.trim()).length < 2)}
-                className="flex items-center gap-2 bg-[#111827] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                <Send className="w-3.5 h-3.5" />
-                {uploading ? "Uploading…" : posting ? "Posting…" : "Post"}
-              </button>
+            <div className="flex items-center justify-between">
+              {!selectedFlair && (
+                <p className="text-xs text-red-400 font-medium">Pick a flair before posting</p>
+              )}
+              <div className="ml-auto">
+                <button
+                  type="submit"
+                  disabled={posting || !selectedFlair || (pollMode && pollOptions.filter((o) => o.trim()).length < 2)}
+                  className="flex items-center gap-2 bg-[#111827] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {uploading ? "Uploading…" : posting ? "Posting…" : "Post"}
+                </button>
+              </div>
             </div>
           )}
         </form>
@@ -998,9 +1145,23 @@ export default function FeedPage() {
         posts.map((post) => {
           if (post.type === "SHOUTOUT" && post.recipient) {
             return (
-              <div key={post.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+              <div key={post.id} className={`bg-white rounded-xl border overflow-hidden ${post.isPinned ? "border-amber-300" : "border-zinc-200"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="px-5 py-4 space-y-3">
+                  {post.isPinned && (
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600">
+                      <Pin className="w-3 h-3" /> Pinned
+                    </div>
+                  )}
+                  {(() => {
+                    const flair = flairById[post.flair ?? "RECOGNITION"] ?? flairById["RECOGNITION"];
+                    return (
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border w-fit mb-1 ${flair.color}`}>
+                        <span>{flair.emoji}</span>
+                        <span>{flair.label}</span>
+                      </span>
+                    );
+                  })()}
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5">
                       <Avatar name={post.author.displayName} url={post.author.avatarUrl} size="sm" />
@@ -1012,6 +1173,15 @@ export default function FeedPage() {
                       <span className="text-sm font-semibold text-zinc-800">{post.recipient.displayName}</span>
                     </div>
                     <span className="text-xs text-zinc-400 ml-auto">{timeAgo(post.createdAt)}</span>
+                    {dbUser?.role === "HR_ADMIN" && (
+                      <button
+                        onClick={() => togglePin(post.id)}
+                        className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`}
+                        title={post.isPinned ? "Unpin post" : "Pin post"}
+                      >
+                        <Pin className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
                       <button
                         onClick={() => deletePost(post.id)}
@@ -1022,7 +1192,7 @@ export default function FeedPage() {
                       </button>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-700 leading-relaxed">{post.content}</p>
+                  <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
                   <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-3 flex-wrap">
                     <ReactionBar
                       postId={post.id}
@@ -1155,15 +1325,32 @@ export default function FeedPage() {
 
           const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
-            <div key={post.id} className={`rounded-xl border overflow-hidden ${meta.bg}`}>
+            <div key={post.id} className={`rounded-xl border overflow-hidden ${post.isPinned ? "border-amber-300 bg-amber-50/30" : meta.bg}`}>
               <div className="p-5">
-                {/* Post type chip */}
-                {meta.label && (
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full mb-3 ${meta.chip}`}>
-                    {meta.icon && <meta.icon className="w-3 h-3" />}
-                    {meta.label}
-                  </span>
+                {/* Pinned indicator */}
+                {post.isPinned && (
+                  <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 mb-2">
+                    <Pin className="w-3 h-3" /> Pinned
+                  </div>
                 )}
+
+                {/* Flair + structural type chips */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {(() => {
+                    const flair = flairById[post.flair ?? "CASUAL"] ?? flairById["CASUAL"];
+                    return (
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${flair.color}`}>
+                        <span>{flair.emoji}</span>
+                        <span>{flair.label}</span>
+                      </span>
+                    );
+                  })()}
+                  {post.type === "POLL" && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-100 text-navy-700">
+                      <BarChart2 className="w-3 h-3" /> Poll
+                    </span>
+                  )}
+                </div>
 
                 {/* Author row */}
                 <div className="flex gap-3">
@@ -1172,17 +1359,26 @@ export default function FeedPage() {
                     <div className="flex items-baseline gap-2">
                       <span className="font-semibold text-sm text-gray-900">{post.author.displayName}</span>
                       <span className="text-xs text-gray-400">{timeAgo(post.createdAt)}</span>
+                      {dbUser?.role === "HR_ADMIN" && (
+                        <button
+                          onClick={() => togglePin(post.id)}
+                          className={`ml-auto p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`}
+                          title={post.isPinned ? "Unpin post" : "Pin post"}
+                        >
+                          <Pin className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
                         <button
                           onClick={() => deletePost(post.id)}
-                          className="ml-auto text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                          className={`${dbUser?.role !== "HR_ADMIN" ? "ml-auto" : ""} text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50`}
                           title="Delete post"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
-                    <p className="text-sm text-gray-700 mt-1.5 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                    <p className="text-sm text-gray-700 mt-1.5 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
 
                     {post.imageUrls?.length > 0 && (
                       <ImageCarousel urls={post.imageUrls} onOpen={setLightboxUrl} />

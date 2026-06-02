@@ -3,9 +3,12 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
+const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().positive() });
+
 const orderSchema = z.object({
   quantity: z.number().int().min(1).max(99),
   note: z.string().max(500).optional(),
+  selectedAddOns: z.array(addOnSchema).max(10).default([]),
 });
 
 export async function POST(
@@ -43,6 +46,7 @@ export async function POST(
       userId: authUser.id,
       quantity: parsed.data.quantity,
       note: parsed.data.note ?? null,
+      selectedAddOns: parsed.data.selectedAddOns,
     },
   });
 

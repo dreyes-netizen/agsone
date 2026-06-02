@@ -6,7 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import Link from "next/link";
 import {
   ShoppingBag, Trophy, Gamepad2, Rss, ArrowUpRight,
-  TrendingUp, Flame, Star, BarChart3, Coins,
+  TrendingUp, Flame, Star, BarChart3, Coins, UtensilsCrossed, Pill,
 } from "lucide-react";
 
 type Transaction = {
@@ -78,6 +78,22 @@ const quickLinks = [
     accent: "text-emerald-600",
     bg: "bg-emerald-50",
   },
+  {
+    href: "/food",
+    label: "Food Board",
+    sub: "Order from colleagues",
+    icon: UtensilsCrossed,
+    accent: "text-rose-500",
+    bg: "bg-rose-50",
+  },
+  {
+    href: "/medicine",
+    label: "Medicine",
+    sub: "Request supplies",
+    icon: Pill,
+    accent: "text-sky-600",
+    bg: "bg-sky-50",
+  },
 ];
 
 function getGreeting() {
@@ -92,14 +108,14 @@ export default function DashboardPage() {
   const { apiFetch } = useApiClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [todayBirthdays, setTodayBirthdays] = useState<BirthdayPerson[]>([]);
+  const [upcomingBirthdays, setUpcomingBirthdays] = useState<(BirthdayPerson & { daysUntil: number })[]>([]);
 
   useEffect(() => {
     if (authLoading || !user) return;
     apiFetch<{ data: UserProfile }>("/api/me").then((r) => setProfile(r.data)).catch(() => {});
     apiFetch<{ data: Transaction[] }>("/api/points/history").then((r) => setTransactions(r.data.slice(0, 6))).catch(() => {});
     apiFetch<{ data: (BirthdayPerson & { daysUntil: number })[] }>("/api/birthdays/upcoming")
-      .then((r) => setTodayBirthdays(r.data.filter((b) => b.daysUntil === 0)))
+      .then((r) => setUpcomingBirthdays(r.data.filter((b) => b.daysUntil <= 7)))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
@@ -163,19 +179,21 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Celebrating Today ── */}
-      {todayBirthdays.length > 0 && (
+      {/* ── Upcoming Birthdays ── */}
+      {upcomingBirthdays.length > 0 && (
         <div className="bg-gradient-to-r from-pink-50 to-violet-50 border border-pink-100 rounded-xl px-5 py-4">
-          <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-3">🎂 Celebrating Today</p>
-          <div className="flex flex-wrap gap-3">
-            {todayBirthdays.map((b) => (
+          <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-3">🎂 Upcoming Birthdays</p>
+          <div className="flex flex-wrap gap-4">
+            {upcomingBirthdays.map((b) => (
               <div key={b.id} className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                   {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-zinc-900 leading-tight">{b.displayName}</p>
-                  {b.department && <p className="text-xs text-zinc-400">{b.department}</p>}
+                  <p className="text-xs text-zinc-400">
+                    {b.daysUntil === 0 ? "Today 🎉" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
+                  </p>
                 </div>
               </div>
             ))}
@@ -184,7 +202,7 @@ export default function DashboardPage() {
       )}
 
       {/* ── Quick links ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {quickLinks.map(({ href, label, sub, icon: Icon, accent, bg }) => (
           <Link key={href} href={href} className="group">
             <div className="bg-white rounded-xl border border-zinc-200 p-4 hover:border-zinc-300 hover:shadow-sm transition-all duration-150">

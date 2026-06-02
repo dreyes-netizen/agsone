@@ -331,6 +331,7 @@ model SocialPost {
   imageUrl    String?
   imageUrls   String[]
   isPinned    Boolean  @default(false)
+  flair       String   @default("CASUAL")
   recipientId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

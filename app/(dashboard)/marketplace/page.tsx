@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import React from "react";
-import { ShoppingBag, CheckCircle, AlertCircle, Coins, Package, Ticket, Star, Monitor } from "lucide-react";
+import { ShoppingBag, CheckCircle, AlertCircle, Coins, Package, Ticket, Star, Monitor, X } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
@@ -35,6 +35,7 @@ export default function MarketplacePage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const { fire: fireConfetti } = useConfetti();
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -122,7 +123,7 @@ export default function MarketplacePage() {
           <p className="text-zinc-400 text-sm mt-1">Ask HR to add items to the marketplace.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((reward) => {
             const cfg = categoryConfig[reward.category] ?? categoryConfig.PHYSICAL;
             const canAfford = balance >= reward.pointCost;
@@ -132,21 +133,22 @@ export default function MarketplacePage() {
             return (
               <div
                 key={reward.id}
-                className={`bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow ${outOfStock ? "opacity-55" : ""}`}
+                onClick={() => setSelectedReward(reward)}
+                className={`bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer ${outOfStock ? "opacity-55" : ""}`}
               >
                 {/* Photo or color accent */}
                 {reward.imageUrl ? (
                   <button
                     type="button"
                     className="block w-full focus:outline-none cursor-zoom-in"
-                    onClick={() => setLightboxImg(reward.imageUrl!)}
+                    onClick={(e) => { e.stopPropagation(); setLightboxImg(reward.imageUrl!); }}
                     aria-label={`View photo of ${reward.name}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={reward.imageUrl}
                       alt={reward.name}
-                      className="w-full h-40 object-cover"
+                      className="w-full aspect-square object-contain bg-white"
                     />
                   </button>
                 ) : (
@@ -180,7 +182,7 @@ export default function MarketplacePage() {
                     </div>
                     <button
                       disabled={!canAfford || outOfStock || busy}
-                      onClick={() => handleRedeem(reward)}
+                      onClick={(e) => { e.stopPropagation(); handleRedeem(reward); }}
                       className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                         outOfStock || !canAfford
                           ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
@@ -201,6 +203,58 @@ export default function MarketplacePage() {
         open={!!lightboxImg}
         onClose={() => setLightboxImg(null)}
       />
+
+      {selectedReward && (() => {
+        const cfg = categoryConfig[selectedReward.category] ?? categoryConfig.PHYSICAL;
+        const canAfford = balance >= selectedReward.pointCost;
+        const outOfStock = selectedReward.stockQuantity === 0;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0"
+            onClick={() => setSelectedReward(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {selectedReward.imageUrl && (
+                <img src={selectedReward.imageUrl} alt={selectedReward.name} className="w-full aspect-square object-contain bg-white rounded-t-2xl" />
+              )}
+              <div className="p-5 space-y-4">
+                <button onClick={() => setSelectedReward(null)} className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>{cfg.label}</span>
+                  <span className="text-xs text-zinc-400">
+                    {outOfStock ? "Out of stock" : selectedReward.stockQuantity === -1 ? "Unlimited" : `${selectedReward.stockQuantity} left`}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-900">{selectedReward.name}</h2>
+                  {selectedReward.description && (
+                    <p className="text-sm text-zinc-600 mt-2 whitespace-pre-wrap leading-relaxed">{selectedReward.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+                  <p className={`font-bold text-lg tabular-nums ${canAfford && !outOfStock ? "text-navy-600" : "text-zinc-400"}`}>
+                    {selectedReward.pointCost.toLocaleString()} <span className="text-sm font-medium">pts</span>
+                  </p>
+                  <button
+                    disabled={!canAfford || outOfStock || redeeming === selectedReward.id}
+                    onClick={() => { handleRedeem(selectedReward); setSelectedReward(null); }}
+                    className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                      outOfStock || !canAfford ? "bg-zinc-100 text-zinc-400 cursor-not-allowed" : "bg-[#111827] text-white hover:bg-gray-800"
+                    }`}
+                  >
+                    {outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

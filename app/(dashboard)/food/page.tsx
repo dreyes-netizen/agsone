@@ -1,16 +1,19 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, Loader2, ImagePlus } from "lucide-react";
+import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, Loader2, ImagePlus, Pencil, Plus } from "lucide-react";
 import { ImageLightbox } from "@/components/ImageLightbox";
+
+type AddOn = { name: string; price: number };
 
 type MyOrder = {
   id: string;
   quantity: number;
   note: string | null;
+  selectedAddOns: AddOn[];
   createdAt: string;
 };
 
@@ -18,6 +21,7 @@ type OrderRow = {
   id: string;
   quantity: number;
   note: string | null;
+  selectedAddOns: AddOn[];
   createdAt: string;
   user: { displayName: string };
 };
@@ -29,6 +33,8 @@ type Listing = {
   price: string;
   imageUrls: string[];
   cutoffAt: string;
+  deliveryDate: string | null;
+  addOns: AddOn[];
   isActive: boolean;
   createdBy: { id: string; displayName: string; avatarUrl: string | null };
   myOrder: MyOrder | null;
@@ -59,10 +65,11 @@ export default function FoodPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("AVAILABLE");
 
-  // Inline order form state
+  // Order form state
   const [orderingId, setOrderingId] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [orderNote, setOrderNote] = useState("");
+  const [selectedAddOns, setSelectedAddOns] = useState<AddOn[]>([]);
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
   // Expanded seller view
@@ -70,15 +77,22 @@ export default function FoodPage() {
   const [sellerOrders, setSellerOrders] = useState<Record<string, OrderRow[]>>({});
 
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
-  // Create listing form
+  // Create / edit form
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState("");
   const [newCutoff, setNewCutoff] = useState("");
+  const [newDeliveryDate, setNewDeliveryDate] = useState("");
   const [newImages, setNewImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  const [newAddOns, setNewAddOns] = useState<AddOn[]>([]);
+  const [addOnName, setAddOnName] = useState("");
+  const [addOnPrice, setAddOnPrice] = useState("");
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -98,66 +112,118 @@ export default function FoodPage() {
     }
   }
 
-  // ── Image picker ────────────────────────────────────────────────────────────
+  // ── Image picker ─────────────────────────────────────────────────────────────
   function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    const combined = [...newImages, ...files].slice(0, 3);
+    const remaining = 3 - existingImageUrls.length;
+    const combined = [...newImages, ...files].slice(0, remaining);
     imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setNewImages(combined);
     setImagePreviews(combined.map((f) => URL.createObjectURL(f)));
   }
 
-  function removeImage(idx: number) {
+  function removeNewImage(idx: number) {
     URL.revokeObjectURL(imagePreviews[idx]);
     const updated = newImages.filter((_, i) => i !== idx);
     setNewImages(updated);
     setImagePreviews(updated.map((f) => URL.createObjectURL(f)));
   }
 
-  // ── Create listing ──────────────────────────────────────────────────────────
-  async function handleCreate(e: React.FormEvent) {
+  function removeExistingImage(idx: number) {
+    setExistingImageUrls((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  // ── Add-on management ────────────────────────────────────────────────────────
+  function addAddOn() {
+    const name = addOnName.trim();
+    const price = parseFloat(addOnPrice);
+    if (!name || isNaN(price) || price < 0 || newAddOns.length >= 10) return;
+    setNewAddOns((prev) => [...prev, { name, price }]);
+    setAddOnName("");
+    setAddOnPrice("");
+  }
+
+  function removeAddOn(idx: number) {
+    setNewAddOns((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  // ── Reset form ───────────────────────────────────────────────────────────────
+  function resetForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setNewTitle(""); setNewDesc(""); setNewPrice(""); setNewCutoff(""); setNewDeliveryDate("");
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNewImages([]); setImagePreviews([]); setExistingImageUrls([]);
+    setNewAddOns([]); setAddOnName(""); setAddOnPrice("");
+  }
+
+  // ── Edit listing ─────────────────────────────────────────────────────────────
+  function handleEdit(listing: Listing) {
+    setEditingId(listing.id);
+    setNewTitle(listing.title);
+    setNewDesc(listing.description ?? "");
+    setNewPrice(parseFloat(listing.price).toString());
+    setNewCutoff(new Date(listing.cutoffAt).toISOString().slice(0, 16));
+    setNewDeliveryDate(listing.deliveryDate ? new Date(listing.deliveryDate).toISOString().slice(0, 16) : "");
+    setExistingImageUrls(listing.imageUrls);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNewImages([]); setImagePreviews([]);
+    setNewAddOns(listing.addOns ?? []);
+    setAddOnName(""); setAddOnPrice("");
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── Create / update listing ──────────────────────────────────────────────────
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
     try {
-      const imageUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f)));
-      await apiFetch("/api/food", {
-        method: "POST",
-        body: JSON.stringify({
-          title: newTitle,
-          description: newDesc || undefined,
-          price: parseFloat(newPrice),
-          imageUrls,
-          cutoffAt: new Date(newCutoff).toISOString(),
-        }),
-      });
-      setShowForm(false);
-      setNewTitle(""); setNewDesc(""); setNewPrice(""); setNewCutoff("");
-      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-      setNewImages([]); setImagePreviews([]);
+      const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f)));
+      const imageUrls = [...existingImageUrls, ...uploadedUrls];
+      const payload = {
+        title: newTitle,
+        description: newDesc || undefined,
+        price: parseFloat(newPrice),
+        imageUrls,
+        cutoffAt: new Date(newCutoff).toISOString(),
+        ...(newDeliveryDate && { deliveryDate: new Date(newDeliveryDate).toISOString() }),
+        addOns: newAddOns,
+      };
+      if (editingId) {
+        await apiFetch(`/api/food/${editingId}`, { method: "PATCH", body: JSON.stringify(payload) });
+      } else {
+        await apiFetch("/api/food", { method: "POST", body: JSON.stringify(payload) });
+      }
+      resetForm();
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to create listing");
+      alert(err instanceof Error ? err.message : "Failed to save listing");
     } finally {
       setCreating(false);
     }
   }
 
-  // ── Place order ─────────────────────────────────────────────────────────────
+  // ── Place order ──────────────────────────────────────────────────────────────
   async function handleOrder(listing: Listing) {
     setSubmittingOrder(true);
     try {
       await apiFetch(`/api/food/${listing.id}/order`, {
         method: "POST",
-        body: JSON.stringify({ quantity: qty, note: orderNote || undefined }),
+        body: JSON.stringify({ quantity: qty, note: orderNote || undefined, selectedAddOns }),
       });
       setListings((prev) =>
         prev.map((l) =>
           l.id === listing.id
-            ? { ...l, myOrder: { id: "optimistic", quantity: qty, note: orderNote || null, createdAt: new Date().toISOString() }, _count: { orders: l._count.orders + 1 } }
+            ? {
+                ...l,
+                myOrder: { id: "optimistic", quantity: qty, note: orderNote || null, selectedAddOns, createdAt: new Date().toISOString() },
+                _count: { orders: l._count.orders + 1 },
+              }
             : l
         )
       );
-      setOrderingId(null); setQty(1); setOrderNote("");
+      setOrderingId(null); setQty(1); setOrderNote(""); setSelectedAddOns([]);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to place order");
     } finally {
@@ -165,7 +231,7 @@ export default function FoodPage() {
     }
   }
 
-  // ── Cancel order ────────────────────────────────────────────────────────────
+  // ── Cancel order ─────────────────────────────────────────────────────────────
   async function handleCancel(listing: Listing) {
     if (!confirm("Cancel your order?")) return;
     try {
@@ -182,7 +248,18 @@ export default function FoodPage() {
     }
   }
 
-  // ── Close listing ────────────────────────────────────────────────────────────
+  // ── Delete listing ────────────────────────────────────────────────────────────
+  async function handleDelete(listing: Listing) {
+    if (!confirm(`Delete "${listing.title}"? This cannot be undone and will remove all orders.`)) return;
+    try {
+      await apiFetch(`/api/food/${listing.id}`, { method: "DELETE" });
+      setListings((prev) => prev.filter((l) => l.id !== listing.id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete listing");
+    }
+  }
+
+  // ── Close listing ─────────────────────────────────────────────────────────────
   async function handleClose(listing: Listing) {
     if (!confirm(`Close "${listing.title}"? No more orders will be accepted.`)) return;
     try {
@@ -196,7 +273,7 @@ export default function FoodPage() {
     }
   }
 
-  // ── Load seller orders ───────────────────────────────────────────────────────
+  // ── Load seller orders ────────────────────────────────────────────────────────
   async function toggleSellerOrders(listing: Listing) {
     if (expandedId === listing.id) { setExpandedId(null); return; }
     setExpandedId(listing.id);
@@ -209,13 +286,15 @@ export default function FoodPage() {
     }
   }
 
-  // ── Filter ──────────────────────────────────────────────────────────────────
+  // ── Filter ───────────────────────────────────────────────────────────────────
   const filtered = listings.filter((l) => {
     if (tab === "AVAILABLE") return l.isActive && new Date(l.cutoffAt) > new Date();
     if (tab === "MY_ORDERS") return !!l.myOrder;
     if (tab === "MY_LISTINGS") return l.createdBy.id === dbUser?.id;
     return true;
   });
+
+  const totalImages = existingImageUrls.length + newImages.length;
 
   return (
     <div className="space-y-5">
@@ -226,7 +305,14 @@ export default function FoodPage() {
           <p className="text-zinc-500 text-sm mt-1">Order food from your colleagues</p>
         </div>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => {
+            if (showForm && !editingId) {
+              resetForm();
+            } else {
+              resetForm();
+              setShowForm(true);
+            }
+          }}
           className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
         >
           <UtensilsCrossed className="w-4 h-4" />
@@ -234,11 +320,11 @@ export default function FoodPage() {
         </button>
       </div>
 
-      {/* Create form */}
+      {/* Create / edit form */}
       {showForm && (
         <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-4">
-          <h2 className="font-semibold text-zinc-900">New Listing</h2>
-          <form onSubmit={handleCreate} className="space-y-3">
+          <h2 className="font-semibold text-zinc-900">{editingId ? "Edit Listing" : "New Listing"}</h2>
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-zinc-600 mb-1">Title</label>
@@ -251,7 +337,7 @@ export default function FoodPage() {
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-zinc-600 mb-1">Description <span className="text-zinc-400 font-normal">(optional)</span></label>
                 <textarea
-                  value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={2}
+                  value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={3}
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                 />
               </div>
@@ -271,22 +357,39 @@ export default function FoodPage() {
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 mb-1">Delivery date & time <span className="text-zinc-400 font-normal">(optional)</span></label>
+                <input
+                  type="datetime-local" value={newDeliveryDate} onChange={(e) => setNewDeliveryDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                />
+              </div>
             </div>
 
             {/* Image picker */}
             <div>
               <label className="block text-xs font-medium text-zinc-600 mb-1">Photos <span className="text-zinc-400 font-normal">(up to 3, optional)</span></label>
               <div className="flex items-center gap-2 flex-wrap">
-                {imagePreviews.map((src, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
+                {existingImageUrls.map((src, i) => (
+                  <div key={src} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 rounded-full p-0.5 text-white">
+                    <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 rounded-full p-0.5 text-white">
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
-                {newImages.length < 3 && (
+                {imagePreviews.map((src, i) => (
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => removeNewImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 rounded-full p-0.5 text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {totalImages < 3 && (
                   <label className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 transition-colors">
                     <ImagePlus className="w-5 h-5 text-zinc-400" />
                     <span className="text-[10px] text-zinc-400 mt-0.5">Add</span>
@@ -296,15 +399,56 @@ export default function FoodPage() {
               </div>
             </div>
 
+            {/* Add-ons */}
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 mb-1">
+                Add-ons / Options <span className="text-zinc-400 font-normal">(optional — e.g. Extra Rice ₱15, Spicy ₱0)</span>
+              </label>
+              {newAddOns.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {newAddOns.map((a, i) => (
+                    <span key={i} className="flex items-center gap-1.5 bg-zinc-100 text-zinc-700 text-xs px-2.5 py-1 rounded-full">
+                      {a.name}{a.price > 0 ? ` — ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " — Free"}
+                      <button type="button" onClick={() => removeAddOn(i)} className="text-zinc-400 hover:text-zinc-700">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {newAddOns.length < 10 && (
+                <div className="flex gap-2">
+                  <input
+                    value={addOnName} onChange={(e) => setAddOnName(e.target.value)}
+                    placeholder="Name (e.g. Extra Rice)"
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAddOn())}
+                    className="flex-1 border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  />
+                  <input
+                    value={addOnPrice} onChange={(e) => setAddOnPrice(e.target.value)}
+                    type="number" min="0" step="0.01" placeholder="₱ (0 = free)"
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAddOn())}
+                    className="w-20 border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  />
+                  <button
+                    type="button" onClick={addAddOn}
+                    className="flex items-center gap-1 text-sm font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />Add
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2">
               <button
                 type="submit" disabled={creating}
                 className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {creating ? "Creating…" : "Post Listing"}
+                {creating ? (editingId ? "Saving…" : "Creating…") : editingId ? "Save Changes" : "Post Listing"}
               </button>
-              <button type="button" onClick={() => setShowForm(false)} className="text-sm text-zinc-500 hover:text-zinc-700 px-3 py-2">
+              <button type="button" onClick={resetForm} className="text-sm text-zinc-500 hover:text-zinc-700 px-3 py-2">
                 Cancel
               </button>
             </div>
@@ -330,7 +474,7 @@ export default function FoodPage() {
 
       {/* Listings */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="bg-white rounded-xl border border-zinc-200 overflow-hidden animate-pulse">
               <div className="h-36 bg-zinc-100" />
@@ -351,11 +495,13 @@ export default function FoodPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((listing) => {
             const closed = isClosed(listing);
             const isMine = listing.createdBy.id === dbUser?.id;
             const isExpanded = expandedId === listing.id;
+            const addOnsTotal = selectedAddOns.reduce((s, a) => s + a.price, 0);
+            const orderTotal = (parseFloat(listing.price) + addOnsTotal) * qty;
 
             return (
               <div key={listing.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow">
@@ -366,7 +512,7 @@ export default function FoodPage() {
                     <img
                       src={listing.imageUrls[0]}
                       alt={listing.title}
-                      className="w-full h-36 object-cover cursor-zoom-in"
+                      className="w-full aspect-square object-contain bg-white cursor-zoom-in"
                       onClick={() => setLightbox({ images: listing.imageUrls, index: 0 })}
                     />
                     {listing.imageUrls.length > 1 && (
@@ -374,9 +520,7 @@ export default function FoodPage() {
                         {listing.imageUrls.slice(1).map((url, i) => (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            key={i}
-                            src={url}
-                            alt=""
+                            key={i} src={url} alt=""
                             className="w-10 h-10 object-cover rounded border-2 border-white cursor-zoom-in"
                             onClick={() => setLightbox({ images: listing.imageUrls, index: i + 1 })}
                           />
@@ -399,9 +543,9 @@ export default function FoodPage() {
                     <span className="ml-auto text-xs text-zinc-400">{listing._count.orders} orders</span>
                   </div>
 
-                  {/* Title + desc */}
-                  <div>
-                    <h3 className="font-bold text-zinc-900 leading-snug">{listing.title}</h3>
+                  {/* Title + desc — click to see full details */}
+                  <div className="cursor-pointer" onClick={() => setSelectedListing(listing)}>
+                    <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors">{listing.title}</h3>
                     {listing.description && (
                       <p className="text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
                     )}
@@ -415,6 +559,23 @@ export default function FoodPage() {
                       {closed ? "Closed" : `By ${formatCutoff(listing.cutoffAt)}`}
                     </span>
                   </div>
+                  {listing.deliveryDate && (
+                    <div className="flex items-center gap-1 text-xs text-sky-600 font-medium">
+                      <span>🚚</span>
+                      <span>Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                    </div>
+                  )}
+
+                  {/* Add-ons preview badges */}
+                  {(listing.addOns?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(listing.addOns ?? []).map((a, i) => (
+                        <span key={i} className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                          +{a.name}{a.price > 0 ? ` ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " (free)"}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Action area */}
                   <div className="mt-auto pt-3 border-t border-zinc-100 space-y-2">
@@ -426,7 +587,7 @@ export default function FoodPage() {
 
                     {!closed && !isMine && !listing.myOrder && orderingId !== listing.id && (
                       <button
-                        onClick={() => { setOrderingId(listing.id); setQty(1); setOrderNote(""); }}
+                        onClick={() => { setOrderingId(listing.id); setQty(1); setOrderNote(""); setSelectedAddOns([]); }}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
                       >
                         Order
@@ -444,11 +605,44 @@ export default function FoodPage() {
                             <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">+</button>
                           </div>
                         </div>
+
+                        {/* Add-on checkboxes */}
+                        {(listing.addOns?.length ?? 0) > 0 && (
+                          <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
+                            {(listing.addOns ?? []).map((a, i) => {
+                              const checked = selectedAddOns.some((s) => s.name === a.name);
+                              return (
+                                <label key={i} className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox" checked={checked}
+                                    onChange={(e) => {
+                                      setSelectedAddOns((prev) =>
+                                        e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name)
+                                      );
+                                    }}
+                                    className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                                  />
+                                  <span className="text-xs text-zinc-700 flex-1">{a.name}</span>
+                                  <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+
                         <input
                           value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
                           placeholder="e.g. no onions (optional)"
                           className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
+
+                        {/* Running total */}
+                        <div className="flex items-center justify-between text-xs px-0.5">
+                          <span className="text-zinc-500">Total</span>
+                          <span className="font-bold text-emerald-700 text-sm">₱{orderTotal.toFixed(2)}</span>
+                        </div>
+
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleOrder(listing)} disabled={submittingOrder}
@@ -457,7 +651,10 @@ export default function FoodPage() {
                             {submittingOrder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                             Confirm Order
                           </button>
-                          <button onClick={() => setOrderingId(null)} className="text-sm text-zinc-500 hover:text-zinc-700 px-2">
+                          <button
+                            onClick={() => { setOrderingId(null); setSelectedAddOns([]); }}
+                            className="text-sm text-zinc-500 hover:text-zinc-700 px-2"
+                          >
                             Cancel
                           </button>
                         </div>
@@ -469,6 +666,9 @@ export default function FoodPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs font-semibold text-zinc-700">Your order: ×{listing.myOrder.quantity}</p>
+                          {(listing.myOrder.selectedAddOns?.length ?? 0) > 0 && (
+                            <p className="text-xs text-amber-600">{(listing.myOrder.selectedAddOns ?? []).map((a) => a.name).join(", ")}</p>
+                          )}
                           {listing.myOrder.note && <p className="text-xs text-zinc-400">{listing.myOrder.note}</p>}
                         </div>
                         {!closed && (
@@ -489,11 +689,28 @@ export default function FoodPage() {
                           <span>View Orders ({listing._count.orders})</span>
                           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
-                        {!closed && (
-                          <button onClick={() => handleClose(listing)} className="w-full text-sm text-red-500 hover:text-red-600 font-medium border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
-                            Close Listing
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(listing)}
+                            className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-zinc-700 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />Edit
                           </button>
-                        )}
+                          {!closed && (
+                            <button
+                              onClick={() => handleClose(listing)}
+                              className="flex-1 text-sm text-red-500 hover:text-red-600 font-medium border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Close
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDelete(listing)}
+                          className="w-full text-xs text-zinc-400 hover:text-red-500 transition-colors text-center py-0.5"
+                        >
+                          Delete listing
+                        </button>
                       </div>
                     )}
                   </div>
@@ -512,7 +729,7 @@ export default function FoodPage() {
                           <tr className="text-zinc-400 border-b border-zinc-200">
                             <th className="text-left pb-1.5 font-medium">Name</th>
                             <th className="text-center pb-1.5 font-medium">Qty</th>
-                            <th className="text-left pb-1.5 font-medium">Note</th>
+                            <th className="text-left pb-1.5 font-medium">Add-ons / Note</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -520,7 +737,12 @@ export default function FoodPage() {
                             <tr key={o.id} className="border-b border-zinc-100 last:border-0">
                               <td className="py-1.5 font-medium text-zinc-800">{o.user.displayName}</td>
                               <td className="py-1.5 text-center text-zinc-700">×{o.quantity}</td>
-                              <td className="py-1.5 text-zinc-400">{o.note ?? "—"}</td>
+                              <td className="py-1.5 text-zinc-500">
+                                {(o.selectedAddOns?.length ?? 0) > 0 && (
+                                  <span className="text-amber-600">{(o.selectedAddOns ?? []).map((a) => a.name).join(", ")}{o.note ? " · " : ""}</span>
+                                )}
+                                {o.note ?? ((o.selectedAddOns?.length ?? 0) > 0 ? "" : "—")}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -541,6 +763,44 @@ export default function FoodPage() {
           open={!!lightbox}
           onClose={() => setLightbox(null)}
         />
+      )}
+
+      {selectedListing && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0" onClick={() => setSelectedListing(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {selectedListing.imageUrls.length > 0 && (
+              <img src={selectedListing.imageUrls[0]} alt={selectedListing.title} className="w-full aspect-square object-contain bg-white rounded-t-2xl" />
+            )}
+            <div className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-bold text-emerald-600">{formatPrice(selectedListing.price)}</span>
+                <button onClick={() => setSelectedListing(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"><X className="w-4 h-4" /></button>
+              </div>
+              <h2 className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
+              <p className="text-xs text-zinc-500">by {selectedListing.createdBy.displayName}</p>
+              {selectedListing.description && (
+                <p className="text-sm text-zinc-600 whitespace-pre-wrap leading-relaxed">{selectedListing.description}</p>
+              )}
+              {selectedListing.addOns?.length > 0 && (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 space-y-1">
+                  <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons available</p>
+                  {selectedListing.addOns.map((a, i) => (
+                    <div key={i} className="flex justify-between text-xs text-zinc-700">
+                      <span>{a.name}</span><span className="font-semibold text-amber-700">+₱{a.price % 1 === 0 ? a.price : a.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs text-zinc-500 pt-1">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Orders close {formatCutoff(selectedListing.cutoffAt)}</span>
+              </div>
+              {selectedListing.deliveryDate && (
+                <p className="text-xs text-sky-600 font-medium">🚚 Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

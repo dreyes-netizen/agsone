@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  caption: z.string().min(1).max(500).optional(),
+  caption: z.string().min(1).max(3000).optional(),
   imageUrl: z.string().url().optional(),
   stockQuantity: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
@@ -24,7 +24,9 @@ export async function PATCH(
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const first = Object.entries(fieldErrors)[0];
+    return NextResponse.json({ error: first ? `${first[0]}: ${first[1]?.[0]}` : "Invalid request" }, { status: 400 });
   }
 
   const existing = await prisma.medicineItem.findUnique({ where: { id }, select: { id: true } });

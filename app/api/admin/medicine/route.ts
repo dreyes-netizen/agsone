@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
-  caption: z.string().min(1).max(500),
+  caption: z.string().min(1).max(3000),
   imageUrl: z.string().url(),
   stockQuantity: z.number().int().min(0),
 });
@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const first = Object.entries(fieldErrors)[0];
+    return NextResponse.json({ error: first ? `${first[0]}: ${first[1]?.[0]}` : "Invalid request" }, { status: 400 });
   }
 
   const medicine = await prisma.medicineItem.create({

@@ -3,12 +3,16 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
+const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().min(0) });
+
 const createSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   price: z.number().positive().multipleOf(0.01),
   imageUrls: z.array(z.string().url()).max(3).default([]),
   cutoffAt: z.string().datetime(),
+  deliveryDate: z.string().datetime().optional(),
+  addOns: z.array(addOnSchema).max(10).default([]),
 });
 
 export async function GET(req: NextRequest) {
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { title, description, price, imageUrls, cutoffAt } = parsed.data;
+  const { title, description, price, imageUrls, cutoffAt, deliveryDate, addOns } = parsed.data;
 
   if (new Date(cutoffAt) <= new Date()) {
     return NextResponse.json({ error: "Cutoff must be in the future" }, { status: 400 });
@@ -67,6 +71,8 @@ export async function POST(req: NextRequest) {
       price,
       imageUrls,
       cutoffAt: new Date(cutoffAt),
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+      addOns,
       createdById: authUser.id,
     },
   });

@@ -55,7 +55,7 @@ const inputClass =
 export default function AdminMedicinePage() {
   const { apiFetch } = useApiClient();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"catalog" | "requests">("catalog");
+  const [activeTab, setActiveTab] = useState<"catalog" | "inventory" | "requests">("catalog");
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loadingMeds, setLoadingMeds] = useState(true);
@@ -71,6 +71,9 @@ export default function AdminMedicinePage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const addImageRef = useRef<HTMLInputElement>(null);
   const editImageRef = useRef<HTMLInputElement>(null);
+
+  const [inventoryEdits, setInventoryEdits] = useState<Record<string, string>>({});
+  const [savingStock, setSavingStock] = useState<string | null>(null);
 
   const [requests, setRequests] = useState<MedicineRequest[]>([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
@@ -155,6 +158,26 @@ export default function AdminMedicinePage() {
     }
   }
 
+  async function handleStockSave(med: Medicine) {
+    const raw = inventoryEdits[med.id];
+    if (raw === undefined) return;
+    const qty = parseInt(raw, 10);
+    if (isNaN(qty) || qty < 0) { alert("Enter a valid stock number."); return; }
+    setSavingStock(med.id);
+    try {
+      const res = await apiFetch<{ data: Medicine }>(`/api/admin/medicine/${med.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ stockQuantity: qty }),
+      });
+      setMedicines((prev) => prev.map((m) => (m.id === med.id ? res.data : m)));
+      setInventoryEdits((prev) => { const next = { ...prev }; delete next[med.id]; return next; });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update stock");
+    } finally {
+      setSavingStock(null);
+    }
+  }
+
   async function handleDelete(med: Medicine) {
     if (!confirm(`Delete "${med.name}"? This cannot be undone.`)) return;
     try {
@@ -215,7 +238,7 @@ export default function AdminMedicinePage() {
       </div>
 
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {(["catalog", "requests"] as const).map((tab) => (
+        {(["catalog", "inventory", "requests"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -223,7 +246,7 @@ export default function AdminMedicinePage() {
               activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tab}
+            {tab === "catalog" ? "Catalog" : tab === "inventory" ? "Inventory" : "Requests"}
             {tab === "requests" && pending.length > 0 && (
               <span className="ml-1.5 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                 {pending.length}
@@ -272,11 +295,12 @@ export default function AdminMedicinePage() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption</label>
-                <input
+                <textarea
                   value={addForm.caption}
                   onChange={(e) => setAddForm((f) => ({ ...f, caption: e.target.value }))}
-                  className={inputClass}
+                  className={inputClass + " resize-none"}
                   placeholder="Short description of the medicine"
+                  rows={3}
                 />
               </div>
               <div>
@@ -375,6 +399,78 @@ export default function AdminMedicinePage() {
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === "inventory" && (
+        loadingMeds ? (
+          <div className="text-center text-gray-400 py-12">Loading…</div>
+        ) : medicines.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">No medicines yet.</div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {medicines.map((med) => {
+                  const editVal = inventoryEdits[med.id];
+                  const isDirty = editVal !== undefined && editVal !== String(med.stockQuantity);
+                  const isSaving = savingStock === med.id;
+                  return (
+                    <tr key={med.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={med.imageUrl}
+                            alt={med.name}
+                            className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0"
+                          />
+                          <span className="font-medium text-gray-900">{med.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            value={editVal ?? String(med.stockQuantity)}
+                            onChange={(e) =>
+                              setInventoryEdits((prev) => ({ ...prev, [med.id]: e.target.value }))
+                            }
+                            className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                          />
+                          <span className={`text-xs font-medium ${med.stockQuantity === 0 ? "text-red-500" : "text-emerald-600"}`}>
+                            {med.stockQuantity === 0 ? "Out of stock" : "in stock"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${med.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                          {med.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => handleStockSave(med)}
+                          disabled={!isDirty || isSaving}
+                          className="px-3 py-1.5 text-xs font-semibold bg-[#111827] text-white rounded-lg hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isSaving ? "Saving…" : "Save"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {activeTab === "requests" && (
@@ -511,10 +607,11 @@ export default function AdminMedicinePage() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption</label>
-                <input
+                <textarea
                   value={editForm.caption}
                   onChange={(e) => setEditForm((f) => ({ ...f, caption: e.target.value }))}
-                  className={inputClass}
+                  className={inputClass + " resize-none"}
+                  rows={3}
                 />
               </div>
               <div>

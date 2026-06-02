@@ -3,6 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { FLAIR_IDS } from "@/lib/flairs";
 
 const PAGE_SIZE = 15;
 
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const cursor     = searchParams.get("cursor") ?? undefined;
 
   const posts = await prisma.socialPost.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
     take: PAGE_SIZE + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     where: typeFilter ? { type: typeFilter as never } : undefined,
@@ -68,11 +69,13 @@ const postSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.enum(["UPDATE", "ACHIEVEMENT", "CELEBRATION", "ANNOUNCEMENT"]),
     content: z.string().min(1).max(1000),
+    flair: z.enum(FLAIR_IDS),
     imageUrls: z.array(z.string().url()).max(4).optional(),
   }),
   z.object({
     type: z.literal("POLL"),
     content: z.string().min(1).max(1000),
+    flair: z.enum(FLAIR_IDS),
     options: z.array(z.string().min(1).max(200)).min(2).max(4),
     imageUrls: z.array(z.string().url()).max(4).optional(),
   }),
@@ -97,6 +100,7 @@ export async function POST(req: NextRequest) {
         authorId: user.id,
         content: parsed.data.content,
         type: "POLL",
+        flair: parsed.data.flair,
         imageUrls: parsed.data.imageUrls ?? [],
         pollOptions: {
           create: parsed.data.options.map((text) => ({ text })),
@@ -119,6 +123,7 @@ export async function POST(req: NextRequest) {
         authorId: user.id,
         content: parsed.data.content,
         type: "SHOUTOUT",
+        flair: "RECOGNITION",
         imageUrls: [],
         recipientId: parsed.data.recipientId,
       },
@@ -141,6 +146,7 @@ export async function POST(req: NextRequest) {
       authorId: user.id,
       content: parsed.data.content,
       type: parsed.data.type,
+      flair: parsed.data.flair,
       imageUrls: parsed.data.imageUrls ?? [],
     },
     include: { author: { select: { displayName: true, avatarUrl: true } } },

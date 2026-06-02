@@ -162,7 +162,7 @@ export default function AdminRewardsPage() {
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Optional description"
-                  rows={2}
+                  rows={3}
                   className={inputClass + " resize-none"}
                 />
               </div>

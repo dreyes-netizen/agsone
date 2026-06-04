@@ -32,8 +32,8 @@ const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number
 const updateSchema = z.object({
   isActive: z.boolean().optional(),
   title: z.string().min(1).max(200).optional(),
-  description: z.string().max(1000).nullable().optional(),
-  price: z.number().positive().multipleOf(0.01).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  price: z.number().positive().transform((v) => Math.round(v * 100) / 100).optional(),
   imageUrls: z.array(z.string().url()).max(3).optional(),
   cutoffAt: z.string().datetime().optional(),
   deliveryDate: z.string().datetime().nullable().optional(),

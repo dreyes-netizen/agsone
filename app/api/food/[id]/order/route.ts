@@ -53,6 +53,42 @@ export async function POST(
   return NextResponse.json({ data: order }, { status: 201 });
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authUser = await verifyAuth(req);
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+
+  const body = await req.json();
+  const parsed = orderSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const order = await prisma.foodOrder.findUnique({
+    where: { listingId_userId: { listingId: id, userId: authUser.id } },
+    include: { listing: { select: { cutoffAt: true, isActive: true } } },
+  });
+  if (!order) return NextResponse.json({ error: "No order found" }, { status: 404 });
+  if (!order.listing.isActive || order.listing.cutoffAt <= new Date()) {
+    return NextResponse.json({ error: "Cannot edit after cutoff" }, { status: 410 });
+  }
+
+  const updated = await prisma.foodOrder.update({
+    where: { listingId_userId: { listingId: id, userId: authUser.id } },
+    data: {
+      quantity: parsed.data.quantity,
+      note: parsed.data.note ?? null,
+      selectedAddOns: parsed.data.selectedAddOns,
+    },
+  });
+
+  return NextResponse.json({ data: updated });
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

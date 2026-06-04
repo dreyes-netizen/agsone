@@ -163,7 +163,8 @@ export default function MedicinePage() {
           <div className="text-center text-gray-400 py-16">You haven't requested any medicines yet.</div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[360px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
@@ -187,6 +188,7 @@ export default function MedicinePage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )
       )}

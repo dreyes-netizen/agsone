@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Send, ImagePlus, X, ZoomIn, MessageCircle, SmilePlus, Trash2, ChevronLeft, ChevronRight, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { timeAgo } from "@/lib/helpers/timeAgo";
+import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
 
 type PollOption = {
@@ -219,9 +219,9 @@ function PollBlock({
                 background: voted ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.07)",
               }}
             />
-            <span className="relative flex items-center justify-between">
-              <span>{opt.text}{voted && <span className="ml-1.5 text-navy-600 text-xs flex items-center gap-0.5 inline-flex"><Check className="w-3 h-3" /> Voted</span>}</span>
-              <span className="text-xs text-gray-400 font-normal ml-3 shrink-0">{pct}% · {opt._count.votes}</span>
+            <span className="relative flex items-center justify-between gap-2">
+              <span className="flex-1 min-w-0 truncate">{opt.text}{voted && <span className="ml-1.5 text-navy-600 text-xs inline-flex items-center gap-0.5"><Check className="w-3 h-3" /> Voted</span>}</span>
+              <span className="text-xs text-gray-400 font-normal shrink-0">{pct}% · {opt._count.votes}</span>
             </span>
           </button>
         );
@@ -322,7 +322,7 @@ function ImageCarousel({
 }
 
 function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; size?: "sm" | "md" }) {
-  const dim = size === "md" ? "w-10 h-10 text-base" : "w-8 h-8 text-sm";
+  const dim = size === "md" ? "w-12 h-12 text-lg" : "w-10 h-10 text-base";
   if (url) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} />;
   return (
     <div className={`${dim} rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white font-bold shrink-0`}>
@@ -828,7 +828,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-4xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Activity Feed</h1>
         <p className="text-zinc-500 text-sm mt-1">What&apos;s happening across the company</p>
@@ -1163,16 +1163,16 @@ export default function FeedPage() {
                     );
                   })()}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity min-w-0">
                       <Avatar name={post.author.displayName} url={post.author.avatarUrl} size="sm" />
-                      <span className="text-sm font-semibold text-zinc-800">{post.author.displayName}</span>
-                    </div>
-                    <span className="text-sm text-amber-600 font-medium flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> gave a shoutout to</span>
-                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-zinc-800 truncate max-w-[120px]">{post.author.displayName}</span>
+                    </button>
+                    <span className="text-sm text-amber-600 font-medium flex items-center gap-1 shrink-0"><Sparkles className="w-3.5 h-3.5" /> gave a shoutout to</span>
+                    <button type="button" onClick={() => router.push(`/employees/${post.recipient.id}`)} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity min-w-0">
                       <Avatar name={post.recipient.displayName} url={post.recipient.avatarUrl} size="sm" />
-                      <span className="text-sm font-semibold text-zinc-800">{post.recipient.displayName}</span>
-                    </div>
-                    <span className="text-xs text-zinc-400 ml-auto">{timeAgo(post.createdAt)}</span>
+                      <span className="text-sm font-semibold text-zinc-800 truncate max-w-[120px]">{post.recipient.displayName}</span>
+                    </button>
+                    <span className="text-xs text-zinc-400 ml-auto">{postTimestamp(post.createdAt)}</span>
                     {dbUser?.role === "HR_ADMIN" && (
                       <button
                         onClick={() => togglePin(post.id)}
@@ -1354,11 +1354,15 @@ export default function FeedPage() {
 
                 {/* Author row */}
                 <div className="flex gap-3">
-                  <Avatar name={post.author.displayName} url={post.author.avatarUrl} />
+                  <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="shrink-0 hover:opacity-80 transition-opacity">
+                    <Avatar name={post.author.displayName} url={post.author.avatarUrl} />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-sm text-gray-900">{post.author.displayName}</span>
-                      <span className="text-xs text-gray-400">{timeAgo(post.createdAt)}</span>
+                      <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="font-semibold text-sm text-gray-900 hover:underline transition-colors">
+                        {post.author.displayName}
+                      </button>
+                      <span className="text-xs text-gray-400">{postTimestamp(post.createdAt)}</span>
                       {dbUser?.role === "HR_ADMIN" && (
                         <button
                           onClick={() => togglePin(post.id)}

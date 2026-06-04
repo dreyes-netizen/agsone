@@ -7,8 +7,8 @@ const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number
 
 const createSchema = z.object({
   title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-  price: z.number().positive().multipleOf(0.01),
+  description: z.string().max(2000).optional(),
+  price: z.number().positive().transform((v) => Math.round(v * 100) / 100),
   imageUrls: z.array(z.string().url()).max(3).default([]),
   cutoffAt: z.string().datetime(),
   deliveryDate: z.string().datetime().optional(),
@@ -55,7 +55,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const first = parsed.error.issues[0];
+    const msg = first ? `${first.path.join(".") || "root"}: ${first.message}` : "Validation failed";
+    console.error("[food POST] validation failed:", JSON.stringify(parsed.error.issues));
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   const { title, description, price, imageUrls, cutoffAt, deliveryDate, addOns } = parsed.data;

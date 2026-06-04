@@ -111,6 +111,13 @@ enum MedicineRequestStatus {
   REJECTED
 }
 
+enum GameSessionStatus {
+  WAITING
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Department {
@@ -139,6 +146,8 @@ model User {
   hireDate           DateTime?
   onboardingComplete Boolean   @default(false)
   notificationPrefs  Json?
+  bio                String?
+  skills             String[]
   isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -179,6 +188,9 @@ model User {
   medicineItems    MedicineItem[]    @relation("MedicineItemsCreated")
   medicineRequests MedicineRequest[] @relation("MedicineRequestsMade")
   medicineApprovals MedicineRequest[] @relation("MedicineRequestsApproved")
+  gameSessionsHosted GameSession[]   @relation("GameSessionHost")
+  gameSessionsJoined GameSession[]   @relation("GameSessionGuest")
+  gameSessionsWon    GameSession[]   @relation("GameSessionWinner")
 }
 
 model PointTransaction {
@@ -201,7 +213,7 @@ model Reward {
   id            String         @id @default(uuid())
   name          String
   description   String?
-  imageUrl      String?
+  imageUrls     String[]
   pointCost     Int
   stockQuantity Int            @default(-1)
   category      RewardCategory
@@ -448,6 +460,7 @@ model FoodOrder {
   quantity       Int
   note           String?
   selectedAddOns Json        @default("[]")
+  paidAt         DateTime?
   createdAt      DateTime    @default(now())
 
   listing FoodListing @relation(fields: [listingId], references: [id])
@@ -585,4 +598,22 @@ model MedicineRequest {
   medicine   MedicineItem @relation(fields: [medicineId], references: [id])
   user       User         @relation("MedicineRequestsMade", fields: [userId], references: [id])
   approvedBy User?        @relation("MedicineRequestsApproved", fields: [approvedById], references: [id])
+}
+
+model GameSession {
+  id          String            @id @default(uuid())
+  gameType    String
+  hostId      String
+  guestId     String?
+  status      GameSessionStatus @default(WAITING)
+  state       Json
+  currentTurn String?
+  winnerId    String?
+  pointsWager Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  host   User  @relation("GameSessionHost",   fields: [hostId],   references: [id])
+  guest  User? @relation("GameSessionGuest",  fields: [guestId],  references: [id])
+  winner User? @relation("GameSessionWinner", fields: [winnerId], references: [id])
 }

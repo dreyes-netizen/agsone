@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { sendMail } from "@/lib/email/mailer";
 import { notificationEmail } from "@/lib/email/templates";
+import { broadcast } from "@/lib/realtime/broadcast";
 
 type CreateNotificationParams = {
   userId: string;
@@ -40,5 +41,10 @@ export async function createNotification(params: CreateNotificationParams) {
       // fail open — if pref check errors, still send notification
     }
   }
-  return prisma.notification.create({ data: params });
+  const notification = await prisma.notification.create({ data: params });
+
+  // Ping the recipient's channel so their notification bell re-fetches instantly.
+  await broadcast(`user:${params.userId}`);
+
+  return notification;
 }

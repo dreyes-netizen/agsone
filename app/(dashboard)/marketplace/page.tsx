@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import React from "react";
-import { ShoppingBag, CheckCircle, AlertCircle, Coins, Package, Ticket, Star, Monitor, X } from "lucide-react";
+import { ShoppingBag, CheckCircle, AlertCircle, Coins, Package, Ticket, Star, Monitor, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
@@ -12,7 +12,7 @@ type Reward = {
   id: string;
   name: string;
   description: string | null;
-  imageUrl: string | null;
+  imageUrls: string[];
   pointCost: number;
   stockQuantity: number;
   category: string;
@@ -34,12 +34,14 @@ export default function MarketplacePage() {
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const { fire: fireConfetti } = useConfetti();
-  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [selectedRewardImageIndex, setSelectedRewardImageIndex] = useState(0);
+  const [cardImageIndices, setCardImageIndices] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Reward[] }>("/api/rewards").then((r) => setRewards(r.data)).catch(() => {});
+    apiFetch<{ data: Reward[] }>("/api/rewards").then((r) => setRewards(r.data)).catch((e) => console.error("rewards fetch failed:", e));
     apiFetch<{ data: { pointsBalance: number } }>("/api/me").then((r) => setBalance(r.data.pointsBalance)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
@@ -129,28 +131,52 @@ export default function MarketplacePage() {
             const canAfford = balance >= reward.pointCost;
             const outOfStock = reward.stockQuantity === 0;
             const busy = redeeming === reward.id;
+            const images = reward.imageUrls ?? [];
+            const idx = cardImageIndices[reward.id] ?? 0;
+            const setIdx = (i: number) => setCardImageIndices((prev) => ({ ...prev, [reward.id]: i }));
 
             return (
               <div
                 key={reward.id}
-                onClick={() => setSelectedReward(reward)}
+                onClick={() => { setSelectedReward(reward); setSelectedRewardImageIndex(cardImageIndices[reward.id] ?? 0); }}
                 className={`bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer ${outOfStock ? "opacity-55" : ""}`}
               >
-                {/* Photo or color accent */}
-                {reward.imageUrl ? (
-                  <button
-                    type="button"
-                    className="block w-full focus:outline-none cursor-zoom-in"
-                    onClick={(e) => { e.stopPropagation(); setLightboxImg(reward.imageUrl!); }}
-                    aria-label={`View photo of ${reward.name}`}
-                  >
+                {/* Photo carousel or color accent */}
+                {images.length > 0 ? (
+                  <div className="relative group" onClick={(e) => e.stopPropagation()}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={reward.imageUrl}
+                      src={images[idx]}
                       alt={reward.name}
-                      className="w-full aspect-square object-contain bg-white"
+                      className="w-full aspect-square object-contain bg-white cursor-zoom-in"
+                      onClick={() => setLightbox({ images, index: idx })}
                     />
-                  </button>
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + images.length) % images.length); }}
+                          className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % images.length); }}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+                          {images.map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                              className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   <div className={`h-1 bg-gradient-to-r ${cfg.accent}`} />
                 )}
@@ -198,16 +224,22 @@ export default function MarketplacePage() {
           })}
         </div>
       )}
-      <ImageLightbox
-        images={lightboxImg ? [lightboxImg] : []}
-        open={!!lightboxImg}
-        onClose={() => setLightboxImg(null)}
-      />
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          open={!!lightbox}
+          onClose={() => setLightbox(null)}
+        />
+      )}
 
       {selectedReward && (() => {
         const cfg = categoryConfig[selectedReward.category] ?? categoryConfig.PHYSICAL;
         const canAfford = balance >= selectedReward.pointCost;
         const outOfStock = selectedReward.stockQuantity === 0;
+        const images = selectedReward.imageUrls ?? [];
+        const total = images.length;
         return (
           <div
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0"
@@ -217,8 +249,41 @@ export default function MarketplacePage() {
               className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {selectedReward.imageUrl && (
-                <img src={selectedReward.imageUrl} alt={selectedReward.name} className="w-full aspect-square object-contain bg-white rounded-t-2xl" />
+              {total > 0 && (
+                <div className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={images[selectedRewardImageIndex]}
+                    alt={selectedReward.name}
+                    className="w-full aspect-square object-contain bg-white rounded-t-2xl cursor-zoom-in"
+                    onClick={() => setLightbox({ images, index: selectedRewardImageIndex })}
+                  />
+                  {total > 1 && (
+                    <>
+                      <button
+                        onClick={() => setSelectedRewardImageIndex((i) => (i - 1 + total) % total)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedRewardImageIndex((i) => (i + 1) % total)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {images.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setSelectedRewardImageIndex(i)}
+                            className={`w-2 h-2 rounded-full transition-colors ${i === selectedRewardImageIndex ? "bg-white" : "bg-white/50"}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
               <div className="p-5 space-y-4">
                 <button onClick={() => setSelectedReward(null)} className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors">

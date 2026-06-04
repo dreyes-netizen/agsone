@@ -36,23 +36,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. Brand new employee — create a fresh record and send welcome email
-    await prisma.user.create({
-      data: {
-        firebaseUid: decoded.uid,
-        email,
-        displayName,
-        avatarUrl: decoded.picture ?? null,
-        role: "EMPLOYEE",
-        onboardingComplete: false,
-      },
-    });
-
-    if (email) {
-      sendMail({ to: email, ...welcomeEmail(displayName) }).catch(() => {});
-    }
-
-    return NextResponse.json({ status: "created" });
+    // 3. Email not in the system — reject access
+    return NextResponse.json({ error: "not_in_directory" }, { status: 403 });
   } catch (err) {
     console.error("Auth sync error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

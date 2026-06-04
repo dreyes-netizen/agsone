@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 
 type DbProfile = {
@@ -46,10 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         document.cookie = `firebase-token=${idToken}; path=/; max-age=3600; SameSite=Strict`;
 
-        await fetch("/api/auth/sync", {
+        const syncRes = await fetch("/api/auth/sync", {
           method: "POST",
           headers: { Authorization: `Bearer ${idToken}` },
         });
+
+        if (syncRes.status === 403) {
+          await signOut(auth);
+          return;
+        }
 
         const meRes = await fetch("/api/me", {
           headers: { Authorization: `Bearer ${idToken}` },

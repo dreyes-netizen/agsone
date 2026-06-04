@@ -15,14 +15,15 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const typeFilter = searchParams.get("type");
   const cursor     = searchParams.get("cursor") ?? undefined;
+  const limit      = Math.min(parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10), PAGE_SIZE);
 
   const posts = await prisma.socialPost.findMany({
     orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
-    take: PAGE_SIZE + 1,
+    take: limit + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     where: typeFilter ? { type: typeFilter as never } : undefined,
     include: {
-      author: { select: { displayName: true, avatarUrl: true } },
+      author: { select: { id: true, displayName: true, avatarUrl: true } },
       recipient: { select: { id: true, displayName: true, avatarUrl: true } },
       reactions: { select: { emoji: true, userId: true } },
       _count: { select: { comments: true } },
@@ -30,8 +31,8 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const hasMore   = posts.length > PAGE_SIZE;
-  const page      = hasMore ? posts.slice(0, PAGE_SIZE) : posts;
+  const hasMore   = posts.length > limit;
+  const page      = hasMore ? posts.slice(0, limit) : posts;
   const nextCursor = hasMore ? page[page.length - 1].id : null;
 
   const myVotes = await prisma.pollVote.findMany({
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest) {
       type: "SHOUTOUT_RECEIVED",
       title: `${user.displayName} gave you a shoutout!`,
       body: parsed.data.content.slice(0, 100),
+      data: { postId: post.id },
     });
     return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
   }

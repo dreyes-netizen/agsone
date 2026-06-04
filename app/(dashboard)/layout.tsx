@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Trophy, User, ShieldCheck, LogOut,
-  Rss, Gamepad2, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search, Pill,
+  Rss, Menu, Target, UtensilsCrossed, MessageSquare, Sparkles, Swords, Search, Pill, Puzzle,
 } from "lucide-react";
 import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
@@ -21,7 +21,7 @@ const mainNav = [
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/medicine",    label: "Medicine",    icon: Pill },
-  { href: "/games",       label: "Games",       icon: Gamepad2 },
+  { href: "/minigames",   label: "Minigames",   icon: Puzzle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/shoutouts",   label: "Shoutouts",   icon: Sparkles },
   { href: "/challenges",  label: "Challenges",  icon: Swords },
@@ -43,8 +43,8 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
       href={href}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
         active
-          ? "bg-white/25 text-white"
-          : "text-white hover:bg-white/[0.10]"
+          ? "bg-white/20 text-white font-semibold border-l-2 border-white/60 pl-[10px]"
+          : "text-white/80 hover:text-white hover:bg-white/[0.10]"
       }`}
     >
       <Icon className="w-4 h-4 shrink-0" />
@@ -143,9 +143,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 transition-colors group cursor-default">
           <div className="relative shrink-0">
             {user?.photoURL ? (
-              <img src={user.photoURL} alt={user.displayName ?? ""} className="w-7 h-7 rounded-full object-cover" />
+              <img src={user.photoURL} alt={user.displayName ?? ""} className="w-9 h-9 rounded-full object-cover" />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-9 h-9 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white">
                 {initials}
               </div>
             )}
@@ -229,7 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <main className="flex-1 lg:ml-[216px] min-h-screen">
         <div className="lg:hidden h-14" />
-        <div className="p-5 pb-24 lg:p-8 lg:pb-10">{children}</div>
+        <div className="p-5 pb-24 lg:p-8 lg:pb-10 overflow-x-clip">{children}</div>
         <div className="lg:hidden h-16" />
       </main>
 
@@ -241,13 +241,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors relative ${
-                active ? "text-white" : "text-white/40"
-              }`}
+              className="flex flex-col items-center justify-center gap-1 flex-1 h-full text-white transition-colors relative"
             >
-              {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-white rounded-full" />}
-              <Icon className="w-5 h-5 shrink-0" />
-              <span className="text-[9px] font-medium leading-none">{label}</span>
+              {active && (
+                <span className="absolute inset-x-1.5 top-1.5 bottom-1.5 bg-white/15 rounded-xl" />
+              )}
+              <Icon className={`shrink-0 relative z-10 transition-transform ${active ? "w-[22px] h-[22px]" : "w-5 h-5 opacity-70"}`} />
+              <span className={`text-[9px] font-medium leading-none relative z-10 ${active ? "" : "opacity-70"}`}>{label}</span>
             </Link>
           );
         })}

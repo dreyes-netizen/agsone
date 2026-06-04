@@ -19,7 +19,8 @@ export async function GET(
 
   const orders = await prisma.foodOrder.findMany({
     where: { listingId: id },
-    include: { user: { select: { displayName: true } } },
+    include: { user: { select: { id: true, displayName: true, department: { select: { name: true } } } } },
+    // paidAt is returned automatically — no select needed (full model)
     orderBy: { createdAt: "asc" },
   });
 

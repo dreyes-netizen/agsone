@@ -116,13 +116,13 @@ export default function ChallengesPage() {
                     const reached = dp.progress >= challenge.targetValue;
                     return (
                       <div key={dp.deptId} className={`rounded-xl p-3 border transition-colors ${isMyDept ? "border-navy-200 bg-navy-50/50 ring-1 ring-navy-200" : "border-zinc-100 bg-zinc-50/50"}`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-zinc-800">{dp.deptName}</span>
-                            {isMyDept && <span className="text-xs font-medium text-navy-600 bg-navy-100 px-1.5 py-0.5 rounded-full">Your dept</span>}
-                            {reached && <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">Goal reached!</span>}
+                        <div className="flex items-center justify-between mb-1.5 gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="text-sm font-semibold text-zinc-800 truncate">{dp.deptName}</span>
+                            {isMyDept && <span className="text-xs font-medium text-navy-600 bg-navy-100 px-1.5 py-0.5 rounded-full shrink-0">Your dept</span>}
+                            {reached && <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full shrink-0">Goal reached!</span>}
                           </div>
-                          <span className="text-xs text-zinc-500 font-medium">{dp.progress.toLocaleString()} / {challenge.targetValue.toLocaleString()}</span>
+                          <span className="text-xs text-zinc-500 font-medium shrink-0 tabular-nums">{dp.progress.toLocaleString()} / {challenge.targetValue.toLocaleString()}</span>
                         </div>
                         <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all ${reached ? "bg-emerald-500" : isMyDept ? "bg-navy-500" : "bg-zinc-400"}`} style={{ width: `${pct}%` }} />

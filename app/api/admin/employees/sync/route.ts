@@ -159,12 +159,28 @@ export async function POST(req: NextRequest) {
       data: { isActive: true },
     });
 
+    // Deactivate employees not present in the active list at all
+    // (covers resigned employees whose email was removed from the file)
+    const notInFile = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: "EMPLOYEE",
+        NOT: { email: { in: activeRows.map((r) => r.email), mode: "insensitive" } },
+      },
+      select: { id: true },
+    });
+    const removedResult = await prisma.user.updateMany({
+      where: { id: { in: notInFile.map((u) => u.id) } },
+      data: { isActive: false },
+    });
+
     return NextResponse.json({
       data: {
         resignedInFile: resignedEmails.length,
         activeInFile: activeRows.length,
         deactivated: deactivateResult.count,
         reactivated: reactivateResult.count,
+        removedFromList: removedResult.count,
         imported,
         birthdaysUpdated,
         failedImports: failedEmails.length,

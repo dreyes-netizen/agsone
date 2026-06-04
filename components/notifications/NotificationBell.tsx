@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 
 type Notification = {
   id: string;
@@ -12,11 +14,34 @@ type Notification = {
   body: string;
   readAt: string | null;
   createdAt: string;
+  data: Record<string, unknown> | null;
 };
 
+function getNotificationLink(n: Notification): string | null {
+  switch (n.type) {
+    case "SHOUTOUT_RECEIVED":      return "/feed";
+    case "POINTS_AWARDED":         return "/profile";
+    case "MISSION_COMPLETED":
+    case "MISSION_REJECTED":       return "/missions";
+    case "MILESTONE_REWARD":       return "/profile";
+    case "GAME_INVITE":             return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/minigames";
+    case "GAME_WIN":               return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/games";
+    case "REDEMPTION_APPROVED":
+    case "REDEMPTION_REJECTED":
+    case "REDEMPTION_PENDING":     return "/marketplace";
+    case "LEVEL_UP":
+    case "BADGE_EARNED":           return "/profile";
+    case "STREAK_RESTORED":
+    case "STREAK_BROKEN":          return "/profile";
+    case "FEEDBACK_REPLY":         return "/feedback";
+    default:                       return null;
+  }
+}
+
 export function NotificationBell() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, dbUser } = useAuth();
   const { apiFetch } = useApiClient();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -25,10 +50,16 @@ export function NotificationBell() {
   useEffect(() => {
     if (authLoading || !user) return;
     load();
-    const interval = setInterval(load, 30_000);
+    // Slow fallback poll — Realtime delivers new notifications instantly; this
+    // only backstops a rare dropped message.
+    const interval = setInterval(load, 60_000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
+
+  // Real-time: refresh the bell the moment a notification (invite, win, etc.)
+  // is created for this user.
+  useRealtimeChannel(dbUser ? `user:${dbUser.id}` : null, load);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -52,10 +83,15 @@ export function NotificationBell() {
     setUnread(0);
   }
 
-  async function markRead(id: string) {
-    await apiFetch(`/api/notifications/${id}`, { method: "PATCH" });
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, readAt: new Date().toISOString() } : n));
-    setUnread((c) => Math.max(0, c - 1));
+  async function handleNotificationClick(n: Notification) {
+    if (!n.readAt) {
+      await apiFetch(`/api/notifications/${n.id}`, { method: "PATCH" });
+      setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x));
+      setUnread((c) => Math.max(0, c - 1));
+    }
+    const link = getNotificationLink(n);
+    setOpen(false);
+    if (link) router.push(link);
   }
 
   return (
@@ -86,22 +122,28 @@ export function NotificationBell() {
           <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
             {notifications.length === 0 ? (
               <li className="px-4 py-6 text-center text-sm text-gray-400">No notifications yet.</li>
-            ) : notifications.map((n) => (
-              <li
-                key={n.id}
-                onClick={() => !n.readAt && markRead(n.id)}
-                className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.readAt ? "bg-indigo-50/60" : ""}`}
-              >
-                <div className="flex items-start gap-2">
-                  {!n.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
-                  <div className={!n.readAt ? "" : "ml-4"}>
-                    <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                  </div>
-                </div>
-              </li>
-            ))}
+            ) : notifications.map((n) => {
+              const link = getNotificationLink(n);
+              return (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleNotificationClick(n)}
+                    className={`w-full text-left px-4 py-3 transition-colors ${link ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"} ${!n.readAt ? "bg-indigo-50/60" : ""}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      {!n.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
+                      <div className={!n.readAt ? "" : "ml-4"}>
+                        <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                        {link && <p className="text-[10px] text-indigo-500 mt-0.5">Tap to view →</p>}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

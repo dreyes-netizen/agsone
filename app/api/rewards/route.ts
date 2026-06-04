@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrls: z.array(z.string().url()).max(3).default([]),
   pointCost: z.number().int().min(1),
   stockQuantity: z.number().int().min(-1).default(-1),
   category: z.enum(["PHYSICAL", "VOUCHER", "PRIVILEGE", "DIGITAL"]),

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, Loader2, ImagePlus, Pencil, Plus } from "lucide-react";
+import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus } from "lucide-react";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
 type AddOn = { name: string; price: number };
@@ -22,8 +23,9 @@ type OrderRow = {
   quantity: number;
   note: string | null;
   selectedAddOns: AddOn[];
+  paidAt: string | null;
   createdAt: string;
-  user: { displayName: string };
+  user: { id: string; displayName: string; department: { name: string } | null };
 };
 
 type Listing = {
@@ -60,6 +62,7 @@ function isClosed(listing: Listing) {
 export default function FoodPage() {
   const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
+  const router = useRouter();
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +70,7 @@ export default function FoodPage() {
 
   // Order form state
   const [orderingId, setOrderingId] = useState<string | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [orderNote, setOrderNote] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<AddOn[]>([]);
@@ -78,6 +82,8 @@ export default function FoodPage() {
 
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [selectedListingImageIndex, setSelectedListingImageIndex] = useState(0);
+  const [cardImageIndices, setCardImageIndices] = useState<Record<string, number>>({});
 
   // Create / edit form
   const [showForm, setShowForm] = useState(false);
@@ -231,6 +237,34 @@ export default function FoodPage() {
     }
   }
 
+  // ── Edit order ───────────────────────────────────────────────────────────────
+  function openEditOrder(listing: Listing) {
+    if (!listing.myOrder) return;
+    setQty(listing.myOrder.quantity);
+    setOrderNote(listing.myOrder.note ?? "");
+    setSelectedAddOns(listing.myOrder.selectedAddOns ?? []);
+    setEditingOrderId(listing.id);
+    setOrderingId(null);
+  }
+
+  async function handleUpdateOrder(listing: Listing) {
+    setSubmittingOrder(true);
+    try {
+      const res = await apiFetch<{ data: MyOrder }>(`/api/food/${listing.id}/order`, {
+        method: "PATCH",
+        body: JSON.stringify({ quantity: qty, note: orderNote || undefined, selectedAddOns }),
+      });
+      setListings((prev) =>
+        prev.map((l) => l.id === listing.id ? { ...l, myOrder: res.data } : l)
+      );
+      setEditingOrderId(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update order");
+    } finally {
+      setSubmittingOrder(false);
+    }
+  }
+
   // ── Cancel order ─────────────────────────────────────────────────────────────
   async function handleCancel(listing: Listing) {
     if (!confirm("Cancel your order?")) return;
@@ -246,6 +280,40 @@ export default function FoodPage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to cancel order");
     }
+  }
+
+  // ── Toggle paid ───────────────────────────────────────────────────────────────
+  async function togglePaid(listingId: string, orderId: string, paid: boolean) {
+    try {
+      const res = await apiFetch<{ data: { paidAt: string | null } }>(
+        `/api/food/${listingId}/orders/${orderId}`,
+        { method: "PATCH", body: JSON.stringify({ paid }) }
+      );
+      setSellerOrders((prev) => ({
+        ...prev,
+        [listingId]: (prev[listingId] ?? []).map((o) =>
+          o.id === orderId ? { ...o, paidAt: res.data.paidAt } : o
+        ),
+      }));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update payment status");
+    }
+  }
+
+  // ── Sell Again (clone listing) ───────────────────────────────────────────────
+  function handleSellAgain(listing: Listing) {
+    setEditingId(null);
+    setNewTitle(listing.title);
+    setNewDesc(listing.description ?? "");
+    setNewPrice(parseFloat(listing.price).toString());
+    setNewCutoff("");
+    setNewDeliveryDate("");
+    setExistingImageUrls(listing.imageUrls);
+    setNewImages([]); setImagePreviews([]);
+    setNewAddOns(listing.addOns ?? []);
+    setAddOnName(""); setAddOnPrice("");
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // ── Delete listing ────────────────────────────────────────────────────────────
@@ -335,9 +403,13 @@ export default function FoodPage() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-zinc-600 mb-1">Description <span className="text-zinc-400 font-normal">(optional)</span></label>
+                <div className="flex justify-between items-baseline mb-1">
+                  <label className="block text-xs font-medium text-zinc-600">Description <span className="text-zinc-400 font-normal">(optional)</span></label>
+                  <span className={`text-xs ${newDesc.length > 1800 ? "text-red-500" : "text-zinc-400"}`}>{newDesc.length}/2000</span>
+                </div>
                 <textarea
                   value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={3}
+                  maxLength={2000}
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                 />
               </div>
@@ -474,7 +546,7 @@ export default function FoodPage() {
 
       {/* Listings */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="bg-white rounded-xl border border-zinc-200 overflow-hidden animate-pulse">
               <div className="h-36 bg-zinc-100" />
@@ -495,7 +567,7 @@ export default function FoodPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((listing) => {
             const closed = isClosed(listing);
             const isMine = listing.createdBy.id === dbUser?.id;
@@ -505,46 +577,75 @@ export default function FoodPage() {
 
             return (
               <div key={listing.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow">
-                {/* Hero image */}
-                {listing.imageUrls.length > 0 && (
-                  <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={listing.imageUrls[0]}
-                      alt={listing.title}
-                      className="w-full aspect-square object-contain bg-white cursor-zoom-in"
-                      onClick={() => setLightbox({ images: listing.imageUrls, index: 0 })}
-                    />
-                    {listing.imageUrls.length > 1 && (
-                      <div className="flex gap-1 absolute bottom-1.5 right-1.5">
-                        {listing.imageUrls.slice(1).map((url, i) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            key={i} src={url} alt=""
-                            className="w-10 h-10 object-cover rounded border-2 border-white cursor-zoom-in"
-                            onClick={() => setLightbox({ images: listing.imageUrls, index: i + 1 })}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Hero image carousel */}
+                {listing.imageUrls.length > 0 && (() => {
+                  const idx = cardImageIndices[listing.id] ?? 0;
+                  const total = listing.imageUrls.length;
+                  const setIdx = (i: number) => setCardImageIndices((prev) => ({ ...prev, [listing.id]: i }));
+                  return (
+                    <div className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={listing.imageUrls[idx]}
+                        alt={listing.title}
+                        className="w-full aspect-square object-contain bg-white cursor-zoom-in"
+                        onClick={() => setLightbox({ images: listing.imageUrls, index: idx })}
+                      />
+                      {total > 1 && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + total) % total); }}
+                            className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % total); }}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+                            {listing.imageUrls.map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
                 {listing.imageUrls.length === 0 && (
                   <div className={`h-1 ${closed ? "bg-zinc-300" : "bg-emerald-500"}`} />
                 )}
 
                 <div className="p-4 flex flex-col flex-1 gap-2">
                   {/* Seller */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-navy-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                      {listing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
-                    </div>
-                    <span className="text-xs text-zinc-500">{listing.createdBy.displayName}</span>
-                    <span className="ml-auto text-xs text-zinc-400">{listing._count.orders} orders</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); router.push(`/employees/${listing.createdBy.id}`); }}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0 flex-1"
+                    >
+                      {listing.createdBy.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={listing.createdBy.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                          {listing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-xs text-zinc-500 truncate">{listing.createdBy.displayName}</span>
+                    </button>
+                    <span className="shrink-0 text-xs text-zinc-400">{listing._count.orders} orders</span>
                   </div>
 
                   {/* Title + desc — click to see full details */}
-                  <div className="cursor-pointer" onClick={() => setSelectedListing(listing)}>
+                  <div className="cursor-pointer" onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}>
                     <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors">{listing.title}</h3>
                     {listing.description && (
                       <p className="text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
@@ -552,10 +653,10 @@ export default function FoodPage() {
                   </div>
 
                   {/* Price + cutoff */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-emerald-600">{formatPrice(listing.price)}</span>
-                    <span className={`flex items-center gap-1 text-xs ${closed ? "text-zinc-400" : "text-amber-600"}`}>
-                      <Clock className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-lg font-bold text-emerald-600 shrink-0">{formatPrice(listing.price)}</span>
+                    <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-zinc-400" : "text-amber-600"}`}>
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
                       {closed ? "Closed" : `By ${formatCutoff(listing.cutoffAt)}`}
                     </span>
                   </div>
@@ -594,8 +695,8 @@ export default function FoodPage() {
                       </button>
                     )}
 
-                    {/* Inline order form */}
-                    {!closed && !isMine && !listing.myOrder && orderingId === listing.id && (
+                    {/* Inline order form — new order or edit */}
+                    {!closed && !isMine && ((!listing.myOrder && orderingId === listing.id) || editingOrderId === listing.id) && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
@@ -645,14 +746,15 @@ export default function FoodPage() {
 
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleOrder(listing)} disabled={submittingOrder}
+                            onClick={() => editingOrderId === listing.id ? handleUpdateOrder(listing) : handleOrder(listing)}
+                            disabled={submittingOrder}
                             className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-1.5 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                           >
                             {submittingOrder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                            Confirm Order
+                            {editingOrderId === listing.id ? "Save Changes" : "Confirm Order"}
                           </button>
                           <button
-                            onClick={() => { setOrderingId(null); setSelectedAddOns([]); }}
+                            onClick={() => { setOrderingId(null); setEditingOrderId(null); setSelectedAddOns([]); }}
                             className="text-sm text-zinc-500 hover:text-zinc-700 px-2"
                           >
                             Cancel
@@ -662,22 +764,52 @@ export default function FoodPage() {
                     )}
 
                     {/* Existing order */}
-                    {!isMine && listing.myOrder && (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-semibold text-zinc-700">Your order: ×{listing.myOrder.quantity}</p>
-                          {(listing.myOrder.selectedAddOns?.length ?? 0) > 0 && (
-                            <p className="text-xs text-amber-600">{(listing.myOrder.selectedAddOns ?? []).map((a) => a.name).join(", ")}</p>
+                    {!isMine && listing.myOrder && (() => {
+                      const qty = listing.myOrder.quantity;
+                      const base = parseFloat(listing.price);
+                      const addOnSum = (listing.myOrder.selectedAddOns ?? []).reduce((s, a) => s + a.price, 0);
+                      const total = (base + addOnSum) * qty;
+                      return (
+                        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <p className="text-xs font-bold text-zinc-700">Your Order</p>
+                              <p className="text-xs text-zinc-600">×{qty} {listing.title} <span className="text-zinc-400">@ {formatPrice(listing.price)} each</span></p>
+                              {(listing.myOrder.selectedAddOns?.length ?? 0) > 0 && (
+                                <div className="space-y-0.5">
+                                  {listing.myOrder.selectedAddOns.map((a, i) => (
+                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-zinc-400">(₱{a.price.toFixed(2)} × {qty})</span></p>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="text-[11px] text-zinc-400">
+                                Ordered {new Date(listing.myOrder.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-base font-bold text-emerald-700">₱{total.toFixed(2)}</p>
+                              <p className="text-[10px] text-zinc-400">total</p>
+                            </div>
+                          </div>
+                          {listing.myOrder.note && (
+                            <p className="text-xs text-zinc-400 italic border-t border-emerald-100 pt-2">
+                              📝 "{listing.myOrder.note}"
+                            </p>
                           )}
-                          {listing.myOrder.note && <p className="text-xs text-zinc-400">{listing.myOrder.note}</p>}
+                          {!closed && (
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => openEditOrder(listing)} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
+                                Edit order
+                              </button>
+                              <span className="text-zinc-200">|</span>
+                              <button onClick={() => handleCancel(listing)} className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors">
+                                Cancel order
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        {!closed && (
-                          <button onClick={() => handleCancel(listing)} className="text-xs text-red-500 hover:text-red-600 font-medium">
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Seller view */}
                     {isMine && (
@@ -705,6 +837,14 @@ export default function FoodPage() {
                             </button>
                           )}
                         </div>
+                        {closed && (
+                          <button
+                            onClick={() => handleSellAgain(listing)}
+                            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            🔁 Sell Again
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(listing)}
                           className="w-full text-xs text-zinc-400 hover:text-red-500 transition-colors text-center py-0.5"
@@ -718,36 +858,118 @@ export default function FoodPage() {
 
                 {/* Seller order list (expanded) */}
                 {isMine && isExpanded && (
-                  <div className="border-t border-zinc-100 px-4 py-3 bg-zinc-50">
+                  <div className="border-t border-zinc-100 bg-zinc-50">
                     {!sellerOrders[listing.id] ? (
-                      <div className="flex justify-center py-2"><Loader2 className="w-4 h-4 animate-spin text-zinc-400" /></div>
+                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-zinc-400" /></div>
                     ) : sellerOrders[listing.id].length === 0 ? (
-                      <p className="text-xs text-zinc-400 text-center py-2">No orders yet.</p>
-                    ) : (
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-zinc-400 border-b border-zinc-200">
-                            <th className="text-left pb-1.5 font-medium">Name</th>
-                            <th className="text-center pb-1.5 font-medium">Qty</th>
-                            <th className="text-left pb-1.5 font-medium">Add-ons / Note</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sellerOrders[listing.id].map((o) => (
-                            <tr key={o.id} className="border-b border-zinc-100 last:border-0">
-                              <td className="py-1.5 font-medium text-zinc-800">{o.user.displayName}</td>
-                              <td className="py-1.5 text-center text-zinc-700">×{o.quantity}</td>
-                              <td className="py-1.5 text-zinc-500">
-                                {(o.selectedAddOns?.length ?? 0) > 0 && (
-                                  <span className="text-amber-600">{(o.selectedAddOns ?? []).map((a) => a.name).join(", ")}{o.note ? " · " : ""}</span>
-                                )}
-                                {o.note ?? ((o.selectedAddOns?.length ?? 0) > 0 ? "" : "—")}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                      <p className="text-xs text-zinc-400 text-center py-4">No orders yet.</p>
+                    ) : (() => {
+                      const orders = sellerOrders[listing.id];
+                      const totalQty = orders.reduce((s, o) => s + o.quantity, 0);
+                      const basePrice = parseFloat(listing.price);
+                      const totalRevenue = orders.reduce((s, o) => {
+                        const addOnSum = (o.selectedAddOns ?? []).reduce((a, b) => a + b.price, 0);
+                        return s + (basePrice + addOnSum) * o.quantity;
+                      }, 0);
+                      const collected = orders.reduce((s, o) => {
+                        if (!o.paidAt) return s;
+                        const addOnSum = (o.selectedAddOns ?? []).reduce((a, b) => a + b.price, 0);
+                        return s + (basePrice + addOnSum) * o.quantity;
+                      }, 0);
+                      const outstanding = totalRevenue - collected;
+                      const addOnCounts: Record<string, number> = {};
+                      orders.forEach((o) => (o.selectedAddOns ?? []).forEach((a) => {
+                        addOnCounts[a.name] = (addOnCounts[a.name] ?? 0) + o.quantity;
+                      }));
+                      return (
+                        <>
+                          {/* Summary bar */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-zinc-200">
+                            <div className="text-center px-3 py-3 border-r border-b sm:border-b-0 border-zinc-200">
+                              <p className="text-base font-black text-zinc-800">{orders.length}</p>
+                              <p className="text-[10px] text-zinc-400">orders</p>
+                            </div>
+                            <div className="text-center px-3 py-3 border-b sm:border-b-0 sm:border-r border-zinc-200">
+                              <p className="text-base font-black text-zinc-800">{totalQty}</p>
+                              <p className="text-[10px] text-zinc-400">to prep</p>
+                            </div>
+                            <div className="text-center px-3 py-3 border-r border-zinc-200">
+                              <p className="text-base font-black text-emerald-600">₱{collected.toFixed(2)}</p>
+                              <p className="text-[10px] text-zinc-400">collected</p>
+                            </div>
+                            <div className="text-center px-3 py-3">
+                              <p className="text-base font-black text-rose-500">₱{outstanding.toFixed(2)}</p>
+                              <p className="text-[10px] text-zinc-400">outstanding</p>
+                            </div>
+                          </div>
+
+                          {/* Add-on breakdown */}
+                          {Object.keys(addOnCounts).length > 0 && (
+                            <div className="px-4 py-2 border-b border-zinc-200 flex flex-wrap gap-1.5">
+                              {Object.entries(addOnCounts).map(([name, count]) => (
+                                <span key={name} className="text-[11px] bg-amber-50 border border-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                                  {name} ×{count}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Order rows */}
+                          <div className="divide-y divide-zinc-100">
+                            {orders.map((o) => {
+                              const addOnSum = (o.selectedAddOns ?? []).reduce((a, b) => a + b.price, 0);
+                              const rowTotal = (basePrice + addOnSum) * o.quantity;
+                              const isPaid = !!o.paidAt;
+                              return (
+                                <div key={o.id} className={`px-4 py-2.5 flex items-start gap-3 transition-colors ${isPaid ? "bg-emerald-50/50" : ""}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <button
+                                        type="button"
+                                        onClick={() => router.push(`/employees/${o.user.id}`)}
+                                        className="text-xs font-semibold text-zinc-800 hover:underline hover:text-navy-600 transition-colors"
+                                      >
+                                        {o.user.displayName}
+                                      </button>
+                                      {o.user.department && (
+                                        <span className="text-[10px] bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded-full">{o.user.department.name}</span>
+                                      )}
+                                      {isPaid && (
+                                        <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">✓ Paid</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-zinc-500 mt-0.5">×{o.quantity} @ {formatPrice(listing.price)} each</p>
+                                    {(o.selectedAddOns?.length ?? 0) > 0 && (
+                                      <p className="text-[11px] text-amber-600 mt-0.5">
+                                        {(o.selectedAddOns ?? []).map((a) => `+ ${a.name} (₱${a.price.toFixed(2)})`).join(", ")}
+                                      </p>
+                                    )}
+                                    {o.note && <p className="text-[11px] text-zinc-400 italic mt-0.5">"{o.note}"</p>}
+                                    <p className="text-[10px] text-zinc-300 mt-0.5">
+                                      {new Date(o.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                                    </p>
+                                  </div>
+                                  <div className="text-right shrink-0 space-y-1.5">
+                                    <p className={`text-sm font-bold ${isPaid ? "text-emerald-600" : "text-zinc-700"}`}>₱{rowTotal.toFixed(2)}</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePaid(listing.id, o.id, !isPaid)}
+                                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                                        isPaid
+                                          ? "border-zinc-200 text-zinc-400 hover:text-red-500 hover:border-red-200"
+                                          : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                                      }`}
+                                    >
+                                      {isPaid ? "Undo" : "Mark paid"}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -768,16 +990,58 @@ export default function FoodPage() {
       {selectedListing && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0" onClick={() => setSelectedListing(null)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {selectedListing.imageUrls.length > 0 && (
-              <img src={selectedListing.imageUrls[0]} alt={selectedListing.title} className="w-full aspect-square object-contain bg-white rounded-t-2xl" />
-            )}
+            {selectedListing.imageUrls.length > 0 && (() => {
+              const total = selectedListing.imageUrls.length;
+              return (
+                <div className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedListing.imageUrls[selectedListingImageIndex]}
+                    alt={selectedListing.title}
+                    className="w-full aspect-square object-contain bg-white rounded-t-2xl cursor-zoom-in"
+                    onClick={() => setLightbox({ images: selectedListing.imageUrls, index: selectedListingImageIndex })}
+                  />
+                  {total > 1 && (
+                    <>
+                      <button
+                        onClick={() => setSelectedListingImageIndex((i) => (i - 1 + total) % total)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedListingImageIndex((i) => (i + 1) % total)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {selectedListing.imageUrls.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setSelectedListingImageIndex(i)}
+                            className={`w-2 h-2 rounded-full transition-colors ${i === selectedListingImageIndex ? "bg-white" : "bg-white/50"}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             <div className="p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-emerald-600">{formatPrice(selectedListing.price)}</span>
                 <button onClick={() => setSelectedListing(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"><X className="w-4 h-4" /></button>
               </div>
               <h2 className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
-              <p className="text-xs text-zinc-500">by {selectedListing.createdBy.displayName}</p>
+              <button
+                type="button"
+                onClick={() => { setSelectedListing(null); router.push(`/employees/${selectedListing.createdBy.id}`); }}
+                className="text-xs text-zinc-500 hover:text-zinc-800 hover:underline transition-colors text-left"
+              >
+                by {selectedListing.createdBy.displayName}
+              </button>
               {selectedListing.description && (
                 <p className="text-sm text-zinc-600 whitespace-pre-wrap leading-relaxed">{selectedListing.description}</p>
               )}

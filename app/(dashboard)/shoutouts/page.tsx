@@ -15,9 +15,9 @@ type Shoutout = {
 };
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
-  if (url) return <img src={url} alt={name} className="w-8 h-8 rounded-full object-cover" />;
+  if (url) return <img src={url} alt={name} className="w-10 h-10 rounded-full object-cover" />;
   return (
-    <div className="w-8 h-8 rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-bold text-xs">
+    <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-bold text-xs">
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -114,17 +114,17 @@ export default function ShoutoutsPage() {
                 <div className="h-1 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="p-4 space-y-3">
                   <div className="flex items-center gap-1.5 flex-wrap text-sm">
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 min-w-0">
                       <Avatar name={s.author.displayName} url={s.author.avatarUrl} />
-                      <span className="font-semibold text-zinc-800">{s.author.displayName}</span>
+                      <span className="font-semibold text-zinc-800 truncate max-w-[120px]">{s.author.displayName}</span>
                     </div>
                     <span className="text-amber-600 font-medium flex items-center gap-1 shrink-0">
                       <Sparkles className="w-3.5 h-3.5" /> shouted out
                     </span>
                     {s.recipient && (
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 min-w-0">
                         <Avatar name={s.recipient.displayName} url={s.recipient.avatarUrl} />
-                        <span className="font-semibold text-zinc-800">{s.recipient.displayName}</span>
+                        <span className="font-semibold text-zinc-800 truncate max-w-[120px]">{s.recipient.displayName}</span>
                       </div>
                     )}
                   </div>

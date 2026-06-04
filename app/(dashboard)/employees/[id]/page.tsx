@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   ArrowLeft, Coins, Star, Flame, CalendarDays, Building2,
-  Award, Trophy, Sparkles, History,
+  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase,
 } from "lucide-react";
+
+type Shoutout = {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; displayName: string; avatarUrl: string | null };
+};
 
 type Employee = {
   id: string;
@@ -20,6 +27,8 @@ type Employee = {
   streakDays: number;
   birthday: string | null;
   hireDate: string | null;
+  bio: string | null;
+  skills: string[];
   isActive: boolean;
   rank: number;
   department: { id: string; name: string } | null;
@@ -28,6 +37,7 @@ type Employee = {
     awardedAt: string;
     badge: { name: string; description: string | null; iconUrl: string | null };
   }[];
+  shoutoutsReceived: Shoutout[];
 };
 
 type Transaction = {
@@ -59,9 +69,29 @@ const typeConfig: Record<string, { label: string; color: string; bg: string }> =
   MILESTONE:    { label: "Milestone Reward", color: "text-violet-600",  bg: "bg-violet-50" },
 };
 
+function getTenure(hireDate: string | null): string | null {
+  if (!hireDate) return null;
+  const start = new Date(hireDate);
+  const now = new Date();
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+  if (months < 0) { years--; months += 12; }
+  if (years === 0 && months === 0) return "Just started";
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} yr${years !== 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} mo`);
+  return parts.join(" ") + " at AGS";
+}
+
 function formatDate(val: string | null) {
   if (!val) return null;
   return new Date(val).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function fullSizeAvatar(url: string | null) {
+  if (!url) return url;
+  // Google profile photos: strip the =sNNN-c size suffix to get the original
+  return url.replace(/=s\d+-c$/, "=s0-c");
 }
 
 const inputClass =
@@ -89,6 +119,10 @@ export default function EmployeeProfilePage() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [avatarZoomed, setAvatarZoomed] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
 
   const isAdminOrManager = dbUser?.role === "HR_ADMIN" || dbUser?.role === "MANAGER";
   const isSelf = dbUser?.id === id;
@@ -189,11 +223,15 @@ export default function EmployeeProfilePage() {
       {/* Header card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-xl font-bold shrink-0 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => employee.avatarUrl && setAvatarZoomed(true)}
+            className={`w-20 h-20 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 overflow-hidden ${employee.avatarUrl ? "cursor-zoom-in hover:ring-2 hover:ring-navy-400 hover:ring-offset-2 transition-all" : "cursor-default"}`}
+          >
             {employee.avatarUrl
               ? <img src={employee.avatarUrl} alt={employee.displayName} className="w-full h-full object-cover" />
               : initials}
-          </div>
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">{employee.displayName}</h1>
@@ -212,6 +250,12 @@ export default function EmployeeProfilePage() {
                 <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
                   <Building2 className="w-3 h-3" />
                   {employee.department.name}
+                </span>
+              )}
+              {getTenure(employee.hireDate) && (
+                <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+                  <Briefcase className="w-3 h-3" />
+                  {getTenure(employee.hireDate)}
                 </span>
               )}
             </div>
@@ -242,6 +286,70 @@ export default function EmployeeProfilePage() {
           <p className="text-xs text-gray-400 mt-0.5">All-Time Rank</p>
         </div>
       </div>
+
+      {/* Bio */}
+      {employee.bio && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4 text-gray-400" />
+            <p className="text-sm font-semibold text-gray-700">About</p>
+          </div>
+          <p className="text-sm text-gray-600 leading-relaxed">{employee.bio}</p>
+        </div>
+      )}
+
+      {/* Skills */}
+      {employee.skills.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Tag className="w-4 h-4 text-gray-400" />
+            <p className="text-sm font-semibold text-gray-700">Skills</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {employee.skills.map((skill) => (
+              <span key={skill} className="text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Shoutouts received */}
+      {employee.shoutoutsReceived.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <p className="text-sm font-semibold text-gray-700">
+              Shoutouts Received
+              <span className="ml-1.5 text-xs font-normal text-gray-400">({employee.shoutoutsReceived.length})</span>
+            </p>
+          </div>
+          <div className="space-y-3">
+            {employee.shoutoutsReceived.map((s) => {
+              const initials = s.author.displayName.charAt(0).toUpperCase();
+              return (
+                <div key={s.id} className="flex gap-3 p-3 bg-amber-50/60 rounded-xl border border-amber-100">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                    {s.author.avatarUrl
+                      ? <img src={s.author.avatarUrl} alt={s.author.displayName} className="w-full h-full object-cover" />
+                      : initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-gray-900">{s.author.displayName}</span>
+                      <span className="text-xs text-gray-400">
+                        {new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{s.content}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Award Points — managers and HR admins only, not on own profile */}
       {isAdminOrManager && !isSelf && (
@@ -415,6 +523,54 @@ export default function EmployeeProfilePage() {
               })}
             </ul>
           )}
+        </div>
+      )}
+      {/* Avatar zoom lightbox */}
+      {avatarZoomed && employee.avatarUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center select-none"
+          onClick={() => { setAvatarZoomed(false); setZoom(1); setPan({ x: 0, y: 0 }); }}
+          onWheel={(e) => {
+            e.preventDefault();
+            setZoom((z) => Math.min(5, Math.max(1, z - e.deltaY * 0.002)));
+          }}
+        >
+          <img
+            src={fullSizeAvatar(employee.avatarUrl)}
+            alt={employee.displayName}
+            draggable={false}
+            style={{
+              transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+              transition: dragStart.current ? "none" : "transform 0.1s ease",
+              cursor: zoom > 1 ? (dragStart.current ? "grabbing" : "grab") : "zoom-in",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              borderRadius: "1rem",
+              objectFit: "contain",
+              boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (zoom === 1) setZoom(2.5);
+              else { setZoom(1); setPan({ x: 0, y: 0 }); }
+            }}
+            onDoubleClick={(e) => { e.stopPropagation(); setZoom(1); setPan({ x: 0, y: 0 }); }}
+            onMouseDown={(e) => {
+              if (zoom <= 1) return;
+              e.stopPropagation();
+              dragStart.current = { mx: e.clientX, my: e.clientY, px: pan.x, py: pan.y };
+            }}
+            onMouseMove={(e) => {
+              if (!dragStart.current) return;
+              e.stopPropagation();
+              setPan({ x: dragStart.current.px + e.clientX - dragStart.current.mx, y: dragStart.current.py + e.clientY - dragStart.current.my });
+            }}
+            onMouseUp={() => { dragStart.current = null; }}
+            onMouseLeave={() => { dragStart.current = null; }}
+          />
+          <p className="absolute bottom-4 text-white/50 text-xs pointer-events-none">
+            {zoom > 1 ? "Double-click or click to reset · Drag to pan" : "Click to zoom · Scroll to zoom"}
+          </p>
         </div>
       )}
     </div>

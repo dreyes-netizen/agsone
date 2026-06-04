@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -11,7 +11,7 @@ type Reward = {
   id: string;
   name: string;
   description: string | null;
-  imageUrl: string | null;
+  imageUrls: string[];
   pointCost: number;
   stockQuantity: number;
   category: string;
@@ -33,8 +33,14 @@ export default function AdminRewardsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+
+  // Multi-image state
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  const totalImages = existingImageUrls.length + newImages.length;
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -47,15 +53,52 @@ export default function AdminRewardsPage() {
     setRewards(res.data);
   }
 
+  function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const remaining = 3 - existingImageUrls.length;
+    const combined = [...newImages, ...files].slice(0, remaining);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNewImages(combined);
+    setImagePreviews(combined.map((f) => URL.createObjectURL(f)));
+    e.target.value = "";
+  }
+
+  function removeNewImage(idx: number) {
+    URL.revokeObjectURL(imagePreviews[idx]);
+    const updated = newImages.filter((_, i) => i !== idx);
+    setNewImages(updated);
+    setImagePreviews(updated.map((f) => URL.createObjectURL(f)));
+  }
+
+  function removeExistingImage(idx: number) {
+    setExistingImageUrls((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
+    setShowForm(false);
+    setExistingImageUrls([]);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNewImages([]);
+    setImagePreviews([]);
+    setError("");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
+      setUploading(true);
+      const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f)));
+      setUploading(false);
+      const imageUrls = [...existingImageUrls, ...uploadedUrls];
+
       const payload = {
         name: form.name,
         description: form.description || undefined,
-        imageUrl: imageUrl || undefined,
+        imageUrls,
         pointCost: Number(form.pointCost),
         stockQuantity: Number(form.stockQuantity),
         category: form.category,
@@ -67,12 +110,10 @@ export default function AdminRewardsPage() {
         await apiFetch("/api/rewards", { method: "POST", body: JSON.stringify(payload) });
       }
 
-      setForm(emptyForm);
-      setImageUrl("");
-      setEditingId(null);
-      setShowForm(false);
+      resetForm();
       await loadRewards();
     } catch (err) {
+      setUploading(false);
       setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSubmitting(false);
@@ -87,25 +128,12 @@ export default function AdminRewardsPage() {
       stockQuantity: String(reward.stockQuantity),
       category: reward.category,
     });
-    setImageUrl(reward.imageUrl ?? "");
+    setExistingImageUrls(reward.imageUrls ?? []);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNewImages([]);
+    setImagePreviews([]);
     setEditingId(reward.id);
     setShowForm(true);
-  }
-
-  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError("");
-    try {
-      const url = await uploadToCloudinary(file);
-      setImageUrl(url);
-    } catch {
-      setError("Image upload failed — try again.");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
   }
 
   async function handleDelete(id: string) {
@@ -130,7 +158,7 @@ export default function AdminRewardsPage() {
           <p className="text-gray-500 text-sm mt-1">Manage the rewards marketplace.</p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}
+          onClick={() => { resetForm(); setShowForm(true); }}
           className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Add Reward
@@ -166,46 +194,49 @@ export default function AdminRewardsPage() {
                   className={inputClass + " resize-none"}
                 />
               </div>
-              {/* Photo */}
+
+              {/* Photos — up to 3 */}
               <div className="col-span-2 space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">
-                  Photo <span className="text-gray-400 font-normal">(optional)</span>
+                  Photos <span className="text-gray-400 font-normal">(up to 3, optional)</span>
                 </label>
-                {imageUrl ? (
-                  <div className="relative w-24 h-24">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageUrl}
-                      alt="Preview"
-                      className="w-24 h-24 object-cover rounded-xl border border-gray-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl("")}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
-                      aria-label="Remove photo"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    className={`flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 text-gray-500 w-fit ${
-                      uploading ? "opacity-50 pointer-events-none" : ""
-                    }`}
-                  >
-                    <ImagePlus className="w-4 h-4" />
-                    {uploading ? "Uploading…" : "Upload photo"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePhotoChange}
-                      disabled={uploading}
-                    />
-                  </label>
-                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {existingImageUrls.map((src, i) => (
+                    <div key={src} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(i)}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {imagePreviews.map((src, i) => (
+                    <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(i)}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {totalImages < 3 && (
+                    <label className={`flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-navy-400 transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      <ImagePlus className="w-5 h-5 text-gray-400" />
+                      <span className="text-[10px] text-gray-400 mt-0.5">{uploading ? "Uploading…" : "Add"}</span>
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handleImagePick} disabled={uploading} />
+                    </label>
+                  )}
+                </div>
               </div>
+
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Point Cost</label>
                 <input
@@ -245,14 +276,14 @@ export default function AdminRewardsPage() {
               <div className="col-span-2 flex gap-2">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || uploading}
                   className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
                 >
-                  {submitting ? "Saving..." : editingId ? "Save Changes" : "Add Reward"}
+                  {uploading ? "Uploading…" : submitting ? "Saving…" : editingId ? "Save Changes" : "Add Reward"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowForm(false); setEditingId(null); setImageUrl(""); }}
+                  onClick={resetForm}
                   className="border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50"
                 >
                   Cancel
@@ -282,8 +313,16 @@ export default function AdminRewardsPage() {
             ) : rewards.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50">
                 <td className={tdClass}>
-                  <p className="font-medium text-gray-900">{r.name}</p>
-                  {r.description && <p className="text-xs text-gray-400 truncate max-w-xs">{r.description}</p>}
+                  <div className="flex items-center gap-3">
+                    {(r.imageUrls?.[0]) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrls[0]} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-medium text-gray-900">{r.name}</p>
+                      {r.description && <p className="text-xs text-gray-400 truncate max-w-xs">{r.description}</p>}
+                    </div>
+                  </div>
                 </td>
                 <td className={tdClass}>
                   <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">

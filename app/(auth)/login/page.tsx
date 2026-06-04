@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/client";
 import { Trophy, Gamepad2, Gift, Target } from "lucide-react";
 
@@ -33,7 +33,7 @@ const FEATURES = [
     color: "bg-purple-500/20",
     iconColor: "text-purple-400",
     label: "Rewards Marketplace",
-    desc: "Redeem your points for cash, gadgets & experiences.",
+    desc: "Redeem your points for rewards, gadgets & experiences.",
   },
 ];
 
@@ -46,7 +46,20 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+
+      const syncRes = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      if (syncRes.status === 403) {
+        await signOut(auth);
+        setError("Your email is not registered in the system. Please contact HR to be added.");
+        return;
+      }
+
       router.push("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Sign-in failed";
@@ -74,17 +87,6 @@ export default function LoginPage() {
         {/* Ambient glows — on-brand slate tones */}
         <div className="absolute top-0 left-0 w-[32rem] h-[32rem] rounded-full bg-white/5 blur-3xl -translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-white/5 blur-3xl translate-x-1/3 translate-y-1/3" />
-
-        {/* Branding */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow overflow-hidden">
-            <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
-          </div>
-          <div>
-            <p className="text-white font-bold text-sm leading-tight">AGS One</p>
-            <p className="text-white/35 text-[10px]">Alliance Global Solutions</p>
-          </div>
-        </div>
 
         {/* Center content */}
         <div className="relative z-10 space-y-10">
@@ -139,9 +141,7 @@ export default function LoginPage() {
 
           {/* Mobile branding */}
           <div className="lg:hidden mb-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#111827] flex items-center justify-center shadow-lg overflow-hidden mb-4">
-              <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-2" />
-            </div>
+            <img src="/agslogo.png" alt="AGS One" className="w-20 h-20 object-contain mb-4" />
             <p className="text-zinc-900 font-bold text-xl leading-tight">AGS One</p>
             <p className="text-zinc-400 text-xs mb-2">Alliance Global Solutions</p>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">
@@ -153,14 +153,10 @@ export default function LoginPage() {
           <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xl shadow-zinc-200/60 p-8">
 
             {/* Desktop logo inside card */}
-            <div className="hidden lg:flex items-center gap-2.5 mb-7">
-              <div className="w-8 h-8 rounded-lg bg-[#111827] flex items-center justify-center overflow-hidden">
-                <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
-              </div>
-              <div>
-                <p className="text-zinc-900 font-bold text-sm leading-tight">AGS One</p>
-                <p className="text-zinc-400 text-[10px]">Alliance Global Solutions</p>
-              </div>
+            <div className="hidden lg:flex flex-col items-center mb-7">
+              <img src="/agslogo.png" alt="AGS One" className="w-20 h-20 object-contain mb-3" />
+              <p className="text-zinc-900 font-bold text-base leading-tight">AGS One</p>
+              <p className="text-zinc-400 text-xs">Alliance Global Solutions</p>
             </div>
 
             <div className="mb-7">

@@ -23,12 +23,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       hireDate: true,
       isActive: true,
       department: { select: { id: true, name: true } },
+      bio: true,
+      skills: true,
       userBadges: {
         orderBy: { awardedAt: "desc" },
         select: {
           id: true,
           awardedAt: true,
           badge: { select: { name: true, description: true, iconUrl: true } },
+        },
+      },
+      shoutoutsReceived: {
+        where: { type: "SHOUTOUT" },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
         },
       },
     },

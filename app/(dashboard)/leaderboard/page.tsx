@@ -33,7 +33,7 @@ const podiumStyle: Record<number, { bg: string; height: string; medal: React.Ele
 };
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" | "lg" }) {
-  const cls = size === "lg" ? "w-14 h-14 text-xl" : size === "sm" ? "w-7 h-7 text-xs" : "w-9 h-9 text-sm";
+  const cls = size === "lg" ? "w-16 h-16 text-2xl" : size === "sm" ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
   if (url) return <img src={url} alt={name} className={`${cls} rounded-full object-cover`} />;
   return (
     <div className={`${cls} rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-bold`}>
@@ -182,7 +182,7 @@ export default function LeaderboardPage() {
                   <p className="font-medium text-sm text-zinc-900 truncate">
                     {e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}
                   </p>
-                  {e.department && <p className="text-xs text-zinc-400">{e.department}</p>}
+                  {e.department && <p className="text-xs text-zinc-400 truncate">{e.department}</p>}
                 </div>
                 <span className="font-bold text-navy-600 text-sm tabular-nums">
                   {e.points.toLocaleString()} pts

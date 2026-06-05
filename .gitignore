@@ -23,6 +23,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# ─── Superpowers (brainstorm mockups, scratch) ───────────────────────────────────
+.superpowers/
+.playwright-mcp/
+
 # ─── Prisma ────────────────────────────────────────────────────────────────────
 prisma/*.db
 prisma/*.db-journal

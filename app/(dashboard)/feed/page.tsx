@@ -772,7 +772,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5">
+    <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Activity Feed</h1>
         <p className="text-zinc-500 text-sm mt-1">What&apos;s happening across the company</p>

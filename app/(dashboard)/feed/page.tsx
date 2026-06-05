@@ -4,10 +4,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, ZoomIn, MessageCircle, SmilePlus, Trash2, ChevronLeft, ChevronRight, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
+import { PostImages } from "@/components/feed/PostImages";
+import { ImageLightbox } from "@/components/ImageLightbox";
 
 type PollOption = {
   id: string;
@@ -19,6 +21,7 @@ type FeedPost = {
   id: string;
   authorId: string;
   type: string;
+  title: string | null;
   content: string;
   imageUrls: string[];
   createdAt: string;
@@ -231,96 +234,6 @@ function PollBlock({
   );
 }
 
-function ImageCarousel({
-  urls,
-  onOpen,
-}: {
-  urls: string[];
-  onOpen: (url: string) => void;
-}) {
-  const [index, setIndex] = useState(0);
-  if (urls.length === 0) return null;
-
-  const prev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIndex((i) => (i - 1 + urls.length) % urls.length);
-  };
-  const next = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIndex((i) => (i + 1) % urls.length);
-  };
-
-  return (
-    <div className="mt-3 relative group/carousel rounded-xl overflow-hidden bg-black select-none">
-      {/* Image */}
-      <button
-        type="button"
-        onClick={() => onOpen(urls[index])}
-        className="block w-full focus:outline-none"
-        aria-label="View full image"
-      >
-        <img
-          key={urls[index]}
-          src={urls[index]}
-          alt={`Image ${index + 1} of ${urls.length}`}
-          className="w-full max-h-[480px] object-cover transition-opacity duration-200"
-          draggable={false}
-        />
-        {/* Zoom hint */}
-        <div className="absolute inset-0 bg-black/0 group-hover/carousel:bg-black/15 transition-colors duration-200 flex items-center justify-center pointer-events-none">
-          <div className="opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-200 bg-black/50 backdrop-blur-sm rounded-full p-2">
-            <ZoomIn className="w-4 h-4 text-white" />
-          </div>
-        </div>
-      </button>
-
-      {/* Prev / Next — only when multiple images */}
-      {urls.length > 1 && (
-        <>
-          <button
-            type="button"
-            onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-150 hover:bg-black/70 z-10"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-150 hover:bg-black/70 z-10"
-            aria-label="Next image"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-
-          {/* Dot indicators */}
-          <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-            {urls.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setIndex(i); }}
-                className={`rounded-full transition-all duration-200 ${
-                  i === index
-                    ? "w-4 h-1.5 bg-white"
-                    : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"
-                }`}
-                aria-label={`Go to image ${i + 1}`}
-              />
-            ))}
-          </div>
-
-          {/* Counter badge */}
-          <div className="absolute top-2.5 right-2.5 bg-black/50 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10">
-            {index + 1} / {urls.length}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; size?: "sm" | "md" }) {
   const dim = size === "md" ? "w-12 h-12 text-lg" : "w-10 h-10 text-base";
   if (url) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} />;
@@ -342,6 +255,9 @@ export default function FeedPage() {
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState<{ id: string; content: string; postId: string; isReply: boolean; parentId?: string } | null>(null);
+  const [editingPost, setEditingPost] = useState<{ id: string; title: string; content: string } | null>(null);
+  const [savingPostEdit, setSavingPostEdit] = useState(false);
+  const [postTitle, setPostTitle] = useState("");
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
   const [pollMode, setPollMode] = useState(false);
@@ -362,9 +278,10 @@ export default function FeedPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const editMentionMapRef = useRef<Record<string, string>>({});
   const shoutoutSearchRef = useRef<HTMLDivElement>(null);
   const mentionDropdownRef = useRef<HTMLDivElement>(null);
   const [showShoutoutForm, setShowShoutoutForm] = useState(false);
@@ -375,14 +292,6 @@ export default function FeedPage() {
   const [shoutoutSearchOpen, setShoutoutSearchOpen] = useState(false);
   const [shoutoutContent, setShoutoutContent] = useState("");
   const [shoutoutSubmitting, setShoutoutSubmitting] = useState(false);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setLightboxUrl(null);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -463,7 +372,7 @@ export default function FeedPage() {
 
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPost.trim() || !selectedFlair) return;
+    if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
     setPosting(true);
     try {
       let imageUrls: string[] = [];
@@ -474,21 +383,23 @@ export default function FeedPage() {
       }
 
       const content = buildContent(newPost.trim());
+      const title = postTitle.trim();
       if (pollMode) {
         const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
         if (opts.length < 2) return;
         await apiFetch("/api/feed", {
           method: "POST",
-          body: JSON.stringify({ content, type: "POLL", flair: selectedFlair, options: opts, imageUrls }),
+          body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls }),
         });
         setPollMode(false);
         setPollOptions(["", ""]);
       } else {
         await apiFetch("/api/feed", {
           method: "POST",
-          body: JSON.stringify({ content, type: "UPDATE", flair: selectedFlair, imageUrls }),
+          body: JSON.stringify({ title, content, type: "UPDATE", flair: selectedFlair, imageUrls }),
         });
       }
+      setPostTitle("");
       setNewPost("");
       setSelectedFlair(null);
       setMentionMap({});
@@ -685,6 +596,60 @@ export default function FeedPage() {
     });
   }
 
+  // Turn stored "@[Name|id]" tokens back into "@Name" for editing, keeping a name→id map
+  function decodeMentions(content: string): { text: string; map: Record<string, string> } {
+    const map: Record<string, string> = {};
+    const text = content.replace(/@\[([^|]+)\|([^\]]+)\]/g, (_m, name, id) => {
+      map[name] = id;
+      return `@${name}`;
+    });
+    return { text, map };
+  }
+
+  // Re-apply the "@Name" → "@[Name|id]" encoding after an edit
+  function encodeMentions(text: string, map: Record<string, string>): string {
+    const entries = Object.entries(map).sort((a, b) => b[0].length - a[0].length);
+    let result = text;
+    for (const [name, id] of entries) {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      result = result.replace(new RegExp(`@${escaped}`, "g"), `@[${name}|${id}]`);
+    }
+    return result;
+  }
+
+  function startEditPost(post: FeedPost) {
+    const { text, map } = decodeMentions(post.content);
+    editMentionMapRef.current = map;
+    setEditingPost({ id: post.id, title: post.title ?? "", content: text });
+  }
+
+  async function saveEditPost(post: FeedPost) {
+    if (!editingPost) return;
+    const trimmedContent = editingPost.content.trim();
+    if (!trimmedContent) return;
+    const isShoutout = post.type === "SHOUTOUT";
+    const trimmedTitle = editingPost.title.trim();
+    if (!isShoutout && !trimmedTitle) return; // title is required on non-shoutout posts
+
+    setSavingPostEdit(true);
+    const encoded = encodeMentions(trimmedContent, editMentionMapRef.current);
+    const newTitle = isShoutout ? null : trimmedTitle;
+
+    // Optimistic update
+    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, title: newTitle, content: encoded } : p)));
+    setEditingPost(null);
+    try {
+      await apiFetch(`/api/feed/${post.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: newTitle, content: encoded }),
+      });
+    } catch {
+      await load(activeFilter);
+    } finally {
+      setSavingPostEdit(false);
+    }
+  }
+
   async function deletePost(postId: string) {
     if (!confirm("Delete this post?")) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -839,7 +804,15 @@ export default function FeedPage() {
         <form onSubmit={handlePost} className="space-y-3">
           <div className="flex gap-3">
             <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
-            <div className="flex-1 relative">
+            <div className="flex-1 relative space-y-2">
+              <input
+                type="text"
+                placeholder="Title *"
+                value={postTitle}
+                onChange={(e) => setPostTitle(e.target.value)}
+                maxLength={120}
+                className="w-full text-sm font-semibold bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-400 placeholder:font-normal transition-all"
+              />
               <textarea
                 ref={composerRef}
                 placeholder="Share something with the team… (type @ to mention)"
@@ -985,13 +958,15 @@ export default function FeedPage() {
 
           {(newPost.trim() || imageFiles.length > 0) && (
             <div className="flex items-center justify-between">
-              {!selectedFlair && (
-                <p className="text-xs text-red-400 font-medium">Pick a flair before posting</p>
+              {(!postTitle.trim() || !selectedFlair) && (
+                <p className="text-xs text-red-400 font-medium">
+                  {!postTitle.trim() ? "Add a title before posting" : "Pick a flair before posting"}
+                </p>
               )}
               <div className="ml-auto">
                 <button
                   type="submit"
-                  disabled={posting || !selectedFlair || (pollMode && pollOptions.filter((o) => o.trim()).length < 2)}
+                  disabled={posting || !postTitle.trim() || !selectedFlair || (pollMode && pollOptions.filter((o) => o.trim()).length < 2)}
                   className="flex items-center gap-2 bg-[#111827] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -1183,16 +1158,52 @@ export default function FeedPage() {
                       </button>
                     )}
                     {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
-                      <button
-                        onClick={() => deletePost(post.id)}
-                        className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
-                        title="Delete post"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => startEditPost(post)}
+                          className="text-gray-300 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50"
+                          title="Edit shoutout"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deletePost(post.id)}
+                          className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                          title="Delete post"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
+                  {editingPost?.id === post.id ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editingPost.content}
+                        onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev))}
+                        rows={3}
+                        maxLength={500}
+                        className="w-full resize-none text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 placeholder:text-zinc-400 transition-all"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => saveEditPost(post)}
+                          disabled={savingPostEdit || !editingPost.content.trim()}
+                          className="flex items-center gap-1.5 bg-[#111827] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Save
+                        </button>
+                        <button
+                          onClick={() => setEditingPost(null)}
+                          className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
+                  )}
                   <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-3 flex-wrap">
                     <ReactionBar
                       postId={post.id}
@@ -1363,29 +1374,82 @@ export default function FeedPage() {
                         {post.author.displayName}
                       </button>
                       <span className="text-xs text-gray-400">{postTimestamp(post.createdAt)}</span>
-                      {dbUser?.role === "HR_ADMIN" && (
-                        <button
-                          onClick={() => togglePin(post.id)}
-                          className={`ml-auto p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`}
-                          title={post.isPinned ? "Unpin post" : "Pin post"}
-                        >
-                          <Pin className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
-                        <button
-                          onClick={() => deletePost(post.id)}
-                          className={`${dbUser?.role !== "HR_ADMIN" ? "ml-auto" : ""} text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50`}
-                          title="Delete post"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <div className="ml-auto flex items-center gap-0.5">
+                        {dbUser?.role === "HR_ADMIN" && (
+                          <button
+                            onClick={() => togglePin(post.id)}
+                            className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`}
+                            title={post.isPinned ? "Unpin post" : "Pin post"}
+                          >
+                            <Pin className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
+                          <>
+                            <button
+                              onClick={() => startEditPost(post)}
+                              className="text-gray-300 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50"
+                              title="Edit post"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deletePost(post.id)}
+                              className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                              title="Delete post"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700 mt-1.5 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
+                    {editingPost?.id === post.id ? (
+                      <div className="mt-2 space-y-2">
+                        <input
+                          type="text"
+                          value={editingPost.title}
+                          onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+                          maxLength={120}
+                          placeholder="Title *"
+                          className="w-full text-sm font-semibold bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:font-normal placeholder:text-zinc-400 transition-all"
+                        />
+                        <textarea
+                          value={editingPost.content}
+                          onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev))}
+                          rows={3}
+                          className="w-full resize-none text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-400 transition-all"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => saveEditPost(post)}
+                            disabled={savingPostEdit || !editingPost.content.trim() || !editingPost.title.trim()}
+                            className="flex items-center gap-1.5 bg-[#111827] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Save
+                          </button>
+                          <button
+                            onClick={() => setEditingPost(null)}
+                            className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {post.title && (
+                          <p className="text-base font-bold text-zinc-900 mt-1 leading-snug">{post.title}</p>
+                        )}
+                        <p className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
+                      </>
+                    )}
 
                     {post.imageUrls?.length > 0 && (
-                      <ImageCarousel urls={post.imageUrls} onOpen={setLightboxUrl} />
+                      <PostImages
+                        urls={post.imageUrls}
+                        onOpen={(index) => setLightbox({ images: post.imageUrls, index })}
+                      />
                     )}
 
                     {post.type === "POLL" && post.pollOptions.length > 0 && (
@@ -1543,28 +1607,13 @@ export default function FeedPage() {
         })
       )}
 
-      {/* ── Lightbox ── */}
-      {lightboxUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
-          onClick={() => setLightboxUrl(null)}
-        >
-          <button
-            type="button"
-            onClick={() => setLightboxUrl(null)}
-            className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <img
-            src={lightboxUrl}
-            alt="Full size"
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl"
-          />
-        </div>
-      )}
+      {/* ── Lightbox (shared component, supports prev/next + keyboard) ── */}
+      <ImageLightbox
+        images={lightbox?.images ?? []}
+        initialIndex={lightbox?.index ?? 0}
+        open={lightbox !== null}
+        onClose={() => setLightbox(null)}
+      />
     </div>
   );
 }

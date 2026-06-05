@@ -8,7 +8,7 @@ import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, Pa
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
-import { PostImages } from "@/components/feed/PostImages";
+import { PostImages, photoGridClass } from "@/components/feed/PostImages";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
 type PollOption = {
@@ -842,21 +842,33 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {/* Image previews */}
+          {/* Image previews — mirrors PostImages layout */}
           {imagePreviews.length > 0 && (
-            <div className={`grid gap-2 ${imagePreviews.length === 1 ? "grid-cols-1" : imagePreviews.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
-              {imagePreviews.map((src, i) => (
-                <div key={i} className="relative group">
-                  <img src={src} alt={`Preview ${i + 1}`} className="w-full h-32 rounded-xl object-cover border border-gray-200" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-gray-900/70 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
+            <div className={imagePreviews.length === 1 ? "" : `rounded-xl overflow-hidden ${photoGridClass(imagePreviews.length)}`}>
+              {imagePreviews.map((src, i) => {
+                const isHero = imagePreviews.length === 3 && i === 0;
+                return (
+                  <div key={i} className={`relative group ${isHero ? "row-span-2" : ""}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`Preview ${i + 1}`}
+                      className={
+                        imagePreviews.length === 1
+                          ? "w-full max-h-[320px] object-contain rounded-xl border border-gray-200 bg-black/5"
+                          : `w-full object-cover ${isHero ? "h-full min-h-[160px]" : "h-40"}`
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-gray-900/70 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors z-10"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 

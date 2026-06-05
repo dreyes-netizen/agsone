@@ -10,6 +10,7 @@ import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
 import { PostImages, photoGridClass } from "@/components/feed/PostImages";
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { FeedSidebar } from "@/components/feed/FeedSidebar";
 
 type PollOption = {
   id: string;
@@ -282,26 +283,8 @@ export default function FeedPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const editMentionMapRef = useRef<Record<string, string>>({});
-  const shoutoutSearchRef = useRef<HTMLDivElement>(null);
   const mentionDropdownRef = useRef<HTMLDivElement>(null);
-  const [showShoutoutForm, setShowShoutoutForm] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
-  const [shoutoutRecipientId, setShoutoutRecipientId] = useState("");
-  const [shoutoutRecipientName, setShoutoutRecipientName] = useState("");
-  const [shoutoutSearch, setShoutoutSearch] = useState("");
-  const [shoutoutSearchOpen, setShoutoutSearchOpen] = useState(false);
-  const [shoutoutContent, setShoutoutContent] = useState("");
-  const [shoutoutSubmitting, setShoutoutSubmitting] = useState(false);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (shoutoutSearchRef.current && !shoutoutSearchRef.current.contains(e.target as Node)) {
-        setShoutoutSearchOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -675,26 +658,22 @@ export default function FeedPage() {
     }
   }
 
-  async function handleShoutoutSubmit() {
-    if (!shoutoutRecipientId || !shoutoutContent.trim()) return;
-    setShoutoutSubmitting(true);
-    try {
-      const res = await apiFetch<{ data: FeedPost }>("/api/feed", {
-        method: "POST",
-        body: JSON.stringify({ type: "SHOUTOUT", content: shoutoutContent.trim(), recipientId: shoutoutRecipientId }),
-      });
-      setPosts((prev) => [res.data, ...prev]);
-      setShoutoutContent("");
-      setShoutoutRecipientId("");
-      setShoutoutRecipientName("");
-      setShoutoutSearch("");
-      setShowShoutoutForm(false);
-    } catch {
-      // silent — user sees no change
-    } finally {
-      setShoutoutSubmitting(false);
+  function handleShoutoutCreated(post: unknown) {
+    setPosts((prev) => [post as FeedPost, ...prev]);
+  }
+
+  function jumpToPost(id: string) {
+    const el = document.getElementById(`feed-post-${id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-2", "ring-amber-300");
+      setTimeout(() => el.classList.remove("ring-2", "ring-amber-300"), 1600);
     }
   }
+
+  const pinnedItems = posts
+    .filter((p) => p.isPinned)
+    .map((p) => ({ id: p.id, title: p.title, authorName: p.author.displayName }));
 
   function handleComposerChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const value = e.target.value;
@@ -793,12 +772,29 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
+    <div className="max-w-6xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Activity Feed</h1>
         <p className="text-zinc-500 text-sm mt-1">What&apos;s happening across the company</p>
       </div>
 
+      {/* Two-column layout: compose+posts (left), sidebar (right). Stacks on mobile. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] items-start">
+
+        {/* Sidebar — right column on desktop (spans both rows), first on mobile */}
+        <aside className="order-1 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
+          <FeedSidebar
+            activeFilter={activeFilter}
+            onFilterChange={(value) => { setActiveFilter(value); setPosts([]); setNextCursor(null); }}
+            employees={employees}
+            onShoutoutCreated={handleShoutoutCreated}
+            pinned={pinnedItems}
+            onJumpToPost={jumpToPost}
+          />
+        </aside>
+
+        {/* Compose — left column, row 1 */}
+        <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-1">
       {/* Compose */}
       <div className="bg-white rounded-xl border border-zinc-200 p-4">
         <form onSubmit={handlePost} className="space-y-3">
@@ -989,118 +985,10 @@ export default function FeedPage() {
           )}
         </form>
       </div>
-
-      {/* Filter tabs */}
-      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 w-fit">
-        {(["All", "Updates", "Shoutouts"] as const).map((label) => {
-          const value = label === "All" ? "ALL" : label === "Updates" ? "UPDATE" : "SHOUTOUT";
-          return (
-            <button
-              key={label}
-              onClick={() => { setActiveFilter(value); setPosts([]); setNextCursor(null); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                activeFilter === value
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Give Shoutout */}
-      <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        <div className="px-5 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-zinc-700">Recognize a colleague</span>
-          <button
-            onClick={() => setShowShoutoutForm((v) => !v)}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5" /> Give Shoutout
-          </button>
         </div>
 
-        {showShoutoutForm && (
-          <div className="px-5 pb-4 border-t border-zinc-100 pt-3 space-y-3">
-            <div ref={shoutoutSearchRef} className="relative">
-              {shoutoutRecipientId ? (
-                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  <span className="text-sm text-amber-800 font-medium flex-1">{shoutoutRecipientName}</span>
-                  <button
-                    type="button"
-                    onClick={() => { setShoutoutRecipientId(""); setShoutoutRecipientName(""); setShoutoutSearch(""); }}
-                    className="text-amber-500 hover:text-amber-700 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  value={shoutoutSearch}
-                  onChange={(e) => { setShoutoutSearch(e.target.value); setShoutoutSearchOpen(true); }}
-                  onFocus={() => setShoutoutSearchOpen(true)}
-                  placeholder="Search colleague…"
-                  className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition"
-                />
-              )}
-              {shoutoutSearchOpen && !shoutoutRecipientId && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-zinc-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {employees
-                    .filter((e) => e.displayName.toLowerCase().includes(shoutoutSearch.toLowerCase()))
-                    .map((e) => (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => {
-                          setShoutoutRecipientId(e.id);
-                          setShoutoutRecipientName(e.displayName);
-                          setShoutoutSearch("");
-                          setShoutoutSearchOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-zinc-700 hover:bg-amber-50 hover:text-amber-800 transition-colors"
-                      >
-                        {e.displayName}
-                      </button>
-                    ))}
-                  {employees.filter((e) => e.displayName.toLowerCase().includes(shoutoutSearch.toLowerCase())).length === 0 && (
-                    <p className="px-3 py-2 text-sm text-zinc-400">No results</p>
-                  )}
-                </div>
-              )}
-            </div>
-            <textarea
-              value={shoutoutContent}
-              onChange={(e) => setShoutoutContent(e.target.value)}
-              maxLength={500}
-              rows={3}
-              placeholder="What did they do that deserves recognition?"
-              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 placeholder-zinc-400 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">{shoutoutContent.length}/500</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setShowShoutoutForm(false); setShoutoutContent(""); setShoutoutRecipientId(""); setShoutoutRecipientName(""); setShoutoutSearch(""); setShoutoutSearchOpen(false); }}
-                  className="text-sm text-zinc-500 hover:text-zinc-700 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleShoutoutSubmit}
-                  disabled={shoutoutSubmitting || !shoutoutRecipientId || !shoutoutContent.trim()}
-                  className="text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {shoutoutSubmitting ? "Sending…" : "Send Shoutout"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
+        {/* Posts — left column, row 2 */}
+        <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5">
       {/* Posts */}
       {loadError ? (
         <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
@@ -1132,7 +1020,7 @@ export default function FeedPage() {
         posts.map((post) => {
           if (post.type === "SHOUTOUT" && post.recipient) {
             return (
-              <div key={post.id} className={`bg-white rounded-xl border overflow-hidden ${post.isPinned ? "border-amber-300" : "border-zinc-200"}`}>
+              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-xl border overflow-hidden transition-shadow ${post.isPinned ? "border-amber-300" : "border-zinc-200"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="px-5 py-4 space-y-3">
                   {post.isPinned && (
@@ -1348,7 +1236,7 @@ export default function FeedPage() {
 
           const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
-            <div key={post.id} className={`rounded-xl border overflow-hidden ${post.isPinned ? "border-amber-300 bg-amber-50/30" : meta.bg}`}>
+            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-xl border overflow-hidden transition-shadow ${post.isPinned ? "border-amber-300 bg-amber-50/30" : meta.bg}`}>
               <div className="p-5">
                 {/* Pinned indicator */}
                 {post.isPinned && (
@@ -1618,6 +1506,8 @@ export default function FeedPage() {
           );
         })
       )}
+        </div>
+      </div>
 
       {/* ── Lightbox (shared component, supports prev/next + keyboard) ── */}
       <ImageLightbox

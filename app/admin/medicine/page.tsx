@@ -453,8 +453,14 @@ export default function AdminMedicinePage() {
                             }
                             className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                           />
-                          <span className={`text-xs font-medium ${med.stockQuantity === 0 ? "text-red-500" : "text-emerald-600"}`}>
-                            {med.stockQuantity === 0 ? "Out of stock" : "in stock"}
+                          <span className={`text-xs font-medium ${
+                            med.stockQuantity === 0
+                              ? "text-red-500"
+                              : med.stockQuantity <= 3
+                              ? "text-amber-500"
+                              : "text-emerald-600"
+                          }`}>
+                            {med.stockQuantity === 0 ? "Out of stock" : med.stockQuantity <= 3 ? "Low stock" : "in stock"}
                           </span>
                         </div>
                       </td>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Pill, Plus, Trash2, X } from "lucide-react";
 
 type Medicine = {
   id: string;
@@ -364,7 +364,13 @@ export default function AdminMedicinePage() {
                   className={`bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col ${!med.isActive ? "opacity-50" : ""}`}
                 >
                   <div className="aspect-square bg-gray-50 overflow-hidden relative">
-                    <img src={med.imageUrl} alt={med.name} className="w-full h-full object-cover" />
+                    {med.imageUrl ? (
+                      <img src={med.imageUrl} alt={med.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <Pill className="w-10 h-10 text-gray-300" />
+                      </div>
+                    )}
                     {!med.isActive && (
                       <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                         <span className="text-white text-xs font-semibold bg-gray-800/80 px-2 py-0.5 rounded-full">
@@ -426,11 +432,13 @@ export default function AdminMedicinePage() {
                     <tr key={med.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={med.imageUrl}
-                            alt={med.name}
-                            className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0"
-                          />
+                          {med.imageUrl ? (
+                            <img src={med.imageUrl} alt={med.name} className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-lg border border-gray-100 bg-gray-100 flex items-center justify-center shrink-0">
+                              <Pill className="w-4 h-4 text-gray-300" />
+                            </div>
+                          )}
                           <span className="font-medium text-gray-900">{med.name}</span>
                         </div>
                       </td>
@@ -637,11 +645,17 @@ export default function AdminMedicinePage() {
                   }}
                 />
                 <div className="flex items-center gap-3">
-                  <img
-                    src={editForm.imagePreview || editForm.imageUrl}
-                    alt=""
-                    className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                  />
+                  {(editForm.imagePreview || editForm.imageUrl) ? (
+                    <img
+                      src={editForm.imagePreview || editForm.imageUrl}
+                      alt=""
+                      className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                      <Pill className="w-6 h-6 text-gray-300" />
+                    </div>
+                  )}
                   <button
                     onClick={() => editImageRef.current?.click()}
                     className="text-sm text-blue-600 hover:underline"

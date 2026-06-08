@@ -37,7 +37,6 @@ type FeedPost = {
 };
 
 type LeaderboardEntry = {
-  rank: number;
   userId: string;
   displayName: string;
   avatarUrl: string | null;
@@ -333,7 +332,7 @@ export default function DashboardPage() {
                   <div key={entry.userId} className={`flex items-center gap-2.5 px-4 py-2.5 ${entry.isCurrentUser ? "bg-navy-50/50" : "hover:bg-zinc-50/60"} transition-colors`}>
                     <Link href={`/employees/${entry.userId}`}><Avatar url={entry.avatarUrl} name={entry.displayName} size="w-6 h-6" /></Link>
                     <Link href={`/employees/${entry.userId}`} className={`text-xs font-medium truncate flex-1 min-w-0 hover:underline ${entry.isCurrentUser ? "text-navy-700 font-semibold" : "text-zinc-700"}`}>
-                      {entry.isCurrentUser ? "You" : entry.displayName}
+                      {entry.isCurrentUser ? `${entry.displayName} (You)` : entry.displayName}
                     </Link>
                     <span className="text-xs font-bold tabular-nums text-zinc-500 shrink-0">
                       {entry.points.toLocaleString()}

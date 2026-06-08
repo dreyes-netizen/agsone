@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 
 type Entry = {
-  rank: number;
   userId: string;
   displayName: string;
   avatarUrl: string | null;
@@ -50,11 +49,14 @@ export default function LeaderboardPage() {
 
   async function load() {
     setLoading(true);
-    const params = new URLSearchParams({ period });
-    if (departmentId !== "ALL") params.set("departmentId", departmentId);
-    const res = await apiFetch<{ data: Entry[] }>(`/api/leaderboard?${params.toString()}`);
-    setEntries(res.data);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams({ period });
+      if (departmentId !== "ALL") params.set("departmentId", departmentId);
+      const res = await apiFetch<{ data: Entry[] }>(`/api/leaderboard?${params.toString()}`);
+      setEntries(res.data);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -63,7 +65,7 @@ export default function LeaderboardPage() {
       {/* ── Header ── */}
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Top Performers</h1>
-        <p className="text-zinc-500 text-sm mt-1">This month's highest earners.</p>
+        <p className="text-zinc-500 text-sm mt-1">{period === "monthly" ? "This month's" : "All-time"} highest earners.</p>
       </div>
 
       {/* ── Filters ── */}

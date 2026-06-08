@@ -64,6 +64,48 @@ function WaitingDots() {
   return <span aria-hidden>{"·".repeat(tick + 1)}</span>;
 }
 
+// ─── Forfeit Modal ────────────────────────────────────────────────────────────
+
+function ForfeitModal({
+  opponentName,
+  confirming,
+  onConfirm,
+  onCancel,
+}: {
+  opponentName: string;
+  confirming: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-xs w-full text-center">
+        <div className="text-4xl mb-3">🏳️</div>
+        <h3 className="text-lg font-black text-gray-900 mb-2">Forfeit Game?</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          {opponentName} will be declared the winner.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            disabled={confirming}
+            className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 disabled:opacity-60 text-red-600 border border-red-200 font-bold text-sm rounded-xl transition-colors"
+          >
+            {confirming ? "Forfeiting…" : "Yes, forfeit"}
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={confirming}
+            className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-60 text-gray-700 border border-gray-200 text-sm rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Invite Panel ─────────────────────────────────────────────────────────────
 
 function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: ReturnType<typeof useApiClient>["apiFetch"] }) {
@@ -1215,6 +1257,7 @@ export default function MinigameSessionPage() {
   const [moving, setMoving] = useState(false);
   const [forfeiting, setForfeiting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showForfeitModal, setShowForfeitModal] = useState(false);
   const [h2h, setH2h] = useState<{ wins: number; losses: number; draws: number } | null>(null);
   const prevStatus = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1288,8 +1331,12 @@ export default function MinigameSessionPage() {
 
   async function forfeit() {
     if (!session || forfeiting) return;
-    const confirmed = confirm("Forfeit this game? Your opponent will win.");
-    if (!confirmed) return;
+    setShowForfeitModal(true);
+  }
+
+  async function executeForfeit() {
+    if (!session) return;
+    setShowForfeitModal(false);
     setForfeiting(true);
     try {
       await apiFetch(`/api/minigames/sessions/${id}/forfeit`, { method: "POST" });
@@ -1315,6 +1362,17 @@ export default function MinigameSessionPage() {
   return (
     <div className="space-y-4">
       {showHelp && <HowToPlayModal gameType={session.gameType} onClose={() => setShowHelp(false)} />}
+
+      {showForfeitModal && session && (
+        <ForfeitModal
+          opponentName={
+            (session.myRole === "host" ? session.guest?.displayName : session.host.displayName) ?? "Your opponent"
+          }
+          confirming={forfeiting}
+          onConfirm={executeForfeit}
+          onCancel={() => setShowForfeitModal(false)}
+        />
+      )}
 
       {session.status === "FINISHED" && session.myRole !== "spectator" && (
         <GameResultOverlay

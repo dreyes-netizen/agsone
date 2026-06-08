@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 @theme {
   --color-navy-50:  oklch(0.970 0.013 265.754);
   --color-navy-100: oklch(0.932 0.032 255.585);

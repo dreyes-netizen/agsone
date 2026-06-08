@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus } from "lucide-react";
+import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
 type AddOn = { name: string; price: number };
@@ -59,6 +59,15 @@ function isClosed(listing: Listing) {
   return !listing.isActive || new Date(listing.cutoffAt) <= new Date();
 }
 
+function getUrgencyLabel(cutoffAt: string): string | null {
+  const diff = new Date(cutoffAt).getTime() - Date.now();
+  if (diff <= 0 || diff > 60 * 60_000) return null;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "Closes in less than a minute";
+  if (minutes === 1) return "Closes in 1 min";
+  return `Closes in ${minutes} min`;
+}
+
 export default function FoodPage() {
   const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
@@ -69,12 +78,11 @@ export default function FoodPage() {
   const [tab, setTab] = useState<Tab>("AVAILABLE");
 
   // Order form state
-  const [orderingId, setOrderingId] = useState<string | null>(null);
-  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [orderNote, setOrderNote] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<AddOn[]>([]);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   // Expanded seller view
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -84,6 +92,7 @@ export default function FoodPage() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedListingImageIndex, setSelectedListingImageIndex] = useState(0);
   const [cardImageIndices, setCardImageIndices] = useState<Record<string, number>>({});
+  const [modalOrderMode, setModalOrderMode] = useState<"order" | "edit" | "confirm" | null>(null);
 
   // Create / edit form
   const [showForm, setShowForm] = useState(false);
@@ -107,12 +116,17 @@ export default function FoodPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
+  function showToast(type: "success" | "error", msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  }
+
   async function load() {
     try {
       const r = await apiFetch<{ data: Listing[] }>("/api/food");
       setListings(r.data);
     } catch {
-      alert("Failed to load listings");
+      showToast("error", "Failed to load listings");
     } finally {
       setLoading(false);
     }
@@ -204,7 +218,7 @@ export default function FoodPage() {
       resetForm();
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save listing");
+      showToast("error", err instanceof Error ? err.message : "Failed to save listing");
     } finally {
       setCreating(false);
     }
@@ -218,20 +232,22 @@ export default function FoodPage() {
         method: "POST",
         body: JSON.stringify({ quantity: qty, note: orderNote || undefined, selectedAddOns }),
       });
+      const newMyOrder = { id: "optimistic", quantity: qty, note: orderNote || null, selectedAddOns, createdAt: new Date().toISOString() };
       setListings((prev) =>
         prev.map((l) =>
           l.id === listing.id
-            ? {
-                ...l,
-                myOrder: { id: "optimistic", quantity: qty, note: orderNote || null, selectedAddOns, createdAt: new Date().toISOString() },
-                _count: { orders: l._count.orders + 1 },
-              }
+            ? { ...l, myOrder: newMyOrder, _count: { orders: l._count.orders + 1 } }
             : l
         )
       );
-      setOrderingId(null); setQty(1); setOrderNote(""); setSelectedAddOns([]);
+      setSelectedListing((prev) =>
+        prev?.id === listing.id ? { ...prev, myOrder: newMyOrder, _count: { orders: prev._count.orders + 1 } } : prev
+      );
+      setQty(1); setOrderNote(""); setSelectedAddOns([]);
+      setModalOrderMode(null);
+      showToast("success", "Order placed!");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to place order");
+      showToast("error", err instanceof Error ? err.message : "Failed to place order");
     } finally {
       setSubmittingOrder(false);
     }
@@ -243,8 +259,9 @@ export default function FoodPage() {
     setQty(listing.myOrder.quantity);
     setOrderNote(listing.myOrder.note ?? "");
     setSelectedAddOns(listing.myOrder.selectedAddOns ?? []);
-    setEditingOrderId(listing.id);
-    setOrderingId(null);
+    setSelectedListing(listing);
+    setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0);
+    setModalOrderMode("edit");
   }
 
   async function handleUpdateOrder(listing: Listing) {
@@ -257,9 +274,13 @@ export default function FoodPage() {
       setListings((prev) =>
         prev.map((l) => l.id === listing.id ? { ...l, myOrder: res.data } : l)
       );
-      setEditingOrderId(null);
+      setSelectedListing((prev) =>
+        prev?.id === listing.id ? { ...prev, myOrder: res.data } : prev
+      );
+      setModalOrderMode(null);
+      showToast("success", "Order updated!");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update order");
+      showToast("error", err instanceof Error ? err.message : "Failed to update order");
     } finally {
       setSubmittingOrder(false);
     }
@@ -267,7 +288,6 @@ export default function FoodPage() {
 
   // ── Cancel order ─────────────────────────────────────────────────────────────
   async function handleCancel(listing: Listing) {
-    if (!confirm("Cancel your order?")) return;
     try {
       await apiFetch(`/api/food/${listing.id}/order`, { method: "DELETE" });
       setListings((prev) =>
@@ -277,8 +297,12 @@ export default function FoodPage() {
             : l
         )
       );
+      setSelectedListing((prev) =>
+        prev?.id === listing.id ? { ...prev, myOrder: null, _count: { orders: Math.max(0, prev._count.orders - 1) } } : prev
+      );
+      showToast("success", "Order cancelled");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to cancel order");
+      showToast("error", err instanceof Error ? err.message : "Failed to cancel order");
     }
   }
 
@@ -296,7 +320,7 @@ export default function FoodPage() {
         ),
       }));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update payment status");
+      showToast("error", err instanceof Error ? err.message : "Failed to update payment status");
     }
   }
 
@@ -350,7 +374,7 @@ export default function FoodPage() {
       const r = await apiFetch<{ data: OrderRow[] }>(`/api/food/${listing.id}/orders`);
       setSellerOrders((prev) => ({ ...prev, [listing.id]: r.data }));
     } catch {
-      alert("Failed to load orders");
+      showToast("error", "Failed to load orders");
     }
   }
 
@@ -387,6 +411,20 @@ export default function FoodPage() {
           Sell Food
         </button>
       </div>
+
+      {/* Toast — fixed overlay, bottom on mobile / top-right on desktop */}
+      {toast && (
+        <div className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
+          toast.type === "success"
+            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+            : "bg-red-50 text-red-800 border-red-200"
+        }`}>
+          {toast.type === "success"
+            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />}
+          {toast.msg}
+        </div>
+      )}
 
       {/* Create / edit form */}
       {showForm && (
@@ -528,8 +566,8 @@ export default function FoodPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2">
+      {/* Tabs — horizontal scroll on mobile */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible pb-0.5">
         {([["AVAILABLE", "Available"], ["MY_ORDERS", "My Orders"], ["MY_LISTINGS", "My Listings"]] as [Tab, string][]).map(([t, label]) => (
           <button
             key={t} onClick={() => setTab(t)}
@@ -577,211 +615,152 @@ export default function FoodPage() {
 
             return (
               <div key={listing.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow">
-                {/* Hero image carousel */}
-                {listing.imageUrls.length > 0 && (() => {
-                  const idx = cardImageIndices[listing.id] ?? 0;
-                  const total = listing.imageUrls.length;
-                  const setIdx = (i: number) => setCardImageIndices((prev) => ({ ...prev, [listing.id]: i }));
-                  return (
-                    <div className="relative group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={listing.imageUrls[idx]}
-                        alt={listing.title}
-                        className="w-full aspect-square object-contain bg-white cursor-zoom-in"
-                        onClick={() => setLightbox({ images: listing.imageUrls, index: idx })}
-                      />
-                      {total > 1 && (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + total) % total); }}
-                            className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % total); }}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
-                            {listing.imageUrls.map((_, i) => (
-                              <button
-                                key={i}
-                                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
-                                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`}
-                              />
-                            ))}
+
+                {/* Mobile: image left + content right | Desktop: image top + content below */}
+                <div className="flex flex-row items-center sm:flex-col sm:items-stretch">
+
+                  {/* Image / accent */}
+                  {listing.imageUrls.length > 0 ? (() => {
+                    const idx = cardImageIndices[listing.id] ?? 0;
+                    const total = listing.imageUrls.length;
+                    const setIdx = (i: number) => setCardImageIndices((prev) => ({ ...prev, [listing.id]: i }));
+                    return (
+                      <div
+                        className="relative group shrink-0 w-[120px] h-[120px] sm:w-full sm:h-auto"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={listing.imageUrls[idx]}
+                          alt={listing.title}
+                          className="w-full h-full object-contain bg-white cursor-zoom-in sm:aspect-square"
+                          onClick={() => setLightbox({ images: listing.imageUrls, index: idx })}
+                        />
+                        {/* Carousel — desktop only */}
+                        {total > 1 && (
+                          <div className="hidden sm:block">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + total) % total); }}
+                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % total); }}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+                              {listing.imageUrls.map((_, i) => (
+                                <button key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`}
+                                />
+                              ))}
+                            </div>
                           </div>
-                        </>
+                        )}
+                      </div>
+                    );
+                  })() : (
+                    // Mobile: vertical left strip | Desktop: horizontal top strip
+                    <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:w-full sm:h-1 sm:self-auto sm:bg-gradient-to-r ${closed ? "bg-zinc-300" : "bg-emerald-500"}`} />
+                  )}
+
+                  {/* Content */}
+                  <div className="flex flex-col flex-1 min-w-0 p-3 sm:p-4 gap-1.5 sm:gap-2">
+
+                    {/* Seller */}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); router.push(`/employees/${listing.createdBy.id}`); }}
+                        className="flex items-center gap-1.5 hover:opacity-80 transition-opacity min-w-0 flex-1"
+                      >
+                        {listing.createdBy.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={listing.createdBy.avatarUrl} alt="" className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-navy-500 flex items-center justify-center text-[10px] sm:text-xs font-bold text-white shrink-0">
+                            {listing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-xs text-zinc-500 truncate">{listing.createdBy.displayName}</span>
+                      </button>
+                      <span className="hidden sm:inline shrink-0 text-xs text-zinc-400">{listing._count.orders} orders</span>
+                    </div>
+
+                    {/* Title — click to open modal */}
+                    <div className="cursor-pointer" onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}>
+                      <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors line-clamp-2 text-sm sm:text-base">{listing.title}</h3>
+                      {listing.description && (
+                        <p className="hidden sm:block text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
                       )}
                     </div>
-                  );
-                })()}
-                {listing.imageUrls.length === 0 && (
-                  <div className={`h-1 ${closed ? "bg-zinc-300" : "bg-emerald-500"}`} />
-                )}
 
-                <div className="p-4 flex flex-col flex-1 gap-2">
-                  {/* Seller */}
-                  <div className="flex items-center gap-2 min-w-0">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); router.push(`/employees/${listing.createdBy.id}`); }}
-                      className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0 flex-1"
-                    >
-                      {listing.createdBy.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={listing.createdBy.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                          {listing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
-                        </div>
-                      )}
-                      <span className="text-xs text-zinc-500 truncate">{listing.createdBy.displayName}</span>
-                    </button>
-                    <span className="shrink-0 text-xs text-zinc-400">{listing._count.orders} orders</span>
-                  </div>
+                    {/* Price + cutoff */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-base sm:text-lg font-bold text-emerald-600 shrink-0">{formatPrice(listing.price)}</span>
+                      <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-zinc-400" : "text-amber-600"}`}>
+                        <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                        {closed ? "Closed" : `By ${formatCutoff(listing.cutoffAt)}`}
+                      </span>
+                    </div>
 
-                  {/* Title + desc — click to see full details */}
-                  <div className="cursor-pointer" onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}>
-                    <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors">{listing.title}</h3>
-                    {listing.description && (
-                      <p className="text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
+                    {/* Delivery — desktop only */}
+                    {listing.deliveryDate && (
+                      <div className="hidden sm:flex items-center gap-1 text-xs text-sky-600 font-medium">
+                        <span>🚚</span>
+                        <span>Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Price + cutoff */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-lg font-bold text-emerald-600 shrink-0">{formatPrice(listing.price)}</span>
-                    <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-zinc-400" : "text-amber-600"}`}>
-                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                      {closed ? "Closed" : `By ${formatCutoff(listing.cutoffAt)}`}
-                    </span>
-                  </div>
-                  {listing.deliveryDate && (
-                    <div className="flex items-center gap-1 text-xs text-sky-600 font-medium">
-                      <span>🚚</span>
-                      <span>Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
-                    </div>
-                  )}
-
-                  {/* Add-ons preview badges */}
-                  {(listing.addOns?.length ?? 0) > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {(listing.addOns ?? []).map((a, i) => (
-                        <span key={i} className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                          +{a.name}{a.price > 0 ? ` ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " (free)"}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                    {/* Add-ons badges — desktop only */}
+                    {(listing.addOns?.length ?? 0) > 0 && (
+                      <div className="hidden sm:flex flex-wrap gap-1">
+                        {(listing.addOns ?? []).map((a, i) => (
+                          <span key={i} className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                            +{a.name}{a.price > 0 ? ` ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " (free)"}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                   {/* Action area */}
-                  <div className="mt-auto pt-3 border-t border-zinc-100 space-y-2">
+                  <div className="mt-auto pt-2 sm:pt-3 border-t border-zinc-100 space-y-2">
                     {closed && !isMine && (
                       <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
                         Orders closed
                       </span>
                     )}
 
-                    {!closed && !isMine && !listing.myOrder && orderingId !== listing.id && (
+                    {/* Order button — opens modal */}
+                    {!closed && !isMine && !listing.myOrder && (
                       <button
-                        onClick={() => { setOrderingId(listing.id); setQty(1); setOrderNote(""); setSelectedAddOns([]); }}
+                        onClick={() => {
+                          setSelectedListing(listing);
+                          setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0);
+                          setQty(1); setOrderNote(""); setSelectedAddOns([]);
+                          setModalOrderMode("order");
+                        }}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
                       >
                         Order
                       </button>
                     )}
 
-                    {/* Inline order form — new order or edit */}
-                    {!closed && !isMine && ((!listing.myOrder && orderingId === listing.id) || editingOrderId === listing.id) && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
-                          <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">−</button>
-                            <span className="w-8 text-center text-sm font-semibold">{qty}</span>
-                            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">+</button>
-                          </div>
-                        </div>
-
-                        {/* Add-on checkboxes */}
-                        {(listing.addOns?.length ?? 0) > 0 && (
-                          <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
-                            {(listing.addOns ?? []).map((a, i) => {
-                              const checked = selectedAddOns.some((s) => s.name === a.name);
-                              return (
-                                <label key={i} className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox" checked={checked}
-                                    onChange={(e) => {
-                                      setSelectedAddOns((prev) =>
-                                        e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name)
-                                      );
-                                    }}
-                                    className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-                                  />
-                                  <span className="text-xs text-zinc-700 flex-1">{a.name}</span>
-                                  <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        <input
-                          value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
-                          placeholder="e.g. no onions (optional)"
-                          className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-
-                        {/* Running total */}
-                        <div className="flex items-center justify-between text-xs px-0.5">
-                          <span className="text-zinc-500">Total</span>
-                          <span className="font-bold text-emerald-700 text-sm">₱{orderTotal.toFixed(2)}</span>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => editingOrderId === listing.id ? handleUpdateOrder(listing) : handleOrder(listing)}
-                            disabled={submittingOrder}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-1.5 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                          >
-                            {submittingOrder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                            {editingOrderId === listing.id ? "Save Changes" : "Confirm Order"}
-                          </button>
-                          <button
-                            onClick={() => { setOrderingId(null); setEditingOrderId(null); setSelectedAddOns([]); }}
-                            className="text-sm text-zinc-500 hover:text-zinc-700 px-2"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Existing order */}
+                    {/* Existing order summary on card */}
                     {!isMine && listing.myOrder && (() => {
-                      const qty = listing.myOrder.quantity;
+                      const oQty = listing.myOrder.quantity;
                       const base = parseFloat(listing.price);
                       const addOnSum = (listing.myOrder.selectedAddOns ?? []).reduce((s, a) => s + a.price, 0);
-                      const total = (base + addOnSum) * qty;
+                      const total = (base + addOnSum) * oQty;
                       return (
                         <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 space-y-2">
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1 flex-1 min-w-0">
                               <p className="text-xs font-bold text-zinc-700">Your Order</p>
-                              <p className="text-xs text-zinc-600">×{qty} {listing.title} <span className="text-zinc-400">@ {formatPrice(listing.price)} each</span></p>
-                              {(listing.myOrder.selectedAddOns?.length ?? 0) > 0 && (
-                                <div className="space-y-0.5">
-                                  {listing.myOrder.selectedAddOns.map((a, i) => (
-                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-zinc-400">(₱{a.price.toFixed(2)} × {qty})</span></p>
-                                  ))}
-                                </div>
-                              )}
+                              <p className="text-xs text-zinc-600">×{oQty} {listing.title} <span className="text-zinc-400">@ {formatPrice(listing.price)} each</span></p>
                               <p className="text-[11px] text-zinc-400">
                                 Ordered {new Date(listing.myOrder.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                               </p>
@@ -791,18 +770,19 @@ export default function FoodPage() {
                               <p className="text-[10px] text-zinc-400">total</p>
                             </div>
                           </div>
-                          {listing.myOrder.note && (
-                            <p className="text-xs text-zinc-400 italic border-t border-emerald-100 pt-2">
-                              📝 "{listing.myOrder.note}"
-                            </p>
-                          )}
                           {!closed && (
                             <div className="flex items-center gap-3">
-                              <button onClick={() => openEditOrder(listing)} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
+                              <button
+                                onClick={() => openEditOrder(listing)}
+                                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                              >
                                 Edit order
                               </button>
                               <span className="text-zinc-200">|</span>
-                              <button onClick={() => handleCancel(listing)} className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors">
+                              <button
+                                onClick={() => handleCancel(listing)}
+                                className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+                              >
                                 Cancel order
                               </button>
                             </div>
@@ -854,9 +834,10 @@ export default function FoodPage() {
                       </div>
                     )}
                   </div>
-                </div>
+                  </div>
+                </div>{/* end inner row */}
 
-                {/* Seller order list (expanded) */}
+                {/* Seller order list (expanded) — always full width */}
                 {isMine && isExpanded && (
                   <div className="border-t border-zinc-100 bg-zinc-50">
                     {!sellerOrders[listing.id] ? (
@@ -987,85 +968,396 @@ export default function FoodPage() {
         />
       )}
 
-      {selectedListing && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0" onClick={() => setSelectedListing(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {selectedListing.imageUrls.length > 0 && (() => {
-              const total = selectedListing.imageUrls.length;
-              return (
-                <div className="relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedListing.imageUrls[selectedListingImageIndex]}
-                    alt={selectedListing.title}
-                    className="w-full aspect-square object-contain bg-white rounded-t-2xl cursor-zoom-in"
-                    onClick={() => setLightbox({ images: selectedListing.imageUrls, index: selectedListingImageIndex })}
-                  />
-                  {total > 1 && (
-                    <>
-                      <button
-                        onClick={() => setSelectedListingImageIndex((i) => (i - 1 + total) % total)}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => setSelectedListingImageIndex((i) => (i + 1) % total)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {selectedListing.imageUrls.map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setSelectedListingImageIndex(i)}
-                            className={`w-2 h-2 rounded-full transition-colors ${i === selectedListingImageIndex ? "bg-white" : "bg-white/50"}`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
-            <div className="p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-emerald-600">{formatPrice(selectedListing.price)}</span>
-                <button onClick={() => setSelectedListing(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"><X className="w-4 h-4" /></button>
+      {selectedListing && (() => {
+        const closed = isClosed(selectedListing);
+        const isMine = selectedListing.createdBy.id === dbUser?.id;
+        const hasOrder = !!selectedListing.myOrder;
+        const addOnsTotal = selectedAddOns.reduce((s, a) => s + a.price, 0);
+        const orderTotal = (parseFloat(selectedListing.price) + addOnsTotal) * qty;
+        const urgency = !closed ? getUrgencyLabel(selectedListing.cutoffAt) : null;
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0"
+            onClick={() => { setSelectedListing(null); setModalOrderMode(null); }}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag handle */}
+              <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
+                <div className="w-10 h-1 bg-zinc-300 rounded-full" />
               </div>
-              <h2 className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
+
               <button
-                type="button"
-                onClick={() => { setSelectedListing(null); router.push(`/employees/${selectedListing.createdBy.id}`); }}
-                className="text-xs text-zinc-500 hover:text-zinc-800 hover:underline transition-colors text-left"
+                onClick={() => { setSelectedListing(null); setModalOrderMode(null); }}
+                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10"
               >
-                by {selectedListing.createdBy.displayName}
+                <X className="w-4 h-4" />
               </button>
-              {selectedListing.description && (
-                <p className="text-sm text-zinc-600 whitespace-pre-wrap leading-relaxed">{selectedListing.description}</p>
-              )}
-              {selectedListing.addOns?.length > 0 && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 space-y-1">
-                  <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons available</p>
-                  {selectedListing.addOns.map((a, i) => (
-                    <div key={i} className="flex justify-between text-xs text-zinc-700">
-                      <span>{a.name}</span><span className="font-semibold text-amber-700">+₱{a.price % 1 === 0 ? a.price : a.price.toFixed(2)}</span>
+
+              {/* Scrollable content */}
+              <div className="overflow-y-auto scrollbar-hide flex-1 rounded-2xl">
+                {/* Image carousel */}
+                {selectedListing.imageUrls.length > 0 && (() => {
+                  const total = selectedListing.imageUrls.length;
+                  return (
+                    <div className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={selectedListing.imageUrls[selectedListingImageIndex]}
+                        alt={selectedListing.title}
+                        className="w-full aspect-square object-contain bg-white rounded-t-2xl cursor-zoom-in"
+                        onClick={() => setLightbox({ images: selectedListing.imageUrls, index: selectedListingImageIndex })}
+                      />
+                      {total > 1 && (
+                        <>
+                          <button
+                            onClick={() => setSelectedListingImageIndex((i) => (i - 1 + total) % total)}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => setSelectedListingImageIndex((i) => (i + 1) % total)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                            {selectedListing.imageUrls.map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setSelectedListingImageIndex(i)}
+                                className={`w-2 h-2 rounded-full transition-colors ${i === selectedListingImageIndex ? "bg-white" : "bg-white/50"}`}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ))}
+                  );
+                })()}
+
+                <div className="p-5 space-y-4">
+                  {/* Price + closed badge */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-emerald-600">{formatPrice(selectedListing.price)}</span>
+                    {closed && (
+                      <span className="text-xs font-semibold bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">Closed</span>
+                    )}
+                  </div>
+
+                  {/* Title */}
+                  <h2 className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
+
+                  {/* Seller avatar + name + order count */}
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedListing(null); setModalOrderMode(null); router.push(`/employees/${selectedListing.createdBy.id}`); }}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0"
+                    >
+                      {selectedListing.createdBy.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={selectedListing.createdBy.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                          {selectedListing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-xs text-zinc-500 truncate">by {selectedListing.createdBy.displayName}</span>
+                    </button>
+                    <span className="text-xs text-zinc-400 shrink-0">
+                      {selectedListing._count.orders} {selectedListing._count.orders === 1 ? "order" : "orders"}
+                    </span>
+                  </div>
+
+                  {/* Description */}
+                  {selectedListing.description && (
+                    <p className="text-sm text-zinc-600 whitespace-pre-wrap leading-relaxed">{selectedListing.description}</p>
+                  )}
+
+                  {/* Add-ons list */}
+                  {(selectedListing.addOns?.length ?? 0) > 0 && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 space-y-1">
+                      <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons available</p>
+                      {selectedListing.addOns.map((a, i) => (
+                        <div key={i} className="flex justify-between text-xs text-zinc-700">
+                          <span>{a.name}</span>
+                          <span className="font-semibold text-amber-700">+₱{a.price % 1 === 0 ? a.price : a.price.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Cutoff + urgency chip */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {urgency && (
+                      <span className="text-xs font-semibold bg-red-50 text-red-500 border border-red-100 px-2 py-0.5 rounded-full">
+                        {urgency}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1 text-xs text-zinc-500">
+                      <Clock className="w-3.5 h-3.5" />
+                      Orders close {formatCutoff(selectedListing.cutoffAt)}
+                    </span>
+                  </div>
+
+                  {/* Delivery date */}
+                  {selectedListing.deliveryDate && (
+                    <p className="text-xs text-sky-600 font-medium">🚚 Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+                  )}
+
+                  {/* Action area */}
+                  <div className="pt-3 border-t border-zinc-100 space-y-3">
+
+                    {/* Closed */}
+                    {closed && !isMine && (
+                      <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
+                        Orders closed
+                      </span>
+                    )}
+
+                    {/* Order button */}
+                    {!closed && !isMine && !hasOrder && modalOrderMode === null && (
+                      <button
+                        onClick={() => { setModalOrderMode("order"); setQty(1); setOrderNote(""); setSelectedAddOns([]); }}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+                      >
+                        Order
+                      </button>
+                    )}
+
+                    {/* Inline order form */}
+                    {!closed && !isMine && !hasOrder && modalOrderMode === "order" && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">−</button>
+                            <span className="w-8 text-center text-sm font-semibold">{qty}</span>
+                            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">+</button>
+                          </div>
+                        </div>
+                        {(selectedListing.addOns?.length ?? 0) > 0 && (
+                          <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
+                            {(selectedListing.addOns ?? []).map((a, i) => {
+                              const checked = selectedAddOns.some((s) => s.name === a.name);
+                              return (
+                                <label key={i} className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox" checked={checked}
+                                    onChange={(e) => setSelectedAddOns((prev) => e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name))}
+                                    className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                                  />
+                                  <span className="text-xs text-zinc-700 flex-1">{a.name}</span>
+                                  <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <input
+                          value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
+                          placeholder="e.g. no onions (optional)"
+                          className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <div className="flex items-center justify-between text-xs px-0.5">
+                          <span className="text-zinc-500">Total</span>
+                          <span className="font-bold text-emerald-700 text-sm">₱{orderTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setModalOrderMode("confirm")}
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+                          >
+                            Review Order
+                          </button>
+                          <button onClick={() => setModalOrderMode(null)} className="text-sm text-zinc-500 hover:text-zinc-700 px-3">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Confirmation step */}
+                    {!closed && !isMine && !hasOrder && modalOrderMode === "confirm" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                          <h3 className="font-bold text-zinc-900">Confirm your order</h3>
+                        </div>
+                        <div className="bg-zinc-50 rounded-xl p-4 space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-zinc-500">Item</span>
+                            <span className="font-semibold text-zinc-900 text-right max-w-[60%] leading-snug">{selectedListing.title}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-500">Qty</span>
+                            <span className="font-semibold text-zinc-900">{qty}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-500">Price each</span>
+                            <span className="font-semibold text-zinc-900">{formatPrice(selectedListing.price)}</span>
+                          </div>
+                          {selectedAddOns.length > 0 && selectedAddOns.map((a, i) => (
+                            <div key={i} className="flex justify-between">
+                              <span className="text-zinc-500">+ {a.name}</span>
+                              <span className="font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
+                            </div>
+                          ))}
+                          {orderNote && (
+                            <div className="flex justify-between">
+                              <span className="text-zinc-500">Note</span>
+                              <span className="text-zinc-600 italic text-right max-w-[60%]">&ldquo;{orderNote}&rdquo;</span>
+                            </div>
+                          )}
+                          <div className="border-t border-zinc-200 pt-2 flex justify-between">
+                            <span className="font-semibold text-zinc-700">Total</span>
+                            <span className="font-bold text-emerald-700 text-base">₱{orderTotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setModalOrderMode("order")}
+                            disabled={submittingOrder}
+                            className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors"
+                          >
+                            Back
+                          </button>
+                          <button
+                            onClick={() => handleOrder(selectedListing)}
+                            disabled={submittingOrder}
+                            className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+                          >
+                            {submittingOrder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                            {submittingOrder ? "Placing…" : "Place Order"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Existing order summary */}
+                    {!isMine && hasOrder && modalOrderMode !== "edit" && (() => {
+                      const oQty = selectedListing.myOrder!.quantity;
+                      const base = parseFloat(selectedListing.price);
+                      const addOnSum = (selectedListing.myOrder!.selectedAddOns ?? []).reduce((s, a) => s + a.price, 0);
+                      const oTotal = (base + addOnSum) * oQty;
+                      return (
+                        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <p className="text-xs font-bold text-zinc-700">Your Order</p>
+                              <p className="text-xs text-zinc-600">×{oQty} {selectedListing.title} <span className="text-zinc-400">@ {formatPrice(selectedListing.price)} each</span></p>
+                              {(selectedListing.myOrder!.selectedAddOns?.length ?? 0) > 0 && (
+                                <div className="space-y-0.5">
+                                  {selectedListing.myOrder!.selectedAddOns.map((a, i) => (
+                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-zinc-400">(₱{a.price.toFixed(2)} × {oQty})</span></p>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="text-[11px] text-zinc-400">
+                                Ordered {new Date(selectedListing.myOrder!.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-base font-bold text-emerald-700">₱{oTotal.toFixed(2)}</p>
+                              <p className="text-[10px] text-zinc-400">total</p>
+                            </div>
+                          </div>
+                          {selectedListing.myOrder!.note && (
+                            <p className="text-xs text-zinc-400 italic border-t border-emerald-100 pt-2">📝 &ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
+                          )}
+                          {!closed && (
+                            <div className="flex items-center gap-3 pt-1">
+                              <button
+                                onClick={() => {
+                                  setQty(selectedListing.myOrder!.quantity);
+                                  setOrderNote(selectedListing.myOrder!.note ?? "");
+                                  setSelectedAddOns(selectedListing.myOrder!.selectedAddOns ?? []);
+                                  setModalOrderMode("edit");
+                                }}
+                                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                              >
+                                Edit order
+                              </button>
+                              <span className="text-zinc-200">|</span>
+                              <button
+                                onClick={() => handleCancel(selectedListing)}
+                                className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+                              >
+                                Cancel order
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Edit order form */}
+                    {!closed && !isMine && hasOrder && modalOrderMode === "edit" && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">−</button>
+                            <span className="w-8 text-center text-sm font-semibold">{qty}</span>
+                            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">+</button>
+                          </div>
+                        </div>
+                        {(selectedListing.addOns?.length ?? 0) > 0 && (
+                          <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
+                            {(selectedListing.addOns ?? []).map((a, i) => {
+                              const checked = selectedAddOns.some((s) => s.name === a.name);
+                              return (
+                                <label key={i} className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox" checked={checked}
+                                    onChange={(e) => setSelectedAddOns((prev) => e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name))}
+                                    className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                                  />
+                                  <span className="text-xs text-zinc-700 flex-1">{a.name}</span>
+                                  <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <input
+                          value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
+                          placeholder="e.g. no onions (optional)"
+                          className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <div className="flex items-center justify-between text-xs px-0.5">
+                          <span className="text-zinc-500">Total</span>
+                          <span className="font-bold text-emerald-700 text-sm">₱{((parseFloat(selectedListing.price) + selectedAddOns.reduce((s, a) => s + a.price, 0)) * qty).toFixed(2)}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleUpdateOrder(selectedListing)}
+                            disabled={submittingOrder}
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                          >
+                            {submittingOrder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                            Save Changes
+                          </button>
+                          <button onClick={() => setModalOrderMode(null)} className="text-sm text-zinc-500 hover:text-zinc-700 px-3">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-              <div className="flex items-center gap-2 text-xs text-zinc-500 pt-1">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Orders close {formatCutoff(selectedListing.cutoffAt)}</span>
               </div>
-              {selectedListing.deliveryDate && (
-                <p className="text-xs text-sky-600 font-medium">🚚 Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

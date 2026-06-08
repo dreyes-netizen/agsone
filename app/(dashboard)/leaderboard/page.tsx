@@ -68,7 +68,11 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Department[] }>("/api/departments").then((res) => setDepartments(res.data));
+    apiFetch<{ data: Department[] }>("/api/departments")
+      .then((res) => setDepartments(res.data))
+      .catch(() => {});
+    setProfileLoading(true);
+    setAchieversLoading(true);
     Promise.allSettled([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: Achiever[] }>("/api/leaderboard/achievers"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Pill, Search, X } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -200,7 +200,7 @@ export default function MedicinePage() {
           onClick={() => setSelectedMed(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto scrollbar-hide"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative">

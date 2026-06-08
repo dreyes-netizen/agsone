@@ -85,6 +85,7 @@ export function GameResultOverlay({ session, myId, h2h, onNavigate }: Props) {
       onNavigate(`/minigames/${res.data.id}`);
     } catch {
       setRematching(false);
+      alert("Couldn't start a rematch — please try again.");
     }
   }
 

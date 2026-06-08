@@ -37,6 +37,7 @@ export default function MedicinePage() {
   const [requesting, setRequesting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"catalog" | "requests">("catalog");
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -73,6 +74,10 @@ export default function MedicinePage() {
     }
   }
 
+  const visibleMedicines = searchQuery.trim()
+    ? medicines.filter((m) => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : medicines;
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -87,7 +92,7 @@ export default function MedicinePage() {
         {(["catalog", "requests"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => { setActiveTab(tab); if (tab !== "catalog") setSearchQuery(""); }}
             className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors capitalize ${
               activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
@@ -109,8 +114,23 @@ export default function MedicinePage() {
         ) : medicines.length === 0 ? (
           <div className="text-center text-gray-400 py-16">No medicines available.</div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {medicines.map((med) => {
+          <div className="space-y-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                aria-label="Search medicines"
+                placeholder="Search medicines…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 bg-white"
+              />
+            </div>
+            {visibleMedicines.length === 0 ? (
+              <div className="text-center text-gray-400 py-12">No medicines match your search.</div>
+            ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {visibleMedicines.map((med) => {
               const isPending = pendingIds.has(med.id);
               const outOfStock = med.stockQuantity <= 0;
               const isRequesting = requesting === med.id;
@@ -155,6 +175,8 @@ export default function MedicinePage() {
                 </div>
               );
             })}
+          </div>
+            )}
           </div>
         )
       )}

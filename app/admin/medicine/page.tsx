@@ -92,13 +92,13 @@ export default function AdminMedicinePage() {
   }, [authLoading, user]);
 
   async function handleAdd() {
-    if (!addForm.name.trim() || !addForm.caption.trim() || !addForm.imageFile || !addForm.stockQuantity) {
-      alert("Please fill in all fields and upload an image.");
+    if (!addForm.name.trim() || !addForm.caption.trim() || !addForm.stockQuantity) {
+      alert("Please fill in all required fields.");
       return;
     }
     setAddingMed(true);
     try {
-      const imageUrl = await uploadToCloudinary(addForm.imageFile);
+      const imageUrl = addForm.imageFile ? await uploadToCloudinary(addForm.imageFile) : "";
       const res = await apiFetch<{ data: Medicine }>("/api/admin/medicine", {
         method: "POST",
         body: JSON.stringify({
@@ -304,7 +304,7 @@ export default function AdminMedicinePage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-400">(optional)</span></label>
                 <input
                   ref={addImageRef}
                   type="file"
@@ -625,7 +625,7 @@ export default function AdminMedicinePage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-400">(optional)</span></label>
                 <input
                   ref={editImageRef}
                   type="file"

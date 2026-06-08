@@ -6,7 +6,7 @@ import { z } from "zod";
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   caption: z.string().min(1).max(3000),
-  imageUrl: z.string().url(),
+  imageUrl: z.union([z.string().url(), z.literal("")]),
   stockQuantity: z.number().int().min(0),
 });
 

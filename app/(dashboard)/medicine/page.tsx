@@ -122,11 +122,13 @@ export default function MedicinePage() {
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow"
                 >
                   <div className="aspect-square bg-gray-50 overflow-hidden">
-                    <img
-                      src={med.imageUrl}
-                      alt={med.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {med.imageUrl ? (
+                      <img src={med.imageUrl} alt={med.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <Pill className="w-10 h-10 text-gray-300" />
+                      </div>
+                    )}
                   </div>
                   <div className="p-3 flex flex-col gap-2 flex-1">
                     <div>
@@ -204,11 +206,17 @@ export default function MedicinePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative">
-              <img
-                src={selectedMed.imageUrl}
-                alt={selectedMed.name}
-                className="w-full aspect-square object-cover rounded-t-2xl"
-              />
+              {selectedMed.imageUrl ? (
+                <img
+                  src={selectedMed.imageUrl}
+                  alt={selectedMed.name}
+                  className="w-full aspect-square object-cover rounded-t-2xl"
+                />
+              ) : (
+                <div className="w-full aspect-square flex items-center justify-center bg-gray-100 rounded-t-2xl">
+                  <Pill className="w-16 h-16 text-gray-300" />
+                </div>
+              )}
               <button
                 onClick={() => setSelectedMed(null)}
                 className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"

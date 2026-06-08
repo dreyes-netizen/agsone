@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import Link from "next/link";
 import {
-  Rss, Trophy, Gamepad2, ShoppingBag, Flame, Star, Coins,
+  Rss, Gamepad2, ShoppingBag, Flame, Star, Coins,
   Target, Swords,
 } from "lucide-react";
 import { DashboardFeedCard } from "@/components/dashboard/DashboardFeedCard";
@@ -67,8 +67,6 @@ type BirthdayPerson = {
   daysUntil: number;
 };
 
-const MEDAL = ["🥇", "🥈", "🥉"];
-
 const METRIC_LABEL: Record<string, string> = {
   TOTAL_POINTS: "pts earned",
   MISSIONS_COMPLETED: "missions done",
@@ -120,7 +118,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    Promise.all([
+    Promise.allSettled([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: FeedPost[]; nextCursor: string | null }>("/api/feed?limit=5"),
       apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard"),
@@ -129,23 +127,18 @@ export default function DashboardPage() {
       apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming"),
     ])
       .then(([me, feed, lb, ch, ms, bd]) => {
-        setProfile(me.data);
-        setFeedPosts(feed.data ?? []);
-        setLeaderboard(lb.data ?? []);
-        setChallenges(ch.data ?? []);
-        setMissions(ms.data ?? []);
-        setBirthdays((bd.data ?? []).filter((b) => b.daysUntil <= 7));
+        if (me.status === "fulfilled") setProfile(me.value.data);
+        if (feed.status === "fulfilled") setFeedPosts(feed.value.data ?? []);
+        if (lb.status === "fulfilled") setLeaderboard(lb.value.data ?? []);
+        if (ch.status === "fulfilled") setChallenges(ch.value.data ?? []);
+        if (ms.status === "fulfilled") setMissions(ms.value.data ?? []);
+        if (bd.status === "fulfilled") setBirthdays((bd.value.data ?? []).filter((b) => b.daysUntil <= 7));
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
-
-  const myRank = leaderboard.find((e) => e.isCurrentUser)?.rank;
-  const top3 = leaderboard.slice(0, 3);
-  const meNotInTop3 = myRank && myRank > 3 ? leaderboard.find((e) => e.isCurrentUser) : null;
 
   const shoutouts = feedPosts.filter((p) => p.type === "SHOUTOUT").slice(0, 3);
   const availableMissions = missions.filter((m) => !m.myCompletion).slice(0, 2);
@@ -182,7 +175,6 @@ export default function DashboardPage() {
           { icon: <Coins className="w-3.5 h-3.5 text-navy-500" />, label: "Points", value: profile?.pointsBalance?.toLocaleString() },
           { icon: <Star className="w-3.5 h-3.5 text-violet-500" />, label: "Level", value: profile?.level },
           { icon: <Flame className="w-3.5 h-3.5 text-orange-400" />, label: "Streak", value: profile ? `${profile.streakDays}d` : undefined },
-          { icon: <Trophy className="w-3.5 h-3.5 text-yellow-500" />, label: "Rank", value: myRank ? `#${myRank}` : undefined },
         ].map(({ icon, label, value }) => (
           <div key={label} className="flex-1 flex items-center gap-2 px-4 first:pl-0 last:pr-0">
             {icon}
@@ -320,48 +312,34 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Leaderboard snippet */}
+          {/* Top Performers widget */}
           <div className="bg-white rounded-xl border border-zinc-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50">
               <div className="flex items-center gap-1.5">
-                <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="text-xs font-semibold text-zinc-700">Leaderboard</span>
+                <Star className="w-3.5 h-3.5 text-yellow-500" />
+                <span className="text-xs font-semibold text-zinc-700">Top Performers</span>
               </div>
               <Link href="/leaderboard" className="text-xs text-navy-600 hover:text-navy-700 font-medium">See all →</Link>
             </div>
             {loading ? (
               <div className="p-4 space-y-3 animate-pulse">
-                {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-zinc-100 rounded" />)}
+                {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-8 bg-zinc-100 rounded" />)}
               </div>
-            ) : top3.length === 0 ? (
-              <p className="text-xs text-zinc-400 text-center py-6">No rankings yet</p>
+            ) : leaderboard.length === 0 ? (
+              <p className="text-xs text-zinc-400 text-center py-6">No data yet</p>
             ) : (
               <div>
-                {top3.map((entry, i) => (
+                {leaderboard.slice(0, 5).map((entry) => (
                   <div key={entry.userId} className={`flex items-center gap-2.5 px-4 py-2.5 ${entry.isCurrentUser ? "bg-navy-50/50" : "hover:bg-zinc-50/60"} transition-colors`}>
-                    <span className="text-base shrink-0">{MEDAL[i]}</span>
                     <Link href={`/employees/${entry.userId}`}><Avatar url={entry.avatarUrl} name={entry.displayName} size="w-6 h-6" /></Link>
                     <Link href={`/employees/${entry.userId}`} className={`text-xs font-medium truncate flex-1 min-w-0 hover:underline ${entry.isCurrentUser ? "text-navy-700 font-semibold" : "text-zinc-700"}`}>
-                      {entry.displayName}
+                      {entry.isCurrentUser ? "You" : entry.displayName}
                     </Link>
                     <span className="text-xs font-bold tabular-nums text-zinc-500 shrink-0">
                       {entry.points.toLocaleString()}
                     </span>
                   </div>
                 ))}
-                {meNotInTop3 && (
-                  <>
-                    <div className="border-t border-dashed border-zinc-100 mx-4" />
-                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-navy-50/50">
-                      <span className="text-xs font-bold text-navy-600 shrink-0 w-6 text-center">#{meNotInTop3.rank}</span>
-                      <Avatar url={meNotInTop3.avatarUrl} name={meNotInTop3.displayName} size="w-6 h-6" />
-                      <span className="text-xs font-semibold text-navy-700 truncate flex-1 min-w-0">You</span>
-                      <span className="text-xs font-bold tabular-nums text-zinc-500 shrink-0">
-                        {meNotInTop3.points.toLocaleString()}
-                      </span>
-                    </div>
-                  </>
-                )}
               </div>
             )}
           </div>

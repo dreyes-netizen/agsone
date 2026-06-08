@@ -273,12 +273,12 @@ export default function AdminMedicinePage() {
               <h3 className="font-semibold text-gray-900">New Medicine</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Name</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Generic Name</label>
                   <input
                     value={addForm.name}
                     onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
                     className={inputClass}
-                    placeholder="e.g. Biogesic"
+                    placeholder="e.g. Paracetamol"
                   />
                 </div>
                 <div>
@@ -598,7 +598,7 @@ export default function AdminMedicinePage() {
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Name</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Generic Name</label>
                 <input
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}

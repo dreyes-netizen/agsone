@@ -1,9 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Medal } from "lucide-react";
 
 type Entry = {
   rank: number;
@@ -17,20 +16,6 @@ type Entry = {
 };
 
 type Department = { id: string; name: string };
-
-const rankColors: Record<number, string> = {
-  1: "text-yellow-500",
-  2: "text-zinc-400",
-  3: "text-orange-500",
-};
-
-const podiumOrder = [1, 0, 2];
-
-const podiumStyle: Record<number, { bg: string; height: string; medal: React.ElementType; medalClass: string }> = {
-  0: { bg: "bg-zinc-100 border border-zinc-200",        height: "pt-10", medal: Medal, medalClass: "text-zinc-400" },
-  1: { bg: "bg-yellow-50 border border-yellow-200",     height: "pt-4",  medal: Medal, medalClass: "text-yellow-500" },
-  2: { bg: "bg-orange-50 border border-orange-200",     height: "pt-14", medal: Medal, medalClass: "text-orange-500" },
-};
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" | "lg" }) {
   const cls = size === "lg" ? "w-16 h-16 text-2xl" : size === "sm" ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
@@ -72,15 +57,13 @@ export default function LeaderboardPage() {
     setLoading(false);
   }
 
-  const currentUserEntry = entries.find((e) => e.isCurrentUser);
-
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
 
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Leaderboard</h1>
-        <p className="text-zinc-500 text-sm mt-1">Top point earners in the company.</p>
+        <h1 className="text-2xl font-bold text-zinc-900">Top Performers</h1>
+        <p className="text-zinc-500 text-sm mt-1">This month's highest earners.</p>
       </div>
 
       {/* ── Filters ── */}
@@ -113,50 +96,6 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* ── Current user rank (if outside top 10) ── */}
-      {currentUserEntry && currentUserEntry.rank > 10 && (
-        <div className="bg-navy-50 border border-navy-200 rounded-xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-navy-600 font-bold text-sm">#{currentUserEntry.rank}</span>
-            <Avatar name={currentUserEntry.displayName} url={currentUserEntry.avatarUrl} />
-            <div>
-              <p className="font-semibold text-sm text-zinc-900">You</p>
-              {currentUserEntry.department && <p className="text-xs text-zinc-500">{currentUserEntry.department}</p>}
-            </div>
-          </div>
-          <span className="font-bold text-navy-600 text-sm">{currentUserEntry.points.toLocaleString()} pts</span>
-        </div>
-      )}
-
-      {/* ── Podium ── */}
-      {!loading && entries.length >= 3 && (
-        <div className="flex items-end justify-center gap-3 px-2">
-          {podiumOrder.map((idx) => {
-            const e = entries[idx];
-            if (!e) return null;
-            const style = podiumStyle[idx];
-            const isFirst = idx === 1;
-            return (
-              <div
-                key={e.userId}
-                className={`flex-1 rounded-xl text-center ${style.bg} ${style.height} ${e.isCurrentUser ? "ring-2 ring-navy-400 ring-offset-1" : ""}`}
-              >
-                <div className={`flex flex-col items-center gap-1 px-2 pb-4 ${isFirst ? "pt-4" : "pt-3"}`}>
-                  <style.medal className={`${isFirst ? "w-10 h-10" : "w-8 h-8"} ${style.medalClass}`} />
-                  <Avatar name={e.displayName} url={e.avatarUrl} size={isFirst ? "lg" : "md"} />
-                  <p className={`font-semibold text-zinc-800 mt-1 truncate w-full px-1 ${isFirst ? "text-sm" : "text-xs"}`}>
-                    {e.isCurrentUser ? "You" : e.displayName}
-                  </p>
-                  <p className={`font-bold text-zinc-700 ${isFirst ? "text-sm" : "text-xs"}`}>
-                    {e.points.toLocaleString()} pts
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {/* ── Rankings list ── */}
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
         {loading ? (
@@ -174,9 +113,6 @@ export default function LeaderboardPage() {
                     : "hover:bg-zinc-50 border-l-2 border-transparent"
                 }`}
               >
-                <span className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-zinc-400"}`}>
-                  {`#${e.rank}`}
-                </span>
                 <Avatar name={e.displayName} url={e.avatarUrl} />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-zinc-900 truncate">

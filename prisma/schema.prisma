@@ -127,6 +127,7 @@ model Department {
   createdAt   DateTime @default(now())
 
   users User[]
+  posts SocialPost[]
 }
 
 model User {
@@ -170,7 +171,7 @@ model User {
   gamesCreated      Game[]
   gamePlays         GamePlay[]
   posts             SocialPost[]
-  shoutoutsReceived SocialPost[] @relation("ShoutoutsReceived")
+  shoutoutsReceived ShoutoutRecipient[] @relation("ShoutoutsReceived")
   reactions         SocialReaction[]
   comments          SocialComment[]
   pollVotes         PollVote[]
@@ -338,22 +339,36 @@ model SocialPost {
   id          String   @id @default(uuid())
   authorId    String
   type        PostType @default(UPDATE)
+  title       String?
   content     String
   referenceId String?
   imageUrl    String?
   imageUrls   String[]
   isPinned    Boolean  @default(false)
   flair       String   @default("CASUAL")
-  recipientId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  author      User             @relation(fields: [authorId], references: [id])
-  recipient   User?            @relation("ShoutoutsReceived", fields: [recipientId], references: [id])
-  reactions   SocialReaction[]
-  comments    SocialComment[]
-  pollOptions PollOption[]
-  pollVotes   PollVote[]
+  departmentId String?
+  department   Department?      @relation(fields: [departmentId], references: [id])
+
+  author             User               @relation(fields: [authorId], references: [id])
+  shoutoutRecipients ShoutoutRecipient[]
+  reactions          SocialReaction[]
+  comments           SocialComment[]
+  pollOptions        PollOption[]
+  pollVotes          PollVote[]
+}
+
+model ShoutoutRecipient {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+
+  post SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation("ShoutoutsReceived", fields: [userId], references: [id])
+
+  @@unique([postId, userId])
 }
 
 model SocialReaction {

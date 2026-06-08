@@ -3,10 +3,13 @@
 import React, { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MessageCircle, Send, SmilePlus } from "lucide-react";
+import { MessageCircle, Send, SmilePlus, Sparkles } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
+import { ImageLightbox } from "@/components/ImageLightbox";
+import { PostImages } from "@/components/feed/PostImages";
+import { flairById } from "@/lib/flairs";
 
 type ReplyItem = {
   id: string;
@@ -27,14 +30,18 @@ type CommentItem = {
 export type DashboardFeedPost = {
   id: string;
   type: string;
+  title: string | null;
   content: string;
   createdAt: string;
-  author: { id: string; displayName: string; avatarUrl: string | null };
-  recipient: { id: string; displayName: string; avatarUrl: string | null } | null;
+  author: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null };
+  shoutoutRecipients: { id: string; userId: string; user: { id: string; displayName: string; avatarUrl: string | null } }[];
+  flair: string | null;
   reactions: Record<string, number>;
   myReactions: string[];
   commentCount: number;
   imageUrls: string[];
+  departmentId: string | null;
+  department: { name: string } | null;
 };
 
 const EMOJIS = [
@@ -180,6 +187,30 @@ function ReactionBar({
   );
 }
 
+function renderContent(content: string) {
+  const parts = content.split(/(@\[[^|]+\|[^\]]+\])/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = part.match(/^@\[([^|]+)\|([^\]]+)\]$/);
+        if (match) {
+          return (
+            <Link
+              key={i}
+              href={`/employees/${match[2]}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-semibold text-blue-600 bg-blue-50 rounded px-0.5 hover:bg-blue-100"
+            >
+              @{match[1]}
+            </Link>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPost }) {
   const router = useRouter();
   const { user, dbUser } = useAuth();
@@ -202,6 +233,10 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
   const [replySending, setReplySending] = useState<Record<string, boolean>>({});
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const isLongContent = initialPost.content.length > 180;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -340,64 +375,154 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
           : "border-zinc-100"
       }`}
     >
-      {/* ── Post header ── */}
-      <div className="flex gap-3">
-        <Link href={`/employees/${initialPost.author.id}`} onClick={(e) => e.stopPropagation()}>
-          <Avatar url={initialPost.author.avatarUrl} name={initialPost.author.displayName} />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-1.5 flex-wrap">
-            <Link
-              href={`/employees/${initialPost.author.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-sm text-zinc-900 hover:underline"
-            >
-              {initialPost.author.displayName}
+      {initialPost.type === "SHOUTOUT" && initialPost.shoutoutRecipients.length > 0 ? (
+        <>
+          {/* ── Sender row ── */}
+          <div className="flex items-center gap-2 mb-3">
+            <Link href={`/employees/${initialPost.author.id}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
+              <Avatar url={initialPost.author.avatarUrl} name={initialPost.author.displayName} />
             </Link>
-            {initialPost.type === "SHOUTOUT" && initialPost.recipient && (
-              <>
-                <span className="text-xs text-zinc-400">gave a shoutout to</span>
-                <Link
-                  href={`/employees/${initialPost.recipient.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-sm text-pink-600 hover:underline"
-                >
-                  {initialPost.recipient.displayName}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <Link href={`/employees/${initialPost.author.id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-sm text-zinc-900 hover:underline whitespace-nowrap min-w-0 truncate">
+                  {initialPost.author.displayName}
                 </Link>
-              </>
-            )}
-            <span className="text-xs text-zinc-400 ml-auto shrink-0">
-              {postTimestamp(initialPost.createdAt)}
-            </span>
-          </div>
-          <p className="text-sm text-zinc-600 mt-1 line-clamp-3 leading-relaxed">
-            {initialPost.content}
-          </p>
-          {initialPost.imageUrls?.length > 0 &&
-            (initialPost.imageUrls.length === 1 ? (
-              <div className="mt-2 rounded-lg overflow-hidden bg-white flex items-start justify-start max-h-80">
-                <img
-                  src={initialPost.imageUrls[0]}
-                  alt=""
-                  className="max-h-80 w-auto max-w-full object-contain"
-                />
+                <span className="text-xs text-zinc-400 ml-auto shrink-0 whitespace-nowrap">{postTimestamp(initialPost.createdAt)}</span>
               </div>
-            ) : (
-              <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg overflow-hidden">
-                {initialPost.imageUrls.slice(0, 4).map((url, idx) => (
-                  <div key={url} className="relative aspect-square bg-zinc-100 overflow-hidden">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                    {idx === 3 && initialPost.imageUrls.length > 4 && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm pointer-events-none">
-                        +{initialPost.imageUrls.length - 4}
-                      </div>
-                    )}
-                  </div>
+              {initialPost.author.department && (
+                <span className="text-xs text-zinc-400 font-medium block">{initialPost.author.department.name}</span>
+              )}
+            </div>
+          </div>
+
+          {/* ── Divider ── */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-px flex-1 bg-amber-200" />
+            <span className="text-xs font-semibold text-amber-600 flex items-center gap-1 shrink-0">
+              <Sparkles className="w-3.5 h-3.5" /> gave a shoutout to
+            </span>
+            <div className="h-px flex-1 bg-amber-200" />
+          </div>
+
+          {/* ── Recipients + message ── */}
+          {initialPost.shoutoutRecipients.length === 1 ? (
+            <>
+              <div className="flex gap-3 items-start">
+                <Link href={`/employees/${initialPost.shoutoutRecipients[0].user.id}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
+                  <Avatar url={initialPost.shoutoutRecipients[0].user.avatarUrl} name={initialPost.shoutoutRecipients[0].user.displayName} size="w-12 h-12" />
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/employees/${initialPost.shoutoutRecipients[0].user.id}`} onClick={(e) => e.stopPropagation()} className="font-bold text-base text-zinc-900 hover:underline block">
+                    {initialPost.shoutoutRecipients[0].user.displayName}
+                  </Link>
+                  <p className={`text-sm text-zinc-600 italic mt-1 leading-relaxed whitespace-pre-wrap ${!contentExpanded && isLongContent ? "line-clamp-3" : ""}`}>
+                    &ldquo;{renderContent(initialPost.content)}&rdquo;
+                  </p>
+                  {isLongContent && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setContentExpanded((v) => !v); }} className="text-xs font-semibold text-navy-600 hover:text-navy-800 mt-0.5">
+                      {contentExpanded ? "See less" : "See more"}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {initialPost.imageUrls?.length > 0 && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <PostImages urls={initialPost.imageUrls} onOpen={(idx) => { setLightboxIndex(idx); setLightboxOpen(true); }} />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {initialPost.shoutoutRecipients.map((r) => (
+                  <Link key={r.user.id} href={`/employees/${r.user.id}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-0.5 pr-2.5 py-0.5 hover:bg-amber-100 transition-colors">
+                    <Avatar url={r.user.avatarUrl} name={r.user.displayName} size="w-6 h-6" />
+                    <span className="text-xs font-semibold text-amber-900">{r.user.displayName}</span>
+                  </Link>
                 ))}
               </div>
-            ))}
-        </div>
-      </div>
+              <p className={`text-sm text-zinc-600 italic leading-relaxed whitespace-pre-wrap ${!contentExpanded && isLongContent ? "line-clamp-3" : ""}`}>
+                &ldquo;{renderContent(initialPost.content)}&rdquo;
+              </p>
+              {isLongContent && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); setContentExpanded((v) => !v); }} className="text-xs font-semibold text-navy-600 hover:text-navy-800">
+                  {contentExpanded ? "See less" : "See more"}
+                </button>
+              )}
+              {initialPost.imageUrls?.length > 0 && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <PostImages urls={initialPost.imageUrls} onOpen={(idx) => { setLightboxIndex(idx); setLightboxOpen(true); }} />
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* ── Flair chips ── */}
+          {(initialPost.flair || initialPost.departmentId) && (
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              {initialPost.flair && (() => {
+                const flair = flairById[initialPost.flair] ?? flairById["CASUAL"];
+                return (
+                  <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border w-fit ${flair.color}`}>
+                    <span>{flair.emoji}</span>
+                    <span>{flair.label}</span>
+                  </span>
+                );
+              })()}
+              {initialPost.department && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-100 text-navy-700 border border-navy-200">
+                  🏢 {initialPost.department.name} only
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* ── Post header ── */}
+          <div className="flex items-start gap-3">
+            <Link href={`/employees/${initialPost.author.id}`} onClick={(e) => e.stopPropagation()}>
+              <Avatar url={initialPost.author.avatarUrl} name={initialPost.author.displayName} />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Link href={`/employees/${initialPost.author.id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-sm text-zinc-900 hover:underline whitespace-nowrap">
+                  {initialPost.author.displayName}
+                </Link>
+                <span className="text-xs text-zinc-400 ml-auto shrink-0 whitespace-nowrap">
+                  {postTimestamp(initialPost.createdAt)}
+                </span>
+              </div>
+              {initialPost.author.department && (
+                <span className="text-xs text-zinc-400 font-medium block">{initialPost.author.department.name}</span>
+              )}
+              {initialPost.title && (
+                <p className="text-sm font-bold text-zinc-900 mt-1 leading-snug">{initialPost.title}</p>
+              )}
+              <p className={`text-sm text-zinc-600 mt-0.5 leading-relaxed whitespace-pre-wrap ${!contentExpanded && isLongContent ? "line-clamp-3" : ""}`}>
+                {renderContent(initialPost.content)}
+              </p>
+              {isLongContent && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); setContentExpanded((v) => !v); }} className="text-xs font-semibold text-navy-600 hover:text-navy-800 mt-0.5">
+                  {contentExpanded ? "See less" : "See more"}
+                </button>
+              )}
+            </div>
+          </div>
+          {initialPost.imageUrls?.length > 0 && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <PostImages urls={initialPost.imageUrls} onOpen={(idx) => { setLightboxIndex(idx); setLightboxOpen(true); }} />
+            </div>
+          )}
+        </>
+      )}
+
+      <ImageLightbox
+        images={initialPost.imageUrls}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
 
       {/* ── Interaction bar ── */}
       <div className="mt-3 pt-3 border-t border-zinc-100 flex items-center justify-between gap-3 flex-wrap">

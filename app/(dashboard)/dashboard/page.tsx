@@ -22,14 +22,18 @@ type UserProfile = {
 type FeedPost = {
   id: string;
   type: string;
+  title: string | null;
   content: string;
   createdAt: string;
-  author: { id: string; displayName: string; avatarUrl: string | null };
-  recipient: { id: string; displayName: string; avatarUrl: string | null } | null;
+  author: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null };
+  shoutoutRecipients: { id: string; userId: string; user: { id: string; displayName: string; avatarUrl: string | null } }[];
+  flair: string | null;
   reactions: Record<string, number>;
   myReactions: string[];
   commentCount: number;
   imageUrls: string[];
+  departmentId: string | null;
+  department: { name: string } | null;
 };
 
 type LeaderboardEntry = {
@@ -238,8 +242,14 @@ export default function DashboardPage() {
                     <Link href={`/employees/${post.author.id}`} className="shrink-0"><Avatar url={post.author.avatarUrl} name={post.author.displayName} size="w-7 h-7" /></Link>
                     <Link href={`/employees/${post.author.id}`} className="text-xs font-medium text-zinc-700 shrink-0 hover:underline">{post.author.displayName}</Link>
                     <span className="text-xs text-zinc-400 shrink-0">→</span>
-                    {post.recipient && <Link href={`/employees/${post.recipient.id}`} className="shrink-0"><Avatar url={post.recipient.avatarUrl} name={post.recipient.displayName} size="w-7 h-7" /></Link>}
-                    {post.recipient && <Link href={`/employees/${post.recipient.id}`} className="text-xs font-medium text-zinc-700 shrink-0 hover:underline">{post.recipient.displayName}</Link>}
+                    {post.shoutoutRecipients.slice(0, 1).map((r) => (
+                      <Link key={r.user.id} href={`/employees/${r.user.id}`} className="shrink-0"><Avatar url={r.user.avatarUrl} name={r.user.displayName} size="w-7 h-7" /></Link>
+                    ))}
+                    {post.shoutoutRecipients.length > 0 && (
+                      <Link href={`/employees/${post.shoutoutRecipients[0].user.id}`} className="text-xs font-medium text-zinc-700 shrink-0 hover:underline">
+                        {post.shoutoutRecipients[0].user.displayName}{post.shoutoutRecipients.length > 1 ? ` +${post.shoutoutRecipients.length - 1}` : ""}
+                      </Link>
+                    )}
                     <span className="text-xs text-zinc-400 truncate min-w-0">{post.content}</span>
                   </div>
                 ))}
@@ -277,7 +287,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ════ RIGHT COLUMN ════ */}
-        <div className="space-y-4">
+        <div className="space-y-4 sticky top-6 self-start">
 
           {/* My Stats */}
           <div className="bg-white rounded-xl border border-zinc-100 p-4">

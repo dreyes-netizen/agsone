@@ -1,23 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Sparkles, Search } from "lucide-react";
-import { timeAgo } from "@/lib/helpers/timeAgo";
+import { postTimestamp } from "@/lib/helpers/timeAgo";
+import { PostImages } from "@/components/feed/PostImages";
+import { ImageLightbox } from "@/components/ImageLightbox";
+
+type ShoutoutRecipient = { id: string; user: { id: string; displayName: string; avatarUrl: string | null } };
 
 type Shoutout = {
   id: string;
   content: string;
   createdAt: string;
-  author: { displayName: string; avatarUrl: string | null };
-  recipient: { id: string; displayName: string; avatarUrl: string | null } | null;
+  imageUrls: string[];
+  author: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null };
+  shoutoutRecipients: ShoutoutRecipient[];
 };
 
-function Avatar({ name, url }: { name: string; url: string | null }) {
-  if (url) return <img src={url} alt={name} className="w-10 h-10 rounded-full object-cover" />;
+function Avatar({ name, url, size = "w-8 h-8" }: { name: string; url: string | null; size?: string }) {
+  if (url) return <img src={url} alt={name} className={`${size} rounded-full object-cover shrink-0`} />;
   return (
-    <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-bold text-xs">
+    <div className={`${size} rounded-full bg-navy-100 flex items-center justify-center text-navy-600 font-bold text-xs shrink-0`}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -31,6 +37,7 @@ export default function ShoutoutsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -57,7 +64,7 @@ export default function ShoutoutsPage() {
     const q = search.toLowerCase();
     return (
       s.author.displayName.toLowerCase().includes(q) ||
-      (s.recipient?.displayName.toLowerCase().includes(q) ?? false) ||
+      s.shoutoutRecipients.some((r) => r.user.displayName.toLowerCase().includes(q)) ||
       s.content.toLowerCase().includes(q)
     );
   });
@@ -113,27 +120,74 @@ export default function ShoutoutsPage() {
               <div key={s.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden hover:shadow-md transition-shadow">
                 <div className="h-1 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="p-4 space-y-3">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm">
-                    <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+                  {/* Sender row */}
+                  <div className="flex items-center gap-2">
+                    <Link href={`/employees/${s.author.id}`} className="shrink-0">
                       <Avatar name={s.author.displayName} url={s.author.avatarUrl} />
-                      <span className="font-semibold text-zinc-800 truncate max-w-[120px]">{s.author.displayName}</span>
-                    </div>
-                    <span className="text-amber-600 font-medium flex items-center gap-1 shrink-0">
-                      <Sparkles className="w-3.5 h-3.5" /> shouted out
-                    </span>
-                    {s.recipient && (
-                      <div className="flex items-center gap-1.5 shrink-0 min-w-0">
-                        <Avatar name={s.recipient.displayName} url={s.recipient.avatarUrl} />
-                        <span className="font-semibold text-zinc-800 truncate max-w-[120px]">{s.recipient.displayName}</span>
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/employees/${s.author.id}`} className="font-semibold text-sm text-zinc-900 hover:underline whitespace-nowrap min-w-0 truncate">
+                          {s.author.displayName}
+                        </Link>
+                        <span className="text-xs text-zinc-400 ml-auto shrink-0 whitespace-nowrap">{postTimestamp(s.createdAt)}</span>
                       </div>
-                    )}
+                      {s.author.department && (
+                        <span className="text-xs text-zinc-400 font-medium block">{s.author.department.name}</span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-zinc-600 leading-relaxed line-clamp-3">{s.content}</p>
-                  <p className="text-xs text-zinc-400">{timeAgo(s.createdAt)}</p>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-amber-200" />
+                    <span className="text-xs font-semibold text-amber-600 flex items-center gap-1 shrink-0">
+                      <Sparkles className="w-3.5 h-3.5" /> gave a shoutout to
+                    </span>
+                    <div className="h-px flex-1 bg-amber-200" />
+                  </div>
+
+                  {/* Recipients + message */}
+                  {s.shoutoutRecipients.length === 1 ? (
+                    <div className="flex gap-3 items-start">
+                      <Link href={`/employees/${s.shoutoutRecipients[0].user.id}`} className="shrink-0">
+                        <Avatar name={s.shoutoutRecipients[0].user.displayName} url={s.shoutoutRecipients[0].user.avatarUrl} size="w-12 h-12" />
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/employees/${s.shoutoutRecipients[0].user.id}`} className="font-bold text-base text-zinc-900 hover:underline block">
+                          {s.shoutoutRecipients[0].user.displayName}
+                        </Link>
+                        <p className="text-sm text-zinc-600 italic mt-1 leading-relaxed whitespace-pre-wrap line-clamp-4">
+                          &ldquo;{s.content}&rdquo;
+                        </p>
+                        {s.imageUrls?.length > 0 && (
+                          <PostImages urls={s.imageUrls} onOpen={(index) => setLightbox({ images: s.imageUrls, index })} />
+                        )}
+                      </div>
+                    </div>
+                  ) : s.shoutoutRecipients.length > 1 ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {s.shoutoutRecipients.map((r) => (
+                          <Link key={r.user.id} href={`/employees/${r.user.id}`} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-0.5 pr-2.5 py-0.5 hover:bg-amber-100 transition-colors">
+                            <Avatar name={r.user.displayName} url={r.user.avatarUrl} size="w-6 h-6" />
+                            <span className="text-xs font-semibold text-amber-900">{r.user.displayName}</span>
+                          </Link>
+                        ))}
+                      </div>
+                      <p className="text-sm text-zinc-600 italic leading-relaxed whitespace-pre-wrap line-clamp-4">
+                        &ldquo;{s.content}&rdquo;
+                      </p>
+                      {s.imageUrls?.length > 0 && (
+                        <PostImages urls={s.imageUrls} onOpen={(index) => setLightbox({ images: s.imageUrls, index })} />
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}
           </div>
+
           {nextCursor && !search && (
             <div className="flex justify-center">
               <button
@@ -146,6 +200,15 @@ export default function ShoutoutsPage() {
             </div>
           )}
         </>
+      )}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          open
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );

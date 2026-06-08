@@ -11,6 +11,7 @@ export type AuthUser = {
   displayName: string;
   role: Role;
   pointsBalance: number;
+  departmentId: string | null;
 };
 
 export async function verifyAuth(req: NextRequest): Promise<AuthUser | null> {
@@ -28,6 +29,7 @@ export async function verifyAuth(req: NextRequest): Promise<AuthUser | null> {
         displayName: true,
         role: true,
         pointsBalance: true,
+        departmentId: true,
         lastActiveAt: true,
         streakDays: true,
       },

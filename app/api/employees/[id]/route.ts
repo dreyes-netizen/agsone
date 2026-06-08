@@ -34,14 +34,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         },
       },
       shoutoutsReceived: {
-        where: { type: "SHOUTOUT" },
-        orderBy: { createdAt: "desc" },
+        orderBy: { post: { createdAt: "desc" } },
         take: 6,
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          author: { select: { id: true, displayName: true, avatarUrl: true } },
+        include: {
+          post: {
+            select: {
+              id: true,
+              content: true,
+              createdAt: true,
+              imageUrls: true,
+              author: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
+              shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+            },
+          },
         },
       },
     },

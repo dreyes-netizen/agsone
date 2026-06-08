@@ -2,21 +2,6 @@
 
 import { ZoomIn } from "lucide-react";
 
-/**
- * Returns the Tailwind grid classes for the image container given how many
- * photos there are. Pure function so the layout decision is testable.
- *  1 -> single (natural aspect, height-capped, handled separately)
- *  2 -> two equal columns
- *  3 -> two columns (first tile spans both rows = "big + stack")
- *  4+ -> 2x2 grid
- */
-export function photoGridClass(count: number): string {
-  if (count <= 1) return "grid grid-cols-1";
-  if (count === 2) return "grid grid-cols-2 gap-1";
-  if (count === 3) return "grid grid-cols-2 grid-rows-2 gap-1";
-  return "grid grid-cols-2 gap-1"; // 4+
-}
-
 export function PostImages({
   urls,
   onOpen,
@@ -26,25 +11,26 @@ export function PostImages({
 }) {
   if (urls.length === 0) return null;
 
-  // ── Single image: natural aspect ratio, never cropped ──
+  const shown = urls.slice(0, 3);
+  const extra = urls.length - 3;
+  const cols = urls.length === 2 ? "grid grid-cols-2 gap-1" : "grid grid-cols-3 gap-1";
+  const containerWidth = urls.length === 2 ? "w-full sm:w-[80%]" : "w-full";
+
+  // Single image: full-width on mobile, 40% on desktop
   if (urls.length === 1) {
     return (
-      <div className="mt-3 rounded-xl overflow-hidden bg-black/5">
+      <div className="mt-3 w-full sm:w-[40%]">
         <button
           type="button"
           onClick={() => onOpen(0)}
-          className="group/img relative block w-full focus:outline-none"
+          className="group/img relative block w-full aspect-square rounded-lg overflow-hidden focus:outline-none"
           aria-label="View image"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={urls[0]}
-            alt="Post image"
-            className="w-full max-h-[480px] object-contain"
-            draggable={false}
-          />
-          <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/img:bg-black/15 transition-colors">
-            <span className="opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded-full p-2">
+          <img src={urls[0]} alt="Post image" className="w-full h-full object-cover" draggable={false} />
+          <span className="absolute inset-0 bg-black/0 group-hover/img:bg-black/15 transition-colors" />
+          <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+            <span className="bg-black/50 backdrop-blur-sm rounded-full p-2">
               <ZoomIn className="w-4 h-4 text-white" />
             </span>
           </span>
@@ -53,38 +39,36 @@ export function PostImages({
     );
   }
 
-  // ── Multiple images: mosaic grid ──
-  const shown = urls.slice(0, 4);
-  const extra = urls.length - 4;
-
+  // 2 or 3+ images: proportional grid
   return (
-    <div className={`mt-3 rounded-xl overflow-hidden ${photoGridClass(urls.length)}`}>
+    <div className={`mt-3 ${containerWidth} ${cols}`}>
       {shown.map((url, i) => {
-        // For exactly 3 images, the first tile spans both rows on the left.
-        const isHero = urls.length === 3 && i === 0;
-        const spanClass = isHero ? "row-span-2" : "";
-        const isLastWithExtra = i === 3 && extra > 0;
+        const isLastWithExtra = i === 2 && extra > 0;
         return (
           <button
             key={`${url}-${i}`}
             type="button"
             onClick={() => onOpen(i)}
-            className={`group/img relative block w-full focus:outline-none ${spanClass}`}
+            className="group/img relative block w-full aspect-square rounded-lg overflow-hidden focus:outline-none"
             aria-label={`View image ${i + 1}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={url}
               alt={`Post image ${i + 1}`}
-              className={`w-full object-cover ${isHero ? "h-full min-h-[160px]" : "h-40"}`}
+              className="w-full h-full object-cover"
               draggable={false}
             />
-            {/* hover overlay — always rendered */}
             <span className="absolute inset-0 bg-black/0 group-hover/img:bg-black/15 transition-colors" />
-            {/* +N badge on top — only when there are more than 4 images */}
-            {isLastWithExtra && (
+            {isLastWithExtra ? (
               <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-white text-xl font-semibold">
                 +{extra}
+              </span>
+            ) : (
+              <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                <span className="bg-black/50 backdrop-blur-sm rounded-full p-2">
+                  <ZoomIn className="w-4 h-4 text-white" />
+                </span>
               </span>
             )}
           </button>

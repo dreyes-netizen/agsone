@@ -9,11 +9,17 @@ import {
   Award, Trophy, Sparkles, History, FileText, Tag, Briefcase,
 } from "lucide-react";
 
-type Shoutout = {
+type ShoutoutPost = {
   id: string;
   content: string;
   createdAt: string;
-  author: { id: string; displayName: string; avatarUrl: string | null };
+  imageUrls: string[];
+  author: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null };
+};
+
+type Shoutout = {
+  id: string;
+  post: ShoutoutPost;
 };
 
 type Employee = {
@@ -180,7 +186,7 @@ export default function EmployeeProfilePage() {
     try {
       await apiFetch("/api/feed", {
         method: "POST",
-        body: JSON.stringify({ type: "SHOUTOUT", content: shoutoutText, recipientId: id }),
+        body: JSON.stringify({ type: "SHOUTOUT", content: shoutoutText, recipientIds: [id] }),
       });
       setShoutoutSuccess(true);
       setShoutoutText("");
@@ -326,27 +332,32 @@ export default function EmployeeProfilePage() {
             </p>
           </div>
           <div className="space-y-3">
-            {employee.shoutoutsReceived.map((s) => {
-              const initials = s.author.displayName.charAt(0).toUpperCase();
-              return (
-                <div key={s.id} className="flex gap-3 p-3 bg-amber-50/60 rounded-xl border border-amber-100">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
-                    {s.author.avatarUrl
-                      ? <img src={s.author.avatarUrl} alt={s.author.displayName} className="w-full h-full object-cover" />
-                      : initials}
-                  </div>
+            {employee.shoutoutsReceived.map((s) => (
+              <div key={s.id} className="p-3 bg-amber-50/60 rounded-xl border border-amber-100 space-y-2">
+                <div className="flex items-center gap-2">
+                  <a href={`/employees/${s.post.author.id}`} className="shrink-0">
+                    {s.post.author.avatarUrl
+                      ? <img src={s.post.author.avatarUrl} alt={s.post.author.displayName} className="w-8 h-8 rounded-full object-cover" />
+                      : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">{s.post.author.displayName.charAt(0).toUpperCase()}</div>
+                    }
+                  </a>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-gray-900">{s.author.displayName}</span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    <div className="flex items-center gap-2">
+                      <a href={`/employees/${s.post.author.id}`} className="text-xs font-semibold text-gray-900 hover:underline whitespace-nowrap truncate">
+                        {s.post.author.displayName}
+                      </a>
+                      <span className="text-xs text-gray-400 ml-auto shrink-0 whitespace-nowrap">
+                        {new Date(s.post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-0.5 leading-relaxed">{s.content}</p>
+                    {s.post.author.department && (
+                      <span className="text-xs text-zinc-400 font-medium block">{s.post.author.department.name}</span>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+                <p className="text-sm text-gray-600 leading-relaxed italic whitespace-pre-wrap">&ldquo;{s.post.content}&rdquo;</p>
+              </div>
+            ))}
           </div>
         </div>
       )}

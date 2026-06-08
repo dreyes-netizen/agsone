@@ -6,6 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
+import { GameResultOverlay } from "@/components/minigames/GameResultOverlay";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
 
@@ -985,22 +986,12 @@ function RightPanel({
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   const [rematching, setRematching] = useState(false);
-  const [h2h, setH2h] = useState<{ wins: number; losses: number; draws: number } | null>(null);
   const [muted, setMutedState] = useState(false);
   useEffect(() => { setMutedState(isMuted()); }, []);
 
   const rematchId = (session.state as { rematchSessionId?: string }).rematchSessionId;
   const rematchHostId = (session.state as { rematchHostId?: string }).rematchHostId;
   const iStartedRematch = !!rematchHostId && rematchHostId === myId;
-
-  // Head-to-head record vs this opponent, shown on the finished screen.
-  useEffect(() => {
-    if (session.status !== "FINISHED" || !opponent) return;
-    apiFetch<{ data: { wins: number; losses: number; draws: number } }>(`/api/minigames/stats?opponentId=${opponent.id}`)
-      .then(r => setH2h(r.data))
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.status, opponent?.id]);
 
   async function startRematch() {
     setRematching(true);
@@ -1099,16 +1090,6 @@ function RightPanel({
       {/* Actions */}
       {session.status === "FINISHED" && (
         <div className="space-y-2">
-          {h2h && opponent && (h2h.wins + h2h.losses + h2h.draws) > 0 && (
-            <p className="text-center text-xs text-gray-500">
-              vs {opponent.displayName}:{" "}
-              <span className="font-bold text-gray-700">
-                {h2h.wins}–{h2h.losses}{h2h.draws > 0 ? `–${h2h.draws}` : ""}
-              </span>
-              {h2h.wins > h2h.losses ? " · you lead" : h2h.wins < h2h.losses ? " · you trail" : " · all square"}
-            </p>
-          )}
-
           {rematchId ? (
             iStartedRematch ? (
               <button
@@ -1182,6 +1163,7 @@ export default function MinigameSessionPage() {
   const [moving, setMoving] = useState(false);
   const [forfeiting, setForfeiting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [h2h, setH2h] = useState<{ wins: number; losses: number; draws: number } | null>(null);
   const prevStatus = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1222,6 +1204,17 @@ export default function MinigameSessionPage() {
     }
     prevStatus.current = session.status;
   }, [session?.status, session?.winnerId, dbUser?.id]);
+
+  useEffect(() => {
+    if (!session || session.status !== "FINISHED") return;
+    const opponent = session.myRole === "host" ? session.guest : session.host;
+    if (!opponent) return;
+    apiFetch<{ data: { wins: number; losses: number; draws: number } }>(
+      `/api/minigames/stats?opponentId=${opponent.id}`
+    )
+      .then(r => setH2h(r.data))
+      .catch(() => {});
+  }, [session?.status, session?.guest?.id, session?.host?.id]);
 
   async function makeMove(data: unknown) {
     if (moving || !session) return;
@@ -1271,6 +1264,15 @@ export default function MinigameSessionPage() {
     <div className="space-y-4">
       {showHelp && <HowToPlayModal gameType={session.gameType} onClose={() => setShowHelp(false)} />}
 
+      {session.status === "FINISHED" && session.myRole !== "spectator" && (
+        <GameResultOverlay
+          session={session}
+          myId={dbUser?.id}
+          h2h={h2h}
+          onNavigate={router.push}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.push("/minigames")} className="text-sm text-gray-400 hover:text-gray-700 transition-colors font-medium">
@@ -1303,24 +1305,6 @@ export default function MinigameSessionPage() {
 
         {/* Game board */}
         <div className={`w-full lg:flex-1 min-w-0 bg-white border border-gray-200 rounded-2xl p-3 lg:p-6 transition-opacity ${moving ? "opacity-70 pointer-events-none" : ""}`}>
-          {session.status === "FINISHED" && (() => {
-            const won = !!dbUser && session.winnerId === dbUser.id;
-            const draw = !session.winnerId;
-            return (
-              <div className={`mb-4 rounded-2xl py-4 text-center ${
-                draw ? "bg-amber-50 border border-amber-200" :
-                won ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"
-              }`}>
-                <div className="text-4xl mb-1">{draw ? "🤝" : won ? "🏆" : "💪"}</div>
-                <p className={`text-lg font-black ${draw ? "text-amber-700" : won ? "text-emerald-700" : "text-rose-600"}`}>
-                  {draw ? "It's a draw!" : won ? "Victory!" : "Good game!"}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {draw ? "Evenly matched." : won ? "Nicely played." : "Better luck next time."}
-                </p>
-              </div>
-            );
-          })()}
           {session.status === "WAITING" && session.gameType !== "BATTLESHIP" ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <span className="text-5xl mb-4">⏳</span>

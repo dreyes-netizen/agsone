@@ -315,7 +315,7 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
   return (
     <div className="flex flex-col items-center py-2 gap-2">
       <style>{`@keyframes c4drop{0%{transform:translateY(-230px);opacity:.5}70%{transform:translateY(0)}85%{transform:translateY(-7px)}100%{transform:translateY(0);opacity:1}}.c4-drop{animation:c4drop .35s ease-out}`}</style>
-      <div className="bg-indigo-700 p-2 sm:p-2.5 rounded-2xl shadow-md w-full" style={{ width: "min(100%, 320px)" }}>
+      <div className="bg-indigo-700 p-2 sm:p-2.5 rounded-2xl shadow-md w-full" style={{ width: "min(100%, calc(100vw - 32px))" }}>
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-1">
           {Array.from({ length: 7 }, (_, col) => (
             <button
@@ -571,7 +571,7 @@ function DnBBoard({ session, onMove }: { session: Session; onMove: (data: unknow
           style={{
             gridTemplateColumns: Array.from({ length: gridCols }, (_, i) => i % 2 === 0 ? "12px" : "1fr").join(" "),
             gridTemplateRows: Array.from({ length: gridRows }, (_, i) => i % 2 === 0 ? "12px" : "1fr").join(" "),
-            width: "min(100%, 360px)",
+            width: "min(100%, calc(100vw - 32px))",
             aspectRatio: "1",
           }}
         >
@@ -647,7 +647,7 @@ function BSGrid({
   onShoot?: (cell: number) => void;
 }) {
   return (
-    <div className="w-full" style={{ maxWidth: "320px" }}>
+    <div className="w-full overflow-x-auto" style={{ maxWidth: "min(320px, calc(100vw - 32px))" }}>
       <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 text-center">{label}</p>
       <div className="grid gap-0.5 w-full" style={{ gridTemplateColumns: `repeat(${BS_GRID}, 1fr)` }}>
         {Array.from({ length: BS_GRID * BS_GRID }, (_, i) => {
@@ -713,7 +713,7 @@ function BSBoard({ session, onMove }: { session: Session; onMove: (data: unknown
       <div className="space-y-4 py-2">
         <p className="text-sm font-bold text-gray-700 text-center">Deploy your fleet</p>
         <div className="flex justify-center">
-          <div className="grid gap-0.5 w-full" style={{ gridTemplateColumns: `repeat(${BS_GRID}, 1fr)`, maxWidth: "320px" }}>
+          <div className="grid gap-0.5 w-full" style={{ gridTemplateColumns: `repeat(${BS_GRID}, 1fr)`, maxWidth: "min(320px, calc(100vw - 32px))" }}>
             {Array.from({ length: BS_GRID * BS_GRID }, (_, i) => {
               const ship = pending.find(s => s.cells.includes(i));
               return (
@@ -1414,7 +1414,7 @@ export default function MinigameSessionPage() {
       <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
 
         {/* Game board */}
-        <div className={`w-full lg:flex-1 min-w-0 bg-white border border-gray-200 rounded-2xl p-3 lg:p-6 transition-opacity ${moving ? "opacity-70 pointer-events-none" : ""}`}>
+        <div className={`w-full lg:flex-1 min-w-0 bg-white border border-gray-200 rounded-2xl p-2 lg:p-6 transition-opacity ${moving ? "opacity-70 pointer-events-none" : ""}`}>
           {session.status === "WAITING" && session.gameType !== "BATTLESHIP" ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <span className="text-5xl mb-4">⏳</span>

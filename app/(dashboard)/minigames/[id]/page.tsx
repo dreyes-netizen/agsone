@@ -52,6 +52,18 @@ function Avatar({ player, size = 40 }: { player: Player | Employee; size?: numbe
   );
 }
 
+// ─── Waiting Dots ─────────────────────────────────────────────────────────────
+
+// Animates · → · · → · · · to show the inactive player is waiting.
+function WaitingDots() {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(x => (x + 1) % 3), 500);
+    return () => clearInterval(t);
+  }, []);
+  return <span aria-hidden>{"·".repeat(tick + 1)}</span>;
+}
+
 // ─── Invite Panel ─────────────────────────────────────────────────────────────
 
 function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: ReturnType<typeof useApiClient>["apiFetch"] }) {
@@ -898,14 +910,36 @@ function MobileBar({
     <div className="space-y-2">
       {/* Players + status in one compact row */}
       <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
-        <Avatar player={me ?? session.host} size={28} />
-        <span className="text-sm font-semibold text-gray-900 truncate" style={{ maxWidth: 80 }}>{me?.displayName ?? "You"}</span>
+        {/* Me */}
+        <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && isMyTurn ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}>
+          <Avatar player={me ?? session.host} size={28} />
+        </div>
+        <div className="flex flex-col min-w-0" style={{ maxWidth: 80 }}>
+          <span className="text-sm font-semibold text-gray-900 truncate">{me?.displayName ?? "You"}</span>
+          {session.status === "ACTIVE" && isMyTurn && (
+            <span className="text-[9px] text-indigo-600 font-bold leading-tight">● Your turn</span>
+          )}
+        </div>
+
         <span className="text-[10px] text-gray-400 shrink-0">vs</span>
-        {opponent
-          ? <Avatar player={opponent} size={28} />
-          : <div className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 shrink-0" />}
-        <span className="text-sm font-semibold text-gray-900 truncate flex-1" style={{ maxWidth: 80 }}>{opponent?.displayName ?? "Waiting…"}</span>
-        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColor}`}>{statusLabel}</span>
+
+        {/* Opponent */}
+        <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && !isMyTurn && opponent ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}>
+          {opponent
+            ? <Avatar player={opponent} size={28} />
+            : <div className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300" />}
+        </div>
+        <div className="flex flex-col flex-1 min-w-0" style={{ maxWidth: 80 }}>
+          <span className="text-sm font-semibold text-gray-900 truncate">{opponent?.displayName ?? "Waiting…"}</span>
+          {session.status === "ACTIVE" && !isMyTurn && opponent && (
+            <span className="text-[9px] text-indigo-600 font-bold leading-tight">● Their turn</span>
+          )}
+        </div>
+
+        {/* Status pill — only for WAITING/FINISHED states */}
+        {session.status !== "ACTIVE" && (
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColor}`}>{statusLabel}</span>
+        )}
       </div>
 
       {/* Wager */}
@@ -1026,16 +1060,24 @@ function RightPanel({
 
   return (
     <div className="space-y-3">
-      {/* Players */}
+      {/* Players — active player glows, inactive dims */}
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         {/* Me */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          {me ? <Avatar player={me} /> : <div className="w-10 h-10 rounded-full bg-gray-100" />}
+        <div className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 transition-opacity ${session.status === "ACTIVE" && !isMyTurn ? "opacity-50" : ""}`}>
+          <div className={session.status === "ACTIVE" && isMyTurn ? "rounded-full ring-4 ring-indigo-100" : "rounded-full"}>
+            {me ? <Avatar player={me} /> : <div className="w-10 h-10 rounded-full bg-gray-100" />}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 truncate">{me?.displayName ?? "You"}</p>
-            <p className="text-xs text-gray-400">{session.myRole === "host" ? "Host · X / ●1" : "Guest · O / ●2"}</p>
+            {session.status === "ACTIVE" && isMyTurn ? (
+              <p className="text-xs text-indigo-600 font-semibold">▶ Your turn</p>
+            ) : session.status === "ACTIVE" ? (
+              <p className="text-xs text-gray-400">Waiting <WaitingDots /></p>
+            ) : (
+              <p className="text-xs text-gray-400">{session.myRole === "host" ? "Host · X / ●1" : "Guest · O / ●2"}</p>
+            )}
           </div>
-          <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full">You</span>
+          <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">You</span>
         </div>
 
         {/* Vs divider */}
@@ -1046,23 +1088,33 @@ function RightPanel({
         </div>
 
         {/* Opponent */}
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className={`flex items-center gap-3 px-4 py-3 transition-opacity ${session.status === "ACTIVE" && isMyTurn ? "opacity-50" : ""}`}>
           {opponent ? (
-            <Avatar player={opponent} />
+            <div className={session.status === "ACTIVE" && !isMyTurn ? "rounded-full ring-4 ring-indigo-100" : "rounded-full"}>
+              <Avatar player={opponent} />
+            </div>
           ) : (
             <div className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300">?</div>
           )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 truncate">{opponent?.displayName ?? "Waiting…"}</p>
-            <p className="text-xs text-gray-400">{session.myRole === "host" ? "Guest · O / ●2" : "Host · X / ●1"}</p>
+            {session.status === "ACTIVE" && !isMyTurn ? (
+              <p className="text-xs text-indigo-600 font-semibold">▶ Their turn</p>
+            ) : session.status === "ACTIVE" ? (
+              <p className="text-xs text-gray-400">Waiting <WaitingDots /></p>
+            ) : (
+              <p className="text-xs text-gray-400">{session.myRole === "host" ? "Guest · O / ●2" : "Host · X / ●1"}</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Status badge */}
-      <div className={`rounded-xl px-4 py-2.5 text-center text-sm font-bold ${statusColor}`}>
-        {statusLabel}
-      </div>
+      {/* Status badge — only shown while waiting for opponent */}
+      {session.status === "WAITING" && (
+        <div className="rounded-xl px-4 py-2.5 text-center text-sm font-bold text-gray-600 bg-gray-100">
+          Waiting for opponent…
+        </div>
+      )}
 
       {/* Wager */}
       {session.pointsWager > 0 && (

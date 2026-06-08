@@ -184,7 +184,7 @@ export default function MedicinePage() {
       {/* My Requests tab */}
       {activeTab === "requests" && (
         myRequests.length === 0 ? (
-          <div className="text-center text-gray-400 py-16">You haven't requested any medicines yet.</div>
+          <div className="text-center text-gray-400 py-16">You haven&apos;t requested any medicines yet.</div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">

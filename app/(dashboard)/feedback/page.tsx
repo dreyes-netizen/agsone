@@ -71,6 +71,11 @@ const STATUS_CHIP: Record<string, string> = {
   RESOLVED: "bg-emerald-100 text-emerald-700",
 };
 
+// MIN-1: moved to module level
+function isHrRole(role: string) {
+  return role === "HR_ADMIN" || role === "MANAGER";
+}
+
 export default function FeedbackPage() {
   const { user, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
@@ -89,11 +94,17 @@ export default function FeedbackPage() {
   // Thread state
   const [thread, setThread] = useState<FeedbackThread | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
+  const [threadError, setThreadError] = useState<string | null>(null); // CR-2
   const [replyBody, setReplyBody] = useState("");
   const [sending, setSending] = useState(false);
 
+  // CR-3: remember previous panel before entering compose
+  const [prevPanel, setPrevPanel] = useState<PanelState>({ mode: "welcome" });
+
+  // CR-1: clear listLoading when auth is done but user is null
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) { setListLoading(false); return; }
     apiFetch<{ data: FeedbackItem[] }>("/api/feedback")
       .then((r) => setItems(r.data))
       .catch(console.error)
@@ -101,25 +112,42 @@ export default function FeedbackPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
+  // CR-2: surface thread fetch errors instead of swallowing them
   useEffect(() => {
-    if (panel.mode !== "thread") { setThread(null); return; }
+    if (panel.mode !== "thread") { setThread(null); setThreadError(null); return; }
     setThreadLoading(true);
+    setThreadError(null);
     apiFetch<{ data: FeedbackThread }>(`/api/feedback/${panel.id}`)
       .then((r) => setThread(r.data))
-      .catch(console.error)
+      .catch((err) => setThreadError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setThreadLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panel]);
 
+  // CR-3: save current panel before switching to compose
   function startCompose() {
+    setPrevPanel(panel);
     setTitle(""); setCategory(""); setBody(""); setIsAnonymous(false);
     setPanel({ mode: "compose" });
   }
 
+  // CR-3 + IMP-3: restore previous panel and clear replyBody on discard
   function discardCompose() {
     setTitle(""); setCategory(""); setBody(""); setIsAnonymous(false);
-    setPanel({ mode: "welcome" });
+    setReplyBody("");
+    setPanel(prevPanel);
   }
+
+  // IMP-6: Escape key dismisses compose
+  useEffect(() => {
+    if (panel.mode !== "compose") return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") discardCompose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panel.mode]);
 
   async function handleSubmit() {
     if (!title || !category || !body || submitting) return;
@@ -147,6 +175,14 @@ export default function FeedbackPage() {
         body: JSON.stringify({ body: replyBody }),
       });
       setThread((prev) => prev ? { ...prev, replies: [...prev.replies, res.data] } : prev);
+      // IMP-1: update reply count in left panel list
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === thread.id
+            ? { ...item, _count: { replies: item._count.replies + 1 }, updatedAt: new Date().toISOString() }
+            : item
+        )
+      );
       setReplyBody("");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to send");
@@ -156,7 +192,6 @@ export default function FeedbackPage() {
   }
 
   const activeId = panel.mode === "thread" ? panel.id : null;
-  const isHrRole = (role: string) => role === "HR_ADMIN" || role === "MANAGER";
 
   return (
     <div className="flex flex-col h-[calc(100vh-112px)]">
@@ -275,8 +310,9 @@ export default function FeedbackPage() {
             </div>
           )}
 
+          {/* IMP-4: flex-1 min-h-0 so compose scrolls on short viewports */}
           {panel.mode === "compose" && (
-            <div className="p-6 flex flex-col gap-4 max-w-xl overflow-y-auto">
+            <div className="p-6 flex flex-col gap-4 max-w-xl overflow-y-auto flex-1 min-h-0">
               <h2 className="text-base font-bold text-gray-900">New Feedback</h2>
 
               <div>
@@ -371,7 +407,8 @@ export default function FeedbackPage() {
 
           {panel.mode === "thread" && (
             <>
-              {threadLoading || !thread ? (
+              {/* CR-2: separate loading / error / empty / content states */}
+              {threadLoading ? (
                 <div className="p-6 space-y-4">
                   <div className="h-5 w-24 bg-gray-100 rounded animate-pulse" />
                   <div className="h-7 w-64 bg-gray-100 rounded animate-pulse" />
@@ -381,7 +418,12 @@ export default function FeedbackPage() {
                     ))}
                   </div>
                 </div>
-              ) : (
+              ) : threadError ? (
+                <div className="flex flex-col items-center justify-center flex-1 p-10 text-center">
+                  <p className="text-sm font-semibold text-red-600 mb-2">Failed to load thread</p>
+                  <p className="text-xs text-gray-400">{threadError}</p>
+                </div>
+              ) : !thread ? null : (
                 <div className="flex flex-col h-full overflow-hidden">
                   <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-start justify-between gap-3">
@@ -487,6 +529,13 @@ export default function FeedbackPage() {
                           rows={2}
                           value={replyBody}
                           onChange={(e) => setReplyBody(e.target.value)}
+                          // IMP-2: Enter submits reply (Shift+Enter for newline)
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleReply();
+                            }
+                          }}
                           placeholder="Reply to HR..."
                           className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 resize-none"
                         />

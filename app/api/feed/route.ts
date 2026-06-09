@@ -94,9 +94,11 @@ const postSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("SHOUTOUT"),
+    title: z.string().max(120).optional(),
     content: z.string().min(1).max(500),
     recipientIds: z.array(z.string().uuid()).min(1).max(10),
     imageUrls: z.array(z.string().url()).max(4).optional(),
+    deptOnly: z.boolean().optional(),
   }),
 ]);
 
@@ -137,10 +139,12 @@ export async function POST(req: NextRequest) {
     const post = await prisma.socialPost.create({
       data: {
         authorId: user.id,
+        title: parsed.data.title ?? null,
         content: parsed.data.content,
         type: "SHOUTOUT",
         flair: "RECOGNITION",
         imageUrls: parsed.data.imageUrls ?? [],
+        departmentId: parsed.data.deptOnly ? user.departmentId : null,
         shoutoutRecipients: {
           create: parsed.data.recipientIds.map((userId) => ({ userId })),
         },

@@ -139,7 +139,6 @@ export default function DashboardPage() {
 
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
-  const shoutouts = feedPosts.filter((p) => p.type === "SHOUTOUT").slice(0, 3);
   const availableMissions = missions.filter((m) => !m.myCompletion).slice(0, 2);
 
   const deptChallenge = (() => {
@@ -222,31 +221,6 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-
-          {/* Shoutouts widget (derived from feed, no extra fetch) */}
-          {!loading && shoutouts.length > 0 && (
-            <div>
-              <SectionHeader title="Shoutouts" href="/shoutouts" />
-              <div className="bg-white rounded-xl border border-zinc-100 divide-y divide-zinc-50">
-                {shoutouts.map((post) => (
-                  <div key={post.id} className="flex items-center gap-2 px-4 py-3 hover:bg-zinc-50/60 transition-colors">
-                    <Link href={`/employees/${post.author.id}`} className="shrink-0"><Avatar url={post.author.avatarUrl} name={post.author.displayName} size="w-7 h-7" /></Link>
-                    <Link href={`/employees/${post.author.id}`} className="text-xs font-medium text-zinc-700 shrink-0 hover:underline">{post.author.displayName}</Link>
-                    <span className="text-xs text-zinc-400 shrink-0">→</span>
-                    {post.shoutoutRecipients.slice(0, 1).map((r) => (
-                      <Link key={r.user.id} href={`/employees/${r.user.id}`} className="shrink-0"><Avatar url={r.user.avatarUrl} name={r.user.displayName} size="w-7 h-7" /></Link>
-                    ))}
-                    {post.shoutoutRecipients.length > 0 && (
-                      <Link href={`/employees/${post.shoutoutRecipients[0].user.id}`} className="text-xs font-medium text-zinc-700 shrink-0 hover:underline">
-                        {post.shoutoutRecipients[0].user.displayName}{post.shoutoutRecipients.length > 1 ? ` +${post.shoutoutRecipients.length - 1}` : ""}
-                      </Link>
-                    )}
-                    <span className="text-xs text-zinc-400 truncate min-w-0">{post.content}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Missions widget */}
           <div>

@@ -266,6 +266,8 @@ export default function FeedPage() {
   const [pollMode, setPollMode] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [shoutoutMode, setShoutoutMode] = useState(false);
+  const [shoutoutTitle, setShoutoutTitle] = useState("");
+  const [shoutoutDeptOnly, setShoutoutDeptOnly] = useState(false);
   const [recipients, setRecipients] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
   const [recipientSearch, setRecipientSearch] = useState("");
   const [recipientSearchOpen, setRecipientSearchOpen] = useState(false);
@@ -387,10 +389,18 @@ export default function FeedPage() {
         if (recipients.length === 0 || !newPost.trim()) return;
         await apiFetch("/api/feed", {
           method: "POST",
-          body: JSON.stringify({ type: "SHOUTOUT", content: newPost.trim(), recipientIds: recipients.map((r) => r.id), imageUrls }),
+          body: JSON.stringify({
+            type: "SHOUTOUT",
+            title: shoutoutTitle.trim() || undefined,
+            content: newPost.trim(),
+            recipientIds: recipients.map((r) => r.id),
+            imageUrls,
+            deptOnly: shoutoutDeptOnly,
+          }),
         });
         setShoutoutMode(false);
         setRecipients([]); setRecipientSearch(""); setRecipientSearchOpen(false);
+        setShoutoutTitle(""); setShoutoutDeptOnly(false);
       } else {
         if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
         const content = buildContent(newPost.trim());
@@ -884,6 +894,16 @@ export default function FeedPage() {
                   </div>
                 </div>
               )}
+              {shoutoutMode && (
+                <input
+                  type="text"
+                  placeholder="Recognition title (optional)"
+                  value={shoutoutTitle}
+                  onChange={(e) => setShoutoutTitle(e.target.value)}
+                  maxLength={120}
+                  className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 placeholder:text-zinc-400 transition-all"
+                />
+              )}
               <textarea
                 ref={composerRef}
                 placeholder={shoutoutMode ? "What did they do that deserves recognition?" : "Share something with the team… (type @ to mention)"}
@@ -990,6 +1010,32 @@ export default function FeedPage() {
               </div>
             </div>
           )}
+          {shoutoutMode && dbUser?.department && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-400 font-medium shrink-0">Visible to:</span>
+              <div className="flex items-center gap-1 p-0.5 bg-zinc-100 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShoutoutDeptOnly(false)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    !shoutoutDeptOnly ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                  }`}
+                >
+                  Everyone
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShoutoutDeptOnly(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    shoutoutDeptOnly ? "bg-white text-amber-700 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                  }`}
+                >
+                  <span>🏢</span>
+                  {dbUser.department.name} only
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             {/* Hidden file input */}
@@ -1032,7 +1078,7 @@ export default function FeedPage() {
                 const next = !shoutoutMode;
                 setShoutoutMode(next);
                 if (next) { setPollMode(false); setPollOptions(["", ""]); }
-                else { setRecipients([]); setRecipientSearch(""); }
+                else { setRecipients([]); setRecipientSearch(""); setShoutoutTitle(""); setShoutoutDeptOnly(false); }
               }}
               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
                 shoutoutMode
@@ -1192,6 +1238,20 @@ export default function FeedPage() {
                     </span>
                     <div className="h-px flex-1 bg-amber-200" />
                   </div>
+
+                  {/* Title + department badge */}
+                  {(post.title || post.department) && (
+                    <div className="flex flex-col items-center gap-1.5">
+                      {post.title && (
+                        <p className="text-sm font-bold text-amber-800 text-center">{post.title}</p>
+                      )}
+                      {post.department && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                          🏢 {post.department.name} only
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Recipients + message */}
                   {editingPost?.id === post.id ? (
@@ -1655,6 +1715,18 @@ export default function FeedPage() {
             </div>
           );
         })
+      )}
+
+      {!loading && nextCursor && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? "Loading…" : "Load more posts"}
+          </button>
+        </div>
       )}
         </div>
       </div>

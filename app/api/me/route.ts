@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       displayName: true,
       email: true,
       avatarUrl: true,
+      bannerUrl: true,
       role: true,
       pointsBalance: true,
       level: true,
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
 const patchSchema = z.object({
   bio: z.string().max(500).optional(),
   skills: z.array(z.string().min(1).max(50)).max(20).optional(),
+  bannerUrl: z.string().url().nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -54,7 +56,7 @@ export async function PATCH(req: NextRequest) {
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: parsed.data,
-    select: { bio: true, skills: true },
+    select: { bio: true, skills: true, bannerUrl: true },
   });
 
   return NextResponse.json({ data: updated });

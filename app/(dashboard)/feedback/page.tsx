@@ -141,7 +141,7 @@ export default function FeedbackPage() {
           {feedbacks.map((f) => (
             <button
               key={f.id}
-              onClick={() => router.push(`/feedback/${f.id}`)}
+              onClick={() => router.push(`/feedback`)}
               className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-gray-200 hover:shadow-md transition-all"
             >
               <div className="flex items-start justify-between gap-3">

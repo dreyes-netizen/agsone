@@ -1,10 +1,12 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X } from "lucide-react";
+import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Camera } from "lucide-react";
 
 type UserBadge = {
   id: string;
@@ -12,11 +14,34 @@ type UserBadge = {
   badge: { name: string; description: string | null };
 };
 
+type MissionItem = {
+  id: string;
+  title: string;
+  pointsReward: number;
+  myCompletion: { status: "PENDING" | "APPROVED" | "REJECTED" } | null;
+};
+
+type ShoutoutEntry = {
+  id: string;
+  post: {
+    id: string;
+    content: string;
+    createdAt: string;
+    author: {
+      id: string;
+      displayName: string;
+      avatarUrl: string | null;
+      department: { name: string } | null;
+    };
+  };
+};
+
 type UserProfile = {
   id: string;
   displayName: string;
   email: string;
   avatarUrl: string | null;
+  bannerUrl: string | null;
   role: string;
   pointsBalance: number;
   level: number;
@@ -56,6 +81,37 @@ type PointsData = {
 type TimelineEntry =
   | { kind: "earn"; data: PointTx }
   | { kind: "redeem"; data: RedemptionTx };
+
+function getDaysUntil(isoDate: string): number {
+  const now = new Date();
+  const d = new Date(isoDate);
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+  if (next.getTime() < todayMidnight.getTime()) next.setFullYear(now.getFullYear() + 1);
+  return Math.round((next.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getAnniversaryYear(hireDate: string): number {
+  const now = new Date();
+  const hire = new Date(hireDate);
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const thisYearDate = new Date(now.getFullYear(), hire.getMonth(), hire.getDate());
+  return thisYearDate.getTime() < todayMidnight.getTime()
+    ? now.getFullYear() + 1 - hire.getFullYear()
+    : now.getFullYear() - hire.getFullYear();
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function getTenure(hireDate: string): string {
+  const years = Math.floor((Date.now() - new Date(hireDate).getTime()) / (1000 * 60 * 60 * 24 * 365));
+  if (years < 1) return "< 1 yr at AGS";
+  return `${years} yr${years > 1 ? "s" : ""} at AGS`;
+}
 
 const txTypeLabel: Record<string, { label: string; color: string }> = {
   MANUAL_AWARD: { label: "Award",      color: "text-emerald-600" },
@@ -201,18 +257,27 @@ export default function ProfilePage() {
   const [skillInput, setSkillInput] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
+  const [missions, setMissions] = useState<MissionItem[] | null>(null);
+  const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerError, setBannerError] = useState("");
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (authLoading || !authUser) return;
     Promise.all([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: PointsData }>("/api/me/points"),
-    ]).then(([me, pts]) => {
+      apiFetch<{ data: MissionItem[] }>("/api/missions").catch(() => ({ data: [] as MissionItem[] })),
+      apiFetch<{ data: ShoutoutEntry[] }>("/api/me/shoutouts").catch(() => ({ data: [] as ShoutoutEntry[] })),
+    ]).then(([me, pts, miss, shouts]) => {
       setProfile(me.data);
       setPointsData(pts.data);
       setBioEdit(me.data.bio ?? "");
       setSkillsEdit(me.data.skills ?? []);
-
+      setMissions(miss.data);
+      setShoutouts(shouts.data);
     }).catch(() => {
       // intentional: stop loading spinner on fetch failure
     }).finally(() => {
@@ -247,6 +312,24 @@ export default function ProfilePage() {
     setIsEditing(false);
   }
 
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerUploading(true);
+    setBannerError("");
+    try {
+      const url = await uploadToCloudinary(file);
+      await apiFetch("/api/me", { method: "PATCH", body: JSON.stringify({ bannerUrl: url }) });
+      setProfile((p) => p ? { ...p, bannerUrl: url } : p);
+    } catch {
+      setBannerError("Banner upload failed. Please try again.");
+      setTimeout(() => setBannerError(""), 3000);
+    } finally {
+      setBannerUploading(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = "";
+    }
+  }
+
   function handleSkillKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -259,6 +342,17 @@ export default function ProfilePage() {
       setSkillsEdit(skillsEdit.slice(0, -1));
     }
   }
+
+  useEffect(() => {
+    if (!profile?.department) return;
+    apiFetch<{ data: Array<{ rank: number; isCurrentUser: boolean }> }>(
+      `/api/leaderboard?departmentId=${profile.department.id}`
+    ).then((res) => {
+      const me = res.data.find((e) => e.isCurrentUser);
+      if (me) setDeptRank({ rank: me.rank, total: res.data.length });
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.department?.id]);
 
   useEffect(() => {
     if (activeTab !== "notifications" || notifPrefs !== null) return;
@@ -297,13 +391,33 @@ export default function ProfilePage() {
   const levelPct = Math.min(100, (pointsIntoLevel / POINTS_PER_LEVEL) * 100);
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5">
 
       {/* ── Profile card ── */}
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        {/* Top accent */}
-        <div className="h-24 bg-gradient-to-br from-navy-500 to-violet-600 relative">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+        {/* Top accent — click to upload banner */}
+        <div
+          className="h-24 bg-gradient-to-br from-navy-500 to-violet-600 relative group cursor-pointer"
+          onClick={() => bannerInputRef.current?.click()}
+        >
+          {profile.bannerUrl ? (
+            <img src={profile.bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+          )}
+          <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${bannerUploading ? "bg-black/50 opacity-100" : "bg-black/30 opacity-0 group-hover:opacity-100"}`}>
+            {bannerUploading
+              ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <Camera className="w-5 h-5 text-white" />
+            }
+          </div>
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleBannerUpload}
+          />
         </div>
 
         <div className="px-6 pb-6 relative">
@@ -323,6 +437,11 @@ export default function ProfilePage() {
                 {profile.department && (
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
                     {profile.department.name}
+                  </span>
+                )}
+                {profile.hireDate && (
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700">
+                    {getTenure(profile.hireDate)}
                   </span>
                 )}
               </div>
@@ -353,6 +472,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {bannerError && (
+        <p className="text-xs text-red-500 text-center -mt-3">{bannerError}</p>
+      )}
+
       {/* ── Tab bar ── */}
       <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
         {(["overview", "points", "badges", "notifications"] as const).map((tab) => (
@@ -370,6 +493,11 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      {/* ── Two-column layout ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+        {/* ── Left column: tab content ── */}
+        <div className="space-y-5 min-w-0">
+
       {/* ── Overview tab ── */}
       {activeTab === "overview" && (
         <>
@@ -377,23 +505,53 @@ export default function ProfilePage() {
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { icon: Coins,  value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600", bg: "bg-navy-50" },
-              { icon: Star,   value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50" },
-              { icon: Flame,  value: profile.streakDays,                     label: "Streak (days)",  color: "text-orange-500", bg: "bg-orange-50" },
-              { icon: Medal,  value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50" },
-            ].map(({ icon: Icon, value, label, color, bg }) => (
+              { icon: Coins, value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600",   bg: "bg-navy-50",   hint: null },
+              { icon: Star,  value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50", hint: null },
+              { icon: Flame, value: profile.streakDays,                     label: "Streak (days)",  color: "text-orange-500", bg: "bg-orange-50",
+                hint: profile.streakDays > 0 ? "Log in tomorrow to keep it going!" : "Log in daily to start a streak!" },
+              { icon: Medal, value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50",  hint: null },
+            ].map(({ icon: Icon, value, label, color, bg, hint }) => (
               <div key={label} className="bg-white rounded-xl border border-zinc-200 p-4 flex flex-col gap-2">
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
                   <Icon className={`w-4 h-4 ${color}`} />
                 </div>
                 <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
                 <p className="text-xs text-zinc-400 font-medium">{label}</p>
+                {hint && <p className="text-xs text-zinc-400 italic leading-tight">{hint}</p>}
               </div>
             ))}
           </div>
 
           {/* Minigames stats */}
           <MinigamesStatsCard />
+
+          {/* Active Missions */}
+          {missions && missions.filter(m => !m.myCompletion || m.myCompletion.status === "PENDING").length > 0 && (
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center justify-between">
+                <p className="text-sm font-semibold text-zinc-800">🎯 Active Missions</p>
+                <Link href="/dashboard" className="text-xs text-navy-600 hover:underline">Go to Dashboard →</Link>
+              </div>
+              <ul className="divide-y divide-zinc-100">
+                {missions
+                  .filter(m => !m.myCompletion || m.myCompletion.status === "PENDING")
+                  .slice(0, 3)
+                  .map((m) => (
+                    <li key={m.id} className="flex items-center gap-3 px-5 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-800 truncate">{m.title}</p>
+                        <p className="text-xs text-zinc-400">{m.pointsReward.toLocaleString()} pts</p>
+                      </div>
+                      {m.myCompletion?.status === "PENDING" ? (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">Pending</span>
+                      ) : (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">In Progress</span>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
 
           {/* Birthday */}
           <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4">
@@ -501,6 +659,37 @@ export default function ProfilePage() {
               )
             )}
           </div>
+
+          {/* Shoutouts Received */}
+          {shoutouts !== null && (
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center justify-between">
+                <p className="text-sm font-semibold text-zinc-800">💬 Shoutouts</p>
+                <Link href="/feed" className="text-xs text-navy-600 hover:underline">See all →</Link>
+              </div>
+              {shoutouts.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-zinc-400 italic">No shoutouts yet — keep up the great work!</p>
+              ) : (
+                <ul className="divide-y divide-zinc-100">
+                  {shoutouts.map((s) => (
+                    <li key={s.id} className="flex gap-3 px-5 py-3">
+                      <div className="w-8 h-8 rounded-full bg-navy-500 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+                        {s.post.author.avatarUrl
+                          ? <img src={s.post.author.avatarUrl} alt={s.post.author.displayName} className="w-full h-full object-cover" />
+                          : s.post.author.displayName.charAt(0).toUpperCase()
+                        }
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-zinc-800">{s.post.author.displayName}</p>
+                        <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">{s.post.content}</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">{new Date(s.post.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Save / Cancel — only in edit mode */}
           {isEditing && (
@@ -751,6 +940,125 @@ export default function ProfilePage() {
           ) : null}
         </div>
       )}
+
+        </div>{/* end left column */}
+
+        {/* ── Right sidebar ── */}
+        <div className="space-y-4 sticky top-6 self-start">
+
+          {/* Widget 0: Upcoming Milestone */}
+          {(() => {
+            const items: { emoji: string; label: string; daysUntil: number }[] = [];
+            const dayLabel = (d: number) => d === 0 ? "Today!" : `in ${d} day${d === 1 ? "" : "s"}`;
+            if (profile.birthday) {
+              const d = getDaysUntil(profile.birthday);
+              if (d <= 30) items.push({ emoji: "🎂", label: `Birthday ${dayLabel(d)}`, daysUntil: d });
+            }
+            if (profile.hireDate) {
+              const d = getDaysUntil(profile.hireDate);
+              if (d <= 30) {
+                const yr = getAnniversaryYear(profile.hireDate);
+                if (yr > 0) items.push({ emoji: "🎉", label: `${ordinal(yr)} anniversary ${dayLabel(d)}`, daysUntil: d });
+              }
+            }
+            if (items.length === 0) return null;
+            return (
+              <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4 space-y-2">
+                <p className="text-xs text-zinc-400 font-medium">Upcoming</p>
+                {items.map((item) => (
+                  <p key={item.label} className="text-sm font-semibold text-zinc-800">
+                    {item.emoji} {item.label}
+                  </p>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Widget 1: Department Rank */}
+          {profile.department && deptRank && (
+            <Link href="/leaderboard">
+              <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4 hover:border-zinc-300 transition-colors">
+                <p className="text-xs text-zinc-400 font-medium mb-2">Your Department Rank</p>
+                <p className="text-2xl font-black text-navy-600">#{deptRank.rank}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  in {profile.department.name} · of {deptRank.total}
+                </p>
+              </div>
+            </Link>
+          )}
+
+          {/* Widget 2: Recent Activity */}
+          {pointsData && pointsData.transactions.length > 0 && (
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+                <p className="text-xs font-semibold text-zinc-700">Recent Activity</p>
+                <button onClick={() => setActiveTab("points")} className="text-xs text-navy-600 hover:underline">
+                  View all →
+                </button>
+              </div>
+              <ul className="divide-y divide-zinc-100">
+                {pointsData.transactions.slice(0, 3).map((t) => {
+                  const positive = t.amount >= 0;
+                  const meta = txTypeLabel[t.type] ?? { label: t.type, color: "text-zinc-600" };
+                  return (
+                    <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className={`text-xs font-bold shrink-0 ${positive ? "text-emerald-600" : "text-rose-500"}`}>
+                        {positive ? "+" : ""}{t.amount}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-zinc-800 truncate">{t.note ?? meta.label}</p>
+                        <p className="text-xs text-zinc-400">{new Date(t.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {/* Widget 3: Quick Actions */}
+          <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+            <p className="px-4 py-3 text-xs font-semibold text-zinc-700 border-b border-zinc-100">Quick Actions</p>
+            <div className="divide-y divide-zinc-100">
+              {[
+                { href: "/marketplace", icon: ShoppingBag, label: "Redeem Points",   color: "text-violet-500" },
+                { href: "/minigames",   icon: Gamepad2,    label: "Play a Minigame", color: "text-indigo-500" },
+                { href: "/feed",        icon: Megaphone,   label: "Send a Shoutout", color: "text-emerald-500" },
+              ].map(({ href, icon: Icon, label, color }) => (
+                <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors">
+                  <Icon className={`w-4 h-4 shrink-0 ${color}`} />
+                  <span className="text-sm font-medium text-zinc-700">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Widget 4: Recent Badges */}
+          {profile.userBadges.length > 0 && (
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+                <p className="text-xs font-semibold text-zinc-700">Recent Badges</p>
+                <button onClick={() => setActiveTab("badges")} className="text-xs text-navy-600 hover:underline">
+                  See all →
+                </button>
+              </div>
+              <ul className="divide-y divide-zinc-100">
+                {profile.userBadges.slice(0, 2).map((ub) => (
+                  <li key={ub.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <Award className="w-4 h-4 text-amber-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-zinc-800 truncate">{ub.badge.name}</p>
+                      <p className="text-xs text-zinc-400">{new Date(ub.awardedAt).toLocaleDateString()}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+        </div>{/* end right sidebar */}
+      </div>{/* end grid */}
+
     </div>
   );
 }

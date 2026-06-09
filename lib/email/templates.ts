@@ -262,7 +262,7 @@ export function hrReplyEmail(
         <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;">${replyBody}</p>
       </div>
 
-      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/feedback/${feedbackId}"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/feedback"
          style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
         View Thread →
       </a>

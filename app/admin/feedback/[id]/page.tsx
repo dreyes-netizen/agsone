@@ -165,7 +165,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
                     <span className="text-xs font-semibold text-gray-700">{reply.author.displayName}</span>
                     <span className="text-[10px] text-gray-400">{new Date(reply.createdAt).toLocaleString()}</span>
                   </div>
-                  <div className={`px-4 py-3 rounded-2xl text-sm text-gray-800 ${isHr ? "bg-[#111827] text-white rounded-tr-none" : "bg-gray-100 rounded-tl-none"}`}>
+                  <div className={`px-4 py-3 rounded-2xl text-sm text-gray-800 whitespace-pre-wrap ${isHr ? "bg-[#111827] text-white rounded-tr-none" : "bg-gray-100 rounded-tl-none"}`}>
                     {reply.body}
                   </div>
                 </div>

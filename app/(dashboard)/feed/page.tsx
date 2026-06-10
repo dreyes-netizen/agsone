@@ -1364,17 +1364,16 @@ export default function FeedPage() {
                                 <div className="flex gap-2 mt-2">
                                   <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
                                   <div className="flex-1 flex gap-2">
-                                    <input
+                                    <textarea
                                       autoFocus
-                                      type="text"
+                                      rows={1}
                                       placeholder={`Reply to ${c.author.displayName}…`}
                                       value={replyDraft[c.id] ?? ""}
-                                      onChange={(e) => setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                                      onChange={(e) => { setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value })); autoResize(e.target); }}
                                       onKeyDown={(e) => {
-                                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitReply(post.id, c.id); }
                                         if (e.key === "Escape") setReplyingTo(null);
                                       }}
-                                      className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all"
+                                      className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all resize-none overflow-hidden"
                                     />
                                     <button
                                       onClick={() => submitReply(post.id, c.id)}
@@ -1409,15 +1408,12 @@ export default function FeedPage() {
                       <div className="flex gap-2.5 items-center pt-1">
                         <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
                         <div className="flex-1 flex gap-2">
-                          <input
-                            type="text"
+                          <textarea
+                            rows={1}
                             placeholder="Write a comment…"
                             value={commentDraft[post.id] ?? ""}
-                            onChange={(e) => setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(post.id); }
-                            }}
-                            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all"
+                            onChange={(e) => { setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value })); autoResize(e.target); }}
+                            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all resize-none overflow-hidden"
                           />
                           <button
                             onClick={() => submitComment(post.id)}
@@ -1641,17 +1637,16 @@ export default function FeedPage() {
                               <div className="flex gap-2 mt-2">
                                 <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
                                 <div className="flex-1 flex gap-2">
-                                  <input
+                                  <textarea
                                     autoFocus
-                                    type="text"
+                                    rows={1}
                                     placeholder={`Reply to ${c.author.displayName}…`}
                                     value={replyDraft[c.id] ?? ""}
-                                    onChange={(e) => setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                                    onChange={(e) => { setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value })); autoResize(e.target); }}
                                     onKeyDown={(e) => {
-                                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitReply(post.id, c.id); }
                                       if (e.key === "Escape") setReplyingTo(null);
                                     }}
-                                    className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all"
+                                    className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all resize-none overflow-hidden"
                                   />
                                   <button
                                     onClick={() => submitReply(post.id, c.id)}
@@ -1690,15 +1685,12 @@ export default function FeedPage() {
                     <div className="flex gap-2.5 items-center pt-1">
                       <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
                       <div className="flex-1 flex gap-2">
-                        <input
-                          type="text"
+                        <textarea
+                          rows={1}
                           placeholder="Write a comment…"
                           value={commentDraft[post.id] ?? ""}
-                          onChange={(e) => setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitComment(post.id); }
-                          }}
-                          className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all"
+                          onChange={(e) => { setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value })); autoResize(e.target); }}
+                          className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-400 transition-all resize-none overflow-hidden"
                         />
                         <button
                           onClick={() => submitComment(post.id)}

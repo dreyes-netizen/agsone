@@ -512,7 +512,7 @@ export default function FeedbackPage() {
                               </span>
                             </div>
                             <div
-                              className={`px-4 py-3 rounded-2xl text-sm ${
+                              className={`px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
                                 isHrReply
                                   ? "bg-gray-100 text-gray-800 rounded-tl-none"
                                   : "bg-[#111827] text-white rounded-tr-none"
@@ -535,28 +535,24 @@ export default function FeedbackPage() {
                         </p>
                       </div>
                     ) : (
-                      <div className="flex gap-3 items-end">
-                        <textarea
-                          rows={2}
-                          value={replyBody}
-                          onChange={(e) => setReplyBody(e.target.value)}
-                          // IMP-2: Enter submits reply (Shift+Enter for newline)
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleReply();
-                            }
-                          }}
-                          placeholder="Reply to HR..."
-                          className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 resize-none"
-                        />
-                        <button
-                          onClick={handleReply}
-                          disabled={!replyBody.trim() || sending}
-                          className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40 shrink-0"
-                        >
-                          <Send className="w-4 h-4" />
-                        </button>
+                      <div className="flex flex-col gap-1 flex-1">
+                        <div className="flex gap-3 items-end">
+                          <textarea
+                            rows={2}
+                            value={replyBody}
+                            onChange={(e) => setReplyBody(e.target.value)}
+                            placeholder="Reply to HR..."
+                            className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 resize-none"
+                          />
+                          <button
+                            onClick={handleReply}
+                            disabled={!replyBody.trim() || sending}
+                            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40 shrink-0"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-400 pl-1">Press the send button to submit</p>
                       </div>
                     )}
                   </div>

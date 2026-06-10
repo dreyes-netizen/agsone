@@ -2,12 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 
+/*
+ * EMPLOYEE SYNC — EXCEL FILE REQUIREMENTS
+ * ========================================
+ * Upload an .xlsx file exported from Sprout HR with the following columns.
+ * Column names must match exactly (including capitalization).
+ *
+ * REQUIRED COLUMNS:
+ *   Email             — Used to create the employee's login account
+ *   Employee ID       — Used to match and update existing employees (e.g. 1001)
+ *
+ * OPTIONAL COLUMNS (updated on every upload if present):
+ *   First Name        — Combined with Last Name to set the display name
+ *   Last Name         — Combined with First Name to set the display name
+ *   Middle Name       — Accepted but not stored (can be left in the file)
+ *   Birthday          — Date of birth (used for birthday milestone rewards)
+ *   Hire Date         — Start date (used for work anniversary rewards)
+ *   Department        — Department name; auto-created if it doesn't exist yet
+ *   Immediate Supervisor — Accepted but not stored (can be left in the file)
+ *
+ * SEPARATION / RESIGNATION:
+ *   Separation Date   — If this cell contains an actual date, the employee is
+ *                       marked inactive. Text values like "N/A" or "Not yet set"
+ *                       are ignored and the employee stays active.
+ *
+ * WHAT THIS UPLOAD DOES NOT CHANGE:
+ *   - Points balance, level, and streak
+ *   - App role (Employee / Manager / HR Admin)
+ *   - Profile photo, banner, bio, and skills
+ *
+ * HOW MATCHING WORKS:
+ *   1. Matches existing employees by Employee ID (primary)
+ *   2. Falls back to Email if no Employee ID match is found
+ *   Employees not found in the file at all are automatically deactivated.
+ */
+
 type ActiveRow = {
   email: string;
   displayName: string;
   hireDate: Date | null;
   birthday: Date | null;
   departmentName: string | null;
+  employeeId: string | null;
 };
 
 export async function POST(req: NextRequest) {
@@ -71,7 +107,8 @@ export async function POST(req: NextRequest) {
         const birthdayRaw = row["Birthday"];
         const birthday = birthdayRaw instanceof Date ? birthdayRaw : null;
         const departmentName = (row["Department"] as string | null)?.trim() ?? null;
-        activeRows.push({ email, displayName, hireDate, birthday, departmentName });
+        const employeeId = ((row["Employee #"] ?? row["Employee ID"]) as string | null)?.trim() || null;
+        activeRows.push({ email, displayName, hireDate, birthday, departmentName, employeeId });
       }
     }
 
@@ -91,15 +128,38 @@ export async function POST(req: NextRequest) {
     const departments = await prisma.department.findMany({ select: { id: true, name: true } });
     const deptByName = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
 
-    // Find which active emails already exist in DB (trim DB emails to avoid whitespace mismatches)
-    const existingUsers = await prisma.user.findMany({
-      where: { email: { in: activeRows.map((r) => r.email), mode: "insensitive" } },
-      select: { id: true, email: true },
-    });
-    const existingByEmail = new Map(existingUsers.map((u) => [u.email.toLowerCase().trim(), u.id]));
+    // --- Match existing employees: Employee ID first, email fallback ---
 
-    // Create pending accounts for new employees not yet in DB
-    const newRows = activeRows.filter((r) => !existingByEmail.has(r.email));
+    // Step 1: match by employeeId
+    const fileEmployeeIds = activeRows.map((r) => r.employeeId).filter((id): id is string => !!id);
+    const usersById = fileEmployeeIds.length > 0
+      ? await prisma.user.findMany({
+          where: { employeeId: { in: fileEmployeeIds } },
+          select: { id: true, employeeId: true },
+        })
+      : [];
+    const matchedByIdMap = new Map(usersById.map((u) => [u.employeeId!, u.id]));
+
+    // Step 2: for rows not matched by employeeId, fall back to email
+    const unmatchedRows = activeRows.filter((r) => !r.employeeId || !matchedByIdMap.has(r.employeeId));
+    const usersByEmail = unmatchedRows.length > 0
+      ? await prisma.user.findMany({
+          where: { email: { in: unmatchedRows.map((r) => r.email), mode: "insensitive" } },
+          select: { id: true, email: true },
+        })
+      : [];
+    const matchedByEmailMap = new Map(usersByEmail.map((u) => [u.email.toLowerCase().trim(), u.id]));
+
+    function getUserId(row: ActiveRow): string | undefined {
+      if (row.employeeId && matchedByIdMap.has(row.employeeId)) return matchedByIdMap.get(row.employeeId);
+      return matchedByEmailMap.get(row.email);
+    }
+
+    // All user IDs considered "in the file" (used for deactivation logic)
+    const inFileUserIds = new Set([...usersById.map((u) => u.id), ...usersByEmail.map((u) => u.id)]);
+
+    // Create accounts for employees not found by either method
+    const newRows = activeRows.filter((r) => !getUserId(r));
     let imported = 0;
     const failedEmails: string[] = [];
     for (const row of newRows) {
@@ -115,6 +175,7 @@ export async function POST(req: NextRequest) {
             hireDate: row.hireDate,
             birthday: row.birthday,
             departmentId,
+            employeeId: row.employeeId,
             role: "EMPLOYEE",
             onboardingComplete: false,
             isActive: true,
@@ -127,10 +188,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update birthday, hireDate, and department on existing employees
+    // Update existing employees
     let birthdaysUpdated = 0;
     for (const row of activeRows) {
-      const userId = existingByEmail.get(row.email);
+      const userId = getUserId(row);
       if (!userId) continue;
       const departmentId = row.departmentName
         ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
@@ -138,6 +199,8 @@ export async function POST(req: NextRequest) {
       const updateData: Record<string, unknown> = { departmentId };
       if (row.birthday) { updateData.birthday = row.birthday; birthdaysUpdated++; }
       if (row.hireDate) updateData.hireDate = row.hireDate;
+      // Always write employeeId — stamps it on email-matched records so future syncs use ID
+      if (row.employeeId) updateData.employeeId = row.employeeId;
       await prisma.user.update({ where: { id: userId }, data: updateData });
     }
 
@@ -153,19 +216,18 @@ export async function POST(req: NextRequest) {
     // Re-activate employees the file says are still active but were previously deactivated
     const reactivateResult = await prisma.user.updateMany({
       where: {
-        email: { in: activeRows.map((r) => r.email), mode: "insensitive" },
+        id: { in: [...inFileUserIds] },
         isActive: false,
       },
       data: { isActive: true },
     });
 
     // Deactivate employees not present in the active list at all
-    // (covers resigned employees whose email was removed from the file)
     const notInFile = await prisma.user.findMany({
       where: {
         isActive: true,
         role: "EMPLOYEE",
-        NOT: { email: { in: activeRows.map((r) => r.email), mode: "insensitive" } },
+        NOT: { id: { in: [...inFileUserIds] } },
       },
       select: { id: true },
     });

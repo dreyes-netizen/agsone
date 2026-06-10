@@ -126,6 +126,7 @@ export default function FeedbackPage() {
 
   // CR-3: save current panel before switching to compose
   function startCompose() {
+    if (panel.mode === "compose") return;
     setPrevPanel(panel);
     setTitle(""); setCategory(""); setBody(""); setIsAnonymous(false);
     setPanel({ mode: "compose" });
@@ -423,7 +424,17 @@ export default function FeedbackPage() {
                   <p className="text-sm font-semibold text-red-600 mb-2">Failed to load thread</p>
                   <p className="text-xs text-gray-400">{threadError}</p>
                 </div>
-              ) : !thread ? null : (
+              ) : !thread ? (
+                <div className="p-6 space-y-4">
+                  <div className="h-5 w-24 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-7 w-64 bg-gray-100 rounded animate-pulse" />
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-4 bg-gray-100 rounded animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+              ) : (
                 <div className="flex flex-col h-full overflow-hidden">
                   <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-start justify-between gap-3">

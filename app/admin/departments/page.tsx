@@ -168,6 +168,7 @@ export default function DepartmentsPage() {
         ) : departments.length === 0 ? (
           <div className="p-8 text-center text-gray-400">No departments yet.</div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
@@ -184,12 +185,12 @@ export default function DepartmentsPage() {
                     <td colSpan={4} className="px-6 py-4">
                       <div className="space-y-3">
                         {editError && <p className="text-sm text-red-500">{editError}</p>}
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                           <input
                             type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400 w-48"
+                            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400 w-full sm:w-48"
                             placeholder="Name"
                           />
                           <input
@@ -242,6 +243,7 @@ export default function DepartmentsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

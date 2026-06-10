@@ -150,6 +150,7 @@ model User {
   notificationPrefs  Json?
   bio                String?
   skills             String[]
+  employeeId         String?   @unique
   isActive           Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt

@@ -173,7 +173,7 @@ export default function AdminRewardsPage() {
             </h2>
           </div>
           <div className="px-6 py-5">
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Name</label>
                 <input
@@ -295,6 +295,7 @@ export default function AdminRewardsPage() {
       )}
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -355,6 +356,7 @@ export default function AdminRewardsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

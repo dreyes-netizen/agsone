@@ -128,6 +128,7 @@ export default function MilestonesPage() {
         {loading ? (
           <div className="p-8 text-center text-gray-400 text-sm">Loading…</div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -170,6 +171,7 @@ export default function MilestonesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

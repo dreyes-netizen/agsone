@@ -95,6 +95,7 @@ export default function AdminFeedbackPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -135,6 +136,7 @@ export default function AdminFeedbackPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

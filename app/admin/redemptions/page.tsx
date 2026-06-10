@@ -78,6 +78,7 @@ export default function AdminRedemptionsPage() {
           Pending Approval
         </h2>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -143,12 +144,14 @@ export default function AdminRedemptionsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
       <div>
         <h2 className="text-base font-semibold text-gray-700 mb-3">History</h2>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -198,6 +201,7 @@ export default function AdminRedemptionsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

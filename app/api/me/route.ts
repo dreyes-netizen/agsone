@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 const patchSchema = z.object({
   bio: z.string().max(500).optional(),
   skills: z.array(z.string().min(1).max(50)).max(20).optional(),
-  bannerUrl: z.string().url().nullable().optional(),
+  bannerUrl: z.string().max(200).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest) {

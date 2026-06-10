@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import {
-  Users, TrendingUp, ShoppingCart, Gamepad2,
+  Users, TrendingUp, ShoppingCart,
   ArrowUpRight, ArrowDownRight, Minus, Cake, Activity, AlertCircle,
 } from "lucide-react";
 import {
@@ -40,7 +40,6 @@ type Analytics = {
   pointsThisMonth: number;
   monthGrowth: number | null;
   pendingRedemptions: number;
-  activeGames: number;
   topEarners: { id: string; displayName: string; pointsBalance: number; level: number; avatarUrl: string | null }[];
   recentTransactions: {
     id: string;
@@ -167,7 +166,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard
           label="Total Employees"
           value={data.totalEmployees.toLocaleString()}
@@ -188,12 +187,6 @@ export default function AdminDashboardPage() {
           sub={data.pendingRedemptions > 0 ? "Needs approval" : "All cleared"}
           icon={ShoppingCart}
           iconColor={data.pendingRedemptions > 0 ? "bg-amber-500" : "bg-gray-400"}
-        />
-        <KpiCard
-          label="Active Games"
-          value={data.activeGames}
-          icon={Gamepad2}
-          iconColor="bg-violet-500"
         />
       </div>
 
@@ -281,6 +274,7 @@ export default function AdminDashboardPage() {
           {data.departmentBreakdown.length === 0 ? (
             <div className="py-8 text-center text-sm text-gray-400">No department data</div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -311,6 +305,7 @@ export default function AdminDashboardPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

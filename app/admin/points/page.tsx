@@ -318,7 +318,7 @@ export default function AwardPointsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Points to Award</label>
                   <input
@@ -368,6 +368,7 @@ export default function AwardPointsPage() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">Recent Transactions</h2>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -409,6 +410,7 @@ export default function AwardPointsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

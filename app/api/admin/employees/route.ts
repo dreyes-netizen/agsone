@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     orderBy: { displayName: "asc" },
     select: {
       id: true,
+      employeeId: true,
       displayName: true,
       email: true,
       role: true,

@@ -271,7 +271,7 @@ export default function AdminMedicinePage() {
           {showAddForm && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
               <h3 className="font-semibold text-gray-900">New Medicine</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Generic Name</label>
                   <input
@@ -414,6 +414,7 @@ export default function AdminMedicinePage() {
           <div className="text-center text-gray-400 py-12">No medicines yet.</div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -483,6 +484,7 @@ export default function AdminMedicinePage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )
       )}
@@ -499,6 +501,7 @@ export default function AdminMedicinePage() {
                     Pending ({pending.length})
                   </h2>
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
@@ -540,24 +543,26 @@ export default function AdminMedicinePage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}
 
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                   <h2 className="text-base font-semibold text-gray-900">History</h2>
                   <input
                     placeholder="Filter by employee or medicine…"
                     value={reqFilter}
                     onChange={(e) => setReqFilter(e.target.value)}
-                    className="w-60 px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                    className="w-full sm:w-60 px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                   />
                 </div>
                 {filteredHistory.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">No history yet.</p>
                 ) : (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
@@ -593,6 +598,7 @@ export default function AdminMedicinePage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
               </div>

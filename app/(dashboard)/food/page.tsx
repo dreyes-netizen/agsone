@@ -694,7 +694,9 @@ export default function FoodPage() {
                     <div className="cursor-pointer" onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}>
                       <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors line-clamp-2 text-sm sm:text-base">{listing.title}</h3>
                       {listing.description && (
-                        <p className="hidden sm:block text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
+                        <div className="hidden sm:block">
+                          <p className="text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
+                        </div>
                       )}
                     </div>
 

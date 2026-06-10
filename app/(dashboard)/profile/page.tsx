@@ -1,12 +1,11 @@
 ﻿"use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Camera } from "lucide-react";
+import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette } from "lucide-react";
 
 type UserBadge = {
   id: string;
@@ -127,6 +126,21 @@ const txTypeLabel: Record<string, { label: string; color: string }> = {
 };
 
 const POINTS_PER_LEVEL = 1000;
+
+const BANNER_COLOR_OPTIONS = [
+  { key: "default",  gradient: "from-navy-500 to-violet-600" },
+  { key: "ocean",    gradient: "from-blue-500 to-cyan-500" },
+  { key: "forest",   gradient: "from-emerald-500 to-teal-600" },
+  { key: "sunset",   gradient: "from-orange-500 to-rose-500" },
+  { key: "midnight", gradient: "from-slate-800 to-zinc-700" },
+  { key: "lavender", gradient: "from-violet-500 to-purple-600" },
+  { key: "gold",     gradient: "from-amber-400 to-orange-500" },
+  { key: "rose",     gradient: "from-rose-400 to-pink-500" },
+] as const;
+
+const BANNER_GRADIENTS: Record<string, string> = Object.fromEntries(
+  BANNER_COLOR_OPTIONS.map(({ key, gradient }) => [key, gradient])
+);
 
 const roleLabel: Record<string, string> = {
   EMPLOYEE: "Employee",
@@ -260,9 +274,7 @@ export default function ProfilePage() {
   const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
   const [missions, setMissions] = useState<MissionItem[] | null>(null);
   const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
-  const [bannerUploading, setBannerUploading] = useState(false);
-  const [bannerError, setBannerError] = useState("");
-  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading || !authUser) return;
@@ -310,24 +322,6 @@ export default function ProfilePage() {
     setSkillInput("");
     setProfileError("");
     setIsEditing(false);
-  }
-
-  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBannerUploading(true);
-    setBannerError("");
-    try {
-      const url = await uploadToCloudinary(file);
-      await apiFetch("/api/me", { method: "PATCH", body: JSON.stringify({ bannerUrl: url }) });
-      setProfile((p) => p ? { ...p, bannerUrl: url } : p);
-    } catch {
-      setBannerError("Banner upload failed. Please try again.");
-      setTimeout(() => setBannerError(""), 3000);
-    } finally {
-      setBannerUploading(false);
-      if (bannerInputRef.current) bannerInputRef.current.value = "";
-    }
   }
 
   function handleSkillKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -395,29 +389,37 @@ export default function ProfilePage() {
 
       {/* ── Profile card ── */}
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-        {/* Top accent — click to upload banner */}
-        <div
-          className="h-24 bg-gradient-to-br from-navy-500 to-violet-600 relative group cursor-pointer"
-          onClick={() => bannerInputRef.current?.click()}
-        >
-          {profile.bannerUrl ? (
-            <img src={profile.bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          ) : (
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-          )}
-          <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${bannerUploading ? "bg-black/50 opacity-100" : "bg-black/30 opacity-0 group-hover:opacity-100"}`}>
-            {bannerUploading
-              ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <Camera className="w-5 h-5 text-white" />
-            }
+        {/* Top accent — color picker */}
+        <div className={`h-24 bg-gradient-to-br ${BANNER_GRADIENTS[profile.bannerUrl ?? ""] ?? BANNER_GRADIENTS.default} relative`}>
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+          <div className="absolute top-2 right-2">
+            <button
+              onClick={() => setBannerPickerOpen((o) => !o)}
+              className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors"
+              title="Change banner color"
+            >
+              <Palette className="w-3.5 h-3.5" />
+            </button>
+            {bannerPickerOpen && (
+              <div className="absolute top-9 right-0 z-10 bg-white rounded-xl border border-zinc-200 shadow-lg p-3 w-48">
+                <p className="text-xs text-zinc-400 font-medium mb-2">Banner color</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {BANNER_COLOR_OPTIONS.map(({ key, gradient }) => (
+                    <button
+                      key={key}
+                      onClick={async () => {
+                        setBannerPickerOpen(false);
+                        await apiFetch("/api/me", { method: "PATCH", body: JSON.stringify({ bannerUrl: key }) });
+                        setProfile((p) => p ? { ...p, bannerUrl: key } : p);
+                      }}
+                      className={`w-9 h-9 rounded-lg bg-gradient-to-br ${gradient} ring-2 transition-all ${profile.bannerUrl === key || (!profile.bannerUrl && key === "default") ? "ring-zinc-800" : "ring-transparent hover:ring-zinc-400"}`}
+                      title={key}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <input
-            ref={bannerInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleBannerUpload}
-          />
         </div>
 
         <div className="px-6 pb-6 relative">
@@ -471,10 +473,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-
-      {bannerError && (
-        <p className="text-xs text-red-500 text-center -mt-3">{bannerError}</p>
-      )}
 
       {/* ── Tab bar ── */}
       <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">

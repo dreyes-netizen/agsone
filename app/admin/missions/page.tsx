@@ -160,7 +160,7 @@ export default function AdminMissionsPage() {
           <CardHeader><CardTitle className="text-base">New Mission</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1.5">
                   <Label>Title</Label>
                   <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Complete the safety training" />
@@ -203,6 +203,7 @@ export default function AdminMissionsPage() {
           {loading ? (
             <div className="p-8 text-center text-gray-400">Loading...</div>
           ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -244,6 +245,7 @@ export default function AdminMissionsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
           )}
         </CardContent>
       </Card>
@@ -252,6 +254,7 @@ export default function AdminMissionsPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Pending Completions ({completions.length})</CardTitle></CardHeader>
           <CardContent className="p-0">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -271,13 +274,13 @@ export default function AdminMissionsPage() {
                     <TableCell className="text-sm text-gray-400">{timeAgo(c.completedAt)}</TableCell>
                     <TableCell>
                       {rejectId === c.id ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Input
                             autoFocus
                             placeholder="Reason for rejection (required)"
                             value={rejectNote}
                             onChange={(e) => setRejectNote(e.target.value)}
-                            className="h-7 text-sm w-56"
+                            className="h-7 text-sm w-full sm:w-56"
                           />
                           <Button
                             size="sm"
@@ -319,6 +322,7 @@ export default function AdminMissionsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}

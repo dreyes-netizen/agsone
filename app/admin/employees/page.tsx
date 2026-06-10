@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Pencil, Upload, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Upload, X } from "lucide-react";
 
 type Employee = {
   id: string;
+  employeeId: string | null;
   displayName: string;
   email: string;
   role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
@@ -59,6 +60,7 @@ export default function EmployeesPage() {
   const [editForm, setEditForm] = useState<EditForm>({ displayName: "", email: "", departmentId: null, role: "EMPLOYEE", isActive: true, birthday: null, hireDate: null });
   const [departments, setDepartments] = useState<Department[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showUploadGuide, setShowUploadGuide] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -257,8 +259,38 @@ export default function EmployeesPage() {
       />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
+        <button
+          onClick={() => setShowUploadGuide((v) => !v)}
+          className="w-full flex items-center justify-between px-6 py-3 border-b border-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <span>Upload Instructions</span>
+          {showUploadGuide ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        </button>
+
+        {showUploadGuide && (
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 text-sm space-y-3">
+            <p className="text-gray-600">Upload an <strong>.xlsx</strong> file exported from Sprout HR. Column names must match exactly.</p>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Required Columns</p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-700">
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Employee ID</code> — matches existing employees</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Last Name</code> — display name</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Middle Name</code> — display name</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">First Name</code> — display name</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Birthday</code> — used for birthday rewards</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Department</code> — auto-created if new</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Immediate Supervisor</code></li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Hire Date</code> — used for anniversary rewards</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Separation Date</code> — date = inactive, text like "N/A" = active</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Email</code> — employee login account</li>
+              </ul>
+            </div>
+            <p className="text-xs text-gray-400">Points, level, role, and profile info are never changed by an upload.</p>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3 flex-1">
             <span className="text-sm font-semibold text-gray-700">
               {filtered.length} of {employees.length} employees
             </span>
@@ -271,7 +303,7 @@ export default function EmployeesPage() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={syncing}
@@ -284,7 +316,7 @@ export default function EmployeesPage() {
               placeholder="Search by name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-64 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white"
+              className="w-full sm:w-64 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white"
             />
           </div>
         </div>
@@ -302,9 +334,11 @@ export default function EmployeesPage() {
             </button>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Emp ID</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-6 py-3">
@@ -352,12 +386,13 @@ export default function EmployeesPage() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-8 text-center text-gray-400 text-sm">
+                  <td colSpan={11} className="px-6 py-8 text-center text-gray-400 text-sm">
                     No employees match the current filters.
                   </td>
                 </tr>
               ) : filtered.map((employee) => (
                 <tr key={employee.id} className={`hover:bg-gray-50/60 transition-colors border-b border-gray-50 ${!employee.isActive ? "opacity-50" : ""}`}>
+                  <td className="px-6 py-3 text-gray-500 font-mono text-xs">{employee.employeeId ?? <span className="text-gray-300">—</span>}</td>
                   <td className="px-6 py-3 font-medium text-gray-900">{employee.displayName}</td>
                   <td className="px-6 py-3 text-gray-500">{employee.email}</td>
                   <td className="px-6 py-3 text-gray-500 text-sm">
@@ -410,6 +445,7 @@ export default function EmployeesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -448,6 +484,13 @@ export default function EmployeesPage() {
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                 />
               </div>
+
+              {editingEmployee.employeeId && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Employee ID</label>
+                  <p className="px-3 py-2 text-sm font-mono bg-gray-50 border border-gray-200 rounded-lg text-gray-700">{editingEmployee.employeeId}</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Department</label>

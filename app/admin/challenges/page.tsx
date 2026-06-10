@@ -126,6 +126,7 @@ export default function AdminChallengesPage() {
         ) : challenges.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3"><Swords className="w-8 h-8 text-gray-300" /><p className="text-gray-400 text-sm">No challenges yet. Create one above.</p></div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -152,6 +153,7 @@ export default function AdminChallengesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

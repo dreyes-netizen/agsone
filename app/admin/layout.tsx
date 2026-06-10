@@ -1,27 +1,26 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Gamepad2, Building2, Target, MessageSquare, Gift, Swords, FileText, Pill } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, Target, MessageSquare, Gift, Swords, FileText, Pill, Menu } from "lucide-react";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const navItems = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/employees", label: "Employees", icon: Users },
-  { href: "/admin/departments", label: "Departments", icon: Building2 },
-  { href: "/admin/missions",    label: "Missions",    icon: Target },
-  { href: "/admin/milestones",   label: "Milestones",   icon: Gift },
-  { href: "/admin/challenges",   label: "Challenges",   icon: Swords },
-  { href: "/admin/points",       label: "Award Points", icon: Award },
-  { href: "/admin/rewards", label: "Rewards", icon: ShoppingBag },
-  { href: "/admin/redemptions", label: "Redemptions", icon: ClipboardList },
-  { href: "/admin/games", label: "Games", icon: Gamepad2 },
-  { href: "/admin/feedback",    label: "Feedback",    icon: MessageSquare },
-  { href: "/admin/documents",    label: "Documents",    icon: FileText },
+  { href: "/admin",             label: "Overview",     icon: LayoutDashboard },
+  { href: "/admin/employees",   label: "Employees",    icon: Users },
+  { href: "/admin/departments", label: "Departments",  icon: Building2 },
+  { href: "/admin/missions",    label: "Missions",     icon: Target },
+  { href: "/admin/milestones",  label: "Milestones",   icon: Gift },
+  { href: "/admin/challenges",  label: "Challenges",   icon: Swords },
+  { href: "/admin/points",      label: "Award Points", icon: Award },
+  { href: "/admin/rewards",     label: "Rewards",      icon: ShoppingBag },
+  { href: "/admin/redemptions", label: "Redemptions",  icon: ClipboardList },
+  { href: "/admin/feedback",    label: "Feedback",     icon: MessageSquare },
+  { href: "/admin/documents",   label: "Documents",    icon: FileText },
   { href: "/admin/medicine",    label: "Medicine",     icon: Pill },
 ];
 
@@ -29,12 +28,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const { dbUser, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && dbUser?.role !== "HR_ADMIN") {
       router.replace("/dashboard");
     }
   }, [loading, dbUser, router]);
+
+  // Close sidebar on route change on mobile
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   if (loading || dbUser?.role !== "HR_ADMIN") return null;
 
@@ -45,8 +50,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-gray-100 flex flex-col fixed h-full z-10 shadow-sm">
+      <aside className={`fixed inset-y-0 left-0 z-30 w-60 bg-white border-r border-gray-100 flex flex-col shadow-sm transition-transform duration-200 ${
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      } lg:translate-x-0`}>
         {/* Dark header */}
         <div className="bg-[#111827] px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -96,8 +111,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-10 bg-[#111827] px-4 h-14 flex items-center gap-3">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="text-white p-1 -ml-1"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm shrink-0">
+            <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
+          </div>
+          <p className="text-white font-semibold text-[13px]">AGS One Admin</p>
+        </div>
+      </div>
+
       {/* Main content */}
-      <main className="flex-1 ml-60 p-8 overflow-auto min-h-screen">{children}</main>
+      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0 p-4 lg:p-8 overflow-auto min-h-screen">
+        {children}
+      </main>
     </div>
   );
 }

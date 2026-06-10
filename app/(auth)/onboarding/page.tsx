@@ -9,7 +9,7 @@ type Department = { id: string; name: string };
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user: authUser, loading: authLoading, refreshProfile } = useAuth();
+  const { user: authUser, loading: authLoading, dbUser, refreshProfile } = useAuth();
   const { apiFetch } = useApiClient();
 
   const [displayName, setDisplayName] = useState("");
@@ -21,10 +21,12 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (authLoading || !authUser) return;
-    setDisplayName(authUser.displayName ?? "");
+    setDisplayName(dbUser?.displayName ?? authUser.displayName ?? "");
+    if (dbUser?.department?.id) setDepartmentId(dbUser.department.id);
+    if (dbUser?.birthday) setBirthday(dbUser.birthday.slice(0, 10));
     apiFetch<{ data: Department[] }>("/api/departments").then((res) => setDepartments(res.data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, authUser]);
+  }, [authLoading, authUser, dbUser]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,43 +93,47 @@ export default function OnboardingPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="department" className="block text-sm font-medium text-zinc-700">
-                Department{" "}
-                <span className="text-zinc-400 font-normal">(optional)</span>
-              </label>
-              {departments.length === 0 ? (
-                <p className="text-sm text-zinc-400 bg-zinc-50 rounded-lg px-3.5 py-2.5 border border-zinc-200">
-                  No departments set up yet — an admin can assign you later.
-                </p>
-              ) : (
-                <select
-                  id="department"
-                  value={departmentId}
-                  onChange={(e) => setDepartmentId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition bg-white"
-                >
-                  <option value="">Select your department…</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
+            {!dbUser?.department && (
+              <div className="space-y-1.5">
+                <label htmlFor="department" className="block text-sm font-medium text-zinc-700">
+                  Department{" "}
+                  <span className="text-zinc-400 font-normal">(optional)</span>
+                </label>
+                {departments.length === 0 ? (
+                  <p className="text-sm text-zinc-400 bg-zinc-50 rounded-lg px-3.5 py-2.5 border border-zinc-200">
+                    No departments set up yet — an admin can assign you later.
+                  </p>
+                ) : (
+                  <select
+                    id="department"
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition bg-white"
+                  >
+                    <option value="">Select your department…</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
 
-            <div className="space-y-1.5">
-              <label htmlFor="birthday" className="block text-sm font-medium text-zinc-700">
-                Birthday{" "}
-                <span className="text-zinc-400 font-normal">(optional)</span>
-              </label>
-              <input
-                id="birthday"
-                type="date"
-                value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
-              />
-            </div>
+            {!dbUser?.birthday && (
+              <div className="space-y-1.5">
+                <label htmlFor="birthday" className="block text-sm font-medium text-zinc-700">
+                  Birthday{" "}
+                  <span className="text-zinc-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  id="birthday"
+                  type="date"
+                  value={birthday}
+                  onChange={(e) => setBirthday(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
+                />
+              </div>
+            )}
 
             {error && (
               <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-100">

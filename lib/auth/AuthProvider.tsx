@@ -12,6 +12,7 @@ type DbProfile = {
   level: number;
   streakDays: number;
   onboardingComplete: boolean;
+  birthday: string | null;
   department: { id: string; name: string } | null;
 };
 

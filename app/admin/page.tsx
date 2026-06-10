@@ -74,13 +74,13 @@ function KpiCard({
   growth?: number | null;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
       <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColor}`}>
-          <Icon className="w-5 h-5 text-white" />
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconColor}`}>
+          <Icon className="w-4 h-4 text-white" />
         </div>
         {growth != null && (
-          <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
+          <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
             growth > 0 ? "bg-emerald-50 text-emerald-600" : growth < 0 ? "bg-red-50 text-red-500" : "bg-gray-50 text-gray-400"
           }`}>
             {growth > 0 ? <ArrowUpRight className="w-3 h-3" /> : growth < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
@@ -88,9 +88,9 @@ function KpiCard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-black text-gray-900 mt-3 tabular-nums">{value}</p>
+      <p className="text-xl font-black text-gray-900 mt-2 tabular-nums">{value}</p>
       <p className="text-sm font-medium text-gray-500 mt-0.5">{label}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -136,12 +136,12 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
+      <div className="space-y-5 animate-pulse">
         <div className="h-8 bg-gray-100 rounded w-1/3" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-gray-100 rounded-2xl" />)}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
         </div>
-        <div className="h-64 bg-gray-100 rounded-2xl" />
+        <div className="h-56 bg-gray-100 rounded-2xl" />
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
     data.engagementRate >= 70 ? "text-emerald-600" : data.engagementRate >= 40 ? "text-amber-600" : "text-red-500";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
         <p className="text-sm text-gray-500 mt-0.5">
@@ -192,12 +192,12 @@ export default function AdminDashboardPage() {
 
       {/* Chart + Top Earners */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="font-semibold text-gray-900 text-sm mb-4">Points Awarded — Last 30 Days</p>
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="font-semibold text-gray-900 text-sm mb-3">Points Awarded — Last 30 Days</p>
           {chartData.length === 0 ? (
-            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">No data yet</div>
+            <div className="h-40 flex items-center justify-center text-gray-400 text-sm">No data yet</div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="ptGrad" x1="0" y1="0" x2="0" y2="1">
@@ -218,13 +218,13 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="font-semibold text-gray-900 text-sm mb-4">Top Earners</p>
-          <div className="space-y-3">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="font-semibold text-gray-900 text-sm mb-3">Top Earners</p>
+          <div className="space-y-2">
             {data.topEarners.map((e, i) => (
               <div key={e.id} className="flex items-center gap-3">
                 <span className="w-5 text-xs font-bold text-gray-400 tabular-nums">{i + 1}</span>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                   {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -242,7 +242,7 @@ export default function AdminDashboardPage() {
       {/* Engagement + Department Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Engagement card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-gray-400" />
             <p className="font-semibold text-gray-900 text-sm">Engagement</p>
@@ -251,13 +251,13 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-5">
             <EngagementRing rate={data.engagementRate} />
             <div>
-              <p className={`text-3xl font-black tabular-nums ${engagementColor}`}>
+              <p className={`text-2xl font-black tabular-nums ${engagementColor}`}>
                 {data.engagementRate}%
               </p>
               <p className="text-sm text-gray-500 mt-0.5">
                 {data.engagedCount} of {data.totalEmployees} active
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-400 mt-0.5">
                 {data.disengaged.length > 0
                   ? `${data.disengaged.length} employee${data.disengaged.length !== 1 ? "s" : ""} need follow-up`
                   : "Everyone is active!"}
@@ -266,45 +266,44 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Department breakdown */}
+        {/* Department breakdown — 3 columns: Dept / Active / Points */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-50">
+          <div className="px-4 py-3 border-b border-gray-50">
             <p className="font-semibold text-gray-900 text-sm">Department Activity — This Month</p>
           </div>
           {data.departmentBreakdown.length === 0 ? (
             <div className="py-8 text-center text-sm text-gray-400">No department data</div>
           ) : (
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
-                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employees</th>
-                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Active (30d)</th>
-                  <th className="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.departmentBreakdown.map((d, i) => {
-                  const pct = d.totalEmployees === 0 ? 0 : Math.round((d.activeEmployees / d.totalEmployees) * 100);
-                  return (
-                    <tr key={d.id} className={`border-t border-gray-50 hover:bg-gray-50/60 transition-colors ${i === 0 ? "border-t-0" : ""}`}>
-                      <td className="px-5 py-3 font-medium text-gray-900">{d.name}</td>
-                      <td className="px-5 py-3 text-right text-gray-500 tabular-nums">{d.totalEmployees}</td>
-                      <td className="px-5 py-3 text-right tabular-nums">
-                        <span className={pct >= 70 ? "text-emerald-600 font-semibold" : pct >= 40 ? "text-amber-600" : "text-red-500"}>
-                          {d.activeEmployees}
-                        </span>
-                        <span className="text-gray-400 text-xs ml-1">({pct}%)</span>
-                      </td>
-                      <td className="px-5 py-3 text-right font-bold text-navy-600 tabular-nums">
-                        {d.pointsThisMonth.toLocaleString()}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
+                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Active / Total</th>
+                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.departmentBreakdown.map((d, i) => {
+                    const pct = d.totalEmployees === 0 ? 0 : Math.round((d.activeEmployees / d.totalEmployees) * 100);
+                    return (
+                      <tr key={d.id} className={`border-t border-gray-50 hover:bg-gray-50/60 transition-colors ${i === 0 ? "border-t-0" : ""}`}>
+                        <td className="px-4 py-2.5 font-medium text-gray-900">{d.name}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">
+                          <span className={pct >= 70 ? "text-emerald-600 font-semibold" : pct >= 40 ? "text-amber-600" : "text-red-500"}>
+                            {d.activeEmployees}
+                          </span>
+                          <span className="text-gray-400">/{d.totalEmployees}</span>
+                          <span className="text-gray-400 text-xs ml-1">({pct}%)</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-bold text-navy-600 tabular-nums">
+                          {d.pointsThisMonth.toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -313,7 +312,7 @@ export default function AdminDashboardPage() {
       {/* Disengaged Employees */}
       {data.disengaged.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
             <AlertCircle className="w-4 h-4 text-amber-500" />
             <p className="font-semibold text-gray-900 text-sm">No Activity in 30+ Days</p>
             <span className="ml-auto text-xs bg-amber-50 text-amber-600 font-semibold px-2 py-0.5 rounded-full">
@@ -322,8 +321,8 @@ export default function AdminDashboardPage() {
           </div>
           <ul className="divide-y divide-gray-50">
             {data.disengaged.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/60 transition-colors">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+              <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                   {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -337,65 +336,68 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Upcoming Birthdays */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
-          <Cake className="w-4 h-4 text-pink-400" />
-          <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>
-          <span className="text-xs text-gray-400 ml-auto">Next 14 days</span>
+      {/* Birthdays + Recent Awards — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Upcoming Birthdays */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
+            <Cake className="w-4 h-4 text-pink-400" />
+            <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>
+            <span className="text-xs text-gray-400 ml-auto">Next 14 days</span>
+          </div>
+          {birthdays.length === 0 ? (
+            <div className="py-6 text-center text-sm text-gray-400">No birthdays in the next 14 days</div>
+          ) : (
+            <ul className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+              {birthdays.map((b) => {
+                const bDate = new Date(b.birthday);
+                const label = b.daysUntil === 0 ? "Today! 🎂" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`;
+                const labelColor = b.daysUntil === 0 ? "text-pink-600 bg-pink-50" : b.daysUntil <= 3 ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50";
+                return (
+                  <li key={b.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                      {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{b.displayName}</p>
+                      <p className="text-xs text-gray-400">{b.department ?? "No department"} · {bDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${labelColor}`}>{label}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-        {birthdays.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">No birthdays in the next 14 days</div>
-        ) : (
-          <ul className="divide-y divide-gray-50">
-            {birthdays.map((b) => {
-              const bDate = new Date(b.birthday);
-              const label = b.daysUntil === 0 ? "Today! 🎂" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`;
-              const labelColor = b.daysUntil === 0 ? "text-pink-600 bg-pink-50" : b.daysUntil <= 3 ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50";
-              return (
-                <li key={b.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/60 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
-                    {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{b.displayName}</p>
-                    <p className="text-xs text-gray-400">{b.department ?? "No department"} · {bDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
-                  </div>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${labelColor}`}>{label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-50">
-          <p className="font-semibold text-gray-900 text-sm">Recent Awards</p>
+        {/* Recent Awards */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-50">
+            <p className="font-semibold text-gray-900 text-sm">Recent Awards</p>
+          </div>
+          {data.recentTransactions.length === 0 ? (
+            <div className="py-6 text-center text-sm text-gray-400">No transactions yet</div>
+          ) : (
+            <ul className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+              {data.recentTransactions.map((t) => (
+                <li key={t.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{t.toUser.displayName}</p>
+                    <p className="text-xs text-gray-400">
+                      {typeLabel[t.type] ?? t.type}
+                      {t.fromUser ? ` · from ${t.fromUser.displayName}` : ""}
+                      {t.note ? ` · "${t.note}"` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 ml-4">
+                    <p className="text-sm font-bold text-emerald-600">+{t.amount.toLocaleString()} pts</p>
+                    <p className="text-xs text-gray-400">{new Date(t.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        {data.recentTransactions.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No transactions yet</div>
-        ) : (
-          <ul className="divide-y divide-gray-50">
-            {data.recentTransactions.map((t) => (
-              <li key={t.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/60 transition-colors">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{t.toUser.displayName}</p>
-                  <p className="text-xs text-gray-400">
-                    {typeLabel[t.type] ?? t.type}
-                    {t.fromUser ? ` · from ${t.fromUser.displayName}` : ""}
-                    {t.note ? ` · "${t.note}"` : ""}
-                  </p>
-                </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className="text-sm font-bold text-emerald-600">+{t.amount.toLocaleString()} pts</p>
-                  <p className="text-xs text-gray-400">{new Date(t.createdAt).toLocaleDateString()}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );

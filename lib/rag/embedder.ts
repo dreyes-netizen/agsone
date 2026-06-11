@@ -1,2 +1,1 @@
-// Full-text search is used instead of vector embeddings — no embedding API needed.
-export {};
+// RAG uses full-text search (see search.ts). Vector embeddings are not used.

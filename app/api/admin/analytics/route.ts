@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
   // Engagement metrics
   const activeSet = new Set(activeUserIdsRaw.map((r) => r.toUserId));
   const engagedCount = activeSet.size;
-  const engagementRate = totalEmployees === 0 ? 0 : Math.round((engagedCount / totalEmployees) * 100);
+  const engagementRate = totalEmployees === 0 ? 0 : Math.round((engagedCount / totalEmployees) * 1000) / 10;
 
   // Department breakdown
   type DeptRow = { name: string; totalEmployees: number; activeEmployees: number; pointsThisMonth: number };

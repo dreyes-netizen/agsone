@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { X, Send, Copy, Check, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -35,7 +36,7 @@ function MessageBubble({ msg, isStreaming }: { msg: Message; isStreaming: boolea
     <div className={`flex gap-2 ${isModel ? "justify-start" : "justify-end"}`}>
       {isModel && (
         <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5 bg-[#111827] p-1">
-          <img src="/ally-eagle.svg" alt="Ally" className="w-full h-full object-contain invert" />
+          <Image src="/ally-eagle.svg" alt="Ally" width={28} height={28} className="w-full h-full object-contain invert" />
         </div>
       )}
       <div className="max-w-[82%] group relative">
@@ -201,14 +202,14 @@ export function AllyWidget() {
             <div className="flex items-center justify-between px-4 py-3 bg-[#111827] shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center p-1.5">
-                  <img src="/ally-eagle.svg" alt="Ally" className="w-full h-full object-contain invert" />
+                  <Image src="/ally-eagle.svg" alt="Ally" width={32} height={32} className="w-full h-full object-contain invert" />
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm leading-tight">Ally</p>
                   <p className="text-white/50 text-[10px] leading-tight">AGS HR Assistant</p>
                 </div>
               </div>
-              <button onClick={handleClose} className="text-white/60 hover:text-white transition-colors">
+              <button onClick={handleClose} aria-label="Close Ally chat" className="text-white/60 hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -220,7 +221,7 @@ export function AllyWidget() {
                   <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
                     <div className="flex items-start gap-2.5">
                       <div className="w-7 h-7 rounded-full bg-[#111827] p-1 shrink-0 mt-0.5">
-                        <img src="/ally-eagle.svg" alt="Ally" className="w-full h-full object-contain invert" />
+                        <Image src="/ally-eagle.svg" alt="Ally" width={28} height={28} className="w-full h-full object-contain invert" />
                       </div>
                       <p className="text-zinc-600 text-sm leading-relaxed">
                         Hi! I&apos;m <strong className="text-zinc-900">Ally</strong>, your AGS HR assistant. Ask me anything about the Employee Handbook or Code of Conduct.
@@ -266,6 +267,7 @@ export function AllyWidget() {
                 <button
                   onClick={() => send(input)}
                   disabled={loading || !input.trim()}
+                  aria-label="Send message"
                   className="w-9 h-9 bg-[#111827] rounded-xl flex items-center justify-center hover:bg-[#1f2937] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   <Send className="w-4 h-4 text-white" />
@@ -292,7 +294,7 @@ export function AllyWidget() {
           </>
         ) : (
           <>
-            <img src="/ally-eagle.svg" alt="Ally" className="w-5 h-5 object-contain invert" />
+            <Image src="/ally-eagle.svg" alt="Ally" width={20} height={20} className="object-contain invert" />
             <span className="text-white text-sm font-medium">Ask Ally</span>
           </>
         )}

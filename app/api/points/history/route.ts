@@ -7,19 +7,23 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("userId") ?? user.id;
+  const requestedUserId = searchParams.get("userId");
 
-  // Employees can only view their own history; managers/admins can view anyone's
-  if (userId !== user.id && user.role === "EMPLOYEE") {
+  // Employees can only view their own history; managers/admins can view anyone's or all
+  if (requestedUserId && requestedUserId !== user.id && user.role === "EMPLOYEE") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const isAdmin = user.role === "HR_ADMIN" || user.role === "MANAGER";
+  const scopeToUser = requestedUserId ?? (isAdmin ? null : user.id);
+
   const transactions = await prisma.pointTransaction.findMany({
-    where: { toUserId: userId },
+    where: scopeToUser ? { toUserId: scopeToUser } : {},
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 100,
     include: {
-      fromUser: { select: { displayName: true, avatarUrl: true } },
+      toUser:    { select: { displayName: true } },
+      fromUser:  { select: { displayName: true, avatarUrl: true } },
       createdBy: { select: { displayName: true } },
     },
   });

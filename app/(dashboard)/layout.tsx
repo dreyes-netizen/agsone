@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -86,7 +87,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
-              <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
+              <Image src="/agslogo.png" alt="AGS One" width={28} height={28} className="w-full h-full object-contain p-0.5" />
             </div>
             <div>
               <p className="text-white font-semibold text-[13px] leading-tight">AGS One</p>
@@ -111,7 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+      <nav aria-label="Main navigation" className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-white uppercase tracking-widest">Navigate</p>
         {mainNav.map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
@@ -159,6 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button
             onClick={handleSignOut}
             title="Sign out"
+            aria-label="Sign out"
             className="text-white hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -206,7 +208,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
-            <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
+            <Image src="/agslogo.png" alt="AGS One" width={24} height={24} className="w-full h-full object-contain p-0.5" />
           </div>
           <span className="text-white font-semibold text-sm">AGS One</span>
         </div>
@@ -233,7 +235,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111827]/95 backdrop-blur-md flex items-center justify-around z-10 border-t border-white/[0.06]">
+      <nav aria-label="Mobile navigation" className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111827]/95 backdrop-blur-md flex items-center justify-around z-10 border-t border-white/[0.06]">
         {bottomNavItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (

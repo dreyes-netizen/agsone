@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
     ? {}
     : { OR: [{ departmentId: null }, { departmentId: user.departmentId }] };
   const typeWhere = typeFilter ? { type: typeFilter as never } : {};
-  const deptWhere = deptFilter === "mine" ? { departmentId: user.departmentId } : {};
+  const deptWhere = (deptFilter === "mine" && user.departmentId)
+    ? { departmentId: user.departmentId }
+    : {};
 
   const posts = await prisma.socialPost.findMany({
     orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
@@ -70,7 +72,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ data: enriched, nextCursor });
   } catch (err) {
     console.error("[GET /api/feed]", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 

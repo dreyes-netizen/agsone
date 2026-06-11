@@ -40,37 +40,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const idToken = await firebaseUser.getIdToken();
-        setUser(firebaseUser);
-        setToken(idToken);
+      try {
+        if (firebaseUser) {
+          const idToken = await firebaseUser.getIdToken();
+          setUser(firebaseUser);
+          setToken(idToken);
 
-        document.cookie = `firebase-token=${idToken}; path=/; max-age=3600; SameSite=Strict`;
+          const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+          document.cookie = `firebase-token=${idToken}; path=/; max-age=3600; SameSite=Strict${secure}`;
 
-        const syncRes = await fetch("/api/auth/sync", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
+          const syncRes = await fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
 
-        if (syncRes.status === 403) {
-          await signOut(auth);
-          return;
+          if (syncRes.status === 403) {
+            await signOut(auth);
+            return;
+          }
+
+          const meRes = await fetch("/api/me", {
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+          if (meRes.ok) {
+            const meJson = await meRes.json();
+            setDbUser(meJson.data as DbProfile);
+          }
+        } else {
+          setUser(null);
+          setToken(null);
+          setDbUser(null);
+          document.cookie = "firebase-token=; path=/; max-age=0";
         }
-
-        const meRes = await fetch("/api/me", {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-        if (meRes.ok) {
-          const meJson = await meRes.json();
-          setDbUser(meJson.data as DbProfile);
-        }
-      } else {
+      } catch {
         setUser(null);
         setToken(null);
         setDbUser(null);
-        document.cookie = "firebase-token=; path=/; max-age=0";
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

@@ -59,6 +59,11 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  const invalidValues = Object.entries(body).filter(([, v]) => typeof v !== 'boolean');
+  if (invalidValues.length > 0) {
+    return NextResponse.json({ error: 'Preference values must be boolean' }, { status: 400 });
+  }
+
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { notificationPrefs: true },

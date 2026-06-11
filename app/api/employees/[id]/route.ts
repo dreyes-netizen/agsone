@@ -3,10 +3,12 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await verifyAuth(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authUser = await verifyAuth(req);
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+
+  const isPrivileged = authUser && (authUser.role === 'HR_ADMIN' || authUser.role === 'MANAGER');
 
   const employee = await prisma.user.findUnique({
     where: { id },
@@ -58,5 +60,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     where: { pointsBalance: { gt: employee.pointsBalance }, isActive: true },
   }) + 1;
 
-  return NextResponse.json({ data: { ...employee, rank } });
+  const { email, birthday, ...publicFields } = employee;
+  const responseData = isPrivileged
+    ? { ...employee, rank }
+    : { ...publicFields, rank };
+
+  return NextResponse.json({ data: responseData });
 }

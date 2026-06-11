@@ -210,6 +210,10 @@ model PointTransaction {
   fromUser    User? @relation("PointsGiven", fields: [fromUserId], references: [id])
   toUser      User  @relation("PointsReceived", fields: [toUserId], references: [id])
   createdBy   User  @relation("PointsCreatedBy", fields: [createdById], references: [id])
+
+  @@index([toUserId])
+  @@index([createdAt])
+  @@index([toUserId, createdAt])
 }
 
 model Reward {
@@ -399,6 +403,8 @@ model SocialComment {
   author  User            @relation(fields: [authorId], references: [id])
   parent  SocialComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies SocialComment[] @relation("CommentReplies")
+
+  @@index([postId])
 }
 
 model Notification {
@@ -412,6 +418,9 @@ model Notification {
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
 
 model AuditLog {
@@ -510,6 +519,8 @@ model FeedbackReply {
 
   feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
   author   User     @relation(fields: [authorId], references: [id])
+
+  @@index([feedbackId])
 }
 
 model MilestoneConfig {
@@ -535,6 +546,7 @@ model MilestoneAward {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, type, year])
+  @@index([userId, type])
 }
 
 model Challenge {
@@ -633,4 +645,7 @@ model GameSession {
   host   User  @relation("GameSessionHost",   fields: [hostId],   references: [id])
   guest  User? @relation("GameSessionGuest",  fields: [guestId],  references: [id])
   winner User? @relation("GameSessionWinner", fields: [winnerId], references: [id])
+
+  @@index([status, hostId])
+  @@index([guestId])
 }

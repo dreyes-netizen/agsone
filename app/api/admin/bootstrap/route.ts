@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma/client";
 // One-time route: promotes the calling user to HR_ADMIN
 // Disabled automatically once any HR_ADMIN exists
 export async function POST(req: NextRequest) {
+  if (!process.env.BOOTSTRAP_SECRET || req.headers.get('x-bootstrap-secret') !== process.env.BOOTSTRAP_SECRET) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

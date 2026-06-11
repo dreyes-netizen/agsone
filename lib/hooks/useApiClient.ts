@@ -26,7 +26,14 @@ export function useApiClient() {
 
     // On 401, force a token refresh and retry once
     if (res.status === 401) {
-      res = await doFetch(true);
+      res = await doFetch(true); // retry with fresh token
+      if (res.status === 401) {
+        // Persistent 401 — session is invalid, force sign-out
+        import('@/lib/firebase/client').then(({ auth }) => {
+          import('firebase/auth').then(({ signOut }) => signOut(auth));
+        });
+        throw new Error('Session expired. Please sign in again.');
+      }
     }
 
     if (!res.ok) {
@@ -65,7 +72,14 @@ export function useApiClient() {
 
     // On 401, force a token refresh and retry once
     if (res.status === 401) {
-      res = await doFetch(true);
+      res = await doFetch(true); // retry with fresh token
+      if (res.status === 401) {
+        // Persistent 401 — session is invalid, force sign-out
+        import('@/lib/firebase/client').then(({ auth }) => {
+          import('firebase/auth').then(({ signOut }) => signOut(auth));
+        });
+        throw new Error('Session expired. Please sign in again.');
+      }
     }
 
     if (!res.ok) {

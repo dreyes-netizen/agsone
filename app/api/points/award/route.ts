@@ -40,21 +40,21 @@ export async function POST(req: NextRequest) {
   }
 
   // Atomic: update balance + create transaction
-  const transaction = await prisma.$transaction(async (tx) => {
+  const { transaction, newBalance } = await prisma.$transaction(async (tx) => {
     const created = await tx.pointTransaction.create({
       data: { fromUserId: actor!.id, toUserId, amount, type: "MANUAL_AWARD", note, createdById: actor!.id },
     });
-    await tx.user.update({
+    const updatedUser = await tx.user.update({
       where: { id: toUserId },
       data: { pointsBalance: { increment: amount } },
+      select: { pointsBalance: true },
     });
-    return created;
+    return { transaction: created, newBalance: updatedUser.pointsBalance };
   });
 
   // Fire-and-forget: notification + feed post + email
   const actorUser = await prisma.user.findUnique({ where: { id: actor!.id }, select: { displayName: true } });
   const actorName = actorUser?.displayName ?? "Someone";
-  const newBalance = recipient.pointsBalance + amount;
 
   await Promise.all([
     createNotification({

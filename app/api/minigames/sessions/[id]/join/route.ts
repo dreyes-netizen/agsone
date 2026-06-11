@@ -38,9 +38,16 @@ export async function POST(
     ]);
   }
 
-  const updated = await prisma.gameSession.update({
+  const joinResult = await prisma.gameSession.updateMany({
+    where: { id, status: 'WAITING', guestId: null },
+    data: { guestId: authUser.id, status: 'ACTIVE', currentTurn: session.hostId },
+  });
+  if (joinResult.count === 0) {
+    return NextResponse.json({ error: 'Game no longer available' }, { status: 409 });
+  }
+
+  const updated = await prisma.gameSession.findUnique({
     where: { id },
-    data: { guestId: authUser.id, status: "ACTIVE", currentTurn: session.hostId },
     select: {
       id: true, gameType: true, status: true, state: true,
       currentTurn: true, winnerId: true, pointsWager: true,

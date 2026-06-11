@@ -50,10 +50,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Insufficient points" }, { status: 400 });
   }
 
-  if (reward.stockQuantity === 0) {
-    return NextResponse.json({ error: "Out of stock" }, { status: 400 });
-  }
-
   // Atomic: deduct points + create redemption + decrement stock
   const redemption = await prisma.$transaction(async (tx) => {
     const created = await tx.redemption.create({
@@ -66,8 +62,12 @@ export async function POST(req: NextRequest) {
     await tx.pointTransaction.create({
       data: { toUserId: user.id, amount: -reward.pointCost, type: "REDEMPTION", note: `Redeemed: ${reward.name}`, createdById: user.id },
     });
-    if (reward.stockQuantity > 0) {
-      await tx.reward.update({ where: { id: reward.id }, data: { stockQuantity: { decrement: 1 } } });
+    const stockResult = await tx.reward.updateMany({
+      where: { id: reward.id, stockQuantity: { gt: 0 } },
+      data: { stockQuantity: { decrement: 1 } },
+    });
+    if (stockResult.count === 0) {
+      throw new Error('Out of stock');
     }
     return created;
   });

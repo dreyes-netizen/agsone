@@ -1,10 +1,159 @@
+# Top Performers Sidebar Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add a two-column layout to the Top Performers page (`/leaderboard`) with a sticky right sidebar containing four cards: Your Stats, Period Summary, Top Departments, and Recent Achievers.
+
+**Architecture:** Three tasks — commit pending polish fixes, create a new `/api/leaderboard/achievers` endpoint, then rewrite the leaderboard page to add the two-column grid and all four sidebar cards. Cards 2 and 3 derive their data client-side from the leaderboard entries already fetched; Cards 1 and 4 each get their own API call on mount.
+
+**Tech Stack:** Next.js 15 App Router, Prisma (PostgreSQL), React, Tailwind CSS, lucide-react
+
+---
+
+## File Map
+
+| File | Change |
+|---|---|
+| `app/(dashboard)/dashboard/page.tsx` | Commit only — polish fixes already in working tree |
+| `app/(dashboard)/leaderboard/page.tsx` | Commit polish fixes, then full rewrite for sidebar |
+| `app/api/leaderboard/achievers/route.ts` | Create — new GET endpoint |
+
+---
+
+### Task 1: Commit pending polish fixes
+
+**Files:**
+- Modify (commit only): `app/(dashboard)/dashboard/page.tsx`
+- Modify (commit only): `app/(dashboard)/leaderboard/page.tsx`
+
+These files have uncommitted changes in the working tree from the previous refactor session. They must be committed before starting the sidebar work so the new feature has a clean baseline.
+
+- [ ] **Step 1: Verify the pending changes are present**
+
+Run:
+```bash
+git diff --stat HEAD
+```
+Expected output includes both `app/(dashboard)/dashboard/page.tsx` and `app/(dashboard)/leaderboard/page.tsx`.
+
+- [ ] **Step 2: Commit the polish fixes**
+
+```bash
+git add "app/(dashboard)/dashboard/page.tsx" "app/(dashboard)/leaderboard/page.tsx"
+git commit -m "fix: polish fixes — dead rank fields, You label, subtitle, error handling"
+```
+
+---
+
+### Task 2: Create `/api/leaderboard/achievers` endpoint
+
+**Files:**
+- Create: `app/api/leaderboard/achievers/route.ts`
+
+This endpoint merges two queries — recent badge awards (`UserBadge`) and recent milestone awards (`MilestoneAward`) from the last 30 days — and returns the top 5 newest events.
+
+- [ ] **Step 1: Create the file with the full implementation**
+
+Create `app/api/leaderboard/achievers/route.ts` with this exact content:
+
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { verifyAuth } from "@/lib/auth/verifyAuth";
+import { prisma } from "@/lib/prisma/client";
+
+const MILESTONE_LABELS: Record<string, string> = {
+  BIRTHDAY: "Birthday",
+  WORK_ANNIVERSARY_1: "1-Year Anniversary",
+  WORK_ANNIVERSARY_3: "3-Year Anniversary",
+  WORK_ANNIVERSARY_5: "5-Year Anniversary",
+  WORK_ANNIVERSARY_10: "10-Year Anniversary",
+};
+
+export async function GET(req: NextRequest) {
+  const user = await verifyAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const [badges, milestones] = await Promise.all([
+    prisma.userBadge.findMany({
+      where: { awardedAt: { gte: since } },
+      include: {
+        user: { select: { id: true, displayName: true, avatarUrl: true } },
+        badge: { select: { name: true } },
+      },
+      orderBy: { awardedAt: "desc" },
+      take: 20,
+    }),
+    prisma.milestoneAward.findMany({
+      where: { awardedAt: { gte: since } },
+      include: {
+        user: { select: { id: true, displayName: true, avatarUrl: true } },
+      },
+      orderBy: { awardedAt: "desc" },
+      take: 20,
+    }),
+  ]);
+
+  const combined = [
+    ...badges.map((b) => ({
+      userId: b.user.id,
+      displayName: b.user.displayName,
+      avatarUrl: b.user.avatarUrl,
+      label: b.badge.name,
+      achievedAt: b.awardedAt.toISOString(),
+    })),
+    ...milestones.map((m) => ({
+      userId: m.user.id,
+      displayName: m.user.displayName,
+      avatarUrl: m.user.avatarUrl,
+      label: MILESTONE_LABELS[m.type] ?? m.type,
+      achievedAt: m.awardedAt.toISOString(),
+    })),
+  ]
+    .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt))
+    .slice(0, 5);
+
+  return NextResponse.json({ data: combined });
+}
+```
+
+- [ ] **Step 2: Verify TypeScript compiles cleanly**
+
+Run:
+```bash
+npx tsc --noEmit
+```
+Expected: only the pre-existing error in `app/(dashboard)/employees/[id]/page.tsx:550` — no new errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add "app/api/leaderboard/achievers/route.ts"
+git commit -m "feat: add /api/leaderboard/achievers endpoint"
+```
+
+---
+
+### Task 3: Rewrite leaderboard page — two-column layout + all four sidebar cards
+
+**Files:**
+- Modify: `app/(dashboard)/leaderboard/page.tsx`
+
+Replace the entire file content. The left column is the existing header, filters, and rankings list (logic unchanged). The right sidebar adds Your Stats (from `/api/me`), Period Summary (derived), Top Departments (derived), and Recent Achievers (from `/api/leaderboard/achievers`).
+
+- [ ] **Step 1: Replace the entire file**
+
+Write the following as the complete content of `app/(dashboard)/leaderboard/page.tsx`:
+
+```tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { Star, Flame } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { timeAgo } from "@/lib/helpers/timeAgo";
 
 type Entry = {
   userId: string;
@@ -45,6 +194,14 @@ function Avatar({ name, url, size = "md" }: { name: string; url: string | null; 
   );
 }
 
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
+}
+
 export default function LeaderboardPage() {
   const { user, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
@@ -61,11 +218,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Department[] }>("/api/departments")
-      .then((res) => setDepartments(res.data))
-      .catch(() => {});
-    setProfileLoading(true);
-    setAchieversLoading(true);
+    apiFetch<{ data: Department[] }>("/api/departments").then((res) => setDepartments(res.data));
     Promise.allSettled([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: Achiever[] }>("/api/leaderboard/achievers"),
@@ -305,3 +458,16 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+```
+
+- [ ] **Step 2: Verify TypeScript compiles cleanly**
+
+Run:
+```bash
+npx tsc --noEmit
+```
+Expected: only the pre-existing error in `app/(dashboard)/employees/[id]/page.tsx:550`. No new errors.
+
+- [ ] **Step 3: Do NOT commit — report back for controller to handle**
+
+Report back with status and findings.

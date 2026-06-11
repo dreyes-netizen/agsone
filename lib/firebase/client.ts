@@ -16,4 +16,4 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // Restrict sign-in to company Google accounts only
-googleProvider.setCustomParameters({ hd: "*" });
+googleProvider.setCustomParameters({ hd: "allianceglobalsolutions.com" });

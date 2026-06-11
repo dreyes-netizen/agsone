@@ -33,8 +33,11 @@ export async function POST(req: NextRequest) {
   if (!file || !name?.trim()) {
     return NextResponse.json({ error: "file and name are required" }, { status: 400 });
   }
-  if (file.type !== "application/pdf") {
-    return NextResponse.json({ error: "Only PDF files are allowed" }, { status: 400 });
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  const isPdf = file.type === "application/pdf" || ext === "pdf";
+  const isText = ["text/markdown", "text/plain", "application/octet-stream", ""].includes(file.type) && (ext === "md" || ext === "txt");
+  if (!isPdf && !isText) {
+    return NextResponse.json({ error: "Only PDF, Markdown (.md), or plain text (.txt) files are allowed" }, { status: 400 });
   }
   const TEN_MB = 10 * 1024 * 1024;
   if (file.size > TEN_MB) {
@@ -45,14 +48,16 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(arrayBuffer);
   const storagePath = `${randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
 
-  const [, parsed] = await Promise.all([
-    uploadPdf(storagePath, buffer),
-    getDocumentProxy(new Uint8Array(buffer)).then((pdf) =>
-      extractText(pdf, { mergePages: true })
-    ),
-  ]);
-
-  const text = parsed.text as string;
+  let text: string;
+  if (isPdf) {
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const parsed = await extractText(pdf, { mergePages: true });
+    text = parsed.text as string;
+    await uploadPdf(storagePath, buffer, "application/pdf");
+  } else {
+    text = buffer.toString("utf-8");
+    await uploadPdf(storagePath, buffer, "text/plain");
+  }
 
   const doc = await prisma.policyDocument.create({
     data: {

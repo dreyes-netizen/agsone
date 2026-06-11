@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   }
 
   const employees = await prisma.user.findMany({
+    take: 500,
     orderBy: { displayName: "asc" },
     select: {
       id: true,

@@ -3,6 +3,7 @@
 .env.local
 .env*.local
 firebase-service-account.json
+.mcp.json
 
 # ─── Next.js ───────────────────────────────────────────────────────────────────
 .next/

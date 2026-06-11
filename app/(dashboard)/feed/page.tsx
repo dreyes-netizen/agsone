@@ -340,9 +340,11 @@ export default function FeedPage() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const base = activeFilter === "ALL" ? "/api/feed" : activeFilter === "DEPT_ONLY" ? "/api/feed?dept=mine" : `/api/feed?type=${activeFilter}`;
-      const sep = (activeFilter === "ALL" || activeFilter === "DEPT_ONLY") ? "?" : "&";
-      const res = await apiFetch<{ data: FeedPost[]; nextCursor: string | null }>(`${base}${sep}cursor=${nextCursor}`);
+      const params = new URLSearchParams();
+      if (activeFilter === "DEPT_ONLY") params.set("dept", "mine");
+      else if (activeFilter !== "ALL") params.set("type", activeFilter);
+      params.set("cursor", nextCursor);
+      const res = await apiFetch<{ data: FeedPost[]; nextCursor: string | null }>(`/api/feed?${params}`);
       setPosts((prev) => [...prev, ...res.data]);
       setNextCursor(res.nextCursor);
     } catch {
@@ -364,11 +366,13 @@ export default function FeedPage() {
   }
 
   function removeImage(index: number) {
+    URL.revokeObjectURL(imagePreviews[index]);
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
   function clearImages() {
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setImageFiles([]);
     setImagePreviews([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -572,6 +576,8 @@ export default function FeedPage() {
 
   async function deleteComment(postId: string, commentId: string, parentId?: string) {
     if (!confirm("Delete this comment?")) return;
+    const previousCache = commentsCache;
+    const previousPosts = posts;
     if (parentId) {
       setCommentsCache((prev) => ({
         ...prev,
@@ -586,7 +592,12 @@ export default function FeedPage() {
       }));
     }
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
-    await apiFetch(`/api/feed/${postId}/comments/${commentId}`, { method: "DELETE" });
+    try {
+      await apiFetch(`/api/feed/${postId}/comments/${commentId}`, { method: "DELETE" });
+    } catch {
+      setCommentsCache(previousCache);
+      setPosts(previousPosts);
+    }
   }
 
   async function saveEditComment(postId: string) {
@@ -784,6 +795,7 @@ export default function FeedPage() {
     : [];
 
   async function toggleReaction(postId: string, emoji: string) {
+    const previousPosts = posts;
     // Optimistic update
     setPosts((prev) =>
       prev.map((p) => {
@@ -808,7 +820,11 @@ export default function FeedPage() {
       })
     );
 
-    await apiFetch(`/api/feed/${postId}/react`, { method: "POST", body: JSON.stringify({ emoji }) });
+    try {
+      await apiFetch(`/api/feed/${postId}/react`, { method: "POST", body: JSON.stringify({ emoji }) });
+    } catch {
+      setPosts(previousPosts);
+    }
   }
 
   return (
@@ -843,6 +859,7 @@ export default function FeedPage() {
                 <input
                   type="text"
                   placeholder="Title *"
+                  aria-label="Post title"
                   value={postTitle}
                   onChange={(e) => setPostTitle(e.target.value)}
                   maxLength={120}
@@ -907,6 +924,7 @@ export default function FeedPage() {
               <textarea
                 ref={composerRef}
                 placeholder={shoutoutMode ? "What did they do that deserves recognition?" : "Share something with the team… (type @ to mention)"}
+                aria-label="Post content"
                 value={newPost}
                 onChange={handleComposerChange}
                 rows={2}
@@ -1378,6 +1396,7 @@ export default function FeedPage() {
                                     <button
                                       onClick={() => submitReply(post.id, c.id)}
                                       disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
+                                      aria-label="Submit comment"
                                       className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                                     >
                                       <Send className="w-3.5 h-3.5" />
@@ -1418,6 +1437,7 @@ export default function FeedPage() {
                           <button
                             onClick={() => submitComment(post.id)}
                             disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
+                            aria-label="Submit comment"
                             className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                           >
                             <Send className="w-3.5 h-3.5" />

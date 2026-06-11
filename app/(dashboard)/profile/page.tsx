@@ -475,10 +475,12 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Tab bar ── */}
-      <div className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
+      <div role="tablist" className="flex gap-1 bg-zinc-100 p-1 rounded-xl">
         {(["overview", "points", "badges", "notifications"] as const).map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => { setActiveTab(tab); setVisibleCount(10); }}
             className={`flex-1 py-1.5 text-sm font-semibold rounded-lg capitalize transition-colors ${
               activeTab === tab

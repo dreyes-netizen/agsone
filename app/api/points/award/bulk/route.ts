@@ -62,6 +62,13 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
+  // Re-fetch updated balances after the transaction commits to avoid stale reads
+  const updatedRecipients = await prisma.user.findMany({
+    where: { id: { in: recipientIds } },
+    select: { id: true, pointsBalance: true, level: true },
+  });
+  const balanceMap = new Map(updatedRecipients.map((u) => [u.id, u.pointsBalance]));
+
   const actorUser = await prisma.user.findUnique({
     where: { id: actor!.id },
     select: { displayName: true },
@@ -90,7 +97,7 @@ export async function POST(req: NextRequest) {
 
   // Per-user: notification + email + badges + level-up
   for (const r of recipients) {
-    const newBalance = r.pointsBalance + amount;
+    const newBalance = balanceMap.get(r.id) ?? (r.pointsBalance + amount);
     createNotification({
       userId: r.id,
       type: "POINTS_RECEIVED",

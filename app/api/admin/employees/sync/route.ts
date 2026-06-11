@@ -218,6 +218,7 @@ export async function POST(req: NextRequest) {
       where: {
         id: { in: [...inFileUserIds] },
         isActive: false,
+        role: 'EMPLOYEE',
       },
       data: { isActive: true },
     });

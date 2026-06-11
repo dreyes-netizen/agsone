@@ -22,7 +22,7 @@ export async function PATCH(
   if (listing.createdById !== authUser.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const updated = await prisma.foodOrder.update({
-    where: { id: orderId },
+    where: { id: orderId, listingId: id },
     data: { paidAt: parsed.data.paid ? new Date() : null },
   });
 

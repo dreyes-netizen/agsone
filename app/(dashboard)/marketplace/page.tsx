@@ -72,8 +72,8 @@ export default function MarketplacePage() {
     try {
       const r = await apiFetch<{ data: Redemption[] }>("/api/redemptions");
       setRedemptions(r.data);
-    } catch (e) {
-      console.error("redemptions fetch failed:", e);
+    } catch {
+      // fetch failed — redemptions list stays empty; apiFetch throws with user-facing message if needed
     } finally {
       setRedemptionsLoading(false);
     }
@@ -90,7 +90,7 @@ export default function MarketplacePage() {
         setRewards(rewardsRes.data);
         setBalance(meRes.data.pointsBalance);
       })
-      .catch((e) => console.error("marketplace fetch failed:", e))
+      .catch(() => { /* fetch failed — rewards/balance stay at defaults */ })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
@@ -476,6 +476,9 @@ export default function MarketplacePage() {
           >
             {/* Shell: flex-col keeps close button anchored outside the scroll area */}
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="reward-modal-title"
               className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative"
               onClick={(e) => e.stopPropagation()}
             >
@@ -547,7 +550,7 @@ export default function MarketplacePage() {
                         </span>
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-zinc-900">{selectedReward.name}</h2>
+                        <h2 id="reward-modal-title" className="text-xl font-bold text-zinc-900">{selectedReward.name}</h2>
                         {selectedReward.description && (
                           <p className="text-sm text-zinc-600 mt-2 whitespace-pre-wrap leading-relaxed">{selectedReward.description}</p>
                         )}

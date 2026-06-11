@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunker";
 
@@ -122,11 +123,12 @@ export async function searchRelevantChunks(query: string, matchCount = 8): Promi
     const ilikeResults: { content: string; document_id: string; chunk_index: number }[] = [];
 
     for (const term of terms.slice(0, 4)) {
+      const escapedTerm = term.replace(/[%_\\]/g, '\\$&');
       const { data: ilikeData } = await supabase
         .from("document_chunks")
         .select("content, document_id, chunk_index")
         .in("document_id", activeIds)
-        .ilike("content", `%${term}%`)
+        .ilike("content", `%${escapedTerm}%`)
         .order("chunk_index")
         .limit(4);
 

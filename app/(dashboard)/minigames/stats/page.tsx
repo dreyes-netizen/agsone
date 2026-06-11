@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Trophy, Flame, Medal } from "lucide-react";
+import { timeAgo } from "@/lib/helpers/timeAgo";
 
 const GAME_LABEL: Record<string, string> = {
   TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",
@@ -52,17 +53,6 @@ function Avatar({ name, url, size = "md" }: { name: string; url: string | null; 
   );
 }
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
-
 const outcomeStyle: Record<string, { label: string; cls: string }> = {
   win:  { label: "Won",  cls: "text-emerald-600 bg-emerald-50" },
   loss: { label: "Lost", cls: "text-rose-500 bg-rose-50" },
@@ -90,7 +80,7 @@ export default function MinigamesStatsPage() {
     setLoading(true);
     apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
       .then(res => setBoard(res.data))
-      .catch(() => {})
+      .catch(() => setBoard([]))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, period]);

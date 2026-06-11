@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
-const schema = z.object({ emoji: z.string().min(1).max(10) });
+const schema = z.object({ emoji: z.enum(['👍', '❤️', '🔥', '👏', '🎉', '💪']) });
 
 export async function POST(
   req: NextRequest,

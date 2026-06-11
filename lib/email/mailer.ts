@@ -23,8 +23,8 @@ type SendMailParams = {
 export async function sendMail({ to, subject, html }: SendMailParams) {
   const transport = createTransport();
   if (!transport) {
-    // Email not configured — log and skip silently
-    console.log(`[email skipped — not configured] To: ${to} | Subject: ${subject}`);
+    // Email not configured — log and skip silently (to address omitted to avoid logging PII)
+    console.log('[email skipped — not configured]', { subject });
     return;
   }
 

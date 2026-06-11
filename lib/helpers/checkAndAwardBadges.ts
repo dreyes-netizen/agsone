@@ -26,14 +26,21 @@ type CheckContext = {
   streakDays?: number;
 };
 
+let badgeDefsSeeded = false;
+
 export async function checkAndAwardBadges(ctx: CheckContext) {
-  // Upsert badge definitions (idempotent)
-  for (const def of BADGE_DEFS) {
-    await prisma.badge.upsert({
-      where: { name: def.label },
-      update: {},
-      create: { name: def.label, description: `${def.icon} ${def.description}`, criteriaType: "AUTO_RULE" },
-    });
+  // Upsert badge definitions (idempotent) — runs only once per server instance
+  if (!badgeDefsSeeded) {
+    await Promise.all(
+      BADGE_DEFS.map((def) =>
+        prisma.badge.upsert({
+          where: { name: def.label },
+          update: {},
+          create: { name: def.label, description: `${def.icon} ${def.description}`, criteriaType: "AUTO_RULE" },
+        })
+      )
+    );
+    badgeDefsSeeded = true;
   }
 
   const badges = await prisma.badge.findMany({ where: { name: { in: BADGE_DEFS.map((d) => d.label) } } });

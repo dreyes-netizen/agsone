@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -10,10 +11,11 @@ const BUCKET = "policy-docs";
 export async function uploadPdf(
   storagePath: string,
   buffer: Buffer,
+  contentType = "application/pdf",
 ): Promise<void> {
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(storagePath, buffer, { contentType: "application/pdf", upsert: false });
+    .upload(storagePath, buffer, { contentType, upsert: false });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
 }
 

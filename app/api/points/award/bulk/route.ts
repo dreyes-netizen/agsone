@@ -6,12 +6,17 @@ import { sendMail } from "@/lib/email/mailer";
 import { pointsReceivedEmail } from "@/lib/email/templates";
 import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
+import { broadcast } from "@/lib/realtime/broadcast";
+import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
+import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
 import { z } from "zod";
 
 const schema = z.object({
   userIds: z.array(z.string().uuid()).min(1).max(200),
   amount: z.number().int().min(1).max(10000),
   note: z.string().min(1).max(500),
+  activity: z.string().optional(),
+  category: z.enum(Object.keys(AWARD_CATEGORIES) as [string, ...string[]]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,7 +31,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { userIds, amount, note } = parsed.data;
+  const { userIds, note } = parsed.data;
+  let { amount, category, activity } = parsed.data;
+
+  // Activity presets carry the manual's standard point value — server-resolved
+  // so clients can't tamper with preset amounts.
+  if (activity) {
+    const preset = findActivity(activity);
+    if (!preset) {
+      return NextResponse.json({ error: "Unknown award activity" }, { status: 400 });
+    }
+    amount = preset.points;
+    category = preset.category;
+  }
 
   // Remove self
   const targetIds = userIds.filter((id) => id !== actor!.id);
@@ -43,6 +60,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No active recipients found" }, { status: 400 });
   }
 
+  // Manual §3: managers have a 500 pts/month budget; bulk cost is amount × recipients
+  const totalCost = amount * recipients.length;
+  const budget = await checkManagerBudget(actor!.id, actor!.role, totalCost);
+  if (!budget.allowed) {
+    return NextResponse.json(
+      { error: `Budget exceeded. Awarding ${amount} pts to ${recipients.length} recipients costs ${totalCost} pts, but you only have ${budget.remaining} pts remaining this month.` },
+      { status: 400 },
+    );
+  }
+
   const recipientIds = recipients.map((r) => r.id);
 
   await prisma.$transaction([
@@ -53,6 +80,8 @@ export async function POST(req: NextRequest) {
         amount,
         type: "MANUAL_AWARD",
         note,
+        category: category ?? null,
+        activity: activity ?? null,
         createdById: actor!.id,
       })),
     }),
@@ -115,6 +144,9 @@ export async function POST(req: NextRequest) {
       .then((agg) => checkAndAwardBadges({ userId: r.id, totalEarned: agg._sum.amount ?? 0 }))
       .catch(() => {});
   }
+
+  // Notify each recipient's browser to refresh their points balance
+  Promise.all(recipients.map((r) => broadcast(`points:${r.id}`))).catch(() => {});
 
   return NextResponse.json({ data: { awarded: recipients.length } });
 }

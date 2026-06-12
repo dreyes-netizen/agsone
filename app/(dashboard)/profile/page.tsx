@@ -58,6 +58,8 @@ type PointTx = {
   amount: number;
   type: string;
   note: string | null;
+  category: string | null;
+  activity: string | null;
   createdAt: string;
   fromUser: { displayName: string } | null;
 };
@@ -123,6 +125,14 @@ const txTypeLabel: Record<string, { label: string; color: string }> = {
   GAME_SPEND:   { label: "Game",       color: "text-orange-500" },
   REFUND:       { label: "Refund",     color: "text-teal-600" },
   MILESTONE:    { label: "Milestone",  color: "text-amber-600" },
+  DEDUCTION: { label: "Violation Deduction", color: "text-red-600" },
+};
+
+const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
+  PERFORMANCE: { label: "Performance", style: "bg-violet-50 text-violet-700" },
+  TEAMWORK:    { label: "Teamwork",    style: "bg-blue-50 text-blue-700" },
+  INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
+  LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
 };
 
 const POINTS_PER_LEVEL = 1000;
@@ -786,6 +796,11 @@ export default function ProfilePage() {
                               <p className="text-sm font-medium text-zinc-900 truncate">{t.note ?? meta.label}</p>
                               <p className="text-xs text-zinc-400">
                                 <span className={`font-medium ${meta.color}`}>{meta.label}</span>
+                                {t.category && CATEGORY_BADGE[t.category] && (
+                                  <span className={`ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${CATEGORY_BADGE[t.category].style}`}>
+                                    {CATEGORY_BADGE[t.category].label}
+                                  </span>
+                                )}
                                 {t.fromUser ? ` · from ${t.fromUser.displayName}` : ""}
                                 {" · "}{new Date(t.createdAt).toLocaleDateString()}
                               </p>

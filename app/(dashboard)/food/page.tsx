@@ -69,7 +69,7 @@ function getUrgencyLabel(cutoffAt: string): string | null {
 }
 
 export default function FoodPage() {
-  const { user, dbUser, loading: authLoading } = useAuth();
+  const { user, dbUser, token, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const router = useRouter();
 
@@ -199,7 +199,7 @@ export default function FoodPage() {
     e.preventDefault();
     setCreating(true);
     try {
-      const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f)));
+      const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f, token!)));
       const imageUrls = [...existingImageUrls, ...uploadedUrls];
       const payload = {
         title: newTitle,

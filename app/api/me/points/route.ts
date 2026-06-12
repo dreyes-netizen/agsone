@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
         amount: true,
         type: true,
         note: true,
+        category: true,
+        activity: true,
         createdAt: true,
         fromUser: { select: { displayName: true } },
       },

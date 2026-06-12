@@ -11,6 +11,7 @@ import { FLAIRS, flairById } from "@/lib/flairs";
 import { PostImages } from "@/components/feed/PostImages";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 
 type PollOption = {
   id: string;
@@ -249,10 +250,11 @@ function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; 
 
 export default function FeedPage() {
   const router = useRouter();
-  const { user, dbUser, loading: authLoading } = useAuth();
+  const { user, dbUser, token, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasNewPosts, setHasNewPosts] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -301,6 +303,9 @@ export default function FeedPage() {
     load(activeFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, activeFilter]);
+
+  // Real-time: show banner when someone posts while you're reading
+  useRealtimeChannel("feed", () => setHasNewPosts(true));
 
   useEffect(() => {
     if (authLoading || !user || employees.length > 0) return;
@@ -385,7 +390,7 @@ export default function FeedPage() {
       let imageUrls: string[] = [];
       if (imageFiles.length > 0) {
         setUploading(true);
-        imageUrls = await Promise.all(imageFiles.map((f) => uploadToCloudinary(f)));
+        imageUrls = await Promise.all(imageFiles.map((f) => uploadToCloudinary(f, token!)));
         setUploading(false);
       }
 
@@ -833,6 +838,16 @@ export default function FeedPage() {
         <h1 className="text-2xl font-bold text-zinc-900">Activity Feed</h1>
         <p className="text-zinc-500 text-sm mt-1">What&apos;s happening across the company</p>
       </div>
+
+      {hasNewPosts && (
+        <button
+          onClick={() => { setHasNewPosts(false); load(activeFilter); }}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+        >
+          <Sparkles className="w-4 h-4" />
+          New posts — click to refresh
+        </button>
+      )}
 
       {/* Two-column layout: compose+posts (left), sidebar (right). Stacks on mobile. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] items-start">

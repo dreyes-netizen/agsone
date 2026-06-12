@@ -54,7 +54,7 @@ const inputClass =
 
 export default function AdminMedicinePage() {
   const { apiFetch } = useApiClient();
-  const { user, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<"catalog" | "inventory" | "requests">("catalog");
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -98,7 +98,7 @@ export default function AdminMedicinePage() {
     }
     setAddingMed(true);
     try {
-      const imageUrl = addForm.imageFile ? await uploadToCloudinary(addForm.imageFile) : "";
+      const imageUrl = addForm.imageFile ? await uploadToCloudinary(addForm.imageFile, token!) : "";
       const res = await apiFetch<{ data: Medicine }>("/api/admin/medicine", {
         method: "POST",
         body: JSON.stringify({
@@ -137,7 +137,7 @@ export default function AdminMedicinePage() {
     try {
       let imageUrl = editForm.imageUrl;
       if (editForm.imageFile) {
-        imageUrl = await uploadToCloudinary(editForm.imageFile);
+        imageUrl = await uploadToCloudinary(editForm.imageFile, token!);
       }
       const res = await apiFetch<{ data: Medicine }>(`/api/admin/medicine/${editingMed.id}`, {
         method: "PATCH",

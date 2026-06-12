@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { AWARD_ACTIVITIES, AWARD_CATEGORIES, VIOLATION_TYPES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 
 type Department = { id: string; name: string };
 type Employee = {
@@ -16,22 +17,74 @@ type Transaction = {
   id: string;
   amount: number;
   note: string | null;
+  category: string | null;
   createdAt: string;
   toUser?: { displayName: string };
   fromUser: { displayName: string } | null;
 };
+type Budget = { isExempt: boolean; used: number; remaining: number; total: number };
+
+const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
+  PERFORMANCE: { label: "Performance", style: "bg-violet-50 text-violet-700" },
+  TEAMWORK:    { label: "Teamwork",    style: "bg-blue-50 text-blue-700" },
+  INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
+  LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
+};
+
+// Activity dropdown grouped by category, shared by Single and Bulk forms
+function ActivitySelect({ value, onChange }: { value: string; onChange: (key: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
+    >
+      <option value="">Custom amount…</option>
+      {(Object.keys(AWARD_CATEGORIES) as AwardCategory[]).map((cat) => (
+        <optgroup key={cat} label={AWARD_CATEGORIES[cat]}>
+          {AWARD_ACTIVITIES.filter((a) => a.category === cat).map((a) => (
+            <option key={a.key} value={a.key}>
+              {a.label} ({a.points} pts)
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
+function BudgetBar({ budget }: { budget: Budget | null }) {
+  if (!budget || budget.isExempt) return null;
+  const pct = Math.min(100, (budget.used / budget.total) * 100);
+  const barColor = budget.remaining === 0 ? "bg-red-500" : budget.remaining < 100 ? "bg-amber-500" : "bg-emerald-500";
+  return (
+    <div className="mb-4 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+      <div className="flex items-center justify-between text-xs mb-1.5">
+        <span className="font-medium text-gray-600">Monthly recognition budget</span>
+        <span className={`font-semibold ${budget.remaining === 0 ? "text-red-600" : "text-gray-700"}`}>
+          {budget.used} / {budget.total} pts used — {budget.remaining} remaining
+        </span>
+      </div>
+      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export default function AwardPointsPage() {
   const { apiFetch } = useApiClient();
   const { user, dbUser, loading: authLoading } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [tab, setTab] = useState<"single" | "bulk">("single");
+  const [tab, setTab] = useState<"single" | "bulk" | "deduct">("single");
+  const [budget, setBudget] = useState<Budget | null>(null);
 
   // Single award
   const [toUserId, setToUserId] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [activity, setActivity] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
@@ -41,9 +94,28 @@ export default function AwardPointsPage() {
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [bulkAmount, setBulkAmount] = useState("");
   const [bulkNote, setBulkNote] = useState("");
+  const [bulkActivity, setBulkActivity] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkSuccess, setBulkSuccess] = useState("");
   const [bulkError, setBulkError] = useState("");
+
+  // Deduct
+  const [deductUserId, setDeductUserId] = useState("");
+  const [deductViolation, setDeductViolation] = useState(VIOLATION_TYPES[0].key as string);
+  const [deductCustomAmount, setDeductCustomAmount] = useState("");
+  const [deductReason, setDeductReason] = useState("");
+  const [deductSubmitting, setDeductSubmitting] = useState(false);
+  const [deductSuccess, setDeductSuccess] = useState("");
+  const [deductError, setDeductError] = useState("");
+
+  async function loadBudget() {
+    try {
+      const res = await apiFetch<{ data: Budget }>("/api/points/budget");
+      setBudget(res.data);
+    } catch {
+      // ignore — budget bar simply won't render
+    }
+  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -51,6 +123,7 @@ export default function AwardPointsPage() {
       setEmployees(r.data)
     );
     loadHistory();
+    loadBudget();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -71,18 +144,52 @@ export default function AwardPointsPage() {
     try {
       await apiFetch("/api/points/award", {
         method: "POST",
-        body: JSON.stringify({ toUserId, amount: Number(amount), note }),
+        body: JSON.stringify({ toUserId, amount: Number(amount), note, activity: activity || undefined }),
       });
       const recipient = employees.find((e) => e.id === toUserId);
       setSuccess(`${amount} points awarded to ${recipient?.displayName}!`);
       setAmount("");
       setNote("");
       setToUserId("");
+      setActivity("");
       loadHistory();
+      loadBudget();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to award points");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDeductSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setDeductSubmitting(true);
+    setDeductError("");
+    setDeductSuccess("");
+    try {
+      const res = await apiFetch<{ data: { requested: number; deducted: number; newBalance: number } }>("/api/points/deduct", {
+        method: "POST",
+        body: JSON.stringify({
+          toUserId: deductUserId,
+          violationType: deductViolation,
+          customAmount: deductViolation === "CUSTOM" ? Number(deductCustomAmount) : undefined,
+          reason: deductReason,
+        }),
+      });
+      const recipient = employees.find((emp) => emp.id === deductUserId);
+      const floored = res.data.deducted < res.data.requested
+        ? ` (requested ${res.data.requested}, balance floored at 0)`
+        : "";
+      setDeductSuccess(`${res.data.deducted} points deducted from ${recipient?.displayName}${floored}. New balance: ${res.data.newBalance}.`);
+      setDeductUserId("");
+      setDeductCustomAmount("");
+      setDeductReason("");
+      setDeductViolation(VIOLATION_TYPES[0].key);
+      loadHistory();
+    } catch (err) {
+      setDeductError(err instanceof Error ? err.message : "Failed to deduct points");
+    } finally {
+      setDeductSubmitting(false);
     }
   }
 
@@ -98,15 +205,18 @@ export default function AwardPointsPage() {
           userIds: Array.from(bulkSelected),
           amount: Number(bulkAmount),
           note: bulkNote,
+          activity: bulkActivity || undefined,
         }),
       });
       const n = res.data.awarded;
       setBulkSuccess(`${bulkAmount} points awarded to ${n} employee${n !== 1 ? "s" : ""}!`);
       setBulkAmount("");
       setBulkNote("");
+      setBulkActivity("");
       setBulkSelected(new Set());
       setBulkDeptFilter("all");
       loadHistory();
+      loadBudget();
     } catch (err) {
       setBulkError(err instanceof Error ? err.message : "Failed to award points");
     } finally {
@@ -177,7 +287,7 @@ export default function AwardPointsPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-gray-100">
-          {(["single", "bulk"] as const).map((t) => (
+          {(["single", "bulk", "deduct"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -185,15 +295,102 @@ export default function AwardPointsPage() {
                 tab === t
                   ? "text-gray-900 border-b-2 border-[#111827]"
                   : "text-gray-500 hover:text-gray-700"
-              }`}
+              } ${t === "deduct" && tab === "deduct" ? "text-red-600 border-red-600" : ""}`}
             >
-              {t === "single" ? "Single Award" : "Bulk Award"}
+              {t === "single" ? "Single Award" : t === "bulk" ? "Bulk Award" : "Deduct Points"}
             </button>
           ))}
         </div>
 
         <div className="px-6 py-5">
-          {tab === "single" ? (
+          {tab !== "deduct" && <BudgetBar budget={budget} />}
+          {tab === "deduct" ? (
+            <form onSubmit={handleDeductSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Employee</label>
+                <select
+                  value={deductUserId}
+                  onChange={(e) => setDeductUserId(e.target.value)}
+                  required
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
+                >
+                  <option value="">Select an employee...</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.displayName} — {e.pointsBalance} pts
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Violation</label>
+                <select
+                  value={deductViolation}
+                  onChange={(e) => setDeductViolation(e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
+                >
+                  {VIOLATION_TYPES.map((v) => (
+                    <option key={v.key} value={v.key}>
+                      {v.label} (−{v.points} pts)
+                    </option>
+                  ))}
+                  <option value="CUSTOM">Custom amount…</option>
+                </select>
+              </div>
+
+              {deductViolation === "CUSTOM" && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Points to Deduct</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    placeholder="e.g. 50"
+                    value={deductCustomAmount}
+                    onChange={(e) => setDeductCustomAmount(e.target.value)}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Reason</label>
+                <textarea
+                  placeholder="Describe the violation — the employee will see this"
+                  value={deductReason}
+                  onChange={(e) => setDeductReason(e.target.value)}
+                  required
+                  rows={3}
+                  className={inputClass + " resize-none"}
+                />
+              </div>
+
+              {deductUserId && (
+                <p className="text-sm text-red-600 font-medium">
+                  This will deduct {deductViolation === "CUSTOM" ? (deductCustomAmount || "—") : VIOLATION_TYPES.find((v) => v.key === deductViolation)?.points} pts from {employees.find((e) => e.id === deductUserId)?.displayName}.
+                </p>
+              )}
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <p className="text-xs text-amber-700">
+                  The employee will be notified and this action will be logged for audit.
+                </p>
+              </div>
+
+              {deductSuccess && <p className="text-emerald-600 text-sm">{deductSuccess}</p>}
+              {deductError && <p className="text-red-500 text-sm">{deductError}</p>}
+
+              <button
+                type="submit"
+                disabled={deductSubmitting || !deductUserId || !deductReason.trim()}
+                className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+              >
+                {deductSubmitting ? "Deducting..." : "Deduct Points"}
+              </button>
+            </form>
+          ) : tab === "single" ? (
             <form onSubmit={handleSingleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Employee</label>
@@ -215,6 +412,18 @@ export default function AwardPointsPage() {
               </div>
 
               <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Activity</label>
+                <ActivitySelect
+                  value={activity}
+                  onChange={(key) => {
+                    setActivity(key);
+                    const preset = findActivity(key);
+                    if (preset) setAmount(String(preset.points));
+                  }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Points to Award</label>
                 <input
                   type="number"
@@ -224,8 +433,12 @@ export default function AwardPointsPage() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
-                  className={inputClass}
+                  readOnly={!!activity}
+                  className={inputClass + (activity ? " bg-gray-50 text-gray-500 cursor-not-allowed" : "")}
                 />
+                {activity && (
+                  <p className="text-xs text-gray-400">Standard amount from the program manual — select &quot;Custom amount…&quot; to enter a different value.</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -318,6 +531,18 @@ export default function AwardPointsPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">Activity</label>
+                <ActivitySelect
+                  value={bulkActivity}
+                  onChange={(key) => {
+                    setBulkActivity(key);
+                    const preset = findActivity(key);
+                    if (preset) setBulkAmount(String(preset.points));
+                  }}
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Points to Award</label>
@@ -329,7 +554,8 @@ export default function AwardPointsPage() {
                     value={bulkAmount}
                     onChange={(e) => setBulkAmount(e.target.value)}
                     required
-                    className={inputClass}
+                    readOnly={!!bulkActivity}
+                    className={inputClass + (bulkActivity ? " bg-gray-50 text-gray-500 cursor-not-allowed" : "")}
                   />
                 </div>
                 <div className="col-span-2 space-y-1.5">
@@ -375,6 +601,7 @@ export default function AwardPointsPage() {
               <th className={thClass}>Recipient</th>
               <th className={thClass}>Awarded By</th>
               <th className={thClass}>Points</th>
+              <th className={thClass}>Category</th>
               <th className={thClass}>Note</th>
               <th className={thClass}>Date</th>
             </tr>
@@ -382,7 +609,7 @@ export default function AwardPointsPage() {
           <tbody>
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-400 py-8">
+                <td colSpan={6} className="text-center text-gray-400 py-8">
                   No transactions yet
                 </td>
               </tr>
@@ -399,7 +626,18 @@ export default function AwardPointsPage() {
                     {t.fromUser?.displayName ?? "System"}
                   </td>
                   <td className={tdClass}>
-                    <span className="font-semibold text-navy-600">+{t.amount}</span>
+                    <span className={`font-semibold ${t.amount < 0 ? "text-rose-500" : "text-navy-600"}`}>
+                      {t.amount > 0 ? "+" : ""}{t.amount}
+                    </span>
+                  </td>
+                  <td className={tdClass}>
+                    {t.category && CATEGORY_BADGE[t.category] ? (
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${CATEGORY_BADGE[t.category].style}`}>
+                        {CATEGORY_BADGE[t.category].label}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className={`${tdClass} text-gray-500 max-w-xs truncate`}>{t.note}</td>
                   <td className={`${tdClass} text-gray-400`}>

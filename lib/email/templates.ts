@@ -124,6 +124,45 @@ export function pointsReceivedEmail(displayName: string, amount: number, fromNam
   };
 }
 
+export function pointsDeductedEmail(displayName: string, amount: number, reason: string, newBalance: number) {
+  return {
+    subject: `${amount.toLocaleString()} points were deducted from your balance`,
+    html: layout(`
+      <h1 style="margin:0 0 8px;font-size:24px;color:#111827;">Points Deduction Notice</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Hi ${displayName},</p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center;">
+        <span style="font-size:40px;font-weight:800;color:#dc2626;">−${amount.toLocaleString()}</span>
+        <p style="margin:4px 0 0;font-size:14px;color:#b91c1c;">points deducted</p>
+      </div>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #e5e7eb;">
+            <span style="font-size:13px;color:#9ca3af;">Reason</span>
+          </td>
+          <td style="padding:10px 0;border-bottom:1px solid #e5e7eb;text-align:right;">
+            <span style="font-size:13px;color:#111827;">${reason}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;">
+            <span style="font-size:13px;color:#9ca3af;">New Balance</span>
+          </td>
+          <td style="padding:10px 0;text-align:right;">
+            <span style="font-size:14px;color:${BRAND_COLOR};font-weight:700;">${newBalance.toLocaleString()} pts</span>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:0;font-size:13px;color:#6b7280;">
+        This deduction was issued by HR in line with the AGS Rewards Hub point deduction guidelines.
+        If you believe this was made in error, please reach out to HR.
+      </p>
+    `),
+  };
+}
+
 export function redemptionStatusEmail(
   displayName: string,
   rewardName: string,

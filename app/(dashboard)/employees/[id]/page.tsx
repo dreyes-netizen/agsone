@@ -8,6 +8,7 @@ import {
   ArrowLeft, Coins, Star, Flame, CalendarDays, Building2,
   Award, Trophy, Sparkles, History, FileText, Tag, Briefcase,
 } from "lucide-react";
+import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 
 type ShoutoutPost = {
   id: string;
@@ -113,6 +114,8 @@ export default function EmployeeProfilePage() {
   const [notFound, setNotFound] = useState(false);
 
   const [awardAmount, setAwardAmount] = useState("");
+  const [awardActivity, setAwardActivity] = useState("");
+  const [budget, setBudget] = useState<{ isExempt: boolean; used: number; remaining: number; total: number } | null>(null);
   const [awardNote, setAwardNote] = useState("");
   const [awardSubmitting, setAwardSubmitting] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState("");
@@ -139,8 +142,15 @@ export default function EmployeeProfilePage() {
       .catch(() => setNotFound(true));
   }
 
+  function loadBudget() {
+    return apiFetch<{ data: { isExempt: boolean; used: number; remaining: number; total: number } }>("/api/points/budget")
+      .then((r) => setBudget(r.data))
+      .catch(() => {});
+  }
+
   useEffect(() => {
     loadEmployee().finally(() => setLoading(false));
+    if (isAdminOrManager && !isSelf) loadBudget();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -162,12 +172,14 @@ export default function EmployeeProfilePage() {
     try {
       await apiFetch("/api/points/award", {
         method: "POST",
-        body: JSON.stringify({ toUserId: id, amount: Number(awardAmount), note: awardNote }),
+        body: JSON.stringify({ toUserId: id, amount: Number(awardAmount), note: awardNote, activity: awardActivity || undefined }),
       });
       setAwardSuccess(`${Number(awardAmount).toLocaleString()} points awarded!`);
       setAwardAmount("");
       setAwardNote("");
+      setAwardActivity("");
       loadEmployee();
+      loadBudget();
       // Refresh history
       apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
         .then((r) => setTransactions(r.data.slice(0, 15)))
@@ -369,7 +381,37 @@ export default function EmployeeProfilePage() {
             <Coins className="w-4 h-4 text-navy-400" />
             <p className="text-sm font-semibold text-gray-700">Award Points</p>
           </div>
+          {budget && !budget.isExempt && (
+            <div className="mb-3 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-gray-500">Monthly budget</span>
+                <span className={`font-semibold ${budget.remaining === 0 ? "text-red-600" : "text-gray-700"}`}>{budget.remaining} pts left</span>
+              </div>
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${budget.remaining === 0 ? "bg-red-500" : budget.remaining < 100 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, (budget.used / budget.total) * 100)}%` }} />
+              </div>
+            </div>
+          )}
           <form onSubmit={handleAwardPoints} className="space-y-3">
+            <select
+              value={awardActivity}
+              onChange={(e) => {
+                const key = e.target.value;
+                setAwardActivity(key);
+                const preset = findActivity(key);
+                if (preset) setAwardAmount(String(preset.points));
+              }}
+              className={inputClass}
+            >
+              <option value="">Custom amount…</option>
+              {(Object.keys(AWARD_CATEGORIES) as AwardCategory[]).map((cat) => (
+                <optgroup key={cat} label={AWARD_CATEGORIES[cat]}>
+                  {AWARD_ACTIVITIES.filter((a) => a.category === cat).map((a) => (
+                    <option key={a.key} value={a.key}>{a.label} ({a.points} pts)</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
             <input
               type="number"
               min={1}
@@ -378,7 +420,8 @@ export default function EmployeeProfilePage() {
               value={awardAmount}
               onChange={(e) => setAwardAmount(e.target.value)}
               required
-              className={inputClass}
+              readOnly={!!awardActivity}
+              className={inputClass + (awardActivity ? " bg-gray-50 cursor-not-allowed" : "")}
             />
             <textarea
               placeholder={`Reason for awarding ${employee.displayName.split(" ")[0]}…`}
@@ -392,7 +435,7 @@ export default function EmployeeProfilePage() {
             {awardError && <p className="text-xs text-red-500">{awardError}</p>}
             <button
               type="submit"
-              disabled={awardSubmitting || !awardAmount}
+              disabled={awardSubmitting || !awardAmount || (budget !== null && !budget.isExempt && budget.remaining === 0)}
               className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
             >
               {awardSubmitting ? "Awarding…" : "Award Points"}
@@ -547,7 +590,7 @@ export default function EmployeeProfilePage() {
           }}
         >
           <img
-            src={fullSizeAvatar(employee.avatarUrl)}
+            src={fullSizeAvatar(employee.avatarUrl) ?? undefined}
             alt={employee.displayName}
             draggable={false}
             style={{

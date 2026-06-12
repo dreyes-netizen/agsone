@@ -25,7 +25,7 @@ const categoryIconClass: Record<string, string> = { PHYSICAL: "text-orange-600",
 const emptyForm = { name: "", description: "", pointCost: "", stockQuantity: "-1", category: "PHYSICAL" };
 
 export default function AdminRewardsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [form, setForm] = useState(emptyForm);
@@ -91,7 +91,7 @@ export default function AdminRewardsPage() {
     setError("");
     try {
       setUploading(true);
-      const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f)));
+      const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f, token!)));
       setUploading(false);
       const imageUrls = [...existingImageUrls, ...uploadedUrls];
 

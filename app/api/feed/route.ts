@@ -3,6 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { broadcast } from "@/lib/realtime/broadcast";
 import { FLAIR_IDS } from "@/lib/flairs";
 
 const PAGE_SIZE = 15;
@@ -131,6 +132,7 @@ export async function POST(req: NextRequest) {
         pollOptions: { include: { _count: { select: { votes: true } } } },
       },
     });
+    broadcast("feed").catch(() => {});
     return NextResponse.json({ data: { ...post, myVoteOptionId: null } }, { status: 201 });
   }
 
@@ -165,6 +167,7 @@ export async function POST(req: NextRequest) {
         data: { postId: post.id },
       });
     }
+    broadcast("feed").catch(() => {});
     return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
   }
 
@@ -181,5 +184,6 @@ export async function POST(req: NextRequest) {
     include: { author: { select: { displayName: true, avatarUrl: true } } },
   });
 
+  broadcast("feed").catch(() => {});
   return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
 }

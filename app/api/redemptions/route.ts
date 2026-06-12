@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { broadcast } from "@/lib/realtime/broadcast";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -71,6 +72,8 @@ export async function POST(req: NextRequest) {
     }
     return created;
   });
+
+  broadcast(`points:${user!.id}`).catch(() => {});
 
   return NextResponse.json({ data: redemption }, { status: 201 });
 }

@@ -6,12 +6,17 @@ import { sendMail } from "@/lib/email/mailer";
 import { pointsReceivedEmail } from "@/lib/email/templates";
 import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
+import { broadcast } from "@/lib/realtime/broadcast";
+import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
+import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
 import { z } from "zod";
 
 const schema = z.object({
   toUserId: z.string().uuid(),
   amount: z.number().int().min(1).max(10000),
   note: z.string().min(1).max(500),
+  activity: z.string().optional(),
+  category: z.enum(Object.keys(AWARD_CATEGORIES) as [string, ...string[]]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,11 +31,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { toUserId, amount, note } = parsed.data;
+  const { toUserId, note } = parsed.data;
+  let { amount, category, activity } = parsed.data;
+
+  // Activity presets carry the manual's standard point value — the server
+  // resolves it so clients can't tamper with preset amounts.
+  if (activity) {
+    const preset = findActivity(activity);
+    if (!preset) {
+      return NextResponse.json({ error: "Unknown award activity" }, { status: 400 });
+    }
+    amount = preset.points;
+    category = preset.category;
+  }
 
   // Prevent self-award
   if (toUserId === actor!.id) {
     return NextResponse.json({ error: "Cannot award points to yourself" }, { status: 400 });
+  }
+
+  // Manual §3: managers have a 500 pts/month budget (HR_ADMIN exempt)
+  const budget = await checkManagerBudget(actor!.id, actor!.role, amount);
+  if (!budget.allowed) {
+    return NextResponse.json(
+      { error: `Budget exceeded. You have ${budget.remaining} pts remaining this month.` },
+      { status: 400 },
+    );
   }
 
   // Verify recipient exists
@@ -42,7 +68,7 @@ export async function POST(req: NextRequest) {
   // Atomic: update balance + create transaction
   const { transaction, newBalance } = await prisma.$transaction(async (tx) => {
     const created = await tx.pointTransaction.create({
-      data: { fromUserId: actor!.id, toUserId, amount, type: "MANUAL_AWARD", note, createdById: actor!.id },
+      data: { fromUserId: actor!.id, toUserId, amount, type: "MANUAL_AWARD", note, category: category ?? null, activity: activity ?? null, createdById: actor!.id },
     });
     const updatedUser = await tx.user.update({
       where: { id: toUserId },
@@ -77,6 +103,9 @@ export async function POST(req: NextRequest) {
       ...pointsReceivedEmail(recipient.displayName, amount, actorName, note, newBalance),
     }),
   ]);
+
+  // Notify recipient's browser to refresh points balance in real-time
+  broadcast(`points:${toUserId}`).catch(() => {});
 
   // Check badge milestones + level-up (fire-and-forget)
   prisma.pointTransaction.aggregate({ where: { toUserId: toUserId, amount: { gt: 0 } }, _sum: { amount: true } })

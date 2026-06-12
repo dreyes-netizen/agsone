@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
+import { getBrowserSupabase } from "@/lib/supabase/browserClient";
 
 type DbProfile = {
   id: string;
@@ -96,6 +97,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setDbUser(meJson.data as DbProfile);
     }
   }
+
+  // Real-time: refresh points balance whenever the server broadcasts a points change
+  const refreshRef = useRef(refreshProfile);
+  refreshRef.current = refreshProfile;
+  useEffect(() => {
+    if (!dbUser?.id) return;
+    const supabase = getBrowserSupabase();
+    const channel = supabase
+      .channel(`points:${dbUser.id}`)
+      .on("broadcast", { event: "update" }, () => refreshRef.current())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [dbUser?.id]);
 
   return (
     <AuthContext.Provider value={{ user, loading, token, dbUser, refreshProfile }}>

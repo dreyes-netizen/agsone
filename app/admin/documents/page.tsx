@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check } from "lucide-react";
+import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck } from "lucide-react";
+
+const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
 
 type PolicyDocument = {
   id: string;
@@ -34,6 +36,13 @@ export default function DocumentsPage() {
   const [reindexResult, setReindexResult] = useState<string>("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [promptCopied, setPromptCopied] = useState(false);
+
+  function copyPrompt() {
+    navigator.clipboard.writeText(MD_CONVERSION_PROMPT);
+    setPromptCopied(true);
+    setTimeout(() => setPromptCopied(false), 2000);
+  }
 
   async function load() {
     setLoading(true);
@@ -278,6 +287,28 @@ export default function DocumentsPage() {
                   placeholder="e.g. Employee Handbook"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+              </div>
+
+              {/* MD conversion tip */}
+              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-2">
+                <p className="text-xs font-semibold text-indigo-700">For best results — convert to Markdown first</p>
+                <p className="text-xs text-indigo-600 leading-relaxed">
+                  Upload a <span className="font-medium">.md file</span> instead of a PDF. Markdown preserves headings, tables, and lists that PDF extraction often mangles, which makes Ally's answers more accurate.
+                </p>
+                <div className="space-y-1">
+                  <p className="text-xs text-indigo-500">Use this prompt in <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-700">claude.ai</a> — attach your PDF and send:</p>
+                  <div className="bg-white border border-indigo-200 rounded-md px-3 py-2 flex items-start justify-between gap-2">
+                    <p className="text-xs text-gray-600 leading-relaxed flex-1">{MD_CONVERSION_PROMPT}</p>
+                    <button
+                      type="button"
+                      onClick={copyPrompt}
+                      className="shrink-0 text-indigo-400 hover:text-indigo-600 transition-colors mt-0.5"
+                      title="Copy prompt"
+                    >
+                      {promptCopied ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div>

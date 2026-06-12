@@ -5,8 +5,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import Link from "next/link";
 import {
-  Rss, Gamepad2, ShoppingBag, Flame, Star, Coins,
-  Target, Swords,
+  Rss, Gamepad2, ShoppingBag, Star, Coins,
+  Swords,
 } from "lucide-react";
 import { DashboardFeedCard } from "@/components/dashboard/DashboardFeedCard";
 
@@ -14,7 +14,6 @@ import { DashboardFeedCard } from "@/components/dashboard/DashboardFeedCard";
 type UserProfile = {
   pointsBalance: number;
   level: number;
-  streakDays: number;
   displayName: string;
   department: { id: string; name: string } | null;
 };
@@ -52,13 +51,6 @@ type Challenge = {
   deptProgress: { deptId: string; deptName: string; progress: number }[];
 };
 
-type Mission = {
-  id: string;
-  title: string;
-  pointsReward: number;
-  myCompletion: { status: string } | null;
-};
-
 type BirthdayPerson = {
   id: string;
   displayName: string;
@@ -68,7 +60,6 @@ type BirthdayPerson = {
 
 const METRIC_LABEL: Record<string, string> = {
   TOTAL_POINTS: "pts earned",
-  MISSIONS_COMPLETED: "missions done",
   SHOUTOUTS_SENT: "shoutouts sent",
 };
 
@@ -111,7 +102,6 @@ export default function DashboardPage() {
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [missions, setMissions] = useState<Mission[]>([]);
   const [birthdays, setBirthdays] = useState<BirthdayPerson[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -122,15 +112,13 @@ export default function DashboardPage() {
       apiFetch<{ data: FeedPost[]; nextCursor: string | null }>("/api/feed?limit=5"),
       apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard"),
       apiFetch<{ data: Challenge[] }>("/api/challenges"),
-      apiFetch<{ data: Mission[] }>("/api/missions"),
       apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming"),
     ])
-      .then(([me, feed, lb, ch, ms, bd]) => {
+      .then(([me, feed, lb, ch, bd]) => {
         if (me.status === "fulfilled") setProfile(me.value.data);
         if (feed.status === "fulfilled") setFeedPosts(feed.value.data ?? []);
         if (lb.status === "fulfilled") setLeaderboard(lb.value.data ?? []);
         if (ch.status === "fulfilled") setChallenges(ch.value.data ?? []);
-        if (ms.status === "fulfilled") setMissions(ms.value.data ?? []);
         if (bd.status === "fulfilled") setBirthdays((bd.value.data ?? []).filter((b) => b.daysUntil <= 7));
       })
       .finally(() => setLoading(false));
@@ -138,8 +126,6 @@ export default function DashboardPage() {
   }, [authLoading, user]);
 
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
-
-  const availableMissions = missions.filter((m) => !m.myCompletion).slice(0, 2);
 
   const deptChallenge = (() => {
     if (!profile?.department) return null;
@@ -172,7 +158,6 @@ export default function DashboardPage() {
         {[
           { icon: <Coins className="w-3.5 h-3.5 text-navy-500" />, label: "Points", value: profile?.pointsBalance?.toLocaleString() },
           { icon: <Star className="w-3.5 h-3.5 text-violet-500" />, label: "Level", value: profile?.level },
-          { icon: <Flame className="w-3.5 h-3.5 text-orange-400" />, label: "Streak", value: profile ? `${profile.streakDays}d` : undefined },
         ].map(({ icon, label, value }) => (
           <div key={label} className="flex-1 flex items-center gap-2 px-4 first:pl-0 last:pr-0">
             {icon}
@@ -190,7 +175,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
 
         {/* ════ LEFT COLUMN ════ */}
-        <div className="space-y-6">
+        <div className="space-y-6 ">
 
           {/* Feed widget */}
           <div>
@@ -222,33 +207,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Missions widget */}
-          <div>
-            <SectionHeader title="Missions" href="/missions" />
-            {loading ? (
-              <div className="bg-white rounded-xl border border-zinc-100 p-4 animate-pulse space-y-3">
-                <div className="h-3 bg-zinc-100 rounded w-2/3" />
-                <div className="h-3 bg-zinc-100 rounded w-1/2" />
-              </div>
-            ) : availableMissions.length === 0 ? (
-              <div className="bg-white rounded-xl border border-zinc-100 py-8 text-center">
-                <Target className="w-5 h-5 text-zinc-300 mx-auto mb-2" />
-                <p className="text-sm text-zinc-400">No missions right now</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl border border-zinc-100 divide-y divide-zinc-50">
-                {availableMissions.map((m) => (
-                  <Link key={m.id} href="/missions" className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50/60 transition-colors">
-                    <span className="text-sm text-zinc-800 font-medium truncate min-w-0 mr-3">{m.title}</span>
-                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
-                      +{m.pointsReward.toLocaleString()} pts
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
 
         {/* ════ RIGHT COLUMN ════ */}
@@ -275,10 +233,6 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
                     <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-                    <span className="text-sm font-bold text-orange-500">{profile?.streakDays ?? 0}d streak</span>
                   </div>
                 </div>
               </div>

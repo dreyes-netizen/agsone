@@ -13,7 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
 
@@ -42,7 +42,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
 

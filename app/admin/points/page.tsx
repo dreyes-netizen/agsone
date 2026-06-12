@@ -117,11 +117,15 @@ export default function AwardPointsPage() {
     }
   }
 
+  const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
+
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Employee[] }>("/api/admin/employees").then((r) =>
-      setEmployees(r.data)
-    );
+    apiFetch<{ data: (Employee & { role: string })[] }>("/api/admin/employees").then((r) => {
+      // Only Super Admin can award Managers — filter the list for other roles
+      const eligible = isSuperAdmin ? r.data : r.data.filter((e) => e.role === "EMPLOYEE");
+      setEmployees(eligible);
+    });
     loadHistory();
     loadBudget();
   // eslint-disable-next-line react-hooks/exhaustive-deps

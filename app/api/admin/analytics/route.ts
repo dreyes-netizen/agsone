@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 
 export async function GET(req: NextRequest) {
   const actor = await verifyAuth(req);
-  if (!requireRole(actor, ["HR_ADMIN"])) {
+  if (!requireRole(actor, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     }),
 
     prisma.pointTransaction.findMany({
-      where: { amount: { gt: 0 }, type: { in: ["MANUAL_AWARD", "GAME_WIN", "ATTENDANCE"] } },
+      where: { amount: { gt: 0 }, type: { in: ["MANUAL_AWARD", "GAME_WIN"] } },
       orderBy: { createdAt: "desc" },
       take: 10,
       select: {

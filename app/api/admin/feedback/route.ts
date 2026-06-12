@@ -5,7 +5,7 @@ import type { FeedbackCategory, FeedbackStatus } from "@/lib/generated/prisma/cl
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const statusFilter = searchParams.get("status") as FeedbackStatus | null;

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
-  ArrowLeft, Coins, Star, Flame, CalendarDays, Building2,
+  ArrowLeft, Coins, Star, CalendarDays, Building2,
   Award, Trophy, Sparkles, History, FileText, Tag, Briefcase,
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
@@ -31,7 +31,6 @@ type Employee = {
   role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
   pointsBalance: number;
   level: number;
-  streakDays: number;
   birthday: string | null;
   hireDate: string | null;
   bio: string | null;
@@ -56,23 +55,22 @@ type Transaction = {
   fromUser: { displayName: string; avatarUrl: string | null } | null;
 };
 
-const roleLabel = { EMPLOYEE: "Employee", MANAGER: "Manager", HR_ADMIN: "HR Admin" };
+const roleLabel = { EMPLOYEE: "Employee", MANAGER: "Manager", HR_ADMIN: "HR Admin", SUPER_ADMIN: "Super Admin" };
 const roleBadgeClass = {
-  EMPLOYEE: "bg-gray-100 text-gray-600",
-  MANAGER:  "bg-blue-100 text-blue-700",
-  HR_ADMIN: "bg-violet-100 text-violet-700",
+  EMPLOYEE:    "bg-gray-100 text-gray-600",
+  MANAGER:     "bg-blue-100 text-blue-700",
+  HR_ADMIN:    "bg-violet-100 text-violet-700",
+  SUPER_ADMIN: "bg-red-100 text-red-700",
 };
 
 const typeConfig: Record<string, { label: string; color: string; bg: string }> = {
   MANUAL_AWARD: { label: "Points Awarded",   color: "text-emerald-600", bg: "bg-emerald-50" },
-  ATTENDANCE:   { label: "Streak Bonus",     color: "text-sky-600",     bg: "bg-sky-50" },
   REDEMPTION:   { label: "Redeemed",         color: "text-rose-500",    bg: "bg-rose-50" },
   REFUND:       { label: "Refund",           color: "text-emerald-600", bg: "bg-emerald-50" },
   GAME_WIN:     { label: "Game Win",         color: "text-violet-600",  bg: "bg-violet-50" },
   GAME_SPEND:   { label: "Game Entry",       color: "text-orange-500",  bg: "bg-orange-50" },
   CONTEST:      { label: "Contest",          color: "text-navy-600",    bg: "bg-navy-50" },
   KPI:          { label: "KPI Bonus",        color: "text-emerald-600", bg: "bg-emerald-50" },
-  TASK:         { label: "Task Completion",  color: "text-emerald-600", bg: "bg-emerald-50" },
   MILESTONE:    { label: "Milestone Reward", color: "text-violet-600",  bg: "bg-violet-50" },
 };
 
@@ -133,7 +131,8 @@ export default function EmployeeProfilePage() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
 
-  const isAdminOrManager = dbUser?.role === "HR_ADMIN" || dbUser?.role === "MANAGER";
+  const isAdminOrManager = dbUser?.role === "HR_ADMIN" || dbUser?.role === "MANAGER" || dbUser?.role === "SUPER_ADMIN";
+  const canAwardPoints = dbUser?.role === "SUPER_ADMIN" || (isAdminOrManager && employee?.role === "EMPLOYEE");
   const isSelf = dbUser?.id === id;
 
   function loadEmployee() {
@@ -281,8 +280,8 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
 
-      {/* Stats — 2×2 on mobile, 4-col on sm+ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Stats — 2×2 on mobile, 3-col on sm+ */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
           <Coins className="w-4 h-4 text-navy-400 mx-auto mb-1" />
           <p className="text-2xl font-black text-gray-900 tabular-nums">{employee.pointsBalance.toLocaleString()}</p>
@@ -292,11 +291,6 @@ export default function EmployeeProfilePage() {
           <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" />
           <p className="text-2xl font-black text-violet-600">{employee.level}</p>
           <p className="text-xs text-gray-400 mt-0.5">Level</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-          <Flame className="w-4 h-4 text-orange-400 mx-auto mb-1" />
-          <p className="text-2xl font-black text-orange-500">{employee.streakDays}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Day Streak</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
           <Trophy className="w-4 h-4 text-yellow-500 mx-auto mb-1" />
@@ -374,8 +368,8 @@ export default function EmployeeProfilePage() {
         </div>
       )}
 
-      {/* Award Points — managers and HR admins only, not on own profile */}
-      {isAdminOrManager && !isSelf && (
+      {/* Award Points — not on own profile; managers can only award employees */}
+      {canAwardPoints && !isSelf && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
             <Coins className="w-4 h-4 text-navy-400" />

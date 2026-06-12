@@ -9,7 +9,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -29,7 +29,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

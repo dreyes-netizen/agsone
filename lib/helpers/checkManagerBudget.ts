@@ -23,7 +23,7 @@ export async function checkManagerBudget(
   actorRole: string,
   amountNeeded: number,
 ): Promise<BudgetStatus> {
-  if (actorRole === "HR_ADMIN") {
+  if (actorRole === "HR_ADMIN" || actorRole === "SUPER_ADMIN") {
     return { allowed: true, isExempt: true, used: 0, remaining: MANAGER_MONTHLY_BUDGET, total: MANAGER_MONTHLY_BUDGET };
   }
 

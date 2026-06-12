@@ -5,19 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Flame, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette } from "lucide-react";
+import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette } from "lucide-react";
+import { getLevelProgress } from "@/lib/helpers/checkLevelUp";
 
 type UserBadge = {
   id: string;
   awardedAt: string;
   badge: { name: string; description: string | null };
-};
-
-type MissionItem = {
-  id: string;
-  title: string;
-  pointsReward: number;
-  myCompletion: { status: "PENDING" | "APPROVED" | "REJECTED" } | null;
 };
 
 type ShoutoutEntry = {
@@ -44,7 +38,6 @@ type UserProfile = {
   role: string;
   pointsBalance: number;
   level: number;
-  streakDays: number;
   birthday: string | null;
   hireDate: string | null;
   bio: string | null;
@@ -116,8 +109,6 @@ function getTenure(hireDate: string): string {
 
 const txTypeLabel: Record<string, { label: string; color: string }> = {
   MANUAL_AWARD: { label: "Award",      color: "text-emerald-600" },
-  ATTENDANCE:   { label: "Attendance", color: "text-blue-600" },
-  TASK:         { label: "Task",       color: "text-purple-600" },
   KPI:          { label: "KPI",        color: "text-navy-600" },
   CONTEST:      { label: "Contest",    color: "text-yellow-600" },
   REDEMPTION:   { label: "Redemption", color: "text-rose-500" },
@@ -125,7 +116,7 @@ const txTypeLabel: Record<string, { label: string; color: string }> = {
   GAME_SPEND:   { label: "Game",       color: "text-orange-500" },
   REFUND:       { label: "Refund",     color: "text-teal-600" },
   MILESTONE:    { label: "Milestone",  color: "text-amber-600" },
-  DEDUCTION: { label: "Violation Deduction", color: "text-red-600" },
+  DEDUCTION:    { label: "Violation Deduction", color: "text-red-600" },
 };
 
 const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
@@ -135,7 +126,6 @@ const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
   LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
 };
 
-const POINTS_PER_LEVEL = 1000;
 
 const BANNER_COLOR_OPTIONS = [
   { key: "default",  gradient: "from-navy-500 to-violet-600" },
@@ -153,15 +143,17 @@ const BANNER_GRADIENTS: Record<string, string> = Object.fromEntries(
 );
 
 const roleLabel: Record<string, string> = {
-  EMPLOYEE: "Employee",
-  MANAGER:  "Manager",
-  HR_ADMIN: "HR Admin",
+  EMPLOYEE:    "Employee",
+  MANAGER:     "Manager",
+  HR_ADMIN:    "HR Admin",
+  SUPER_ADMIN: "Super Admin",
 };
 
 const roleBadgeStyle: Record<string, string> = {
-  EMPLOYEE: "bg-zinc-100 text-zinc-700",
-  MANAGER:  "bg-blue-50 text-blue-700",
-  HR_ADMIN: "bg-violet-50 text-violet-700",
+  EMPLOYEE:    "bg-zinc-100 text-zinc-700",
+  MANAGER:     "bg-blue-50 text-blue-700",
+  HR_ADMIN:    "bg-violet-50 text-violet-700",
+  SUPER_ADMIN: "bg-red-50 text-red-700",
 };
 
 function CompletenessBar({ profile }: { profile: UserProfile }) {
@@ -282,7 +274,6 @@ export default function ProfilePage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
-  const [missions, setMissions] = useState<MissionItem[] | null>(null);
   const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
   const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
 
@@ -291,14 +282,12 @@ export default function ProfilePage() {
     Promise.all([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: PointsData }>("/api/me/points"),
-      apiFetch<{ data: MissionItem[] }>("/api/missions").catch(() => ({ data: [] as MissionItem[] })),
       apiFetch<{ data: ShoutoutEntry[] }>("/api/me/shoutouts").catch(() => ({ data: [] as ShoutoutEntry[] })),
-    ]).then(([me, pts, miss, shouts]) => {
+    ]).then(([me, pts, shouts]) => {
       setProfile(me.data);
       setPointsData(pts.data);
       setBioEdit(me.data.bio ?? "");
       setSkillsEdit(me.data.skills ?? []);
-      setMissions(miss.data);
       setShoutouts(shouts.data);
     }).catch(() => {
       // intentional: stop loading spinner on fetch failure
@@ -391,8 +380,8 @@ export default function ProfilePage() {
     return <div className="text-zinc-400 py-12 text-center text-sm">Loading profile...</div>;
   }
 
-  const pointsIntoLevel = profile.pointsBalance % POINTS_PER_LEVEL;
-  const levelPct = Math.min(100, (pointsIntoLevel / POINTS_PER_LEVEL) * 100);
+  const { pointsIntoLevel, pointsNeededForLevel } = getLevelProgress(profile.pointsBalance);
+  const levelPct = Math.min(100, (pointsIntoLevel / pointsNeededForLevel) * 100);
 
   return (
     <div className="space-y-5">
@@ -472,7 +461,7 @@ export default function ProfilePage() {
           <div className="mt-5 space-y-1.5">
             <div className="flex justify-between text-xs text-zinc-500 gap-2">
               <span className="font-medium shrink-0">Level {profile.level}</span>
-              <span className="text-right shrink-0">{pointsIntoLevel.toLocaleString()} / {POINTS_PER_LEVEL.toLocaleString()} pts to next</span>
+              <span className="text-right shrink-0">{pointsIntoLevel.toLocaleString()} / {pointsNeededForLevel.toLocaleString()} pts to next</span>
             </div>
             <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
               <div
@@ -513,12 +502,10 @@ export default function ProfilePage() {
         <>
           <CompletenessBar profile={profile} />
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
               { icon: Coins, value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600",   bg: "bg-navy-50",   hint: null },
               { icon: Star,  value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50", hint: null },
-              { icon: Flame, value: profile.streakDays,                     label: "Streak (days)",  color: "text-orange-500", bg: "bg-orange-50",
-                hint: profile.streakDays > 0 ? "Log in tomorrow to keep it going!" : "Log in daily to start a streak!" },
               { icon: Medal, value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50",  hint: null },
             ].map(({ icon: Icon, value, label, color, bg, hint }) => (
               <div key={label} className="bg-white rounded-xl border border-zinc-200 p-4 flex flex-col gap-2">
@@ -534,34 +521,6 @@ export default function ProfilePage() {
 
           {/* Minigames stats */}
           <MinigamesStatsCard />
-
-          {/* Active Missions */}
-          {missions && missions.filter(m => !m.myCompletion || m.myCompletion.status === "PENDING").length > 0 && (
-            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center justify-between">
-                <p className="text-sm font-semibold text-zinc-800">🎯 Active Missions</p>
-                <Link href="/dashboard" className="text-xs text-navy-600 hover:underline">Go to Dashboard →</Link>
-              </div>
-              <ul className="divide-y divide-zinc-100">
-                {missions
-                  .filter(m => !m.myCompletion || m.myCompletion.status === "PENDING")
-                  .slice(0, 3)
-                  .map((m) => (
-                    <li key={m.id} className="flex items-center gap-3 px-5 py-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-800 truncate">{m.title}</p>
-                        <p className="text-xs text-zinc-400">{m.pointsReward.toLocaleString()} pts</p>
-                      </div>
-                      {m.myCompletion?.status === "PENDING" ? (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">Pending</span>
-                      ) : (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">In Progress</span>
-                      )}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
 
           {/* Birthday */}
           <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4">
@@ -773,7 +732,7 @@ export default function ProfilePage() {
                   <div className="flex flex-col items-center py-10 gap-2 text-center px-4">
                     <Trophy className="w-8 h-8 text-zinc-300" />
                     <p className="text-sm font-medium text-zinc-500">No points yet</p>
-                    <p className="text-xs text-zinc-400">Complete missions or wait for your manager to recognize you!</p>
+                    <p className="text-xs text-zinc-400">Earn points through recognition, milestones, or games!</p>
                   </div>
                 );
               }
@@ -896,7 +855,6 @@ export default function ProfilePage() {
             <ul className="divide-y divide-zinc-100">
               {[
                 { type: "SHOUTOUT_RECEIVED", label: "Shoutout received", description: "When a colleague shouts you out" },
-                { type: "MISSION_COMPLETED", label: "Mission approved", description: "When your mission completion is approved" },
                 { type: "POINTS_AWARDED",    label: "Points awarded",   description: "When an admin manually awards you points" },
                 { type: "MILESTONE_REWARD",  label: "Milestone reward", description: "On your birthday or work anniversary" },
               ].map(({ type, label, description }) => {

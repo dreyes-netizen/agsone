@@ -20,7 +20,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       role: true,
       pointsBalance: true,
       level: true,
-      streakDays: true,
       birthday: true,
       hireDate: true,
       isActive: true,

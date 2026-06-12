@@ -45,6 +45,7 @@ type ReplyItem = {
   content: string;
   createdAt: string;
   parentId: string | null;
+  authorId: string;
   author: { displayName: string; avatarUrl: string | null };
 };
 
@@ -52,6 +53,7 @@ type CommentItem = {
   id: string;
   content: string;
   createdAt: string;
+  authorId: string;
   author: { displayName: string; avatarUrl: string | null };
   replies: ReplyItem[];
 };
@@ -276,6 +278,7 @@ export default function FeedPage() {
   const [votingPost, setVotingPost] = useState<string | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentsCache, setCommentsCache] = useState<Record<string, CommentItem[]>>({});
+  const [commentsLoading, setCommentsLoading] = useState<Record<string, boolean>>({});
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [commentSending, setCommentSending] = useState<Record<string, boolean>>({});
   const [replyingTo, setReplyingTo] = useState<{ postId: string; commentId: string; displayName: string } | null>(null);
@@ -490,8 +493,13 @@ export default function FeedPage() {
     const next = !openComments[postId];
     setOpenComments((prev) => ({ ...prev, [postId]: next }));
     if (next && !commentsCache[postId]) {
-      const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
-      setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
+      setCommentsLoading((prev) => ({ ...prev, [postId]: true }));
+      try {
+        const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
+        setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
+      } finally {
+        setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
+      }
     }
   }
 
@@ -1187,7 +1195,7 @@ export default function FeedPage() {
         </div>
 
         {/* Posts — left column, row 2 */}
-        <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5">
+        <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5 ">
       {/* Posts */}
       {loadError ? (
         <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
@@ -1240,12 +1248,12 @@ export default function FeedPage() {
                         </button>
                         <div className="ml-auto shrink-0 flex items-center gap-1">
                           <span className="text-xs text-zinc-400 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
-                          {dbUser?.role === "HR_ADMIN" && (
+                          {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
                             <button onClick={() => togglePin(post.id)} className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"}>
                               <Pin className="w-3.5 h-3.5" />
                             </button>
                           )}
-                          {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
+                          {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
                             <>
                               <button onClick={() => startEditPost(post)} className="text-gray-300 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50" title="Edit shoutout">
                                 <Pencil className="w-3.5 h-3.5" />
@@ -1359,7 +1367,20 @@ export default function FeedPage() {
                   </div>
                   {openComments[post.id] && (
                     <div className="mt-1 pt-3 border-t border-black/5 space-y-4">
-                      {(commentsCache[post.id] ?? []).map((c) => (
+                      {commentsLoading[post.id] && (
+                        <div className="space-y-3 animate-pulse">
+                          {[1, 2].map((i) => (
+                            <div key={i} className="flex gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-zinc-100 shrink-0" />
+                              <div className="flex-1 space-y-1.5">
+                                <div className="h-3 bg-zinc-100 rounded w-1/4" />
+                                <div className="h-3 bg-zinc-100 rounded w-3/4" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!commentsLoading[post.id] && (commentsCache[post.id] ?? []).map((c) => (
                         <div key={c.id}>
                           <div className="flex gap-2.5">
                             <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
@@ -1382,6 +1403,14 @@ export default function FeedPage() {
                                 >
                                   Reply
                                 </button>
+                                {(c.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                                  <button
+                                    onClick={() => deleteComment(post.id, c.id)}
+                                    className="text-[11px] font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
                                 {c.replies.length > 0 && (
                                   <button
                                     onClick={() => setExpandedReplies((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
@@ -1429,7 +1458,17 @@ export default function FeedPage() {
                                           <span className="text-xs font-semibold text-gray-900">{r.author.displayName}</span>
                                           <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{r.content}</p>
                                         </div>
-                                        <span className="text-[11px] text-gray-400 mt-1 pl-1 block">{timeAgo(r.createdAt)}</span>
+                                        <div className="flex items-center gap-3 mt-1 pl-1">
+                                          <span className="text-[11px] text-gray-400">{timeAgo(r.createdAt)}</span>
+                                          {(r.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                                            <button
+                                              onClick={() => deleteComment(post.id, r.id, c.id)}
+                                              className="text-[11px] font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                                            >
+                                              Delete
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
@@ -1512,7 +1551,7 @@ export default function FeedPage() {
                       </button>
                       <div className="ml-auto shrink-0 flex items-center gap-1">
                         <span className="text-xs text-gray-400 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
-                        {dbUser?.role === "HR_ADMIN" && (
+                        {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
                           <button
                             onClick={() => togglePin(post.id)}
                             className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`}
@@ -1521,7 +1560,7 @@ export default function FeedPage() {
                             <Pin className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN") && (
+                        {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
                           <>
                             <button
                               onClick={() => startEditPost(post)}
@@ -1629,7 +1668,20 @@ export default function FeedPage() {
                 {/* Threaded comments */}
                 {openComments[post.id] && (
                   <div className="mt-3 pt-3 border-t border-black/5 space-y-4">
-                    {(commentsCache[post.id] ?? []).map((c) => (
+                    {commentsLoading[post.id] && (
+                      <div className="space-y-3 animate-pulse">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="flex gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-zinc-100 shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="h-3 bg-zinc-100 rounded w-1/4" />
+                              <div className="h-3 bg-zinc-100 rounded w-3/4" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {!commentsLoading[post.id] && (commentsCache[post.id] ?? []).map((c) => (
                       <div key={c.id}>
                         {/* Top-level comment */}
                         <div className="flex gap-2.5">
@@ -1653,6 +1705,14 @@ export default function FeedPage() {
                               >
                                 Reply
                               </button>
+                              {(c.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                                <button
+                                  onClick={() => deleteComment(post.id, c.id)}
+                                  className="text-[11px] font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              )}
                               {c.replies.length > 0 && (
                                 <button
                                   onClick={() =>
@@ -1705,7 +1765,17 @@ export default function FeedPage() {
                                         <span className="text-xs font-semibold text-gray-900">{r.author.displayName}</span>
                                         <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{r.content}</p>
                                       </div>
-                                      <span className="text-[11px] text-gray-400 mt-1 pl-1 block">{timeAgo(r.createdAt)}</span>
+                                      <div className="flex items-center gap-3 mt-1 pl-1">
+                                        <span className="text-[11px] text-gray-400">{timeAgo(r.createdAt)}</span>
+                                        {(r.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                                          <button
+                                            onClick={() => deleteComment(post.id, r.id, c.id)}
+                                            className="text-[11px] font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                                          >
+                                            Delete
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 ))}

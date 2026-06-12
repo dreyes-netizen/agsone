@@ -13,12 +13,11 @@ enum Role {
   EMPLOYEE
   MANAGER
   HR_ADMIN
+  SUPER_ADMIN
 }
 
 enum PointTransactionType {
   MANUAL_AWARD
-  ATTENDANCE
-  TASK
   KPI
   CONTEST
   REDEMPTION
@@ -46,17 +45,6 @@ enum RedemptionStatus {
 enum BadgeCriteriaType {
   MANUAL
   AUTO_RULE
-}
-
-enum MissionCompletionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum MissionType {
-  INDIVIDUAL
-  TEAM
 }
 
 enum GameType {
@@ -102,7 +90,6 @@ enum MilestoneType {
 
 enum ChallengeMetric {
   TOTAL_POINTS
-  MISSIONS_COMPLETED
   SHOUTOUTS_SENT
 }
 
@@ -143,8 +130,6 @@ model User {
   managerId          String?
   pointsBalance      Int       @default(0)
   level              Int       @default(1)
-  streakDays         Int       @default(0)
-  lastActiveAt       DateTime?
   birthday           DateTime?
   hireDate           DateTime?
   onboardingComplete Boolean   @default(false)
@@ -167,9 +152,6 @@ model User {
   redemptionsProcessed Redemption[]   @relation("ProcessedBy")
   userBadges        UserBadge[]
   badgesAwarded     UserBadge[]        @relation("BadgeAwardedBy")
-  missionsCreated   Mission[]
-  missionCompletions MissionCompletion[]
-  missionsVerified  MissionCompletion[] @relation("MissionVerifiedBy")
   rewardsCreated    Reward[]
   gamesCreated      Game[]
   gamePlays         GamePlay[]
@@ -278,40 +260,6 @@ model UserBadge {
   awardedBy User?  @relation("BadgeAwardedBy", fields: [awardedById], references: [id])
 
   @@unique([userId, badgeId])
-}
-
-model Mission {
-  id             String      @id @default(uuid())
-  title          String
-  description    String?
-  pointsReward   Int
-  startDate      DateTime?
-  endDate        DateTime?
-  type           MissionType @default(INDIVIDUAL)
-  criteriaConfig Json?
-  isActive       Boolean     @default(true)
-  createdById    String
-  createdAt      DateTime    @default(now())
-
-  createdBy   User                @relation(fields: [createdById], references: [id])
-  completions MissionCompletion[]
-}
-
-model MissionCompletion {
-  id           String   @id @default(uuid())
-  missionId    String
-  userId       String
-  completedAt  DateTime @default(now())
-  verifiedById String?
-  status       MissionCompletionStatus @default(PENDING)
-  adminNote    String?
-  verifiedAt   DateTime?
-
-  mission    Mission @relation(fields: [missionId], references: [id])
-  user       User    @relation(fields: [userId], references: [id])
-  verifiedBy User?   @relation("MissionVerifiedBy", fields: [verifiedById], references: [id])
-
-  @@unique([missionId, userId])
 }
 
 model Game {

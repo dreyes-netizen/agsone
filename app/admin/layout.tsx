@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, Target, MessageSquare, Gift, Swords, FileText, Pill, Menu } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, MessageSquare, Gift, Swords, FileText, Pill, Menu } from "lucide-react";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,6 @@ const navItems = [
   { href: "/admin",             label: "Overview",     icon: LayoutDashboard },
   { href: "/admin/employees",   label: "Employees",    icon: Users },
   { href: "/admin/departments", label: "Departments",  icon: Building2 },
-  { href: "/admin/missions",    label: "Missions",     icon: Target },
   { href: "/admin/milestones",  label: "Milestones",   icon: Gift },
   { href: "/admin/challenges",  label: "Challenges",   icon: Swords },
   { href: "/admin/points",      label: "Award Points", icon: Award },
@@ -31,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && dbUser?.role !== "HR_ADMIN") {
+    if (!loading && dbUser?.role !== "HR_ADMIN" && dbUser?.role !== "SUPER_ADMIN") {
       router.replace("/dashboard");
     }
   }, [loading, dbUser, router]);
@@ -41,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setSidebarOpen(false);
   }, [pathname]);
 
-  if (loading || dbUser?.role !== "HR_ADMIN") return null;
+  if (loading || (dbUser?.role !== "HR_ADMIN" && dbUser?.role !== "SUPER_ADMIN")) return null;
 
   async function handleSignOut() {
     await signOut(auth);

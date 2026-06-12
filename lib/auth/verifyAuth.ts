@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma/client";
-import { updateStreak } from "@/lib/helpers/updateStreak";
 import type { Role } from "@/lib/generated/prisma/client";
 
 export type AuthUser = {
@@ -30,14 +29,8 @@ export async function verifyAuth(req: NextRequest): Promise<AuthUser | null> {
         role: true,
         pointsBalance: true,
         departmentId: true,
-        lastActiveAt: true,
-        streakDays: true,
       },
     });
-
-    if (user) {
-      updateStreak(user.id, user.lastActiveAt, user.streakDays).catch(() => {});
-    }
 
     return user as AuthUser | null;
   } catch {

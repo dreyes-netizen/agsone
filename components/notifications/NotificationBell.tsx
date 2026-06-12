@@ -21,8 +21,6 @@ function getNotificationLink(n: Notification): string | null {
   switch (n.type) {
     case "SHOUTOUT_RECEIVED":      return "/feed";
     case "POINTS_AWARDED":         return "/profile";
-    case "MISSION_COMPLETED":
-    case "MISSION_REJECTED":       return "/missions";
     case "MILESTONE_REWARD":       return "/profile";
     case "GAME_INVITE":             return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/minigames";
     case "GAME_WIN":               return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/games";
@@ -31,8 +29,6 @@ function getNotificationLink(n: Notification): string | null {
     case "REDEMPTION_PENDING":     return "/marketplace";
     case "LEVEL_UP":
     case "BADGE_EARNED":           return "/profile";
-    case "STREAK_RESTORED":
-    case "STREAK_BROKEN":          return "/profile";
     case "FEEDBACK_REPLY":         return "/feedback";
     default:                       return null;
   }

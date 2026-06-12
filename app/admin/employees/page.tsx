@@ -10,7 +10,7 @@ type Employee = {
   employeeId: string | null;
   displayName: string;
   email: string;
-  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
+  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN" | "SUPER_ADMIN";
   pointsBalance: number;
   isActive: boolean;
   hireDate: string | null;
@@ -50,21 +50,24 @@ const EMPTY_ADD_FORM: AddForm = {
   birthday: "",
 };
 
-const roleLabel = {
-  EMPLOYEE: "Employee",
-  MANAGER: "Manager",
-  HR_ADMIN: "HR Admin",
+const roleLabel: Record<string, string> = {
+  EMPLOYEE:    "Employee",
+  MANAGER:     "Manager",
+  HR_ADMIN:    "HR Admin",
+  SUPER_ADMIN: "Super Admin",
 };
 
-const roleBadgeClass = {
-  EMPLOYEE: "bg-gray-100 text-gray-600",
-  MANAGER: "bg-navy-100 text-navy-700",
-  HR_ADMIN: "bg-violet-100 text-violet-700",
+const roleBadgeClass: Record<string, string> = {
+  EMPLOYEE:    "bg-gray-100 text-gray-600",
+  MANAGER:     "bg-navy-100 text-navy-700",
+  HR_ADMIN:    "bg-violet-100 text-violet-700",
+  SUPER_ADMIN: "bg-red-100 text-red-700",
 };
 
 export default function EmployeesPage() {
   const { apiFetch } = useApiClient();
-  const { user, loading: authLoading } = useAuth();
+  const { user, dbUser, loading: authLoading } = useAuth();
+  const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
@@ -428,6 +431,7 @@ export default function EmployeesPage() {
                     <option value="EMPLOYEE">Employee</option>
                     <option value="MANAGER">Manager</option>
                     <option value="HR_ADMIN">HR Admin</option>
+                    {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                   </select>
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Role</th>
@@ -482,6 +486,7 @@ export default function EmployeesPage() {
                       <option value="EMPLOYEE">Employee</option>
                       <option value="MANAGER">Manager</option>
                       <option value="HR_ADMIN">HR Admin</option>
+                      {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                     </select>
                   </td>
                   <td className="px-6 py-3 text-gray-500 text-sm">
@@ -574,6 +579,7 @@ export default function EmployeesPage() {
                     <option value="EMPLOYEE">Employee</option>
                     <option value="MANAGER">Manager</option>
                     <option value="HR_ADMIN">HR Admin</option>
+                    {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                   </select>
                 </div>
               </div>
@@ -691,6 +697,7 @@ export default function EmployeesPage() {
                   <option value="EMPLOYEE">Employee</option>
                   <option value="MANAGER">Manager</option>
                   <option value="HR_ADMIN">HR Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
                 </select>
               </div>
 

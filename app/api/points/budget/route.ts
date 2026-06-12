@@ -4,7 +4,7 @@ import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["MANAGER", "HR_ADMIN"])) {
+  if (!requireRole(user, ["MANAGER", "HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

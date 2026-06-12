@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Flame } from "lucide-react";
+import { Star } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { timeAgo } from "@/lib/helpers/timeAgo";
@@ -21,7 +21,6 @@ type Department = { id: string; name: string };
 type UserProfile = {
   pointsBalance: number;
   level: number;
-  streakDays: number;
   displayName: string;
   avatarUrl: string | null;
   department: { id: string; name: string } | null;
@@ -219,10 +218,6 @@ export default function LeaderboardPage() {
                   <div className="flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
                     <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-                    <span className="text-sm font-bold text-orange-500">{profile?.streakDays ?? 0}d streak</span>
                   </div>
                 </div>
                 {profile?.department && (

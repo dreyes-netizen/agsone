@@ -15,7 +15,7 @@ type Challenge = {
   id: string;
   title: string;
   description: string | null;
-  metric: "TOTAL_POINTS" | "MISSIONS_COMPLETED" | "SHOUTOUTS_SENT";
+  metric: "TOTAL_POINTS" | "SHOUTOUTS_SENT";
   targetValue: number;
   startDate: string;
   endDate: string;
@@ -24,7 +24,6 @@ type Challenge = {
 
 const metricLabel: Record<Challenge["metric"], string> = {
   TOTAL_POINTS: "Total Points",
-  MISSIONS_COMPLETED: "Missions Completed",
   SHOUTOUTS_SENT: "Shoutouts Sent",
 };
 

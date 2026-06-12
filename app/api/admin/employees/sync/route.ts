@@ -27,7 +27,7 @@ import { prisma } from "@/lib/prisma/client";
  *                       are ignored and the employee stays active.
  *
  * WHAT THIS UPLOAD DOES NOT CHANGE:
- *   - Points balance, level, and streak
+ *   - Points balance and level
  *   - App role (Employee / Manager / HR Admin)
  *   - Profile photo, banner, bio, and skills
  *
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await verifyAuth(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!requireRole(user, ["HR_ADMIN"])) {
+    if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

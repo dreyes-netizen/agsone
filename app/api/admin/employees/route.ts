@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN", "MANAGER"])) {
+  if (!requireRole(user, ["HR_ADMIN", "MANAGER", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -46,7 +46,7 @@ const createSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const actor = await verifyAuth(req);
-  if (!requireRole(actor, ["HR_ADMIN"])) {
+  if (!requireRole(actor, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

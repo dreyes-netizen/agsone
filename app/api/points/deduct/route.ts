@@ -24,7 +24,7 @@ const schema = z
 
 export async function POST(req: NextRequest) {
   const actor = await verifyAuth(req);
-  if (!requireRole(actor, ["HR_ADMIN"])) {
+  if (!requireRole(actor, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

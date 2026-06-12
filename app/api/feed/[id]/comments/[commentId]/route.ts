@@ -40,13 +40,28 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   const comment = await prisma.socialComment.findUnique({
     where: { id: commentId },
-    select: { authorId: true },
+    select: { authorId: true, content: true, postId: true },
   });
   if (!comment) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (comment.authorId !== user.id && user.role !== "HR_ADMIN") {
+
+  const isAdmin = user.role === "HR_ADMIN" || user.role === "SUPER_ADMIN";
+  if (comment.authorId !== user.id && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.socialComment.delete({ where: { id: commentId } });
+
+  if (isAdmin && comment.authorId !== user.id) {
+    await prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        action: "DELETE_COMMENT",
+        entityType: "SocialComment",
+        entityId: commentId,
+        beforeState: { authorId: comment.authorId, postId: comment.postId, content: comment.content.slice(0, 500) },
+      },
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

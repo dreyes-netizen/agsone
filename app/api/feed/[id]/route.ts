@@ -74,14 +74,30 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const post = await prisma.socialPost.findUnique({ where: { id }, select: { authorId: true } });
+  const post = await prisma.socialPost.findUnique({
+    where: { id },
+    select: { authorId: true, content: true, type: true },
+  });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Only the author or an HR_ADMIN can delete
-  if (post.authorId !== user.id && user.role !== "HR_ADMIN") {
+  const isAdmin = user.role === "HR_ADMIN" || user.role === "SUPER_ADMIN";
+  if (post.authorId !== user.id && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.socialPost.delete({ where: { id } });
+
+  if (isAdmin && post.authorId !== user.id) {
+    await prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        action: "DELETE_POST",
+        entityType: "SocialPost",
+        entityId: id,
+        beforeState: { authorId: post.authorId, type: post.type, content: post.content.slice(0, 500) },
+      },
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

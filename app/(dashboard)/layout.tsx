@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Home, ShoppingBag, Star, User, ShieldCheck, LogOut,
-  Rss, Menu, UtensilsCrossed, MessageSquare, Swords, Search, Pill, Puzzle,
+  ShoppingBag, Star, User, ShieldCheck, LogOut,
+  Rss, Menu, UtensilsCrossed, MessageSquare, Search, Pill, Puzzle,
 } from "lucide-react";
 import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
@@ -16,24 +16,22 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { CommandPalette } from "@/components/CommandPalette";
 
 const mainNav = [
-  { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/medicine",    label: "Medicine",    icon: Pill },
   { href: "/minigames",   label: "Minigames",   icon: Puzzle },
   { href: "/leaderboard", label: "Top Performers", icon: Star },
-  { href: "/challenges",  label: "Challenges",  icon: Swords },
   { href: "/profile",     label: "Profile",     icon: User },
   { href: "/feedback",    label: "Feedback",    icon: MessageSquare },
 ];
 
 const bottomNavItems = [
-  { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/minigames",   label: "Minigames",   icon: Puzzle },
+  { href: "/leaderboard", label: "Leaderboard", icon: Star },
 ];
 
 function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {

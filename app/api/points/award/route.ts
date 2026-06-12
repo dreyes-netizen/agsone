@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       action: "AWARD_POINTS",
       entityType: "PointTransaction",
       entityId: transaction.id,
-      afterState: { toUserId, amount, note },
+      afterState: { toUserId, toUserName: recipient.displayName, amount, note },
     },
   });
 

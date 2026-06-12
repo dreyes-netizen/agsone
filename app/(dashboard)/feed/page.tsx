@@ -2,9 +2,10 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
@@ -57,6 +58,37 @@ type CommentItem = {
   author: { displayName: string; avatarUrl: string | null };
   replies: ReplyItem[];
 };
+
+type UserProfile = {
+  pointsBalance: number;
+  level: number;
+  displayName: string;
+  department: { id: string; name: string } | null;
+};
+
+type LeaderboardEntry = {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  points: number;
+  isCurrentUser: boolean;
+};
+
+
+type BirthdayPerson = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  daysUntil: number;
+};
+
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 const EMOJIS = [
   { emoji: "👍", label: "Like" },
@@ -300,6 +332,10 @@ export default function FeedPage() {
   const mentionDropdownRef = useRef<HTMLDivElement>(null);
   const recipientSearchRef = useRef<HTMLDivElement>(null);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [birthdays, setBirthdays] = useState<BirthdayPerson[]>([]);
+  const [widgetsLoading, setWidgetsLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -315,6 +351,20 @@ export default function FeedPage() {
     apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
       .then((res) => setEmployees(res.data))
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    Promise.allSettled([
+      apiFetch<{ data: UserProfile }>("/api/me"),
+      apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard"),
+      apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming"),
+    ]).then(([me, lb, bd]) => {
+      if (me.status === "fulfilled") setProfile(me.value.data);
+      if (lb.status === "fulfilled") setLeaderboard(lb.value.data ?? []);
+      if (bd.status === "fulfilled") setBirthdays((bd.value.data ?? []).filter((b) => b.daysUntil <= 7));
+    }).finally(() => setWidgetsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -840,11 +890,22 @@ export default function FeedPage() {
     }
   }
 
+  const firstName = user?.displayName?.split(" ")[0] ?? "there";
+
   return (
     <div className="space-y-5">
+      {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Activity Feed</h1>
-        <p className="text-zinc-500 text-sm mt-1">What&apos;s happening across the company</p>
+        <p className="text-sm text-zinc-400 font-medium">
+          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+        </p>
+        <h1 className="text-2xl font-bold text-zinc-900 mt-0.5">
+          {authLoading ? (
+            <span className="inline-block h-8 w-48 bg-zinc-100 animate-pulse rounded align-middle" />
+          ) : (
+            <>{getGreeting()}, {firstName}</>
+          )}
+        </h1>
       </div>
 
       {hasNewPosts && (
@@ -862,12 +923,107 @@ export default function FeedPage() {
 
         {/* Sidebar — right column on desktop (spans both rows), first on mobile */}
         <aside className="order-1 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
+
+          {/* My Stats */}
+          <div className="bg-white rounded-xl border border-zinc-100 p-4">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">My Stats</p>
+            {widgetsLoading ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-8 bg-zinc-100 rounded w-1/2" />
+                <div className="h-3 bg-zinc-100 rounded w-1/3" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-3xl font-black text-zinc-900 tabular-nums leading-none">
+                    {profile?.pointsBalance?.toLocaleString() ?? "—"}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-1">points available</p>
+                </div>
+                <div className="flex items-center gap-4 pt-1 border-t border-zinc-50">
+                  <div className="flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                    <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Feed Filters + Pinned */}
           <FeedSidebar
             activeFilter={activeFilter}
             onFilterChange={(value) => { setActiveFilter(value); setPosts([]); setNextCursor(null); }}
             pinned={pinnedItems}
             onJumpToPost={jumpToPost}
           />
+
+          {/* Upcoming Birthdays */}
+          {!widgetsLoading && birthdays.length > 0 && (
+            <div className="bg-gradient-to-br from-pink-50 to-violet-50 border border-pink-100 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-2.5">🎂 Birthdays</p>
+              <div className="space-y-2">
+                {birthdays.map((b) => (
+                  <Link key={b.id} href={`/employees/${b.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <Avatar name={b.displayName} url={b.avatarUrl} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-zinc-900 truncate hover:underline">{b.displayName}</p>
+                      <p className="text-[10px] text-zinc-400">
+                        {b.daysUntil === 0 ? "Today 🎉" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Top Performers */}
+          <div className="bg-white rounded-xl border border-zinc-100 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50">
+              <div className="flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 text-yellow-500" />
+                <span className="text-xs font-semibold text-zinc-700">Top Performers</span>
+              </div>
+              <Link href="/leaderboard" className="text-xs text-navy-600 hover:text-navy-700 font-medium">See all →</Link>
+            </div>
+            {widgetsLoading ? (
+              <div className="p-4 space-y-3 animate-pulse">
+                {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-zinc-100 rounded" />)}
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <p className="text-xs text-zinc-400 text-center py-6">No data yet</p>
+            ) : (
+              <div>
+                {leaderboard.slice(0, 5).map((entry) => (
+                  <div key={entry.userId} className={`flex items-center gap-2.5 px-4 py-2.5 ${entry.isCurrentUser ? "bg-navy-50/50" : "hover:bg-zinc-50/60"} transition-colors`}>
+                    <Link href={`/employees/${entry.userId}`}>
+                      <Avatar name={entry.displayName} url={entry.avatarUrl} size="sm" />
+                    </Link>
+                    <Link href={`/employees/${entry.userId}`} className={`text-xs font-medium truncate flex-1 min-w-0 hover:underline ${entry.isCurrentUser ? "text-navy-700 font-semibold" : "text-zinc-700"}`}>
+                      {entry.isCurrentUser ? `${entry.displayName} (You)` : entry.displayName}
+                    </Link>
+                    <span className="text-xs font-bold tabular-nums text-zinc-500 shrink-0">
+                      {entry.points.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-2">
+            <Link href="/minigames" className="flex flex-col items-center gap-1.5 bg-white border border-zinc-100 rounded-xl py-3 px-2 hover:border-zinc-200 hover:shadow-sm transition-all text-center">
+              <Gamepad2 className="w-5 h-5 text-violet-500" />
+              <span className="text-xs font-semibold text-zinc-700 leading-tight">Play a<br/>Minigame</span>
+            </Link>
+            <Link href="/marketplace" className="flex flex-col items-center gap-1.5 bg-white border border-zinc-100 rounded-xl py-3 px-2 hover:border-zinc-200 hover:shadow-sm transition-all text-center">
+              <ShoppingBag className="w-5 h-5 text-orange-400" />
+              <span className="text-xs font-semibold text-zinc-700 leading-tight">Redeem<br/>Points</span>
+            </Link>
+          </div>
+
         </aside>
 
         {/* Compose — left column, row 1 */}

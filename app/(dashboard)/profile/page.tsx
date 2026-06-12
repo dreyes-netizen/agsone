@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette } from "lucide-react";
-import { getLevelProgress } from "@/lib/helpers/checkLevelUp";
+import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
 type UserBadge = {
   id: string;

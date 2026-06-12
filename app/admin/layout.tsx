@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, MessageSquare, Gift, Swords, FileText, Pill, Menu } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, MessageSquare, Gift, FileText, Pill, Menu, ShieldAlert } from "lucide-react";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -14,13 +14,13 @@ const navItems = [
   { href: "/admin/employees",   label: "Employees",    icon: Users },
   { href: "/admin/departments", label: "Departments",  icon: Building2 },
   { href: "/admin/milestones",  label: "Milestones",   icon: Gift },
-  { href: "/admin/challenges",  label: "Challenges",   icon: Swords },
   { href: "/admin/points",      label: "Award Points", icon: Award },
   { href: "/admin/rewards",     label: "Rewards",      icon: ShoppingBag },
   { href: "/admin/redemptions", label: "Redemptions",  icon: ClipboardList },
   { href: "/admin/feedback",    label: "Feedback",     icon: MessageSquare },
   { href: "/admin/documents",   label: "Documents",    icon: FileText },
   { href: "/admin/medicine",    label: "Medicine",     icon: Pill },
+  { href: "/admin/audit",       label: "Audit Log",    icon: ShieldAlert },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Plus, Send, Inbox, MessageSquarePlus } from "lucide-react";
+import { Plus, Send, MessageSquarePlus } from "lucide-react";
+import { WhistleIcon } from "@/components/icons/WhistleIcon";
 
 type FeedbackItem = {
   id: string;
@@ -40,6 +41,11 @@ type PanelState =
   | { mode: "thread"; id: string };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
+  ETHICAL_FRAUD:             "Ethical Violations & Fraud",
+  MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
+  SECURITY_POLICY:           "Security Concerns & Policy Violations",
+  // Legacy labels for existing submissions
   COMPENSATION_BENEFITS: "Compensation & Benefits",
   WORK_LIFE_BALANCE: "Work-Life Balance",
   COMPANY_CULTURE: "Company Culture",
@@ -50,6 +56,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
+  HARASSMENT_DISCRIMINATION: "bg-red-100 text-red-700",
+  ETHICAL_FRAUD:             "bg-orange-100 text-orange-700",
+  MISCONDUCT_ABUSE:          "bg-amber-100 text-amber-800",
+  SECURITY_POLICY:           "bg-rose-100 text-rose-700",
+  // Legacy colors for existing submissions
   COMPENSATION_BENEFITS: "bg-emerald-100 text-emerald-700",
   WORK_LIFE_BALANCE: "bg-sky-100 text-sky-700",
   COMPANY_CULTURE: "bg-indigo-100 text-indigo-700",
@@ -88,7 +99,7 @@ export default function FeedbackPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [body, setBody] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Thread state
@@ -128,13 +139,13 @@ export default function FeedbackPage() {
   function startCompose() {
     if (panel.mode === "compose") return;
     setPrevPanel(panel);
-    setTitle(""); setCategory(""); setBody(""); setIsAnonymous(false);
+    setTitle(""); setCategory(""); setBody(""); setIsAnonymous(true);
     setPanel({ mode: "compose" });
   }
 
   // CR-3 + IMP-3: restore previous panel and clear replyBody on discard
   function discardCompose() {
-    setTitle(""); setCategory(""); setBody(""); setIsAnonymous(false);
+    setTitle(""); setCategory(""); setBody(""); setIsAnonymous(true);
     setReplyBody("");
     setPanel(prevPanel);
   }
@@ -199,8 +210,8 @@ export default function FeedbackPage() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Feedback</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Private channel to HR</p>
+          <h1 className="text-2xl font-bold text-gray-900">My Reports</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Confidential — HR & Investigators only</p>
         </div>
         <button
           onClick={startCompose}
@@ -226,8 +237,8 @@ export default function FeedbackPage() {
               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                 <MessageSquarePlus className="w-5 h-5 text-gray-400" />
               </div>
-              <p className="text-sm font-semibold text-gray-700">No feedback yet</p>
-              <p className="text-xs text-gray-400 mt-1">Share something with HR privately</p>
+              <p className="text-sm font-semibold text-gray-700">No reports yet</p>
+              <p className="text-xs text-gray-400 mt-1">Report a concern confidentially</p>
             </div>
           ) : (
             <div className="p-3 space-y-1.5">
@@ -235,7 +246,7 @@ export default function FeedbackPage() {
                 <div className="bg-[#111827] text-white rounded-xl p-3 border border-dashed border-white/20">
                   <p className="text-[10px] opacity-60 mb-1">✏️ New draft</p>
                   <p className="text-xs font-semibold opacity-70 italic truncate">
-                    {title || "Untitled feedback"}
+                    {title || "Untitled report"}
                   </p>
                 </div>
               )}
@@ -295,18 +306,25 @@ export default function FeedbackPage() {
 
           {panel.mode === "welcome" && (
             <div className="flex flex-col items-center justify-center flex-1 p-10 text-center">
-              <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Inbox className="w-7 h-7 text-gray-400" />
+              <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                <WhistleIcon className="w-7 h-7 text-red-500" />
               </div>
-              <h2 className="text-base font-bold text-gray-800 mb-2">Your private channel to HR</h2>
-              <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-6">
-                Submit feedback on any topic. HR will review and reply. You can submit anonymously.
+              <h2 className="text-base font-bold text-gray-800 mb-2">Confidential Whistleblower Channel</h2>
+              <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-4">
+                Reports are visible only to HR and authorized investigators. You may submit anonymously.
               </p>
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-left w-full max-w-xs mb-6">
+                <ul className="text-xs text-red-600 space-y-1 list-disc pl-4">
+                  <li>Retaliation is strictly prohibited</li>
+                  <li>Anonymous by default</li>
+                  <li>False malicious reporting may result in disciplinary action</li>
+                </ul>
+              </div>
               <button
                 onClick={startCompose}
-                className="bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
               >
-                {items.length === 0 ? "Submit your first feedback →" : "+ New Feedback"}
+                {items.length === 0 ? "File your first report →" : "+ New Report"}
               </button>
             </div>
           )}
@@ -314,7 +332,15 @@ export default function FeedbackPage() {
           {/* IMP-4: flex-1 min-h-0 so compose scrolls on short viewports */}
           {panel.mode === "compose" && (
             <div className="p-6 flex flex-col gap-4 max-w-xl overflow-y-auto flex-1 min-h-0">
-              <h2 className="text-base font-bold text-gray-900">New Feedback</h2>
+              <h2 className="text-base font-bold text-gray-900">Report a Concern</h2>
+
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <p className="text-sm font-bold text-red-700">Confidential Whistleblower Channel</p>
+                <p className="text-xs text-red-600 mt-1">Visible ONLY to HR and authorized investigators.</p>
+                <p className="text-xs text-amber-700 font-medium mt-1">
+                  ⚠ Retaliation is strictly prohibited. False malicious reporting may result in disciplinary action.
+                </p>
+              </div>
 
               <div>
                 <label htmlFor="fb-title" className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
@@ -327,8 +353,8 @@ export default function FeedbackPage() {
                   maxLength={150}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Brief summary of your feedback"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+                  placeholder="Brief summary of your report"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20"
                 />
               </div>
 
@@ -340,12 +366,13 @@ export default function FeedbackPage() {
                   id="fb-category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/20 bg-white"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 bg-white"
                 >
                   <option value="">Select a category</option>
-                  {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
+                  <option value="HARASSMENT_DISCRIMINATION">Harassment &amp; Discrimination</option>
+                  <option value="ETHICAL_FRAUD">Ethical Violations &amp; Fraud</option>
+                  <option value="MISCONDUCT_ABUSE">Workplace Misconduct &amp; Abuse of Authority</option>
+                  <option value="SECURITY_POLICY">Security Concerns &amp; Policy Violations</option>
                 </select>
               </div>
 
@@ -360,8 +387,8 @@ export default function FeedbackPage() {
                   maxLength={1000}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Describe your feedback in detail..."
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/20 resize-none"
+                  placeholder="Describe the concern in detail..."
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 resize-none"
                 />
               </div>
 
@@ -372,7 +399,7 @@ export default function FeedbackPage() {
                   aria-checked={isAnonymous}
                   onClick={() => setIsAnonymous((v) => !v)}
                   className={`relative shrink-0 mt-0.5 w-10 h-5 rounded-full transition-colors ${
-                    isAnonymous ? "bg-gray-900" : "bg-gray-200"
+                    isAnonymous ? "bg-red-700" : "bg-gray-200"
                   }`}
                 >
                   <span
@@ -401,9 +428,9 @@ export default function FeedbackPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={!title || !category || !body || submitting}
-                  className="bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {submitting ? "Submitting..." : "Submit Feedback"}
+                  {submitting ? "Submitting..." : "Submit Report"}
                 </button>
               </div>
             </div>

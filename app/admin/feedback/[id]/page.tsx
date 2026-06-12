@@ -5,6 +5,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send } from "lucide-react";
+import { WhistleIcon } from "@/components/icons/WhistleIcon";
 
 type Reply = {
   id: string;
@@ -26,6 +27,11 @@ type FeedbackThread = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
+  ETHICAL_FRAUD:             "Ethical Violations & Fraud",
+  MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
+  SECURITY_POLICY:           "Security Concerns & Policy Violations",
+  // Legacy labels for existing submissions
   COMPENSATION_BENEFITS: "Compensation & Benefits",
   WORK_LIFE_BALANCE: "Work-Life Balance",
   COMPANY_CULTURE: "Company Culture",
@@ -110,16 +116,31 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
   return (
     <div className="max-w-2xl space-y-5">
       <button onClick={() => router.push("/admin/feedback")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Inbox
+        <ArrowLeft className="w-4 h-4" /> Back to Whistleblower Reports
       </button>
+
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
+          <WhistleIcon className="w-4 h-4 text-red-600" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Whistleblower Report</h2>
+          <p className="text-xs text-red-600 font-medium">Confidential — HR & Investigators only</p>
+        </div>
+      </div>
 
       {/* Original submission */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-              {CATEGORY_LABELS[thread.category]}
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                🔒 Confidential
+              </span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                {CATEGORY_LABELS[thread.category] ?? thread.category}
+              </span>
+            </div>
             <h1 className="text-lg font-bold text-gray-900">{thread.title}</h1>
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span>

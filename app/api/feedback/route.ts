@@ -3,23 +3,20 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { sendMail } from "@/lib/email/mailer";
-import { newFeedbackEmail } from "@/lib/email/templates";
+import { newWhistleblowerEmail } from "@/lib/email/templates";
 
 const HR_EMAILS = "hr.ags@allianceglobalsolutions.com, hr@allianceglobalsolutions.com";
 
 const createSchema = z.object({
   category: z.enum([
-    "COMPENSATION_BENEFITS",
-    "WORK_LIFE_BALANCE",
-    "COMPANY_CULTURE",
-    "TEAM_DYNAMICS",
-    "PROCESSES_TOOLS",
-    "RECOGNITION",
-    "OTHER",
+    "HARASSMENT_DISCRIMINATION",
+    "ETHICAL_FRAUD",
+    "MISCONDUCT_ABUSE",
+    "SECURITY_POLICY",
   ]),
   title: z.string().min(1).max(150),
   body: z.string().min(1).max(1000),
-  isAnonymous: z.boolean().default(false),
+  isAnonymous: z.boolean().default(true),
 });
 
 export async function GET(req: NextRequest) {
@@ -66,7 +63,7 @@ export async function POST(req: NextRequest) {
   const submitterName = parsed.data.isAnonymous ? null : (feedback.author?.displayName ?? null);
   sendMail({
     to: HR_EMAILS,
-    ...newFeedbackEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
+    ...newWhistleblowerEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
   }).catch(() => {});
 
   return NextResponse.json({ data: feedback }, { status: 201 });

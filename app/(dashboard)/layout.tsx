@@ -6,8 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ShoppingBag, Star, User, ShieldCheck, LogOut,
-  Rss, Menu, UtensilsCrossed, MessageSquare, Search, Pill, Puzzle,
+  Rss, Menu, UtensilsCrossed, Search, Pill, Puzzle,
 } from "lucide-react";
+import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -23,7 +24,7 @@ const mainNav = [
   { href: "/minigames",   label: "Minigames",   icon: Puzzle },
   { href: "/leaderboard", label: "Top Performers", icon: Star },
   { href: "/profile",     label: "Profile",     icon: User },
-  { href: "/feedback",    label: "Feedback",    icon: MessageSquare },
+  { href: "/feedback",    label: "Whistleblower", icon: WhistleIcon },
 ];
 
 const bottomNavItems = [

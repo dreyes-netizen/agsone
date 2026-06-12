@@ -1,0 +1,5 @@
+-- Add whistleblower report categories to FeedbackCategory enum
+ALTER TYPE "FeedbackCategory" ADD VALUE IF NOT EXISTS 'HARASSMENT_DISCRIMINATION';
+ALTER TYPE "FeedbackCategory" ADD VALUE IF NOT EXISTS 'ETHICAL_FRAUD';
+ALTER TYPE "FeedbackCategory" ADD VALUE IF NOT EXISTS 'MISCONDUCT_ABUSE';
+ALTER TYPE "FeedbackCategory" ADD VALUE IF NOT EXISTS 'SECURITY_POLICY';

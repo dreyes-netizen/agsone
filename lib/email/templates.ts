@@ -226,13 +226,17 @@ export function redemptionStatusEmail(
 }
 
 const categoryLabel: Record<string, string> = {
-  COMPENSATION_BENEFITS: "Compensation & Benefits",
-  WORK_LIFE_BALANCE:     "Work-Life Balance",
-  COMPANY_CULTURE:       "Company Culture",
-  TEAM_DYNAMICS:         "Team Dynamics",
-  PROCESSES_TOOLS:       "Processes & Tools",
-  RECOGNITION:           "Recognition",
-  OTHER:                 "Other",
+  COMPENSATION_BENEFITS:    "Compensation & Benefits",
+  WORK_LIFE_BALANCE:        "Work-Life Balance",
+  COMPANY_CULTURE:          "Company Culture",
+  TEAM_DYNAMICS:            "Team Dynamics",
+  PROCESSES_TOOLS:          "Processes & Tools",
+  RECOGNITION:              "Recognition",
+  OTHER:                    "Other",
+  HARASSMENT_DISCRIMINATION:"Harassment & Discrimination",
+  ETHICAL_FRAUD:            "Ethical Violations & Fraud",
+  MISCONDUCT_ABUSE:         "Workplace Misconduct & Abuse of Authority",
+  SECURITY_POLICY:          "Security Concerns & Policy Violations",
 };
 
 export function newFeedbackEmail(
@@ -275,6 +279,66 @@ export function newFeedbackEmail(
 
       <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/admin/feedback"
          style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
+        View in Admin Panel →
+      </a>
+    `),
+  };
+}
+
+export function newWhistleblowerEmail(
+  category: string,
+  title: string,
+  body: string,
+  isAnonymous: boolean,
+  submitterName: string | null,
+) {
+  const catLabel = categoryLabel[category] ?? category;
+  const fromLine = isAnonymous
+    ? `<span style="font-size:13px;color:#6b7280;font-style:italic;">Anonymous submission</span>`
+    : `<span style="font-size:13px;color:#111827;font-weight:500;">${submitterName ?? "Unknown"}</span>`;
+
+  return {
+    subject: `[CONFIDENTIAL] Whistleblower Report: ${title}`,
+    html: layout(`
+      <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:8px;padding:14px 20px;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;font-weight:700;color:#dc2626;">🔒 CONFIDENTIAL — Whistleblower Report</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#b91c1c;">
+          Visible only to HR and authorized investigators. Retaliation is strictly prohibited.
+        </p>
+      </div>
+
+      <h1 style="margin:0 0 8px;font-size:22px;color:#111827;">⚠️ New Whistleblower Report</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">A confidential report has been submitted on AGS One.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border:1px solid #fca5a5;border-radius:8px;overflow:hidden;">
+        <tr style="background:#fef2f2;">
+          <td style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;width:120px;">Category</td>
+          <td style="padding:10px 16px;font-size:13px;color:#111827;">${catLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid #fca5a5;">From</td>
+          <td style="padding:10px 16px;border-top:1px solid #fca5a5;">${fromLine}</td>
+        </tr>
+        <tr style="background:#fef2f2;">
+          <td style="padding:10px 16px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid #fca5a5;">Title</td>
+          <td style="padding:10px 16px;font-size:13px;color:#111827;font-weight:600;border-top:1px solid #fca5a5;">${title}</td>
+        </tr>
+      </table>
+
+      <div style="background:#fef9f0;border:1px solid #fcd34d;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Report Details</p>
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.7;">${body}</p>
+      </div>
+
+      <div style="background:#f9fafb;border-left:4px solid #dc2626;padding:12px 16px;margin-bottom:24px;border-radius:0 8px 8px 0;">
+        <p style="margin:0;font-size:12px;color:#6b7280;">
+          ⚠️ <strong>Policy Reminder:</strong> Retaliation against the reporter is strictly prohibited.
+          False or malicious reports may result in disciplinary action.
+        </p>
+      </div>
+
+      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/admin/feedback"
+         style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
         View in Admin Panel →
       </a>
     `),

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
+import { WhistleIcon } from "@/components/icons/WhistleIcon";
 
 type FeedbackItem = {
   id: string;
@@ -18,6 +19,11 @@ type FeedbackItem = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
+  ETHICAL_FRAUD:             "Ethical Violations & Fraud",
+  MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
+  SECURITY_POLICY:           "Security Concerns & Policy Violations",
+  // Legacy labels for existing submissions
   COMPENSATION_BENEFITS: "Compensation & Benefits",
   WORK_LIFE_BALANCE: "Work-Life Balance",
   COMPANY_CULTURE: "Company Culture",
@@ -64,9 +70,21 @@ export default function AdminFeedbackPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Feedback Inbox</h1>
-        <p className="text-gray-500 text-sm mt-1">Review and respond to employee feedback.</p>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
+          <WhistleIcon className="w-5 h-5 text-red-600" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Whistleblower Reports</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Confidential reports visible only to HR and authorized investigators.</p>
+        </div>
+      </div>
+
+      <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        <span className="text-red-600 text-sm font-bold">🔒 Confidential Channel</span>
+        <span className="text-red-500 text-xs">
+          Reports visible only to HR and authorized investigators. Retaliation is strictly prohibited.
+        </span>
       </div>
 
       {/* Filters */}
@@ -88,9 +106,10 @@ export default function AdminFeedbackPage() {
           className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/20"
         >
           <option value="">All Categories</option>
-          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
+          <option value="HARASSMENT_DISCRIMINATION">Harassment &amp; Discrimination</option>
+          <option value="ETHICAL_FRAUD">Ethical Violations &amp; Fraud</option>
+          <option value="MISCONDUCT_ABUSE">Workplace Misconduct &amp; Abuse of Authority</option>
+          <option value="SECURITY_POLICY">Security Concerns &amp; Policy Violations</option>
         </select>
       </div>
 
@@ -123,7 +142,7 @@ export default function AdminFeedbackPage() {
                     {f.status === "IN_REVIEW" ? "In Review" : f.status === "OPEN" ? "Open" : "Resolved"}
                   </span>
                 </td>
-                <td className={tdClass + " text-gray-600"}>{CATEGORY_LABELS[f.category]}</td>
+                <td className={tdClass + " text-gray-600"}>{CATEGORY_LABELS[f.category] ?? f.category}</td>
                 <td className={tdClass}>
                   <p className="font-medium text-gray-900 truncate max-w-xs">{f.title}</p>
                 </td>

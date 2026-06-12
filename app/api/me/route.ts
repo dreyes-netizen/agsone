@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
       role: true,
       pointsBalance: true,
       level: true,
-      streakDays: true,
       onboardingComplete: true,
       birthday: true,
       hireDate: true,

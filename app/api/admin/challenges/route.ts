@@ -3,11 +3,11 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { ChallengeMetric } from "@/lib/generated/prisma/client";
 
-const VALID_METRICS: ChallengeMetric[] = ["TOTAL_POINTS", "MISSIONS_COMPLETED", "SHOUTOUTS_SENT"];
+const VALID_METRICS: ChallengeMetric[] = ["TOTAL_POINTS", "SHOUTOUTS_SENT"];
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN", "MANAGER"])) {
+  if (!requireRole(user, ["HR_ADMIN", "MANAGER", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

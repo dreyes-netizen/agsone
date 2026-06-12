@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
 const schema = z.object({
-  role: z.enum(["EMPLOYEE", "MANAGER", "HR_ADMIN"]),
+  role: z.enum(["EMPLOYEE", "MANAGER", "HR_ADMIN", "SUPER_ADMIN"]),
 });
 
 export async function PATCH(
@@ -12,7 +12,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -22,6 +22,12 @@ export async function PATCH(
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  }
+
+  // Only SUPER_ADMIN can promote to HR_ADMIN or SUPER_ADMIN
+  const elevatedRoles = ["HR_ADMIN", "SUPER_ADMIN"];
+  if (elevatedRoles.includes(parsed.data.role) && user!.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
   }
 
   const updated = await prisma.user.update({

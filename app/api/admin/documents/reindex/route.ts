@@ -6,7 +6,7 @@ import { storeDocumentChunks, deleteDocumentChunks } from "@/lib/rag/search";
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

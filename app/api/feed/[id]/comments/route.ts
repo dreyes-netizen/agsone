@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
-const authorSelect = { displayName: true, avatarUrl: true };
+const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
 const commentSchema = z.object({
   content:  z.string().min(1).max(1000),
@@ -35,12 +35,14 @@ export async function GET(
     id: c.id,
     content: c.content,
     createdAt: c.createdAt.toISOString(),
-    author: c.author,
+    authorId: c.authorId,
+    author: { displayName: c.author.displayName, avatarUrl: c.author.avatarUrl },
     replies: c.replies.map((r) => ({
       id: r.id,
       content: r.content,
       createdAt: r.createdAt.toISOString(),
-      author: r.author,
+      authorId: r.authorId,
+      author: { displayName: r.author.displayName, avatarUrl: r.author.avatarUrl },
       parentId: r.parentId,
     })),
   }));
@@ -85,7 +87,8 @@ export async function POST(
       id: comment.id,
       content: comment.content,
       createdAt: comment.createdAt.toISOString(),
-      author: comment.author,
+      authorId: comment.authorId,
+      author: { displayName: comment.author.displayName, avatarUrl: comment.author.avatarUrl },
       parentId: comment.parentId ?? null,
       replies: [],
     },

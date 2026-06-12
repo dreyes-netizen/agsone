@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Home, ShoppingBag, Star, User, ShieldCheck, LogOut,
-  Rss, Menu, Target, UtensilsCrossed, MessageSquare, Swords, Search, Pill, Puzzle,
+  Rss, Menu, UtensilsCrossed, MessageSquare, Swords, Search, Pill, Puzzle,
 } from "lucide-react";
 import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
@@ -18,7 +18,6 @@ import { CommandPalette } from "@/components/CommandPalette";
 const mainNav = [
   { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
-  { href: "/missions",    label: "Missions",    icon: Target },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/medicine",    label: "Medicine",    icon: Pill },
@@ -32,9 +31,9 @@ const mainNav = [
 const bottomNavItems = [
   { href: "/dashboard",   label: "Home",        icon: Home },
   { href: "/feed",        label: "Feed",        icon: Rss },
-  { href: "/missions",    label: "Missions",    icon: Target },
   { href: "/food",        label: "Food",        icon: UtensilsCrossed },
   { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
+  { href: "/minigames",   label: "Minigames",   icon: Puzzle },
 ];
 
 function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {
@@ -75,9 +74,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const initials = user?.displayName?.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase() ?? "?";
   const roleBadge: Record<string, string> = {
-    HR_ADMIN: "HR Admin",
-    MANAGER:  "Manager",
-    EMPLOYEE: "Employee",
+    SUPER_ADMIN: "Super Admin",
+    HR_ADMIN:    "HR Admin",
+    MANAGER:     "Manager",
+    EMPLOYEE:    "Employee",
   };
 
   const sidebarContent = (
@@ -118,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
         ))}
 
-        {(dbUser?.role === "MANAGER" || dbUser?.role === "HR_ADMIN") && (
+        {(dbUser?.role === "MANAGER" || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
           <>
             <p className="px-3 pb-2 pt-4 text-[10px] font-semibold text-white uppercase tracking-widest">Management</p>
             <Link

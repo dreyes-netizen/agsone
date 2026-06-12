@@ -8,10 +8,9 @@ import { getBrowserSupabase } from "@/lib/supabase/browserClient";
 type DbProfile = {
   id: string;
   displayName: string;
-  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
+  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN" | "SUPER_ADMIN";
   pointsBalance: number;
   level: number;
-  streakDays: number;
   onboardingComplete: boolean;
   birthday: string | null;
   department: { id: string; name: string } | null;

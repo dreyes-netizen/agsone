@@ -21,7 +21,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const actor = await verifyAuth(req);
-  if (!requireRole(actor, ["MANAGER", "HR_ADMIN"])) {
+  if (!requireRole(actor, ["MANAGER", "HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -51,13 +51,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid recipients" }, { status: 400 });
   }
 
-  const recipients = await prisma.user.findMany({
+  const allRecipients = await prisma.user.findMany({
     where: { id: { in: targetIds }, isActive: true },
-    select: { id: true, displayName: true, email: true, pointsBalance: true },
+    select: { id: true, displayName: true, email: true, pointsBalance: true, role: true },
   });
 
+  // Only Super Admin can award non-employees — silently exclude them for other roles
+  const recipients = actor!.role === "SUPER_ADMIN"
+    ? allRecipients
+    : allRecipients.filter((r) => r.role === "EMPLOYEE");
+
   if (recipients.length === 0) {
-    return NextResponse.json({ error: "No active recipients found" }, { status: 400 });
+    return NextResponse.json({ error: "No eligible recipients found" }, { status: 400 });
   }
 
   // Manual §3: managers have a 500 pts/month budget; bulk cost is amount × recipients

@@ -12,7 +12,7 @@ const createSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
-  if (!requireRole(user, ["HR_ADMIN"])) {
+  if (!requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

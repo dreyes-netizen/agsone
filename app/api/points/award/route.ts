@@ -21,7 +21,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const actor = await verifyAuth(req);
-  if (!requireRole(actor, ["MANAGER", "HR_ADMIN"])) {
+  if (!requireRole(actor, ["MANAGER", "HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
   const recipient = await prisma.user.findUnique({ where: { id: toUserId } });
   if (!recipient) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  }
+
+  // Only Super Admin can award points to Managers and other elevated roles
+  if (recipient.role !== "EMPLOYEE" && actor!.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Only Super Admin can award points to Managers" }, { status: 403 });
   }
 
   // Atomic: update balance + create transaction

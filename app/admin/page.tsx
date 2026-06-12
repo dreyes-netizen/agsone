@@ -60,7 +60,6 @@ type Analytics = {
 const typeLabel: Record<string, string> = {
   MANUAL_AWARD: "Award",
   GAME_WIN: "Game Win",
-  ATTENDANCE: "Streak Bonus",
 };
 
 function KpiCard({

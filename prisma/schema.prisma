@@ -18,6 +18,8 @@ enum Role {
 
 enum PointTransactionType {
   MANUAL_AWARD
+  ATTENDANCE
+  TASK
   KPI
   CONTEST
   REDEMPTION

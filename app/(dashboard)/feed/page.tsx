@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, Swords } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
@@ -74,13 +74,6 @@ type LeaderboardEntry = {
   isCurrentUser: boolean;
 };
 
-type Challenge = {
-  id: string;
-  title: string;
-  metric: string;
-  targetValue: number;
-  deptProgress: { deptId: string; deptName: string; progress: number }[];
-};
 
 type BirthdayPerson = {
   id: string;
@@ -89,10 +82,6 @@ type BirthdayPerson = {
   daysUntil: number;
 };
 
-const METRIC_LABEL: Record<string, string> = {
-  TOTAL_POINTS: "pts earned",
-  SHOUTOUTS_SENT: "shoutouts sent",
-};
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -345,7 +334,6 @@ export default function FeedPage() {
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [birthdays, setBirthdays] = useState<BirthdayPerson[]>([]);
   const [widgetsLoading, setWidgetsLoading] = useState(true);
 
@@ -371,12 +359,10 @@ export default function FeedPage() {
     Promise.allSettled([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard"),
-      apiFetch<{ data: Challenge[] }>("/api/challenges"),
       apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming"),
-    ]).then(([me, lb, ch, bd]) => {
+    ]).then(([me, lb, bd]) => {
       if (me.status === "fulfilled") setProfile(me.value.data);
       if (lb.status === "fulfilled") setLeaderboard(lb.value.data ?? []);
-      if (ch.status === "fulfilled") setChallenges(ch.value.data ?? []);
       if (bd.status === "fulfilled") setBirthdays((bd.value.data ?? []).filter((b) => b.daysUntil <= 7));
     }).finally(() => setWidgetsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -906,15 +892,6 @@ export default function FeedPage() {
 
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
-  const deptChallenge = (() => {
-    if (!profile?.department) return null;
-    for (const c of challenges) {
-      const dp = c.deptProgress.find((d) => d.deptId === profile.department!.id);
-      if (dp) return { challenge: c, dp };
-    }
-    return null;
-  })();
-
   return (
     <div className="space-y-5">
       {/* Greeting */}
@@ -980,34 +957,6 @@ export default function FeedPage() {
             pinned={pinnedItems}
             onJumpToPost={jumpToPost}
           />
-
-          {/* Department Challenge */}
-          {!widgetsLoading && deptChallenge && (
-            <div className="bg-white rounded-xl border border-zinc-100 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50">
-                <div className="flex items-center gap-1.5">
-                  <Swords className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-xs font-semibold text-zinc-700">Your Challenge</span>
-                </div>
-                <Link href="/challenges" className="text-xs text-navy-600 hover:text-navy-700 font-medium">See all →</Link>
-              </div>
-              <div className="px-4 py-3 space-y-2">
-                <p className="text-xs font-semibold text-zinc-800">{deptChallenge.challenge.title}</p>
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>{profile?.department?.name}</span>
-                  <span className="tabular-nums font-medium">
-                    {deptChallenge.dp.progress.toLocaleString()} / {deptChallenge.challenge.targetValue.toLocaleString()} {METRIC_LABEL[deptChallenge.challenge.metric] ?? ""}
-                  </span>
-                </div>
-                <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-1.5 rounded-full transition-all"
-                    style={{ width: `${Math.min((deptChallenge.dp.progress / deptChallenge.challenge.targetValue) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Upcoming Birthdays */}
           {!widgetsLoading && birthdays.length > 0 && (

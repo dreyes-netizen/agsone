@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     result = await prisma.$transaction(async (tx) => {
       const recipient = await tx.user.findUnique({
         where: { id: toUserId },
-        select: { pointsBalance: true },
+        select: { pointsBalance: true, displayName: true },
       });
       if (!recipient) throw new Error("NOT_FOUND");
       if (recipient.pointsBalance <= 0) throw new Error("ZERO_BALANCE");
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         data: { pointsBalance: { decrement: deducted } },
         select: { pointsBalance: true },
       });
-      return { deducted, newBalance: updated.pointsBalance };
+      return { deducted, newBalance: updated.pointsBalance, toUserName: recipient.displayName };
     });
   } catch (err) {
     if (err instanceof Error && err.message === "NOT_FOUND") {
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       action: "DEDUCT_POINTS",
       entityType: "PointTransaction",
       entityId: toUserId,
-      afterState: { toUserId, violationType, requested, deducted: result.deducted, reason, newBalance: result.newBalance },
+      afterState: { toUserId, toUserName: result.toUserName, violationType, deducted: result.deducted, reason, newBalance: result.newBalance },
     },
   });
 

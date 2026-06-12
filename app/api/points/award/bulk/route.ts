@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       action: "BULK_AWARD_POINTS",
       entityType: "PointTransaction",
       entityId: actor!.id,
-      afterState: { recipientIds, amount, note, count: recipients.length },
+      afterState: { count: recipients.length, amount, note, recipientNames: recipients.map((r) => r.displayName) },
     },
   }).catch(() => {});
 

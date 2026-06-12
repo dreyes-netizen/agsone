@@ -90,10 +90,6 @@ enum MilestoneType {
   WORK_ANNIVERSARY_10
 }
 
-enum ChallengeMetric {
-  TOTAL_POINTS
-  SHOUTOUTS_SENT
-}
 
 enum MedicineRequestStatus {
   PENDING
@@ -170,7 +166,6 @@ model User {
   feedbackReplies FeedbackReply[]
   milestoneAwards  MilestoneAward[]
   milestoneConfigs MilestoneConfig[]
-  challengesCreated Challenge[]
   policyDocuments PolicyDocument[]
   chatSessions    ChatSession[]
   medicineItems    MedicineItem[]    @relation("MedicineItemsCreated")
@@ -501,22 +496,6 @@ model MilestoneAward {
 
   @@unique([userId, type, year])
   @@index([userId, type])
-}
-
-model Challenge {
-  id          String          @id @default(uuid())
-  title       String
-  description String?
-  metric      ChallengeMetric
-  targetValue Int
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean         @default(true)
-  createdById String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  createdBy User @relation(fields: [createdById], references: [id])
 }
 
 model ChatSession {

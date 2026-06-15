@@ -6,7 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   ArrowLeft, Coins, Star, CalendarDays, Building2,
-  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase,
+  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle,
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 
@@ -221,7 +221,7 @@ export default function EmployeeProfilePage() {
   if (notFound || !employee) {
     return (
       <div className="max-w-2xl">
-        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6">
+        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-1 mb-6">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         <p className="text-gray-500">Employee not found.</p>
@@ -233,7 +233,7 @@ export default function EmployeeProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-1 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
@@ -257,7 +257,7 @@ export default function EmployeeProfilePage() {
               )}
             </div>
             {isAdminOrManager && (
-              <p className="text-sm text-gray-400 mt-0.5">{employee.email}</p>
+              <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
             )}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass[employee.role]}`}>
@@ -285,17 +285,17 @@ export default function EmployeeProfilePage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
           <Coins className="w-4 h-4 text-navy-400 mx-auto mb-1" />
           <p className="text-2xl font-black text-gray-900 tabular-nums">{employee.pointsBalance.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Points</p>
+          <p className="text-xs text-gray-500 mt-0.5">Points</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
           <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" />
           <p className="text-2xl font-black text-violet-600">{employee.level}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Level</p>
+          <p className="text-xs text-gray-500 mt-0.5">Level</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
           <Trophy className="w-4 h-4 text-yellow-500 mx-auto mb-1" />
           <p className="text-2xl font-black text-yellow-600">#{employee.rank}</p>
-          <p className="text-xs text-gray-400 mt-0.5">All-Time Rank</p>
+          <p className="text-xs text-gray-500 mt-0.5">All-Time Rank</p>
         </div>
       </div>
 
@@ -303,7 +303,7 @@ export default function EmployeeProfilePage() {
       {employee.bio && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-gray-400" />
+            <FileText className="w-4 h-4 text-gray-500" />
             <p className="text-sm font-semibold text-gray-700">About</p>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">{employee.bio}</p>
@@ -314,7 +314,7 @@ export default function EmployeeProfilePage() {
       {employee.skills.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <Tag className="w-4 h-4 text-gray-400" />
+            <Tag className="w-4 h-4 text-gray-500" />
             <p className="text-sm font-semibold text-gray-700">Skills</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -334,7 +334,7 @@ export default function EmployeeProfilePage() {
             <Sparkles className="w-4 h-4 text-amber-400" />
             <p className="text-sm font-semibold text-gray-700">
               Shoutouts Received
-              <span className="ml-1.5 text-xs font-normal text-gray-400">({employee.shoutoutsReceived.length})</span>
+              <span className="ml-1.5 text-xs font-normal text-gray-500">({employee.shoutoutsReceived.length})</span>
             </p>
           </div>
           <div className="space-y-3">
@@ -352,12 +352,12 @@ export default function EmployeeProfilePage() {
                       <a href={`/employees/${s.post.author.id}`} className="text-xs font-semibold text-gray-900 hover:underline whitespace-nowrap truncate">
                         {s.post.author.displayName}
                       </a>
-                      <span className="text-xs text-gray-400 ml-auto shrink-0 whitespace-nowrap">
+                      <span className="text-xs text-gray-500 ml-auto shrink-0 whitespace-nowrap">
                         {new Date(s.post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     </div>
                     {s.post.author.department && (
-                      <span className="text-xs text-zinc-400 font-medium block">{s.post.author.department.name}</span>
+                      <span className="text-xs text-zinc-500 font-medium block">{s.post.author.department.name}</span>
                     )}
                   </div>
                 </div>
@@ -406,17 +406,23 @@ export default function EmployeeProfilePage() {
                 </optgroup>
               ))}
             </select>
-            <input
-              type="number"
-              min={1}
-              max={10000}
-              placeholder="Points (e.g. 100)"
-              value={awardAmount}
-              onChange={(e) => setAwardAmount(e.target.value)}
-              required
-              readOnly={!!awardActivity}
-              className={inputClass + (awardActivity ? " bg-gray-50 cursor-not-allowed" : "")}
-            />
+            <div className="relative">
+              <input
+                type="number"
+                min={1}
+                max={10000}
+                placeholder="Points (e.g. 100)"
+                value={awardAmount}
+                onChange={(e) => setAwardAmount(e.target.value)}
+                aria-label={awardActivity ? "Points amount (set by activity)" : "Points amount"}
+                required
+                readOnly={!!awardActivity}
+                className={inputClass + (awardActivity ? " bg-gray-50 cursor-not-allowed pr-8" : "")}
+              />
+              {awardActivity && (
+                <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" aria-hidden="true" />
+              )}
+            </div>
             <textarea
               placeholder={`Reason for awarding ${employee.displayName.split(" ")[0]}…`}
               value={awardNote}
@@ -426,11 +432,16 @@ export default function EmployeeProfilePage() {
               className={inputClass + " resize-none"}
             />
             {awardSuccess && <p className="text-xs text-emerald-600 font-medium">{awardSuccess}</p>}
-            {awardError && <p className="text-xs text-red-500">{awardError}</p>}
+            {awardError && (
+              <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                {awardError}
+              </div>
+            )}
             <button
               type="submit"
               disabled={awardSubmitting || !awardAmount || (budget !== null && !budget.isExempt && budget.remaining === 0)}
-              className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
               {awardSubmitting ? "Awarding…" : "Award Points"}
             </button>
@@ -447,10 +458,10 @@ export default function EmployeeProfilePage() {
           </div>
           {shoutoutSuccess ? (
             <div className="text-center py-3">
-              <p className="text-emerald-600 font-medium text-sm">Shoutout posted to the feed! 🎉</p>
+              <p className="text-emerald-600 font-medium text-sm">Shoutout posted to the feed! <span aria-hidden="true">🎉</span></p>
               <button
                 onClick={() => setShoutoutSuccess(false)}
-                className="text-xs text-gray-400 hover:text-gray-600 mt-1 transition-colors"
+                className="text-xs text-gray-500 hover:text-gray-700 mt-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 rounded"
               >
                 Send another
               </button>
@@ -470,9 +481,9 @@ export default function EmployeeProfilePage() {
               <button
                 type="submit"
                 disabled={shoutoutSubmitting || !shoutoutText.trim()}
-                className="bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                className="bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600"
               >
-                {shoutoutSubmitting ? "Sending…" : "✨ Send Shoutout"}
+                {shoutoutSubmitting ? "Sending…" : <><span aria-hidden="true">✨</span> Send Shoutout</>}
               </button>
             </form>
           )}
@@ -485,14 +496,14 @@ export default function EmployeeProfilePage() {
           <p className="text-sm font-semibold text-gray-700">Details</p>
           {employee.hireDate && (
             <div className="flex items-center gap-3 text-sm">
-              <CalendarDays className="w-4 h-4 text-gray-400 shrink-0" />
+              <CalendarDays className="w-4 h-4 text-gray-500 shrink-0" />
               <span className="text-gray-500">Hire date</span>
               <span className="ml-auto font-medium text-gray-900">{formatDate(employee.hireDate)}</span>
             </div>
           )}
           {employee.birthday && (
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-base leading-none shrink-0">🎂</span>
+              <span className="text-base leading-none shrink-0" aria-hidden="true">🎂</span>
               <span className="text-gray-500">Birthday</span>
               <span className="ml-auto font-medium text-gray-900">
                 {new Date(employee.birthday).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
@@ -506,7 +517,7 @@ export default function EmployeeProfilePage() {
       {employee.userBadges.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-4 h-4 text-gray-400" />
+            <Award className="w-4 h-4 text-gray-500" />
             <p className="text-sm font-semibold text-gray-700">Badges ({employee.userBadges.length})</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -528,7 +539,7 @@ export default function EmployeeProfilePage() {
       {isAdminOrManager && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-            <History className="w-4 h-4 text-gray-400" />
+            <History className="w-4 h-4 text-gray-500" />
             <p className="text-sm font-semibold text-gray-700">Points History</p>
           </div>
           {historyLoading ? (
@@ -536,7 +547,7 @@ export default function EmployeeProfilePage() {
               {[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-gray-50 rounded-lg" />)}
             </div>
           ) : transactions.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No transactions yet</p>
+            <p className="text-sm text-gray-500 text-center py-8">No transactions yet</p>
           ) : (
             <ul>
               {transactions.map((t, i) => {
@@ -553,7 +564,7 @@ export default function EmployeeProfilePage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 leading-tight">{cfg.label}</p>
-                        <p className="text-xs text-gray-400 truncate">
+                        <p className="text-xs text-gray-500 truncate">
                           {t.fromUser ? `From ${t.fromUser.displayName}` : (t.note ?? "")}
                         </p>
                       </div>
@@ -562,7 +573,7 @@ export default function EmployeeProfilePage() {
                       <p className={`text-sm font-bold tabular-nums ${positive ? "text-emerald-600" : "text-rose-500"}`}>
                         {positive ? "+" : ""}{t.amount.toLocaleString()}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-500">
                         {new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </p>
                     </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette } from "lucide-react";
+import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette, Loader2, AlertCircle, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
 type UserBadge = {
@@ -203,7 +203,7 @@ function CompletenessBar({ profile }: { profile: UserProfile }) {
           </span>
         ))}
       </div>
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-zinc-500">
         Complete your profile to unlock features like milestone rewards and birthday bonuses.
       </p>
     </div>
@@ -228,16 +228,16 @@ function MinigamesStatsCard() {
       className="w-full text-left bg-white rounded-xl border border-zinc-200 px-5 py-4 hover:border-zinc-300 transition-colors"
     >
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-zinc-800 flex items-center gap-2">🎮 Minigames</p>
+        <p className="text-sm font-semibold text-zinc-800 flex items-center gap-2"><span aria-hidden="true">🎮</span> Minigames</p>
         <span className="text-xs text-indigo-600 font-medium">View stats →</span>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-sm"><span className="font-bold text-emerald-600">{s.wins}</span> <span className="text-zinc-400">W</span></span>
-        <span className="text-sm"><span className="font-bold text-rose-500">{s.losses}</span> <span className="text-zinc-400">L</span></span>
-        <span className="text-sm"><span className="font-bold text-zinc-400">{s.draws}</span> <span className="text-zinc-400">D</span></span>
-        <span className="text-sm"><span className="font-bold text-indigo-600">{s.winRate}%</span> <span className="text-zinc-400">win rate</span></span>
+        <span className="text-sm"><span className="font-bold text-emerald-600">{s.wins}</span> <span className="text-zinc-500">W</span></span>
+        <span className="text-sm"><span className="font-bold text-rose-500">{s.losses}</span> <span className="text-zinc-500">L</span></span>
+        <span className="text-sm"><span className="font-bold text-zinc-500">{s.draws}</span> <span className="text-zinc-500">D</span></span>
+        <span className="text-sm"><span className="font-bold text-indigo-600">{s.winRate}%</span> <span className="text-zinc-500">win rate</span></span>
         {s.currentStreak > 0 && (
-          <span className="text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2 py-0.5">🔥 {s.currentStreak}</span>
+          <span className="text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2 py-0.5"><span aria-hidden="true">🔥</span> {s.currentStreak}-win streak</span>
         )}
       </div>
     </button>
@@ -377,7 +377,12 @@ export default function ProfilePage() {
   }
 
   if (loading || !profile) {
-    return <div className="text-zinc-400 py-12 text-center text-sm">Loading profile...</div>;
+    return (
+      <div className="flex items-center justify-center gap-2 py-12 text-zinc-500 text-sm" role="status" aria-live="polite">
+        <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+        Loading profile…
+      </div>
+    );
   }
 
   const { pointsIntoLevel, pointsNeededForLevel } = getLevelProgress(profile.pointsBalance);
@@ -393,15 +398,17 @@ export default function ProfilePage() {
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
           <div className="absolute top-2 right-2">
             <button
+              aria-label="Change banner color"
+              aria-expanded={bannerPickerOpen}
+              aria-haspopup="true"
               onClick={() => setBannerPickerOpen((o) => !o)}
-              className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors"
-              title="Change banner color"
+              className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <Palette className="w-3.5 h-3.5" />
+              <Palette className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
             {bannerPickerOpen && (
               <div className="absolute top-9 right-0 z-10 bg-white rounded-xl border border-zinc-200 shadow-lg p-3 w-48">
-                <p className="text-xs text-zinc-400 font-medium mb-2">Banner color</p>
+                <p className="text-xs text-zinc-500 font-medium mb-2">Banner color</p>
                 <div className="grid grid-cols-4 gap-2">
                   {BANNER_COLOR_OPTIONS.map(({ key, gradient }) => (
                     <button
@@ -411,8 +418,8 @@ export default function ProfilePage() {
                         await apiFetch("/api/me", { method: "PATCH", body: JSON.stringify({ bannerUrl: key }) });
                         setProfile((p) => p ? { ...p, bannerUrl: key } : p);
                       }}
-                      className={`w-9 h-9 rounded-lg bg-gradient-to-br ${gradient} ring-2 transition-all ${profile.bannerUrl === key || (!profile.bannerUrl && key === "default") ? "ring-zinc-800" : "ring-transparent hover:ring-zinc-400"}`}
-                      title={key}
+                      aria-label={`${key} banner color${(profile.bannerUrl === key || (!profile.bannerUrl && key === "default")) ? " (selected)" : ""}`}
+                      className={`w-9 h-9 rounded-lg bg-gradient-to-br ${gradient} ring-2 transition-all focus-visible:outline-none focus-visible:ring-zinc-800 ${profile.bannerUrl === key || (!profile.bannerUrl && key === "default") ? "ring-zinc-800" : "ring-transparent hover:ring-zinc-400"}`}
                     />
                   ))}
                 </div>
@@ -450,9 +457,9 @@ export default function ProfilePage() {
             {activeTab === "overview" && !isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 border border-zinc-200 hover:border-zinc-300 rounded-lg px-3 py-1.5 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 border border-zinc-200 hover:border-zinc-300 rounded-lg px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
-                <Pencil className="w-3 h-3" /> Edit Profile
+                <Pencil className="w-3 h-3" aria-hidden="true" /> Edit Profile
               </button>
             )}
           </div>
@@ -481,10 +488,10 @@ export default function ProfilePage() {
             role="tab"
             aria-selected={activeTab === tab}
             onClick={() => { setActiveTab(tab); setVisibleCount(10); }}
-            className={`flex-1 py-1.5 text-sm font-semibold rounded-lg capitalize transition-colors ${
+            className={`flex-1 py-1.5 text-sm font-semibold rounded-lg capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${
               activeTab === tab
                 ? "bg-white text-zinc-900 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-700"
+                : "text-zinc-600 hover:text-zinc-800"
             }`}
           >
             {tab === "points" ? "Points" : tab === "badges" ? "Badges" : tab === "notifications" ? "Notifs" : "Overview"}
@@ -513,8 +520,8 @@ export default function ProfilePage() {
                   <Icon className={`w-4 h-4 ${color}`} />
                 </div>
                 <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
-                <p className="text-xs text-zinc-400 font-medium">{label}</p>
-                {hint && <p className="text-xs text-zinc-400 italic leading-tight">{hint}</p>}
+                <p className="text-xs text-zinc-500 font-medium">{label}</p>
+                {hint && <p className="text-xs text-zinc-500 italic leading-tight">{hint}</p>}
               </div>
             ))}
           </div>
@@ -529,7 +536,7 @@ export default function ProfilePage() {
                 <CalendarDays className="w-4 h-4 text-rose-500" />
               </div>
               <div>
-                <p className="text-xs text-zinc-400 font-medium">Birthday</p>
+                <p className="text-xs text-zinc-500 font-medium">Birthday</p>
                 <p className="text-sm font-semibold text-zinc-800">
                   {profile.birthday
                     ? new Date(profile.birthday).toLocaleDateString(undefined, { month: "long", day: "numeric" })
@@ -545,7 +552,7 @@ export default function ProfilePage() {
                   <Trophy className="w-4 h-4 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-400 font-medium">Hire Date</p>
+                  <p className="text-xs text-zinc-500 font-medium">Hire Date</p>
                   <p className="text-sm font-semibold text-zinc-800">
                     {new Date(profile.hireDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
                   </p>
@@ -564,7 +571,9 @@ export default function ProfilePage() {
             </div>
             {isEditing ? (
               <>
+                <label htmlFor="bio-edit" className="sr-only">Bio / About yourself</label>
                 <textarea
+                  id="bio-edit"
                   value={bioEdit}
                   onChange={(e) => setBioEdit(e.target.value)}
                   maxLength={500}
@@ -572,11 +581,11 @@ export default function ProfilePage() {
                   placeholder="Tell your colleagues a bit about yourself…"
                   className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition resize-none"
                 />
-                <p className="text-xs text-zinc-400">{bioEdit.length}/500</p>
+                <p className="text-xs text-zinc-500">{bioEdit.length}/500</p>
               </>
             ) : (
               <p className="text-sm text-zinc-600 leading-relaxed">
-                {profile.bio || <span className="text-zinc-400 italic">No bio yet. Click Edit Profile to add one.</span>}
+                {profile.bio || <span className="text-zinc-500 italic">No bio yet. Click Edit Profile to add one.</span>}
               </p>
             )}
           </div>
@@ -597,9 +606,10 @@ export default function ProfilePage() {
                       <span key={skill} className="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
                         {skill}
                         <button
+                          aria-label={`Remove ${skill}`}
                           onClick={() => setSkillsEdit(skillsEdit.filter((s) => s !== skill))}
-                          className="hover:text-blue-900 transition-colors ml-0.5 leading-none"
-                        >×</button>
+                          className="hover:text-blue-900 transition-colors ml-1 p-0.5 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                        ><X className="w-3 h-3" aria-hidden="true" /></button>
                       </span>
                     ))}
                   </div>
@@ -607,12 +617,14 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   value={skillInput}
+                  id="skill-input"
                   onChange={(e) => setSkillInput(e.target.value)}
                   onKeyDown={handleSkillKeyDown}
                   placeholder="Type a skill and press Enter…"
+                  aria-label="Add a skill (press Enter to add)"
                   className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
                 />
-                <p className="text-xs text-zinc-400">{skillsEdit.length}/20 skills</p>
+                <p className="text-xs text-zinc-500">{skillsEdit.length}/20 skills</p>
               </>
             ) : (
               profile.skills.length > 0 ? (
@@ -624,7 +636,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-zinc-400 italic">No skills added yet. Click Edit Profile to add some.</p>
+                <p className="text-sm text-zinc-500 italic">No skills added yet. Click Edit Profile to add some.</p>
               )
             )}
           </div>
@@ -633,11 +645,11 @@ export default function ProfilePage() {
           {shoutouts !== null && (
             <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center justify-between">
-                <p className="text-sm font-semibold text-zinc-800">💬 Shoutouts</p>
-                <Link href="/feed" className="text-xs text-navy-600 hover:underline">See all →</Link>
+                <p className="text-sm font-semibold text-zinc-800"><span aria-hidden="true">💬</span> Shoutouts</p>
+                <Link href="/feed" className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">See all →</Link>
               </div>
               {shoutouts.length === 0 ? (
-                <p className="px-5 py-4 text-sm text-zinc-400 italic">No shoutouts yet — keep up the great work!</p>
+                <p className="px-5 py-4 text-sm text-zinc-500 italic">No shoutouts yet — keep up the great work!</p>
               ) : (
                 <ul className="divide-y divide-zinc-100">
                   {shoutouts.map((s) => (
@@ -651,7 +663,7 @@ export default function ProfilePage() {
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-zinc-800">{s.post.author.displayName}</p>
                         <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">{s.post.content}</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">{new Date(s.post.createdAt).toLocaleDateString()}</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">{new Date(s.post.createdAt).toLocaleDateString()}</p>
                       </div>
                     </li>
                   ))}
@@ -663,21 +675,27 @@ export default function ProfilePage() {
           {/* Save / Cancel — only in edit mode */}
           {isEditing && (
             <>
-              {profileError && <p className="text-xs text-red-500">{profileError}</p>}
+              {profileError && (
+                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  {profileError}
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={handleProfileSave}
                   disabled={profileSaving}
-                  className="flex-1 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-50"
+                  className="flex-1 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold py-2.5 rounded-xl transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5"
                 >
+                  {profileSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
                   {profileSaving ? "Saving…" : "Save Profile"}
                 </button>
                 <button
                   onClick={handleCancelEdit}
                   disabled={profileSaving}
-                  className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-zinc-600 hover:text-zinc-800 border border-zinc-200 hover:border-zinc-300 rounded-xl transition disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-zinc-600 hover:text-zinc-800 border border-zinc-200 hover:border-zinc-300 rounded-xl transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
-                  <X className="w-3.5 h-3.5" /> Cancel
+                  <X className="w-3.5 h-3.5" aria-hidden="true" /> Cancel
                 </button>
               </div>
             </>
@@ -692,17 +710,17 @@ export default function ProfilePage() {
           <div className="bg-white rounded-xl border border-zinc-200 p-5">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <p className="text-xs text-zinc-400 font-medium uppercase tracking-wide">Current Balance</p>
+                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wide">Current Balance</p>
                 <p className="text-4xl font-black text-navy-600 leading-none mt-1">
                   {pointsData.balance.toLocaleString()}
-                  <span className="text-lg font-semibold text-zinc-400 ml-1">pts</span>
+                  <span className="text-lg font-semibold text-zinc-500 ml-1">pts</span>
                 </p>
               </div>
               <div className="text-right">
                 <span className="inline-block bg-violet-100 text-violet-700 text-xs font-bold px-3 py-1 rounded-full">
                   Level {pointsData.level}
                 </span>
-                <p className="text-xs text-zinc-400 mt-2">
+                <p className="text-xs text-zinc-500 mt-2">
                   Total earned:{" "}
                   <span className="font-semibold text-zinc-700">
                     {pointsData.totalEarned.toLocaleString()} pts
@@ -715,7 +733,7 @@ export default function ProfilePage() {
           {/* Unified timeline */}
           <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center gap-2">
-              <History className="w-4 h-4 text-zinc-400" />
+              <History className="w-4 h-4 text-zinc-500" />
               <h2 className="text-sm font-bold text-zinc-800">Transaction History</h2>
             </div>
             {(() => {
@@ -732,7 +750,7 @@ export default function ProfilePage() {
                   <div className="flex flex-col items-center py-10 gap-2 text-center px-4">
                     <Trophy className="w-8 h-8 text-zinc-300" />
                     <p className="text-sm font-medium text-zinc-500">No points yet</p>
-                    <p className="text-xs text-zinc-400">Earn points through recognition, milestones, or games!</p>
+                    <p className="text-xs text-zinc-500">Earn points through recognition, milestones, or games!</p>
                   </div>
                 );
               }
@@ -753,7 +771,7 @@ export default function ProfilePage() {
                             </span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-zinc-900 truncate">{t.note ?? meta.label}</p>
-                              <p className="text-xs text-zinc-400">
+                              <p className="text-xs text-zinc-500">
                                 <span className={`font-medium ${meta.color}`}>{meta.label}</span>
                                 {t.category && CATEGORY_BADGE[t.category] && (
                                   <span className={`ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${CATEGORY_BADGE[t.category].style}`}>
@@ -775,7 +793,7 @@ export default function ProfilePage() {
                             </span>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-zinc-900 truncate">{r.reward.name}</p>
-                              <p className="text-xs text-zinc-400">
+                              <p className="text-xs text-zinc-500">
                                 <span className="font-medium text-rose-500">Redemption</span>
                                 {" · "}{new Date(r.createdAt).toLocaleDateString()}
                               </p>
@@ -808,13 +826,13 @@ export default function ProfilePage() {
           <h2 className="text-sm font-bold text-zinc-800 mb-4 flex items-center gap-2">
             <Medal className="w-4 h-4 text-amber-500" />
             Badges
-            <span className="text-xs font-normal text-zinc-400">({profile.userBadges.length})</span>
+            <span className="text-xs font-normal text-zinc-500">({profile.userBadges.length})</span>
           </h2>
           {profile.userBadges.length === 0 ? (
             <div className="flex flex-col items-center py-8 gap-2 text-center">
               <Award className="w-10 h-10 text-zinc-300" />
               <p className="text-sm text-zinc-500 font-medium">No badges yet</p>
-              <p className="text-xs text-zinc-400">Keep earning points to unlock your first badge!</p>
+              <p className="text-xs text-zinc-500">Keep earning points to unlock your first badge!</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -827,7 +845,7 @@ export default function ProfilePage() {
                     <Award className="w-6 h-6 text-amber-500" />
                     <p className="text-xs font-semibold text-zinc-800">{ub.badge.name}</p>
                     {ub.badge.description && (
-                      <p className="text-xs text-zinc-400 line-clamp-2">{ub.badge.description}</p>
+                      <p className="text-xs text-zinc-500 line-clamp-2">{ub.badge.description}</p>
                     )}
                   </div>
                 );
@@ -841,14 +859,16 @@ export default function ProfilePage() {
       {activeTab === "notifications" && (
         <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-zinc-100 flex items-center gap-2">
-            <Bell className="w-4 h-4 text-zinc-400" />
+            <Bell className="w-4 h-4 text-zinc-500" />
             <h2 className="text-sm font-bold text-zinc-800 flex-1">Notification Preferences</h2>
-            <span className="text-xs text-zinc-400 w-9 text-center">In-App</span>
-            <span className="text-xs text-zinc-400 w-7 text-center">Email</span>
+            <span className="text-xs text-zinc-500 w-9 text-center">In-App</span>
+            <span className="text-xs text-zinc-500 w-7 text-center">Email</span>
           </div>
 
           {notifLoading ? (
-            <div className="p-8 text-center text-zinc-400 text-sm">Loading…</div>
+            <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 p-8 text-zinc-500 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Loading…
+            </div>
           ) : notifError ? (
             <div className="p-8 text-center text-red-400 text-sm">{notifError}</div>
           ) : notifPrefs ? (
@@ -863,7 +883,7 @@ export default function ProfilePage() {
                   <li key={type} className="flex items-center gap-4 px-5 py-4">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-zinc-800">{label}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">{description}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{description}</p>
                     </div>
                     {/* In-app toggle */}
                     <button
@@ -872,7 +892,7 @@ export default function ProfilePage() {
                       aria-checked={enabled}
                       disabled={notifSaving === type}
                       onClick={() => handleNotifToggle(type, !enabled)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
                         enabled ? "bg-navy-500" : "bg-zinc-200"
                       }`}
                     >
@@ -894,7 +914,7 @@ export default function ProfilePage() {
                           aria-checked={emailEnabled}
                           disabled={emailSaving}
                           onClick={() => handleNotifToggle(emailKey, !emailEnabled)}
-                          className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                          className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
                             emailEnabled ? "bg-navy-500" : "bg-zinc-200"
                           }`}
                         >
@@ -937,10 +957,10 @@ export default function ProfilePage() {
             if (items.length === 0) return null;
             return (
               <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4 space-y-2">
-                <p className="text-xs text-zinc-400 font-medium">Upcoming</p>
+                <p className="text-xs text-zinc-500 font-medium">Upcoming</p>
                 {items.map((item) => (
                   <p key={item.label} className="text-sm font-semibold text-zinc-800">
-                    {item.emoji} {item.label}
+                    <span aria-hidden="true">{item.emoji}</span> {item.label}
                   </p>
                 ))}
               </div>
@@ -951,7 +971,7 @@ export default function ProfilePage() {
           {profile.department && deptRank && (
             <Link href="/leaderboard">
               <div className="bg-white rounded-xl border border-zinc-200 px-5 py-4 hover:border-zinc-300 transition-colors">
-                <p className="text-xs text-zinc-400 font-medium mb-2">Your Department Rank</p>
+                <p className="text-xs text-zinc-500 font-medium mb-2">Your Department Rank</p>
                 <p className="text-2xl font-black text-navy-600">#{deptRank.rank}</p>
                 <p className="text-xs text-zinc-500 mt-0.5">
                   in {profile.department.name} · of {deptRank.total}
@@ -965,7 +985,7 @@ export default function ProfilePage() {
             <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
                 <p className="text-xs font-semibold text-zinc-700">Recent Activity</p>
-                <button onClick={() => setActiveTab("points")} className="text-xs text-navy-600 hover:underline">
+                <button onClick={() => setActiveTab("points")} className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">
                   View all →
                 </button>
               </div>
@@ -980,7 +1000,7 @@ export default function ProfilePage() {
                       </span>
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-zinc-800 truncate">{t.note ?? meta.label}</p>
-                        <p className="text-xs text-zinc-400">{new Date(t.createdAt).toLocaleDateString()}</p>
+                        <p className="text-xs text-zinc-500">{new Date(t.createdAt).toLocaleDateString()}</p>
                       </div>
                     </li>
                   );
@@ -1011,7 +1031,7 @@ export default function ProfilePage() {
             <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
                 <p className="text-xs font-semibold text-zinc-700">Recent Badges</p>
-                <button onClick={() => setActiveTab("badges")} className="text-xs text-navy-600 hover:underline">
+                <button onClick={() => setActiveTab("badges")} className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">
                   See all →
                 </button>
               </div>
@@ -1021,7 +1041,7 @@ export default function ProfilePage() {
                     <Award className="w-4 h-4 text-amber-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-zinc-800 truncate">{ub.badge.name}</p>
-                      <p className="text-xs text-zinc-400">{new Date(ub.awardedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-zinc-500">{new Date(ub.awardedAt).toLocaleDateString()}</p>
                     </div>
                   </li>
                 ))}

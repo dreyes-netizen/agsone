@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pill, Search, X } from "lucide-react";
+import { Pill, Search, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -38,6 +38,12 @@ export default function MedicinePage() {
   const [activeTab, setActiveTab] = useState<"catalog" | "requests">("catalog");
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -67,8 +73,9 @@ export default function MedicinePage() {
         { ...res.data, medicine: { name: medicineName } },
         ...prev,
       ]);
+      showToast("success", `"${medicineName}" request submitted! Pending HR approval.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to submit request");
+      showToast("error", err instanceof Error ? err.message : "Failed to submit request");
     } finally {
       setRequesting(null);
     }
@@ -87,19 +94,39 @@ export default function MedicinePage() {
         </div>
       </div>
 
+      {/* Toast */}
+      {toast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
+            toast.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-red-50 text-red-800 border-red-200"
+          }`}
+        >
+          {toast.type === "success"
+            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
+          {toast.msg}
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div role="tablist" aria-label="Medicine views" className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {(["catalog", "requests"] as const).map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => { setActiveTab(tab); if (tab !== "catalog") setSearchQuery(""); }}
-            className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors capitalize ${
-              activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${
+              activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-800"
             }`}
           >
             {tab === "catalog" ? "Catalog" : "My Requests"}
             {tab === "requests" && myRequests.length > 0 && (
-              <span className="ml-1.5 bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              <span className="ml-1.5 bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" aria-label={`${myRequests.length} requests`}>
                 {myRequests.length}
               </span>
             )}
@@ -110,13 +137,20 @@ export default function MedicinePage() {
       {/* Catalog tab */}
       {activeTab === "catalog" && (
         loading ? (
-          <div className="text-center text-gray-400 py-16">Loading…</div>
+          <div role="status" aria-live="polite" className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-500" aria-hidden="true" />
+            <span className="text-sm">Loading medicines…</span>
+          </div>
         ) : medicines.length === 0 ? (
-          <div className="text-center text-gray-400 py-16">No medicines available.</div>
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-gray-100">
+            <Pill className="w-10 h-10 text-gray-300 mb-3" aria-hidden="true" />
+            <p className="text-gray-700 font-medium">No medicines available</p>
+            <p className="text-gray-500 text-sm mt-1">Check back later or contact HR.</p>
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               <input
                 type="text"
                 aria-label="Search medicines"
@@ -127,7 +161,11 @@ export default function MedicinePage() {
               />
             </div>
             {visibleMedicines.length === 0 ? (
-              <div className="text-center text-gray-400 py-12">No medicines match your search.</div>
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-2xl border border-gray-100">
+                <Search className="w-8 h-8 text-gray-300 mb-3" aria-hidden="true" />
+                <p className="text-gray-700 font-medium">No results for &ldquo;{searchQuery}&rdquo;</p>
+                <p className="text-gray-500 text-sm mt-1">Try a different name.</p>
+              </div>
             ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {visibleMedicines.map((med) => {
@@ -136,10 +174,12 @@ export default function MedicinePage() {
               const isRequesting = requesting === med.id;
               const disabled = isPending || outOfStock || isRequesting;
               return (
-                <div
+                <button
                   key={med.id}
+                  type="button"
+                  aria-label={`View details for ${med.name}`}
                   onClick={() => setSelectedMed(med)}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
                   <div className="aspect-square bg-gray-50 overflow-hidden">
                     {med.imageUrl ? (
@@ -151,7 +191,7 @@ export default function MedicinePage() {
                       />
                     ) : null}
                     <div className={`w-full h-full flex items-center justify-center bg-gray-100 ${med.imageUrl ? "hidden" : ""}`}>
-                      <Pill className="w-10 h-10 text-gray-300" />
+                      <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
                     </div>
                   </div>
                   <div className="p-3 flex flex-col gap-2 flex-1">
@@ -159,24 +199,26 @@ export default function MedicinePage() {
                       <p className="font-semibold text-gray-900 text-sm">{med.name}</p>
                       <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">{med.caption}</p>
                     </div>
-                    <p className={`text-xs font-medium ${outOfStock ? "text-gray-400" : "text-emerald-600"}`}>
+                    <p className={`text-xs font-medium ${outOfStock ? "text-gray-500" : "text-emerald-600"}`}>
                       {outOfStock ? "Out of stock" : `${med.stockQuantity} in stock`}
                     </p>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRequest(med.id); }}
                       disabled={disabled}
-                      className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-colors mt-auto ${
+                      aria-label={isPending ? `${med.name} — request pending` : outOfStock ? `${med.name} — out of stock` : `Request ${med.name}`}
+                      className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors mt-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5 ${
                         isPending
-                          ? "bg-amber-50 text-amber-600 cursor-default"
+                          ? "bg-amber-50 text-amber-600 cursor-not-allowed"
                           : outOfStock
-                          ? "bg-gray-100 text-gray-400 cursor-default"
+                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                           : "bg-[#111827] text-white hover:bg-gray-800"
                       }`}
                     >
-                      {isRequesting ? "Submitting…" : isPending ? "Pending…" : "Request"}
+                      {isRequesting && <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />}
+                      {isRequesting ? "Submitting…" : isPending ? "Request pending" : "Request"}
                     </button>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -188,7 +230,11 @@ export default function MedicinePage() {
       {/* My Requests tab */}
       {activeTab === "requests" && (
         myRequests.length === 0 ? (
-          <div className="text-center text-gray-400 py-16">You haven&apos;t requested any medicines yet.</div>
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-gray-100">
+            <Pill className="w-10 h-10 text-gray-300 mb-3" aria-hidden="true" />
+            <p className="text-gray-700 font-medium">No requests yet</p>
+            <p className="text-gray-500 text-sm mt-1">Go to the Catalog tab to request a medicine.</p>
+          </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -228,7 +274,10 @@ export default function MedicinePage() {
           onClick={() => setSelectedMed(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto scrollbar-hide"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="medicine-modal-title"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto scrollbar-hide animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative">
@@ -241,19 +290,21 @@ export default function MedicinePage() {
                 />
               ) : null}
               <div className={`w-full aspect-square flex items-center justify-center bg-gray-100 rounded-t-2xl ${selectedMed.imageUrl ? "hidden" : ""}`}>
-                <Pill className="w-16 h-16 text-gray-300" />
+                <Pill className="w-16 h-16 text-gray-300" aria-hidden="true" />
               </div>
               <button
+                autoFocus
+                aria-label="Close"
                 onClick={() => setSelectedMed(null)}
-                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors"
+                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{selectedMed.name}</h2>
-                <p className={`text-xs font-medium mt-1 ${selectedMed.stockQuantity <= 0 ? "text-gray-400" : "text-emerald-600"}`}>
+                <h2 id="medicine-modal-title" className="text-xl font-bold text-gray-900">{selectedMed.name}</h2>
+                <p className={`text-xs font-medium mt-1 ${selectedMed.stockQuantity <= 0 ? "text-gray-500" : "text-emerald-600"}`}>
                   {selectedMed.stockQuantity <= 0 ? "Out of stock" : `${selectedMed.stockQuantity} in stock`}
                 </p>
               </div>
@@ -261,15 +312,16 @@ export default function MedicinePage() {
               <button
                 onClick={() => { handleRequest(selectedMed.id); setSelectedMed(null); }}
                 disabled={pendingIds.has(selectedMed.id) || selectedMed.stockQuantity <= 0 || requesting === selectedMed.id}
-                className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-2 ${
                   pendingIds.has(selectedMed.id)
-                    ? "bg-amber-50 text-amber-600 cursor-default"
+                    ? "bg-amber-50 text-amber-600 cursor-not-allowed"
                     : selectedMed.stockQuantity <= 0
-                    ? "bg-gray-100 text-gray-400 cursor-default"
+                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                     : "bg-[#111827] text-white hover:bg-gray-800"
                 }`}
               >
-                {pendingIds.has(selectedMed.id) ? "Pending…" : selectedMed.stockQuantity <= 0 ? "Out of stock" : "Request"}
+                {requesting === selectedMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+                {pendingIds.has(selectedMed.id) ? "Request pending" : selectedMed.stockQuantity <= 0 ? "Out of stock" : requesting === selectedMed.id ? "Submitting…" : "Request"}
               </button>
             </div>
           </div>

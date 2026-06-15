@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
+import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, CheckCircle, AlertCircle, AlertTriangle, Truck, RefreshCw } from "lucide-react";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
 type AddOn = { name: string; price: number };
@@ -405,16 +405,19 @@ export default function FoodPage() {
               setShowForm(true);
             }
           }}
-          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
         >
-          <UtensilsCrossed className="w-4 h-4" />
+          <UtensilsCrossed className="w-4 h-4" aria-hidden="true" />
           Sell Food
         </button>
       </div>
 
       {/* Toast — fixed overlay, bottom on mobile / top-right on desktop */}
       {toast && (
-        <div className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
           toast.type === "success"
             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
             : "bg-red-50 text-red-800 border-red-200"
@@ -442,8 +445,8 @@ export default function FoodPage() {
               </div>
               <div className="sm:col-span-2">
                 <div className="flex justify-between items-baseline mb-1">
-                  <label className="block text-xs font-medium text-zinc-600">Description <span className="text-zinc-400 font-normal">(optional)</span></label>
-                  <span className={`text-xs ${newDesc.length > 1800 ? "text-red-500" : "text-zinc-400"}`}>{newDesc.length}/2000</span>
+                  <label className="block text-xs font-medium text-zinc-600">Description <span className="text-zinc-500 font-normal">(optional)</span></label>
+                  <span className={`text-xs ${newDesc.length > 1800 ? "text-red-500" : "text-zinc-500"}`}>{newDesc.length}/2000</span>
                 </div>
                 <textarea
                   value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={3}
@@ -468,7 +471,7 @@ export default function FoodPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-600 mb-1">Delivery date & time <span className="text-zinc-400 font-normal">(optional)</span></label>
+                <label className="block text-xs font-medium text-zinc-600 mb-1">Delivery date & time <span className="text-zinc-500 font-normal">(optional)</span></label>
                 <input
                   type="datetime-local" value={newDeliveryDate} onChange={(e) => setNewDeliveryDate(e.target.value)}
                   min={new Date().toISOString().slice(0, 16)}
@@ -479,13 +482,13 @@ export default function FoodPage() {
 
             {/* Image picker */}
             <div>
-              <label className="block text-xs font-medium text-zinc-600 mb-1">Photos <span className="text-zinc-400 font-normal">(up to 3, optional)</span></label>
+              <label className="block text-xs font-medium text-zinc-600 mb-1">Photos <span className="text-zinc-500 font-normal">(up to 3, optional)</span></label>
               <div className="flex items-center gap-2 flex-wrap">
                 {existingImageUrls.map((src, i) => (
                   <div key={src} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 rounded-full p-0.5 text-white">
+                    <button type="button" aria-label="Remove image" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 text-white transition-colors">
                       <X className="w-3 h-3" />
                     </button>
                   </div>
@@ -494,15 +497,15 @@ export default function FoodPage() {
                   <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => removeNewImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 rounded-full p-0.5 text-white">
+                    <button type="button" aria-label="Remove image" onClick={() => removeNewImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 text-white transition-colors">
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
                 {totalImages < 3 && (
                   <label className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 transition-colors">
-                    <ImagePlus className="w-5 h-5 text-zinc-400" />
-                    <span className="text-[10px] text-zinc-400 mt-0.5">Add</span>
+                    <ImagePlus className="w-5 h-5 text-zinc-500" />
+                    <span className="text-[10px] text-zinc-500 mt-0.5">Add</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleImagePick} multiple />
                   </label>
                 )}
@@ -512,14 +515,14 @@ export default function FoodPage() {
             {/* Add-ons */}
             <div>
               <label className="block text-xs font-medium text-zinc-600 mb-1">
-                Add-ons / Options <span className="text-zinc-400 font-normal">(optional — e.g. Extra Rice ₱15, Spicy ₱0)</span>
+                Add-ons / Options <span className="text-zinc-500 font-normal">(optional — e.g. Extra Rice ₱15, Spicy ₱0)</span>
               </label>
               {newAddOns.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {newAddOns.map((a, i) => (
                     <span key={i} className="flex items-center gap-1.5 bg-zinc-100 text-zinc-700 text-xs px-2.5 py-1 rounded-full">
                       {a.name}{a.price > 0 ? ` — ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " — Free"}
-                      <button type="button" onClick={() => removeAddOn(i)} className="text-zinc-400 hover:text-zinc-700">
+                      <button type="button" onClick={() => removeAddOn(i)} className="text-zinc-500 hover:text-zinc-700">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -567,11 +570,14 @@ export default function FoodPage() {
       )}
 
       {/* Tabs — horizontal scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible pb-0.5">
+      <div role="tablist" aria-label="Food board views" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible pb-0.5">
         {([["AVAILABLE", "Available"], ["MY_ORDERS", "My Orders"], ["MY_LISTINGS", "My Listings"]] as [Tab, string][]).map(([t, label]) => (
           <button
-            key={t} onClick={() => setTab(t)}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+            key={t}
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
               tab === t
                 ? "bg-[#111827] text-white border-[#111827]"
                 : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
@@ -598,9 +604,9 @@ export default function FoodPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-zinc-200 text-center">
-          <UtensilsCrossed className="w-10 h-10 text-zinc-200 mb-4" />
+          <UtensilsCrossed className="w-10 h-10 text-zinc-500 mb-4" aria-hidden="true" />
           <p className="text-zinc-600 font-medium">Nothing here</p>
-          <p className="text-zinc-400 text-sm mt-1">
+          <p className="text-zinc-500 text-sm mt-1">
             {tab === "AVAILABLE" ? "No food listings right now — be the first to post!" : "Nothing to show for this tab."}
           </p>
         </div>
@@ -633,6 +639,7 @@ export default function FoodPage() {
                         <img
                           src={listing.imageUrls[idx]}
                           alt={listing.title}
+                          loading="lazy"
                           className="w-full h-full object-contain bg-white cursor-zoom-in sm:aspect-square"
                           onClick={() => setLightbox({ images: listing.imageUrls, index: idx })}
                         />
@@ -640,21 +647,27 @@ export default function FoodPage() {
                         {total > 1 && (
                           <div className="hidden sm:block">
                             <button
+                              aria-label="Previous image"
                               onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + total) % total); }}
-                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             >
                               <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
+                              aria-label="Next image"
                               onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % total); }}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             >
                               <ChevronRight className="w-4 h-4" />
                             </button>
-                            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
                               {listing.imageUrls.map((_, i) => (
-                                <button key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }}
-                                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`}
+                                <button
+                                  key={i}
+                                  aria-label={`Image ${i + 1} of ${total}`}
+                                  aria-current={i === idx ? "true" : undefined}
+                                  onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                                  className={`w-2 h-2 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${i === idx ? "bg-white" : "bg-white/50"}`}
                                 />
                               ))}
                             </div>
@@ -663,8 +676,13 @@ export default function FoodPage() {
                       </div>
                     );
                   })() : (
-                    // Mobile: vertical left strip | Desktop: horizontal top strip
-                    <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:w-full sm:h-1 sm:self-auto sm:bg-gradient-to-r ${closed ? "bg-zinc-300" : "bg-emerald-500"}`} />
+                    // Mobile: thin left strip | Desktop: square gradient placeholder
+                    <>
+                      <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:hidden ${closed ? "bg-zinc-300" : "bg-emerald-500"}`} />
+                      <div className={`hidden sm:flex sm:w-full sm:aspect-square sm:items-center sm:justify-center sm:bg-gradient-to-br ${closed ? "from-zinc-200 to-zinc-300" : "from-emerald-400 to-teal-500"}`}>
+                        <UtensilsCrossed className="w-12 h-12 text-white/70" aria-hidden="true" />
+                      </div>
+                    </>
                   )}
 
                   {/* Content */}
@@ -687,23 +705,28 @@ export default function FoodPage() {
                         )}
                         <span className="text-xs text-zinc-500 truncate">{listing.createdBy.displayName}</span>
                       </button>
-                      <span className="hidden sm:inline shrink-0 text-xs text-zinc-400">{listing._count.orders} orders</span>
+                      <span className="hidden sm:inline shrink-0 text-xs text-zinc-500">{listing._count.orders} orders</span>
                     </div>
 
                     {/* Title — click to open modal */}
-                    <div className="cursor-pointer" onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}>
+                    <button
+                      type="button"
+                      aria-label={`View details for ${listing.title}`}
+                      onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}
+                      className="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 rounded"
+                    >
                       <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors line-clamp-2 text-sm sm:text-base">{listing.title}</h3>
                       {listing.description && (
                         <div className="hidden sm:block">
                           <p className="text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
                         </div>
                       )}
-                    </div>
+                    </button>
 
                     {/* Price + cutoff */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-base sm:text-lg font-bold text-emerald-600 shrink-0">{formatPrice(listing.price)}</span>
-                      <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-zinc-400" : "text-amber-600"}`}>
+                      <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-zinc-500" : "text-amber-600"}`}>
                         <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                         {closed ? "Closed" : `By ${formatCutoff(listing.cutoffAt)}`}
                       </span>
@@ -712,7 +735,7 @@ export default function FoodPage() {
                     {/* Delivery — desktop only */}
                     {listing.deliveryDate && (
                       <div className="hidden sm:flex items-center gap-1 text-xs text-sky-600 font-medium">
-                        <span>🚚</span>
+                        <Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                         <span>Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                       </div>
                     )}
@@ -731,7 +754,7 @@ export default function FoodPage() {
                   {/* Action area */}
                   <div className="mt-auto pt-2 sm:pt-3 border-t border-zinc-100 space-y-2">
                     {closed && !isMine && (
-                      <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
+                      <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
                         Orders closed
                       </span>
                     )}
@@ -745,7 +768,7 @@ export default function FoodPage() {
                           setQty(1); setOrderNote(""); setSelectedAddOns([]);
                           setModalOrderMode("order");
                         }}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600"
                       >
                         Order
                       </button>
@@ -762,14 +785,14 @@ export default function FoodPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1 flex-1 min-w-0">
                               <p className="text-xs font-bold text-zinc-700">Your Order</p>
-                              <p className="text-xs text-zinc-600">×{oQty} {listing.title} <span className="text-zinc-400">@ {formatPrice(listing.price)} each</span></p>
-                              <p className="text-[11px] text-zinc-400">
+                              <p className="text-xs text-zinc-600">×{oQty} {listing.title} <span className="text-zinc-500">@ {formatPrice(listing.price)} each</span></p>
+                              <p className="text-[11px] text-zinc-500">
                                 Ordered {new Date(listing.myOrder.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                               </p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-base font-bold text-emerald-700">₱{total.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-400">total</p>
+                              <p className="text-[10px] text-zinc-500">total</p>
                             </div>
                           </div>
                           {!closed && (
@@ -798,10 +821,12 @@ export default function FoodPage() {
                       <div className="space-y-2">
                         <button
                           onClick={() => toggleSellerOrders(listing)}
-                          className="w-full flex items-center justify-between text-sm font-medium text-zinc-700 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-2 rounded-lg transition-colors"
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? "Hide" : "View"} orders for ${listing.title}`}
+                          className="w-full flex items-center justify-between text-sm font-medium text-zinc-700 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
                         >
                           <span>View Orders ({listing._count.orders})</span>
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {isExpanded ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
                         </button>
                         <div className="flex gap-2">
                           <button
@@ -822,14 +847,14 @@ export default function FoodPage() {
                         {closed && (
                           <button
                             onClick={() => handleSellAgain(listing)}
-                            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors"
+                            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600"
                           >
-                            🔁 Sell Again
+                            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" /> Sell Again
                           </button>
                         )}
                         <button
                           onClick={() => handleDelete(listing)}
-                          className="w-full text-xs text-zinc-400 hover:text-red-500 transition-colors text-center py-0.5"
+                          className="w-full text-xs text-zinc-500 hover:text-red-500 transition-colors text-center py-0.5"
                         >
                           Delete listing
                         </button>
@@ -843,9 +868,9 @@ export default function FoodPage() {
                 {isMine && isExpanded && (
                   <div className="border-t border-zinc-100 bg-zinc-50">
                     {!sellerOrders[listing.id] ? (
-                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-zinc-400" /></div>
+                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-zinc-500" /></div>
                     ) : sellerOrders[listing.id].length === 0 ? (
-                      <p className="text-xs text-zinc-400 text-center py-4">No orders yet.</p>
+                      <p className="text-xs text-zinc-500 text-center py-4">No orders yet.</p>
                     ) : (() => {
                       const orders = sellerOrders[listing.id];
                       const totalQty = orders.reduce((s, o) => s + o.quantity, 0);
@@ -870,19 +895,19 @@ export default function FoodPage() {
                           <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-zinc-200">
                             <div className="text-center px-3 py-3 border-r border-b sm:border-b-0 border-zinc-200">
                               <p className="text-base font-black text-zinc-800">{orders.length}</p>
-                              <p className="text-[10px] text-zinc-400">orders</p>
+                              <p className="text-[10px] text-zinc-500">orders</p>
                             </div>
                             <div className="text-center px-3 py-3 border-b sm:border-b-0 sm:border-r border-zinc-200">
                               <p className="text-base font-black text-zinc-800">{totalQty}</p>
-                              <p className="text-[10px] text-zinc-400">to prep</p>
+                              <p className="text-[10px] text-zinc-500">to prep</p>
                             </div>
                             <div className="text-center px-3 py-3 border-r border-zinc-200">
                               <p className="text-base font-black text-emerald-600">₱{collected.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-400">collected</p>
+                              <p className="text-[10px] text-zinc-500">collected</p>
                             </div>
                             <div className="text-center px-3 py-3">
                               <p className="text-base font-black text-rose-500">₱{outstanding.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-400">outstanding</p>
+                              <p className="text-[10px] text-zinc-500">outstanding</p>
                             </div>
                           </div>
 
@@ -927,8 +952,8 @@ export default function FoodPage() {
                                         {(o.selectedAddOns ?? []).map((a) => `+ ${a.name} (₱${a.price.toFixed(2)})`).join(", ")}
                                       </p>
                                     )}
-                                    {o.note && <p className="text-[11px] text-zinc-400 italic mt-0.5">"{o.note}"</p>}
-                                    <p className="text-[10px] text-zinc-300 mt-0.5">
+                                    {o.note && <p className="text-[11px] text-zinc-500 italic mt-0.5">"{o.note}"</p>}
+                                    <p className="text-[10px] text-zinc-500 mt-0.5">
                                       {new Date(o.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                                     </p>
                                   </div>
@@ -939,7 +964,7 @@ export default function FoodPage() {
                                       onClick={() => togglePaid(listing.id, o.id, !isPaid)}
                                       className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
                                         isPaid
-                                          ? "border-zinc-200 text-zinc-400 hover:text-red-500 hover:border-red-200"
+                                          ? "border-zinc-200 text-zinc-500 hover:text-red-500 hover:border-red-200"
                                           : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                                       }`}
                                     >
@@ -984,7 +1009,10 @@ export default function FoodPage() {
             onClick={() => { setSelectedListing(null); setModalOrderMode(null); }}
           >
             <div
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="food-modal-title"
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag handle */}
@@ -993,8 +1021,10 @@ export default function FoodPage() {
               </div>
 
               <button
+                autoFocus
+                aria-label="Close"
                 onClick={() => { setSelectedListing(null); setModalOrderMode(null); }}
-                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10"
+                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1016,23 +1046,27 @@ export default function FoodPage() {
                       {total > 1 && (
                         <>
                           <button
+                            aria-label="Previous image"
                             onClick={() => setSelectedListingImageIndex((i) => (i - 1 + total) % total)}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                           >
                             <ChevronLeft className="w-5 h-5" />
                           </button>
                           <button
+                            aria-label="Next image"
                             onClick={() => setSelectedListingImageIndex((i) => (i + 1) % total)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
-                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                          <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-2">
                             {selectedListing.imageUrls.map((_, i) => (
                               <button
                                 key={i}
+                                aria-label={`Image ${i + 1} of ${total}`}
+                                aria-current={i === selectedListingImageIndex ? "true" : undefined}
                                 onClick={() => setSelectedListingImageIndex(i)}
-                                className={`w-2 h-2 rounded-full transition-colors ${i === selectedListingImageIndex ? "bg-white" : "bg-white/50"}`}
+                                className={`w-2.5 h-2.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${i === selectedListingImageIndex ? "bg-white" : "bg-white/50 hover:bg-white/75"}`}
                               />
                             ))}
                           </div>
@@ -1052,7 +1086,7 @@ export default function FoodPage() {
                   </div>
 
                   {/* Title */}
-                  <h2 className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
+                  <h2 id="food-modal-title" className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
 
                   {/* Seller avatar + name + order count */}
                   <div className="flex items-center justify-between gap-3">
@@ -1071,7 +1105,7 @@ export default function FoodPage() {
                       )}
                       <span className="text-xs text-zinc-500 truncate">by {selectedListing.createdBy.displayName}</span>
                     </button>
-                    <span className="text-xs text-zinc-400 shrink-0">
+                    <span className="text-xs text-zinc-500 shrink-0">
                       {selectedListing._count.orders} {selectedListing._count.orders === 1 ? "order" : "orders"}
                     </span>
                   </div>
@@ -1109,7 +1143,7 @@ export default function FoodPage() {
 
                   {/* Delivery date */}
                   {selectedListing.deliveryDate && (
-                    <p className="text-xs text-sky-600 font-medium">🚚 Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+                    <p className="flex items-center gap-1 text-xs text-sky-600 font-medium"><Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
                   )}
 
                   {/* Action area */}
@@ -1117,7 +1151,7 @@ export default function FoodPage() {
 
                     {/* Closed */}
                     {closed && !isMine && (
-                      <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
+                      <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
                         Orders closed
                       </span>
                     )}
@@ -1138,9 +1172,9 @@ export default function FoodPage() {
                         <div className="flex items-center gap-2">
                           <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
                           <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">−</button>
-                            <span className="w-8 text-center text-sm font-semibold">{qty}</span>
-                            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">+</button>
+                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
+                            <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
+                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
                           </div>
                         </div>
                         {(selectedListing.addOns?.length ?? 0) > 0 && (
@@ -1253,25 +1287,25 @@ export default function FoodPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1 flex-1 min-w-0">
                               <p className="text-xs font-bold text-zinc-700">Your Order</p>
-                              <p className="text-xs text-zinc-600">×{oQty} {selectedListing.title} <span className="text-zinc-400">@ {formatPrice(selectedListing.price)} each</span></p>
+                              <p className="text-xs text-zinc-600">×{oQty} {selectedListing.title} <span className="text-zinc-500">@ {formatPrice(selectedListing.price)} each</span></p>
                               {(selectedListing.myOrder!.selectedAddOns?.length ?? 0) > 0 && (
                                 <div className="space-y-0.5">
                                   {selectedListing.myOrder!.selectedAddOns.map((a, i) => (
-                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-zinc-400">(₱{a.price.toFixed(2)} × {oQty})</span></p>
+                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-zinc-500">(₱{a.price.toFixed(2)} × {oQty})</span></p>
                                   ))}
                                 </div>
                               )}
-                              <p className="text-[11px] text-zinc-400">
+                              <p className="text-[11px] text-zinc-500">
                                 Ordered {new Date(selectedListing.myOrder!.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                               </p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-base font-bold text-emerald-700">₱{oTotal.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-400">total</p>
+                              <p className="text-[10px] text-zinc-500">total</p>
                             </div>
                           </div>
                           {selectedListing.myOrder!.note && (
-                            <p className="text-xs text-zinc-400 italic border-t border-emerald-100 pt-2">📝 &ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
+                            <p className="text-xs text-zinc-500 italic border-t border-emerald-100 pt-2"><span aria-hidden="true">📝 </span>&ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
                           )}
                           {!closed && (
                             <div className="flex items-center gap-3 pt-1">
@@ -1305,9 +1339,9 @@ export default function FoodPage() {
                         <div className="flex items-center gap-2">
                           <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
                           <div className="flex items-center gap-1">
-                            <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">−</button>
-                            <span className="w-8 text-center text-sm font-semibold">{qty}</span>
-                            <button type="button" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-7 h-7 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold">+</button>
+                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
+                            <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
+                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
                           </div>
                         </div>
                         {(selectedListing.addOns?.length ?? 0) > 0 && (

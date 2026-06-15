@@ -328,12 +328,13 @@ export default function MarketplacePage() {
                         )}
                       </div>
                     ) : (
-                      // Mobile: vertical left stripe  |  Desktop: horizontal top stripe
-                      <div className={`shrink-0 self-stretch
-                        w-1.5 bg-gradient-to-b
-                        sm:w-full sm:h-1 sm:self-auto sm:bg-gradient-to-r
-                        ${cfg.accent}`}
-                      />
+                      // Mobile: thin left accent stripe  |  Desktop: square gradient placeholder
+                      <>
+                        <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:hidden ${cfg.accent}`} />
+                        <div className={`hidden sm:flex sm:w-full sm:aspect-square sm:bg-gradient-to-br sm:items-center sm:justify-center ${cfg.accent}`}>
+                          <cfg.icon className="w-12 h-12 text-white/70" />
+                        </div>
+                      </>
                     )}
 
                     {/* ── Content ── */}

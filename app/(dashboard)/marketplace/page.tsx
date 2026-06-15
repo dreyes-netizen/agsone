@@ -8,7 +8,7 @@ import {
   ShoppingBag, CheckCircle, AlertCircle, Coins,
   Package, Ticket, Star, Monitor,
   X, ChevronLeft, ChevronRight,
-  Clock, Receipt, AlertTriangle,
+  Clock, Receipt, AlertTriangle, Loader2,
 } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { ImageLightbox } from "@/components/ImageLightbox";
@@ -160,7 +160,10 @@ export default function MarketplacePage() {
 
       {/* ── Toast ── */}
       {toast && (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${
           toast.type === "success"
             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
             : "bg-red-50 text-red-800 border-red-200"
@@ -173,20 +176,26 @@ export default function MarketplacePage() {
       )}
 
       {/* ── View tabs ── */}
-      <div className="flex gap-1 bg-zinc-100 p-1 rounded-lg w-fit">
+      <div role="tablist" aria-label="Marketplace views" className="flex gap-1 bg-zinc-100 p-1 rounded-lg w-fit">
         <button
+          role="tab"
+          aria-selected={view === "browse"}
+          aria-controls="panel-browse"
           onClick={() => setView("browse")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-            view === "browse" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#111827] ${
+            view === "browse" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-800"
           }`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
           Browse
         </button>
         <button
+          role="tab"
+          aria-selected={view === "requests"}
+          aria-controls="panel-requests"
           onClick={() => setView("requests")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-            view === "requests" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#111827] ${
+            view === "requests" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-800"
           }`}
         >
           <Receipt className="w-3.5 h-3.5" />
@@ -196,9 +205,9 @@ export default function MarketplacePage() {
 
       {/* ── Browse view ── */}
       {view === "browse" && (
-        <>
+        <div id="panel-browse" role="tabpanel">
           {/* Category filters with counts — horizontal scroll on mobile, wrap on desktop */}
-          <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible">
+          <div role="group" aria-label="Filter by category" className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible mb-5">
             {categories.map((cat) => {
               const config = categoryConfig[cat];
               const active = filter === cat;
@@ -208,16 +217,17 @@ export default function MarketplacePage() {
                 <button
                   key={cat}
                   onClick={() => setFilter(cat)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                  aria-pressed={active}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
                     active
                       ? "bg-[#111827] text-white border-[#111827]"
                       : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
                   }`}
                 >
-                  {cat !== "ALL" && <config.icon className={`w-3.5 h-3.5 ${active ? "text-white" : config.iconClass}`} />}
+                  {cat !== "ALL" && <config.icon className={`w-3.5 h-3.5 ${active ? "text-white" : config.iconClass}`} aria-hidden="true" />}
                   {cat === "ALL" ? "All Rewards" : config.label}
                   {!loading && (
-                    <span className={`text-xs tabular-nums ${active ? "text-white/70" : "text-zinc-400"}`}>
+                    <span className={`text-xs tabular-nums ${active ? "text-white/70" : "text-zinc-500"}`} aria-label={`${count} items`}>
                       {count}
                     </span>
                   )}
@@ -286,27 +296,31 @@ export default function MarketplacePage() {
                             Only {reward.stockQuantity} left!
                           </span>
                         )}
-                        {/* Carousel arrows — desktop only (too small to be useful on mobile thumbnail) */}
+                        {/* Carousel arrows */}
                         {images.length > 1 && (
                           <div className="hidden sm:block">
                             <button
+                              aria-label="Previous image"
                               onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + images.length) % images.length); }}
-                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             >
                               <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
+                              aria-label="Next image"
                               onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % images.length); }}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             >
                               <ChevronRight className="w-4 h-4" />
                             </button>
-                            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
                               {images.map((_, i) => (
                                 <button
                                   key={i}
+                                  aria-label={`Image ${i + 1} of ${images.length}`}
+                                  aria-current={i === idx ? "true" : undefined}
                                   onClick={(e) => { e.stopPropagation(); setIdx(i); }}
-                                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`}
+                                  className={`w-2 h-2 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${i === idx ? "bg-white" : "bg-white/50"}`}
                                 />
                               ))}
                             </div>
@@ -366,23 +380,24 @@ export default function MarketplacePage() {
                             <span className="font-medium ml-1 text-xs sm:text-sm">pts</span>
                           </p>
                           {outOfStock ? (
-                            <p className="text-xs text-zinc-400 mt-0.5">Out of stock</p>
+                            <p className="text-xs text-zinc-500 mt-0.5">Out of stock</p>
                           ) : !canAfford ? (
-                            <p className="text-xs text-red-400 mt-0.5">Need {deficit.toLocaleString()} more</p>
+                            <p className="text-xs text-red-500 mt-0.5">Need {deficit.toLocaleString()} more</p>
                           ) : lowStock ? (
                             <p className="text-xs text-red-500 font-medium mt-0.5 hidden sm:block">
                               Only {reward.stockQuantity} left!
                             </p>
                           ) : (
-                            <p className="text-xs text-zinc-400 mt-0.5">
+                            <p className="text-xs text-zinc-500 mt-0.5">
                               {reward.stockQuantity === -1 ? "Unlimited" : `${reward.stockQuantity} left`}
                             </p>
                           )}
                         </div>
                         <button
                           disabled={!canAfford || outOfStock || busy}
+                          aria-label={outOfStock ? `${reward.name} — sold out` : !canAfford ? `${reward.name} — need ${deficit.toLocaleString()} more pts` : `Redeem ${reward.name} for ${reward.pointCost.toLocaleString()} pts`}
                           onClick={(e) => { e.stopPropagation(); openModal(reward, true); }}
-                          className={`rounded-lg font-semibold transition-colors
+                          className={`rounded-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]
                             text-xs px-3 py-1.5
                             sm:text-sm sm:px-4 sm:py-2
                             ${outOfStock || !canAfford
@@ -390,7 +405,7 @@ export default function MarketplacePage() {
                               : "bg-[#111827] text-white hover:bg-gray-800"
                             }`}
                         >
-                          {busy ? "…" : outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
                         </button>
                       </div>
                     </div>
@@ -399,51 +414,53 @@ export default function MarketplacePage() {
               })}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* ── My Requests view ── */}
       {view === "requests" && (
-        <div className="space-y-3">
+        <div id="panel-requests" role="tabpanel" className="space-y-3">
           {redemptionsLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-3" aria-label="Loading requests" aria-busy="true">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="bg-white rounded-xl border border-zinc-200 h-20 animate-pulse" />
               ))}
             </div>
           ) : redemptions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-zinc-200">
-              <Receipt className="w-10 h-10 text-zinc-200 mb-4" />
+              <Receipt className="w-10 h-10 text-zinc-200 mb-4" aria-hidden="true" />
               <p className="text-zinc-600 font-medium">No requests yet</p>
-              <p className="text-zinc-400 text-sm mt-1">Redeem a reward and it will appear here.</p>
+              <p className="text-zinc-500 text-sm mt-1">Redeem a reward and it will appear here.</p>
             </div>
           ) : (
-            redemptions.map((r) => {
-              const cfg = categoryConfig[r.reward.category] ?? categoryConfig.PHYSICAL;
-              const status = statusConfig[r.status];
-              return (
-                <div key={r.id} className="bg-white rounded-xl border border-zinc-200 p-4 flex items-center gap-4">
-                  <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-zinc-900 truncate">{r.reward.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Clock className="w-3 h-3 text-zinc-400" />
-                      <span className="text-xs text-zinc-400">
-                        {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </span>
-                      <span className="text-xs text-zinc-400">·</span>
-                      <span className="text-xs font-medium text-zinc-500 tabular-nums">{r.pointsSpent.toLocaleString()} pts</span>
+            <ul role="list" className="space-y-3">
+              {redemptions.map((r) => {
+                const cfg = categoryConfig[r.reward.category] ?? categoryConfig.PHYSICAL;
+                const status = statusConfig[r.status];
+                return (
+                  <li key={r.id} className="bg-white rounded-xl border border-zinc-200 p-4 flex items-center gap-4">
+                    <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} aria-hidden="true" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-zinc-900 truncate">{r.reward.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Clock className="w-3 h-3 text-zinc-500" aria-hidden="true" />
+                        <span className="text-xs text-zinc-500">
+                          {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                        <span className="text-xs text-zinc-500" aria-hidden="true">·</span>
+                        <span className="text-xs font-medium text-zinc-500 tabular-nums">{r.pointsSpent.toLocaleString()} pts</span>
+                      </div>
+                      {r.adminNote && r.status === "REJECTED" && (
+                        <p className="text-xs text-red-600 mt-1">Note: {r.adminNote}</p>
+                      )}
                     </div>
-                    {r.adminNote && r.status === "REJECTED" && (
-                      <p className="text-xs text-red-600 mt-1">Note: {r.adminNote}</p>
-                    )}
-                  </div>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${status.className}`}>
-                    {status.label}
-                  </span>
-                </div>
-              );
-            })
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${status.className}`}>
+                      {status.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       )}
@@ -479,7 +496,7 @@ export default function MarketplacePage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="reward-modal-title"
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative"
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag handle — bottom-sheet affordance on mobile */}
@@ -489,7 +506,9 @@ export default function MarketplacePage() {
 
               <button
                 onClick={closeModal}
-                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10"
+                aria-label="Close"
+                autoFocus
+                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -513,25 +532,29 @@ export default function MarketplacePage() {
                     {total > 1 && (
                       <>
                         <button
+                          aria-label="Previous image"
                           onClick={() => setSelectedRewardImageIndex((i) => (i - 1 + total) % total)}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center transition-opacity
-                            opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
+                            opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
                         >
                           <ChevronLeft className="w-5 h-5" />
                         </button>
                         <button
+                          aria-label="Next image"
                           onClick={() => setSelectedRewardImageIndex((i) => (i + 1) % total)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center transition-opacity
-                            opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
+                            opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-2">
                           {images.map((_, i) => (
                             <button
                               key={i}
+                              aria-label={`Image ${i + 1} of ${total}`}
+                              aria-current={i === selectedRewardImageIndex ? "true" : undefined}
                               onClick={() => setSelectedRewardImageIndex(i)}
-                              className={`w-2.5 h-2.5 rounded-full transition-colors sm:w-2 sm:h-2 ${i === selectedRewardImageIndex ? "bg-white" : "bg-white/50"}`}
+                              className={`w-2.5 h-2.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${i === selectedRewardImageIndex ? "bg-white" : "bg-white/50 hover:bg-white/75"}`}
                             />
                           ))}
                         </div>
@@ -561,13 +584,13 @@ export default function MarketplacePage() {
                             {selectedReward.pointCost.toLocaleString()} <span className="text-sm font-medium">pts</span>
                           </p>
                           {!canAfford && !outOfStock && (
-                            <p className="text-xs text-red-400 mt-0.5">Need {deficit.toLocaleString()} more pts</p>
+                            <p className="text-xs text-red-500 mt-0.5">Need {deficit.toLocaleString()} more pts</p>
                           )}
                         </div>
                         <button
                           disabled={!canAfford || outOfStock}
                           onClick={() => setConfirming(true)}
-                          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
                             outOfStock || !canAfford
                               ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                               : "bg-[#111827] text-white hover:bg-gray-800"
@@ -604,21 +627,21 @@ export default function MarketplacePage() {
                           <span className="font-bold text-navy-600 tabular-nums">{(balance - selectedReward.pointCost).toLocaleString()} pts</span>
                         </div>
                       </div>
-                      <p className="text-xs text-zinc-400 text-center">HR will review your request and confirm delivery.</p>
+                      <p className="text-xs text-zinc-500 text-center">HR will review your request and confirm delivery.</p>
                       <div className="flex gap-3 pt-1">
                         <button
                           onClick={() => setConfirming(false)}
                           disabled={busy}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors"
+                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-500 disabled:opacity-60"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleRedeem(selectedReward)}
                           disabled={busy}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#111827] text-white hover:bg-gray-800 transition-colors disabled:opacity-60"
+                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#111827] text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] disabled:opacity-60 flex items-center justify-center gap-2"
                         >
-                          {busy ? "Redeeming…" : "Confirm"}
+                          {busy ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Redeeming…</span></> : "Confirm"}
                         </button>
                       </div>
                     </div>

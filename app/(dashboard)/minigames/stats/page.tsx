@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Trophy, Flame, Medal } from "lucide-react";
+import { Trophy, Flame, Medal, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 
 const GAME_LABEL: Record<string, string> = {
@@ -41,7 +41,7 @@ type LeaderEntry = {
   total: number; winRate: number; isCurrentUser: boolean;
 };
 
-const rankColors: Record<number, string> = { 1: "text-yellow-500", 2: "text-zinc-400", 3: "text-orange-500" };
+const rankColors: Record<number, string> = { 1: "text-yellow-500", 2: "text-zinc-500", 3: "text-orange-500" };
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" }) {
   const cls = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
@@ -89,7 +89,7 @@ export default function MinigamesStatsPage() {
     <div className="space-y-5 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.push("/minigames")} className="text-sm text-gray-400 hover:text-gray-700 transition-colors font-medium">
+        <button onClick={() => router.push("/minigames")} className="text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded">
           ← Minigames
         </button>
         <h1 className="text-2xl font-bold text-zinc-900 flex-1">Stats & Leaderboard</h1>
@@ -107,7 +107,7 @@ export default function MinigamesStatsPage() {
             <p className="text-xs text-zinc-500 mt-0.5">Losses</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-zinc-400">{stats?.draws ?? 0}</p>
+            <p className="text-2xl font-bold text-zinc-500">{stats?.draws ?? 0}</p>
             <p className="text-xs text-zinc-500 mt-0.5">Draws</p>
           </div>
           <div>
@@ -131,7 +131,7 @@ export default function MinigamesStatsPage() {
               <div key={g} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs">
                 <span>{GAME_EMOJI[g] ?? "🎮"}</span>
                 <span className="font-medium text-zinc-700">{GAME_LABEL[g] ?? g}</span>
-                <span className="text-zinc-400">{r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}</span>
+                <span className="text-zinc-500">{r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}</span>
               </div>
             ))}
           </div>
@@ -142,26 +142,28 @@ export default function MinigamesStatsPage() {
       <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-100">
           <p className="text-sm font-bold text-zinc-800 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-yellow-500" /> Leaderboard</p>
-          <div className="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
-            <button className={`px-3 py-1 font-medium transition-colors ${period === "monthly" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"}`} onClick={() => setPeriod("monthly")}>This Month</button>
-            <button className={`px-3 py-1 font-medium transition-colors ${period === "alltime" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"}`} onClick={() => setPeriod("alltime")}>All Time</button>
+          <div role="group" aria-label="Leaderboard period" className="flex rounded-lg border border-zinc-200 overflow-hidden text-xs">
+            <button aria-pressed={period === "monthly"} className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "monthly" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"}`} onClick={() => setPeriod("monthly")}>This Month</button>
+            <button aria-pressed={period === "alltime"} className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "alltime" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"}`} onClick={() => setPeriod("alltime")}>All Time</button>
           </div>
         </div>
         {loading ? (
-          <div className="text-center py-10 text-zinc-400 text-sm">Loading…</div>
+          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-zinc-500 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Loading…
+          </div>
         ) : board.length === 0 ? (
-          <div className="text-center py-10 text-zinc-400 text-sm">No games played yet. Be the first!</div>
+          <div className="text-center py-10 text-zinc-500 text-sm">No games played yet. Be the first!</div>
         ) : (
           <ul className="divide-y divide-zinc-100">
             {board.map(e => (
               <li key={e.userId} className={`flex items-center gap-3 px-5 py-3 ${e.isCurrentUser ? "bg-indigo-50 border-l-2 border-indigo-500" : "border-l-2 border-transparent"}`}>
-                <span className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-zinc-400"}`}>
+                <span className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-zinc-500"}`}>
                   {e.rank <= 3 ? <Medal className={`w-4 h-4 inline ${rankColors[e.rank]}`} /> : `#${e.rank}`}
                 </span>
                 <Avatar name={e.displayName} url={e.avatarUrl} />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-zinc-900 truncate">{e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}</p>
-                  <p className="text-xs text-zinc-400">{e.wins}W · {e.losses}L{e.draws > 0 ? ` · ${e.draws}D` : ""}</p>
+                  <p className="text-xs text-zinc-500">{e.wins}W · {e.losses}L{e.draws > 0 ? ` · ${e.draws}D` : ""}</p>
                 </div>
                 <span className="font-bold text-indigo-600 text-sm tabular-nums">{e.winRate}%</span>
               </li>
@@ -176,7 +178,7 @@ export default function MinigamesStatsPage() {
           <p className="text-sm font-bold text-zinc-800">Recent games</p>
         </div>
         {!stats || stats.history.length === 0 ? (
-          <div className="text-center py-10 text-zinc-400 text-sm">No finished games yet.</div>
+          <div className="text-center py-10 text-zinc-500 text-sm">No finished games yet.</div>
         ) : (
           <ul className="divide-y divide-zinc-100">
             {stats.history.map(h => {
@@ -186,7 +188,7 @@ export default function MinigamesStatsPage() {
                   <span className="text-lg shrink-0">{GAME_EMOJI[h.gameType] ?? "🎮"}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-900 truncate">{GAME_LABEL[h.gameType] ?? h.gameType}</p>
-                    <p className="text-xs text-zinc-400 truncate">vs {h.opponentName} · {timeAgo(h.finishedAt)}</p>
+                    <p className="text-xs text-zinc-500 truncate">vs {h.opponentName} · {timeAgo(h.finishedAt)}</p>
                   </div>
                   {h.wager > 0 && <span className="text-xs text-amber-600 font-medium shrink-0">{h.wager} pts</span>}
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${o.cls}`}>{o.label}</span>

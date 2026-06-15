@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { BarChart2, Gamepad2, Clock, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 const GAME_TYPES = [
   { key: "RPS",             label: "✌️ Rock Paper Scissors", short: "✌️ RPS",    desc: "3 rounds · Simultaneous picks · Quick & fun" },
@@ -51,6 +52,12 @@ export default function MinigamesPage() {
   const [joining, setJoining] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   async function load() {
     try {
@@ -83,7 +90,7 @@ export default function MinigamesPage() {
       fire();
       router.push(`/minigames/${res.data.id}`);
     } catch {
-      alert("Failed to create challenge. Check your points balance.");
+      showToast("error", "Failed to create challenge. Check your points balance.");
       setCreating(false);
     }
   }
@@ -94,7 +101,7 @@ export default function MinigamesPage() {
       await apiFetch(`/api/minigames/sessions/${sessionId}/join`, { method: "POST" });
       router.push(`/minigames/${sessionId}`);
     } catch {
-      alert("Failed to join. Insufficient points or game already taken.");
+      showToast("error", "Failed to join. Insufficient points or game already taken.");
       setJoining(null);
       load();
     }
@@ -124,6 +131,22 @@ export default function MinigamesPage() {
     <div className="space-y-4">
       {showHelp && <HowToPlayModal gameType={activeTab} onClose={() => setShowHelp(false)} />}
 
+      {/* Toast */}
+      {toast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
+            toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"
+          }`}
+        >
+          {toast.type === "success"
+            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
+          {toast.msg}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -131,10 +154,12 @@ export default function MinigamesPage() {
           <p className="text-sm text-gray-500 mt-0.5">Challenge a coworker to a quick 2-player game.</p>
         </div>
         <button
+          aria-label="Stats and Leaderboard"
           onClick={() => router.push("/minigames/stats")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors whitespace-nowrap"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
         >
-          📊 <span className="hidden sm:inline">Stats & Leaderboard</span><span className="sm:hidden">Stats</span>
+          <BarChart2 className="w-4 h-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Stats & Leaderboard</span><span className="sm:hidden">Stats</span>
         </button>
       </div>
 
@@ -148,7 +173,7 @@ export default function MinigamesPage() {
               className="w-full flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 hover:bg-emerald-100/60 transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">🎮</span>
+                <Gamepad2 className="w-5 h-5 text-emerald-700 shrink-0" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-semibold text-emerald-900">{GAME_LABEL[s.gameType]} — Active</p>
                   <p className="text-xs text-emerald-700">vs {s.host.id === dbUser?.id ? s.guest?.displayName : s.host.displayName}</p>
@@ -160,7 +185,7 @@ export default function MinigamesPage() {
           {myWaiting.map(s => (
             <div key={s.id} className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <div className="flex items-center gap-3">
-                <span className="text-lg">⏳</span>
+                <Clock className="w-5 h-5 text-amber-600 shrink-0" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-semibold text-amber-900">{GAME_LABEL[s.gameType]} — Waiting for opponent</p>
                   {s.pointsWager > 0 && <p className="text-xs text-amber-600">{s.pointsWager} pts wager</p>}
@@ -190,15 +215,18 @@ export default function MinigamesPage() {
         <div className="flex-1 min-w-0 space-y-4">
           {/* Game type tabs */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="flex border-b border-gray-100 overflow-x-auto">
+            <div role="tablist" aria-label="Game type" className="flex border-b border-gray-100 overflow-x-auto">
               {GAME_TYPES.map(g => (
                 <button
                   key={g.key}
+                  role="tab"
+                  aria-selected={activeTab === g.key}
+                  aria-label={g.label.replace(/^[^\w]*/, "").trim()}
                   onClick={() => setActiveTab(g.key)}
-                  className={`flex-1 min-w-[52px] sm:min-w-[80px] px-1 sm:px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`flex-1 min-w-[52px] sm:min-w-[80px] px-1 sm:px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 ${
                     activeTab === g.key
                       ? "border-b-2 border-indigo-600 text-indigo-700 bg-indigo-50/60"
-                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                      : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                   }`}
                 >
                   <span className="hidden sm:inline">{g.label}</span>
@@ -241,8 +269,9 @@ export default function MinigamesPage() {
                 {WAGER_OPTIONS.map(w => (
                   <button
                     key={w}
+                    aria-pressed={wager === w}
                     onClick={() => setWager(w)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 ${
                       wager === w
                         ? "bg-[#111827] border-[#111827] text-white"
                         : "border-gray-200 text-gray-600 hover:border-gray-400"
@@ -256,7 +285,7 @@ export default function MinigamesPage() {
             <button
               onClick={createChallenge}
               disabled={creating}
-              className="w-full py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
+              className="w-full py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
               {creating ? "Creating…" : `Create ${GAME_LABEL[activeTab]} Challenge`}
             </button>
@@ -272,12 +301,14 @@ export default function MinigamesPage() {
             </div>
             <div className="divide-y divide-gray-50">
               {loading ? (
-                <p className="text-sm text-gray-400 text-center py-8">Loading…</p>
+                <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Loading…
+                </div>
               ) : openChallenges.length === 0 ? (
                 <div className="text-center py-10 px-4">
-                  <p className="text-2xl mb-2">🕹️</p>
-                  <p className="text-sm text-gray-500 font-medium">No open challenges yet</p>
-                  <p className="text-xs text-gray-400 mt-1">Create one and invite a coworker!</p>
+                  <Gamepad2 className="w-8 h-8 text-gray-300 mx-auto mb-2" aria-hidden="true" />
+                  <p className="text-sm text-gray-600 font-medium">No open challenges yet</p>
+                  <p className="text-xs text-gray-500 mt-1">Create one and invite a coworker!</p>
                 </div>
               ) : (
                 openChallenges.map(s => (
@@ -303,7 +334,7 @@ export default function MinigamesPage() {
                     <button
                       onClick={() => joinSession(s.id)}
                       disabled={joining === s.id}
-                      className="shrink-0 px-4 py-2 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-colors min-w-[60px]"
+                      className="shrink-0 px-4 py-2 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-colors min-w-[60px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                     >
                       {joining === s.id ? "…" : "Join"}
                     </button>

@@ -72,21 +72,25 @@ export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClos
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="how-to-play-title"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <span className="text-2xl">{info.emoji}</span>
+          <span className="text-2xl" aria-hidden="true">{info.emoji}</span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900">How to Play</p>
-            <p className="text-xs text-gray-500">{info.title}</p>
+            <p id="how-to-play-title" className="text-sm font-bold text-gray-900">How to Play — {info.title}</p>
           </div>
           <button
+            autoFocus
+            aria-label="Close"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors text-lg leading-none"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
           >
-            ×
+            <span aria-hidden="true" className="text-lg leading-none">×</span>
           </button>
         </div>
 
@@ -94,7 +98,7 @@ export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClos
         <div className="px-5 py-4 space-y-3.5">
           {info.rules.map((r, i) => (
             <div key={i} className="flex gap-3">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0" aria-hidden="true">{i + 1}</span>
               <div>
                 <p className="text-sm font-semibold text-gray-800">{r.heading}</p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{r.text}</p>
@@ -106,7 +110,7 @@ export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClos
         <div className="px-5 pb-4">
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-[#111827] hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors"
+            className="w-full py-2.5 bg-[#111827] hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             Got it
           </button>

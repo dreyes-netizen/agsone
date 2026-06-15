@@ -9,6 +9,7 @@ import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
 import { GameResultOverlay } from "@/components/minigames/GameResultOverlay";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
+import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,24 +80,30 @@ function ForfeitModal({
 }) {
   return (
     <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-xs w-full text-center">
-        <div className="text-4xl mb-3">🏳️</div>
-        <h3 className="text-lg font-black text-gray-900 mb-2">Forfeit Game?</h3>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forfeit-title"
+        className="bg-white rounded-2xl shadow-2xl p-6 max-w-xs w-full text-center animate-in fade-in-0 zoom-in-95 duration-200"
+      >
+        <p className="text-4xl mb-3" aria-hidden="true">🏳️</p>
+        <h3 id="forfeit-title" className="text-lg font-black text-gray-900 mb-2">Forfeit Game?</h3>
         <p className="text-sm text-gray-500 mb-6">
           {opponentName} will be declared the winner.
         </p>
         <div className="flex gap-3">
           <button
+            autoFocus
             onClick={onConfirm}
             disabled={confirming}
-            className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 disabled:opacity-60 text-red-600 border border-red-200 font-bold text-sm rounded-xl transition-colors"
+            className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 disabled:opacity-60 text-red-600 border border-red-200 font-bold text-sm rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500"
           >
             {confirming ? "Forfeiting…" : "Yes, forfeit"}
           </button>
           <button
             onClick={onCancel}
             disabled={confirming}
-            className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-60 text-gray-700 border border-gray-200 text-sm rounded-xl transition-colors"
+            className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-60 text-gray-700 border border-gray-200 text-sm rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500"
           >
             Cancel
           </button>
@@ -320,11 +327,12 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
           {Array.from({ length: 7 }, (_, col) => (
             <button
               key={col}
+              aria-label={`Drop in column ${col + 1}`}
               onClick={() => isMyTurn && onMove({ column: col })}
               onMouseEnter={() => setHoverCol(col)}
               onMouseLeave={() => setHoverCol(c => (c === col ? null : c))}
               disabled={!isMyTurn || board[col][5] !== null}
-              className="w-full h-5 flex items-center justify-center text-white/60 hover:text-white disabled:opacity-0 transition-colors text-sm"
+              className="w-full h-8 flex items-center justify-center text-white/60 hover:text-white disabled:opacity-0 transition-colors text-sm focus-visible:outline-none focus-visible:text-white"
             >
               ▼
             </button>
@@ -916,10 +924,17 @@ function MobileBar({
   const opponent = session.myRole === "host" ? session.guest : session.host;
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
   const [rematching, setRematching] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const rematchId = (session.state as { rematchSessionId?: string }).rematchSessionId;
   const rematchHostId = (session.state as { rematchHostId?: string }).rematchHostId;
   const iStartedRematch = !!rematchHostId && rematchHostId === myId;
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const statusColor = session.status === "FINISHED"
     ? (session.winnerId === myId ? "text-emerald-700 bg-emerald-100" : session.winnerId ? "text-red-600 bg-red-100" : "text-yellow-700 bg-yellow-100")
@@ -944,7 +959,6 @@ function MobileBar({
       router.push(`/minigames/${rematchId}`);
     } catch {
       setRematching(false);
-      alert("Couldn't join the rematch.");
     }
   }
 
@@ -998,10 +1012,13 @@ function MobileBar({
       )}
       {session.status === "WAITING" && (
         <button
-          onClick={() => navigator.clipboard.writeText(window.location.href)}
-          className="w-full py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors hover:border-gray-300"
+          onClick={copyLink}
+          aria-label={copied ? "Link copied" : "Copy game link"}
+          className="w-full py-1.5 text-xs border border-gray-200 rounded-xl transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5"
         >
-          📋 Copy game link
+          {copied
+            ? <><Check className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /><span className="text-emerald-600 font-medium">Copied!</span></>
+            : <><Copy className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /><span className="text-gray-500 hover:text-gray-700">Copy game link</span></>}
         </button>
       )}
 
@@ -1010,22 +1027,24 @@ function MobileBar({
         <div className="flex gap-2">
           {rematchId ? (
             iStartedRematch ? (
-              <button onClick={() => router.push(`/minigames/${rematchId}`)} className="flex-1 py-2.5 bg-[#111827] text-white text-sm font-bold rounded-xl transition-colors">
+              <button onClick={() => router.push(`/minigames/${rematchId}`)} className="flex-1 py-2.5 bg-[#111827] text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">
                 Go to rematch →
               </button>
             ) : (
-              <button onClick={acceptRematch} disabled={rematching} className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl animate-pulse transition-colors">
-                {rematching ? "Joining…" : "✅ Accept rematch →"}
+              <button onClick={acceptRematch} disabled={rematching} className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl motion-safe:animate-pulse transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600 flex items-center justify-center gap-1.5">
+                <Check className="w-4 h-4" aria-hidden="true" />
+                {rematching ? "Joining…" : "Accept rematch"}
               </button>
             )
           ) : (
             opponent && (
-              <button onClick={startRematch} disabled={rematching} className="flex-1 py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors">
-                {rematching ? "Sending…" : "🔁 Rematch"}
+              <button onClick={startRematch} disabled={rematching} className="flex-1 py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5">
+                <RefreshCw className="w-4 h-4" aria-hidden="true" />
+                {rematching ? "Sending…" : "Rematch"}
               </button>
             )
           )}
-          <button onClick={() => router.push("/minigames")} className="flex-1 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
+          <button onClick={() => router.push("/minigames")} className="flex-1 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900">
             Back
           </button>
         </div>
@@ -1063,7 +1082,14 @@ function RightPanel({
 
   const [rematching, setRematching] = useState(false);
   const [muted, setMutedState] = useState(false);
+  const [copied, setCopied] = useState(false);
   useEffect(() => { setMutedState(isMuted()); }, []);
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const rematchId = (session.state as { rematchSessionId?: string }).rematchSessionId;
   const rematchHostId = (session.state as { rematchHostId?: string }).rematchHostId;
@@ -1087,7 +1113,6 @@ function RightPanel({
       router.push(`/minigames/${rematchId}`);
     } catch {
       setRematching(false);
-      alert("Couldn't join the rematch — it may have been cancelled or you're short on points.");
     }
   }
 
@@ -1174,10 +1199,13 @@ function RightPanel({
       {/* Copy link (backup invite) */}
       {session.status === "WAITING" && (
         <button
-          onClick={() => navigator.clipboard.writeText(window.location.href)}
-          className="w-full py-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors hover:border-gray-300"
+          onClick={copyLink}
+          aria-label={copied ? "Link copied" : "Copy game link"}
+          className="w-full py-2 text-xs border border-gray-200 rounded-xl transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5"
         >
-          📋 Copy game link
+          {copied
+            ? <><Check className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /><span className="text-emerald-600 font-medium">Copied!</span></>
+            : <><Copy className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /><span className="text-gray-500 hover:text-gray-700">Copy game link</span></>}
         </button>
       )}
 
@@ -1196,9 +1224,10 @@ function RightPanel({
               <button
                 onClick={acceptRematch}
                 disabled={rematching}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors animate-pulse"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors motion-safe:animate-pulse focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600 flex items-center justify-center gap-2"
               >
-                {rematching ? "Joining…" : "✅ Accept rematch →"}
+                <Check className="w-4 h-4" aria-hidden="true" />
+                {rematching ? "Joining…" : "Accept rematch"}
               </button>
             )
           ) : (
@@ -1234,10 +1263,13 @@ function RightPanel({
       {/* Sound toggle */}
       <button
         onClick={() => { const next = !muted; setMuted(next); setMutedState(next); }}
-        className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        title={muted ? "Unmute sounds" : "Mute sounds"}
+        aria-pressed={muted}
+        aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+        className="w-full py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 rounded-xl"
       >
-        {muted ? "🔇 Sounds off" : "🔊 Sounds on"}
+        {muted
+          ? <><VolumeX className="w-3.5 h-3.5" aria-hidden="true" /> Sounds off</>
+          : <><Volume2 className="w-3.5 h-3.5" aria-hidden="true" /> Sounds on</>}
       </button>
     </div>
   );

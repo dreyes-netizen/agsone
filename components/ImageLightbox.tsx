@@ -66,7 +66,7 @@ export function ImageLightbox({ images, initialIndex = 0, open, onClose }: Props
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={images[index]}
-        alt=""
+        alt={`Photo ${index + 1} of ${images.length}`}
         className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       />

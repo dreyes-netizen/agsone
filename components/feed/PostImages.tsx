@@ -5,9 +5,11 @@ import { ZoomIn } from "lucide-react";
 export function PostImages({
   urls,
   onOpen,
+  authorName,
 }: {
   urls: string[];
   onOpen: (index: number) => void;
+  authorName?: string;
 }) {
   if (urls.length === 0) return null;
 
@@ -27,7 +29,7 @@ export function PostImages({
           aria-label="View image"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={urls[0]} alt="Post image" className="w-full h-full object-cover" draggable={false} />
+          <img src={urls[0]} alt={authorName ? `Photo shared by ${authorName}` : "Post photo"} className="w-full h-full object-cover" draggable={false} />
           <span className="absolute inset-0 bg-black/0 group-hover/img:bg-black/15 transition-colors" />
           <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
             <span className="bg-black/50 backdrop-blur-sm rounded-full p-2">
@@ -55,7 +57,7 @@ export function PostImages({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={url}
-              alt={`Post image ${i + 1}`}
+              alt={authorName ? `Photo ${i + 1} shared by ${authorName}` : `Post photo ${i + 1}`}
               className="w-full h-full object-cover"
               draggable={false}
             />

@@ -43,10 +43,10 @@ export function FeedSidebar({
             <span className="text-base leading-none">{activeFilterObj.emoji}</span>
             {activeFilterObj.label}
           </span>
-          <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${mobileFiltersOpen ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-200 ${mobileFiltersOpen ? "rotate-180" : ""}`} />
         </button>
         {/* Desktop: static label */}
-        <p className="hidden lg:block px-2 pt-1 pb-2 text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">Filter</p>
+        <p className="hidden lg:block px-2 pt-1 pb-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Filter</p>
         {/* Filter list: always on desktop, toggle on mobile */}
         <div className={`space-y-0.5 ${mobileFiltersOpen ? "block mt-1" : "hidden"} lg:block`}>
           {FILTERS.map((f) => (
@@ -80,7 +80,7 @@ export function FeedSidebar({
                 className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-amber-50 transition-colors"
               >
                 <p className="text-sm font-medium text-zinc-800 truncate">{p.title ?? "Untitled post"}</p>
-                <p className="text-xs text-zinc-400 truncate">{p.authorName}</p>
+                <p className="text-xs text-zinc-500 truncate">{p.authorName}</p>
               </button>
             ))}
           </div>

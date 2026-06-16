@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck } from "lucide-react";
+import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
 
@@ -37,6 +37,10 @@ export default function DocumentsPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [promptCopied, setPromptCopied] = useState(false);
+  const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
+
+  function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
 
   function copyPrompt() {
     navigator.clipboard.writeText(MD_CONVERSION_PROMPT);
@@ -87,13 +91,22 @@ export default function DocumentsPage() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    await apiFetch(`/api/admin/documents/${id}`, { method: "DELETE" });
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
+    setDeleteConfirmId(id);
+  }
+
+  async function confirmDelete(id: string) {
+    try {
+      await apiFetch(`/api/admin/documents/${id}`, { method: "DELETE" });
+      setDocuments((prev) => prev.filter((d) => d.id !== id));
+      setDeleteConfirmId(null);
+      showToast("success", "Document deleted.");
+    } catch (err) {
+      setDeleteConfirmId(null);
+      showToast("error", err instanceof Error ? err.message : "Delete failed.");
+    }
   }
 
   async function handleReindex() {
-    if (!confirm("Re-index all active documents? This may take a moment.")) return;
     setReindexing(true);
     setReindexResult("");
     try {
@@ -103,8 +116,11 @@ export default function DocumentsPage() {
       );
       const summary = res.data.map((r) => `${r.name}: ${r.status}`).join("\n");
       setReindexResult(summary);
+      showToast("success", "Re-index complete.");
     } catch (err) {
-      setReindexResult(err instanceof Error ? err.message : "Reindex failed");
+      const msg = err instanceof Error ? err.message : "Reindex failed";
+      setReindexResult(msg);
+      showToast("error", msg);
     } finally {
       setReindexing(false);
     }
@@ -133,6 +149,25 @@ export default function DocumentsPage() {
 
   return (
     <div className="max-w-4xl">
+      {/* Toast banner */}
+      {toast && (
+        <div
+          role="alert"
+          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
+            toast.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+              : "bg-red-50 border border-red-200 text-red-800"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          )}
+          {toast.msg}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Policy Documents</h1>
@@ -145,14 +180,14 @@ export default function DocumentsPage() {
             onClick={handleReindex}
             disabled={reindexing}
             title="Re-index all active documents for Ally"
-            className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <RefreshCw className={`w-4 h-4 ${reindexing ? "animate-spin" : ""}`} />
             {reindexing ? "Re-indexing…" : "Re-index Ally"}
           </button>
           <button
             onClick={() => { setModalOpen(true); setUploadError(""); setDocName(""); setFile(null); }}
-            className="flex items-center gap-2 bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1f2937] transition-colors"
+            className="flex items-center gap-2 bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1f2937] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <Upload className="w-4 h-4" />
             Upload Document
@@ -168,12 +203,15 @@ export default function DocumentsPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>
+        <div className="flex justify-center items-center py-16 text-gray-500 text-sm gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Loading…
+        </div>
       ) : documents.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
           <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">No documents uploaded yet</p>
-          <p className="text-gray-400 text-sm mt-1">Upload a document to make it available to the chatbot.</p>
+          <p className="text-gray-500 text-sm mt-1">Upload a document to make it available to the chatbot.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -208,7 +246,7 @@ export default function DocumentsPage() {
                         <button onClick={() => handleRename(doc.id)} className="text-emerald-500 hover:text-emerald-700">
                           <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setRenamingId(null)} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => setRenamingId(null)} className="text-gray-500 hover:text-gray-600">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -217,7 +255,7 @@ export default function DocumentsPage() {
                         <span className="font-medium text-gray-900">{doc.name}</span>
                         <button
                           onClick={() => { setRenamingId(doc.id); setRenameValue(doc.name); }}
-                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-indigo-500 transition-opacity"
+                          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-indigo-500 transition-opacity"
                           title="Rename"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -230,7 +268,7 @@ export default function DocumentsPage() {
                   <td className="px-5 py-3">
                     <button
                       onClick={() => handleToggle(doc.id, doc.isActive)}
-                      className="flex items-center gap-1.5 text-xs font-medium"
+                      className="flex items-center gap-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
                     >
                       {doc.isActive ? (
                         <>
@@ -239,24 +277,42 @@ export default function DocumentsPage() {
                         </>
                       ) : (
                         <>
-                          <ToggleLeft className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-400">Inactive</span>
+                          <ToggleLeft className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-500">Inactive</span>
                         </>
                       )}
                     </button>
                   </td>
-                  <td className="px-5 py-3 text-gray-400 text-xs">
+                  <td className="px-5 py-3 text-gray-500 text-xs">
                     {new Date(doc.uploadedAt).toLocaleDateString()}
-                    <span className="block text-gray-300">{doc.uploadedBy.displayName}</span>
+                    <span className="block text-gray-500">{doc.uploadedBy.displayName}</span>
                   </td>
                   <td className="px-5 py-3">
-                    <button
-                      onClick={() => handleDelete(doc.id, doc.name)}
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {deleteConfirmId === doc.id ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-gray-700 font-medium">Delete?</span>
+                        <button
+                          onClick={() => confirmDelete(doc.id)}
+                          className="text-red-600 font-semibold hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleDelete(doc.id, doc.name)}
+                        className="text-red-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -269,10 +325,19 @@ export default function DocumentsPage() {
       {/* Upload modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-modal-title"
+          >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-semibold text-gray-900">Upload Document</h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 id="upload-modal-title" className="font-semibold text-gray-900">Upload Document</h2>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-gray-500 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                aria-label="Close"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -322,7 +387,7 @@ export default function DocumentsPage() {
                 />
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-200 rounded-lg px-4 py-6 text-center text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors"
+                  className="w-full border-2 border-dashed border-gray-200 rounded-lg px-4 py-6 text-center text-sm text-gray-500 hover:border-indigo-300 hover:text-indigo-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
                   {file ? (
                     <span className="text-gray-700 font-medium">{file.name} ({formatBytes(file.size)})</span>
@@ -339,9 +404,14 @@ export default function DocumentsPage() {
               <button
                 onClick={handleUpload}
                 disabled={uploading || !file || !docName.trim()}
-                className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               >
-                {uploading ? "Uploading…" : "Upload"}
+                {uploading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading…
+                  </span>
+                ) : "Upload"}
               </button>
             </div>
           </div>

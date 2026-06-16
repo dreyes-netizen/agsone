@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { ChevronDown, ChevronUp, Pencil, Upload, UserPlus, X } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Loader2, Pencil, Upload, UserPlus, X } from "lucide-react";
 
 type Employee = {
   id: string;
@@ -88,6 +88,13 @@ export default function EmployeesPage() {
   const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  function showToast(t: "success" | "error", m: string) {
+    setToast({ type: t, msg: m });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -115,7 +122,7 @@ export default function EmployeesPage() {
       );
     } catch (err) {
       console.error(err);
-      alert("Failed to update role");
+      showToast("error", "Failed to update role");
     } finally {
       setUpdatingId(null);
     }
@@ -126,10 +133,10 @@ export default function EmployeesPage() {
       const res = await apiFetch<{ message: string }>("/api/admin/bootstrap", {
         method: "POST",
       });
-      alert(res.message);
+      showToast("success", res.message);
       window.location.reload();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed");
+      showToast("error", err instanceof Error ? err.message : "Failed");
     }
   }
 
@@ -238,7 +245,7 @@ export default function EmployeesPage() {
       );
       setEditingEmployee(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      showToast("error", err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -279,6 +286,19 @@ export default function EmployeesPage() {
           Manage roles and view all employee accounts.
         </p>
       </div>
+
+      {toast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}
+        >
+          {toast.type === "success"
+            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
+          {toast.msg}
+        </div>
+      )}
 
       {syncResult && (
         <div className="space-y-2">
@@ -324,7 +344,7 @@ export default function EmployeesPage() {
           className="w-full flex items-center justify-between px-6 py-3 border-b border-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <span>Upload Instructions</span>
-          {showUploadGuide ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          {showUploadGuide ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
         </button>
 
         {showUploadGuide && (
@@ -345,7 +365,7 @@ export default function EmployeesPage() {
                 <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Email</code> — employee login account</li>
               </ul>
             </div>
-            <p className="text-xs text-gray-400">Points, level, role, and profile info are never changed by an upload.</p>
+            <p className="text-xs text-gray-500">Points, level, role, and profile info are never changed by an upload.</p>
           </div>
         )}
 
@@ -366,7 +386,7 @@ export default function EmployeesPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => { setAddModalOpen(true); setAddForm(EMPTY_ADD_FORM); setAddError(""); }}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
               <UserPlus className="w-4 h-4" />
               Add Employee
@@ -374,7 +394,7 @@ export default function EmployeesPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={syncing}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
               <Upload className="w-4 h-4" />
               {syncing ? "Syncing…" : "Upload Employee List"}
@@ -389,10 +409,13 @@ export default function EmployeesPage() {
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div className="p-8 flex items-center justify-center gap-2 text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+            <span className="text-sm">Loading employees…</span>
+          </div>
         ) : employees.length === 0 ? (
           <div className="p-8 text-center space-y-3">
-            <p className="text-gray-400">No employees found. You may need to set up the first admin.</p>
+            <p className="text-gray-500">No employees found. You may need to set up the first admin.</p>
             <button
               onClick={handleBootstrap}
               className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800"
@@ -454,7 +477,7 @@ export default function EmployeesPage() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-8 text-center text-gray-400 text-sm">
+                  <td colSpan={11} className="px-6 py-8 text-center text-gray-500 text-sm">
                     No employees match the current filters.
                   </td>
                 </tr>
@@ -504,8 +527,8 @@ export default function EmployeesPage() {
                   <td className="px-6 py-3">
                     <button
                       onClick={() => handleEdit(employee)}
-                      className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="Edit employee"
+                      className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                      aria-label={`Edit ${employee.displayName}`}
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -521,10 +544,19 @@ export default function EmployeesPage() {
       {/* Add Employee Modal */}
       {addModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-employee-title"
+          >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-semibold text-gray-900">Add Employee</h2>
-              <button onClick={() => setAddModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <h2 id="add-employee-title" className="font-semibold text-gray-900">Add Employee</h2>
+              <button
+                onClick={() => setAddModalOpen(false)}
+                className="text-gray-500 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
+                aria-label="Close"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -534,6 +566,8 @@ export default function EmployeesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
                 <input
                   required
+                  autoFocus
+                  aria-required="true"
                   type="text"
                   value={addForm.displayName}
                   onChange={(e) => setAddForm((f) => ({ ...f, displayName: e.target.value }))}
@@ -546,6 +580,7 @@ export default function EmployeesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Work Email <span className="text-red-500">*</span></label>
                 <input
                   required
+                  aria-required="true"
                   type="email"
                   value={addForm.email}
                   onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
@@ -621,7 +656,7 @@ export default function EmployeesPage() {
               <button
                 type="submit"
                 disabled={adding || !addForm.displayName.trim() || !addForm.email.trim()}
-                className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {adding ? "Adding…" : "Add Employee"}
               </button>
@@ -632,15 +667,21 @@ export default function EmployeesPage() {
 
       {editingEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-employee-title"
+          >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Edit Employee</h2>
+                <h2 id="edit-employee-title" className="text-lg font-bold text-gray-900">Edit Employee</h2>
                 <p className="text-sm text-gray-500 mt-0.5">{editingEmployee.email}</p>
               </div>
               <button
                 onClick={() => setEditingEmployee(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-500 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -650,6 +691,8 @@ export default function EmployeesPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Display Name</label>
                 <input
+                  autoFocus
+                  aria-required="true"
                   value={editForm.displayName}
                   onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
@@ -660,6 +703,7 @@ export default function EmployeesPage() {
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</label>
                 <input
                   type="email"
+                  aria-required="true"
                   value={editForm.email}
                   onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
@@ -705,6 +749,9 @@ export default function EmployeesPage() {
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active</label>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={editForm.isActive}
+                  aria-label="Employee active status"
                   onClick={() => setEditForm((f) => ({ ...f, isActive: !f.isActive }))}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.isActive ? "bg-emerald-500" : "bg-gray-200"}`}
                 >
@@ -737,14 +784,14 @@ export default function EmployeesPage() {
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setEditingEmployee(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {saving ? "Saving…" : "Save Changes"}
               </button>

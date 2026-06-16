@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, VIOLATION_TYPES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
-import { Upload } from "lucide-react";
+import { Upload, Loader2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 
 type Department = { id: string; name: string };
 type Employee = {
@@ -132,6 +132,9 @@ export default function AwardPointsPage() {
       // ignore — budget bar simply won't render
     }
   }
+
+  const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
+  function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
 
   const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
 
@@ -321,6 +324,22 @@ export default function AwardPointsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+            toast.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+              : "bg-red-50 border border-red-200 text-red-800"
+          }`}
+        >
+          {toast.type === "success"
+            ? <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+            : <XCircle className="w-4 h-4 text-red-500 shrink-0" aria-hidden="true" />}
+          {toast.msg}
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Award Points</h1>
         <p className="text-gray-500 text-sm mt-1">
@@ -330,12 +349,14 @@ export default function AwardPointsPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 overflow-x-auto">
+        <div role="tablist" aria-label="Award type" className="flex border-b border-gray-100 overflow-x-auto">
           {(["single", "bulk", "deduct", "attendance"] as const).map((t) => (
             <button
               key={t}
+              role="tab"
+              aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`px-6 py-3.5 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`px-6 py-3.5 text-sm font-medium transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${
                 tab === t
                   ? t === "deduct"
                     ? "text-red-600 border-b-2 border-red-600"
@@ -360,7 +381,7 @@ export default function AwardPointsPage() {
                   onChange={(e) => setAttendanceMonth(e.target.value)}
                   className={inputClass}
                 />
-                <p className="text-xs text-gray-400">Select the month this attendance data covers — not today&apos;s date.</p>
+                <p className="text-xs text-gray-500">Select the month this attendance data covers — not today&apos;s date.</p>
               </div>
 
               <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-0.5">
@@ -380,9 +401,9 @@ export default function AwardPointsPage() {
                   type="button"
                   onClick={() => attendanceFileRef.current?.click()}
                   disabled={attendanceUploading}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
-                  <Upload className="w-4 h-4" />
+                  {attendanceUploading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Upload className="w-4 h-4" aria-hidden="true" />}
                   {attendanceUploading ? "Processing…" : "Upload Attendance File (.xlsx)"}
                 </button>
               </div>
@@ -393,8 +414,9 @@ export default function AwardPointsPage() {
                 <div className="space-y-3">
                   {attendanceResult.awarded > 0 ? (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
-                      <p className="text-sm font-semibold text-emerald-800">
-                        ✅ {attendanceResult.awarded} employee{attendanceResult.awarded !== 1 ? "s" : ""} awarded 50 pts for perfect attendance
+                      <p className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+                        {attendanceResult.awarded} employee{attendanceResult.awarded !== 1 ? "s" : ""} awarded 50 pts for perfect attendance
                       </p>
                       {attendanceResult.awardedNames && attendanceResult.awardedNames.length > 0 && (
                         <p className="text-xs text-emerald-700">{attendanceResult.awardedNames.join(", ")}</p>
@@ -405,16 +427,18 @@ export default function AwardPointsPage() {
                   )}
                   {attendanceResult.skipped.alreadyAwarded.length > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1">
-                      <p className="text-sm font-semibold text-amber-800">
-                        ⚠️ Already awarded this month ({attendanceResult.skipped.alreadyAwarded.length})
+                      <p className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-amber-500" aria-hidden="true" />
+                        Already awarded this month ({attendanceResult.skipped.alreadyAwarded.length})
                       </p>
                       <p className="text-xs text-amber-700">{attendanceResult.skipped.alreadyAwarded.join(", ")}</p>
                     </div>
                   )}
                   {attendanceResult.skipped.notFound.length > 0 && (
                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
-                      <p className="text-sm font-semibold text-gray-700">
-                        ❌ Employee IDs not found in system ({attendanceResult.skipped.notFound.length})
+                      <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                        <XCircle className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                        Employee IDs not found in system ({attendanceResult.skipped.notFound.length})
                       </p>
                       <p className="text-xs text-gray-500 font-mono">{attendanceResult.skipped.notFound.join(", ")}</p>
                     </div>
@@ -503,9 +527,14 @@ export default function AwardPointsPage() {
               <button
                 type="submit"
                 disabled={deductSubmitting || !deductUserId || !deductReason.trim()}
-                className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+                className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-600"
               >
-                {deductSubmitting ? "Deducting..." : "Deduct Points"}
+                {deductSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    Deducting…
+                  </span>
+                ) : "Deduct Points"}
               </button>
             </form>
           ) : tab === "single" ? (
@@ -555,7 +584,7 @@ export default function AwardPointsPage() {
                   className={inputClass + (activity ? " bg-gray-50 text-gray-500 cursor-not-allowed" : "")}
                 />
                 {activity && (
-                  <p className="text-xs text-gray-400">Standard amount from the program manual — select &quot;Custom amount…&quot; to enter a different value.</p>
+                  <p className="text-xs text-gray-500">Standard amount from the program manual — select &quot;Custom amount…&quot; to enter a different value.</p>
                 )}
               </div>
 
@@ -577,9 +606,14 @@ export default function AwardPointsPage() {
               <button
                 type="submit"
                 disabled={submitting || !toUserId}
-                className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+                className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
-                {submitting ? "Awarding..." : "Award Points"}
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    Awarding…
+                  </span>
+                ) : "Award Points"}
               </button>
             </form>
           ) : (
@@ -623,7 +657,7 @@ export default function AwardPointsPage() {
 
                 <div className="border border-gray-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
                   {filteredForBulk.length === 0 ? (
-                    <p className="text-center text-gray-400 text-sm py-6">No employees found</p>
+                    <p className="text-center text-gray-500 text-sm py-6">No employees found</p>
                   ) : (
                     filteredForBulk.map((e, i) => (
                       <label
@@ -640,9 +674,9 @@ export default function AwardPointsPage() {
                         />
                         <span className="flex-1 text-sm text-gray-800">{e.displayName}</span>
                         {e.department && (
-                          <span className="text-xs text-gray-400">{e.department.name}</span>
+                          <span className="text-xs text-gray-500">{e.department.name}</span>
                         )}
-                        <span className="text-xs text-gray-400">{e.pointsBalance} pts</span>
+                        <span className="text-xs text-gray-500">{e.pointsBalance} pts</span>
                       </label>
                     ))
                   )}
@@ -695,11 +729,14 @@ export default function AwardPointsPage() {
               <button
                 type="submit"
                 disabled={bulkSubmitting || bulkSelected.size === 0 || !bulkAmount || !bulkNote}
-                className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+                className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
-                {bulkSubmitting
-                  ? "Awarding..."
-                  : bulkSelected.size === 0
+                {bulkSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    Awarding…
+                  </span>
+                ) : bulkSelected.size === 0
                   ? "Select employees to award"
                   : `Award ${bulkAmount || "—"} pts to ${bulkSelected.size} employee${bulkSelected.size !== 1 ? "s" : ""}`}
               </button>
@@ -727,7 +764,7 @@ export default function AwardPointsPage() {
           <tbody>
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-8">
+                <td colSpan={6} className="text-center text-gray-500 py-8">
                   No transactions yet
                 </td>
               </tr>
@@ -758,7 +795,7 @@ export default function AwardPointsPage() {
                     )}
                   </td>
                   <td className={`${tdClass} text-gray-500 max-w-xs truncate`}>{t.note}</td>
-                  <td className={`${tdClass} text-gray-400`}>
+                  <td className={`${tdClass} text-gray-500`}>
                     {new Date(t.createdAt).toLocaleDateString()}
                   </td>
                 </tr>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { Loader2, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 
 type Department = {
   id: string;
@@ -26,6 +27,12 @@ export default function DepartmentsPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  function showToast(type: "success" | "error", msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -91,18 +98,30 @@ export default function DepartmentsPage() {
     }
   }
 
-  async function handleDelete(dept: Department) {
-    if (!window.confirm(`Delete department "${dept.name}"?`)) return;
+  function handleDelete(dept: Department) {
+    setDeleteConfirmId(dept.id);
+  }
+
+  async function confirmDelete(dept: Department) {
     try {
       await apiFetch(`/api/admin/departments/${dept.id}`, { method: "DELETE" });
       setDepartments((prev) => prev.filter((d) => d.id !== dept.id));
+      setDeleteConfirmId(null);
+      showToast("success", `"${dept.name}" deleted.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      setDeleteConfirmId(null);
+      showToast("error", err instanceof Error ? err.message : "Failed to delete");
     }
   }
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div role="alert" aria-live="assertive" className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
+          {toast.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" /> : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
+          {toast.msg}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Departments</h1>
@@ -111,7 +130,7 @@ export default function DepartmentsPage() {
         {!showCreateForm && (
           <button
             onClick={() => { setShowCreateForm(true); setCreateError(""); }}
-            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             New Department
           </button>
@@ -148,13 +167,13 @@ export default function DepartmentsPage() {
             <button
               onClick={handleCreate}
               disabled={saving}
-              className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
             >
               {saving ? "Saving..." : "Save"}
             </button>
             <button
               onClick={() => { setShowCreateForm(false); setCreateName(""); setCreateDesc(""); setCreateError(""); }}
-              className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
             >
               Cancel
             </button>
@@ -164,9 +183,9 @@ export default function DepartmentsPage() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div>
         ) : departments.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">No departments yet.</div>
+          <div className="p-8 text-center text-gray-500">No departments yet.</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full">
@@ -203,13 +222,13 @@ export default function DepartmentsPage() {
                           <button
                             onClick={() => handleEdit(dept.id)}
                             disabled={saving}
-                            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                           >
                             {saving ? "Saving..." : "Save"}
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                            className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
                           >
                             Cancel
                           </button>
@@ -225,16 +244,19 @@ export default function DepartmentsPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => startEdit(dept)}
-                            className="text-navy-600 hover:text-navy-800 text-sm font-medium"
+                            className="text-navy-600 hover:text-navy-800 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 rounded"
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={() => handleDelete(dept)}
-                            className="text-red-500 hover:text-red-700 text-sm font-medium"
-                          >
-                            Delete
-                          </button>
+                          {deleteConfirmId === dept.id ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-600 font-medium">Delete?</span>
+                              <button onClick={() => confirmDelete(dept)} className="text-xs text-red-600 font-semibold hover:text-red-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500 rounded">Yes</button>
+                              <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-400 rounded">No</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setDeleteConfirmId(dept.id)} className="text-red-500 hover:text-red-700 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded">Delete</button>
+                          )}
                         </div>
                       </td>
                     </>

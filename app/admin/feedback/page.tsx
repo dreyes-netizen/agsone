@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 
 type FeedbackItem = {
@@ -72,7 +73,7 @@ export default function AdminFeedbackPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
-          <WhistleIcon className="w-5 h-5 text-red-600" />
+          <WhistleIcon className="w-5 h-5 text-red-600" aria-hidden="true" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Whistleblower Reports</h1>
@@ -81,7 +82,7 @@ export default function AdminFeedbackPage() {
       </div>
 
       <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
-        <span className="text-red-600 text-sm font-bold">🔒 Confidential Channel</span>
+        <span className="text-red-600 text-sm font-bold"><span aria-hidden="true">🔒</span> Confidential Channel</span>
         <span className="text-red-500 text-xs">
           Reports visible only to HR and authorized investigators. Retaliation is strictly prohibited.
         </span>
@@ -94,7 +95,7 @@ export default function AdminFeedbackPage() {
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${statusFilter === tab ? "bg-[#111827] text-white" : "text-gray-600 hover:bg-gray-50"}`}
+              className={`px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${statusFilter === tab ? "bg-[#111827] text-white" : "text-gray-600 hover:bg-gray-50"}`}
             >
               {STATUS_TAB_LABELS[tab]}
             </button>
@@ -103,7 +104,7 @@ export default function AdminFeedbackPage() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+          className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
         >
           <option value="">All Categories</option>
           <option value="HARASSMENT_DISCRIMINATION">Harassment &amp; Discrimination</option>
@@ -128,14 +129,17 @@ export default function AdminFeedbackPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">Loading...</td></tr>
+              <tr><td colSpan={6}><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></td></tr>
             ) : feedbacks.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">No feedback found.</td></tr>
+              <tr><td colSpan={6}><div className="flex flex-col items-center justify-center gap-2 py-10 text-gray-500 text-sm"><ShieldAlert className="w-8 h-8 text-gray-300" aria-hidden="true" /><span>No feedback found.</span></div></td></tr>
             ) : feedbacks.map((f) => (
               <tr
                 key={f.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => router.push(`/admin/feedback/${f.id}`)}
-                className="hover:bg-gray-50/60 cursor-pointer transition-colors border-b border-gray-50"
+                onKeyDown={(e) => e.key === "Enter" && router.push(`/admin/feedback/${f.id}`)}
+                className="hover:bg-gray-50/60 cursor-pointer transition-colors border-b border-gray-50 focus-visible:outline-none focus-visible:bg-gray-100"
               >
                 <td className={tdClass}>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CHIP[f.status]}`}>
@@ -149,7 +153,7 @@ export default function AdminFeedbackPage() {
                 <td className={tdClass + " text-gray-600"}>
                   {f.isAnonymous ? "Anonymous" : (f.author?.displayName ?? "—")}
                 </td>
-                <td className={tdClass + " text-gray-400 text-xs"}>{new Date(f.createdAt).toLocaleDateString()}</td>
+                <td className={tdClass + " text-gray-500 text-xs"}>{new Date(f.createdAt).toLocaleDateString()}</td>
                 <td className={tdClass + " text-gray-500"}>{f._count.replies}</td>
               </tr>
             ))}

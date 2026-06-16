@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Loader2 } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 
 type Reply = {
@@ -108,20 +108,25 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
     }
   }
 
-  if (loading) return <div className="p-8 text-gray-400">Loading...</div>;
+  if (loading) return (
+    <div className="p-8 text-gray-500 flex items-center gap-2">
+      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+      Loading...
+    </div>
+  );
   if (!thread) return null;
 
   const isHrRole = (role: string) => role === "HR_ADMIN" || role === "MANAGER";
 
   return (
     <div className="max-w-2xl space-y-5">
-      <button onClick={() => router.push("/admin/feedback")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+      <button onClick={() => router.push("/admin/feedback")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">
         <ArrowLeft className="w-4 h-4" /> Back to Whistleblower Reports
       </button>
 
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
-          <WhistleIcon className="w-4 h-4 text-red-600" />
+          <WhistleIcon className="w-4 h-4 text-red-600" aria-hidden="true" />
         </div>
         <div>
           <h2 className="text-base font-bold text-gray-900">Whistleblower Report</h2>
@@ -135,14 +140,14 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                🔒 Confidential
+                <span aria-hidden="true">🔒</span> Confidential
               </span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
                 {CATEGORY_LABELS[thread.category] ?? thread.category}
               </span>
             </div>
             <h1 className="text-lg font-bold text-gray-900">{thread.title}</h1>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
               <span>
                 {thread.isAnonymous ? "Anonymous Employee" : (thread.author?.displayName ?? "Unknown")}
               </span>
@@ -158,7 +163,8 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
               value={thread.status}
               onChange={(e) => handleStatusChange(e.target.value)}
               disabled={updatingStatus}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none disabled:opacity-50"
+              aria-label="Change report status"
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/30 disabled:opacity-50"
             >
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -184,7 +190,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
                 <div className={`max-w-[75%] space-y-1`}>
                   <div className={`flex items-center gap-2 ${isHr ? "flex-row-reverse" : ""}`}>
                     <span className="text-xs font-semibold text-gray-700">{reply.author.displayName}</span>
-                    <span className="text-[10px] text-gray-400">{new Date(reply.createdAt).toLocaleString()}</span>
+                    <span className="text-[10px] text-gray-500">{new Date(reply.createdAt).toLocaleString()}</span>
                   </div>
                   <div className={`px-4 py-3 rounded-2xl text-sm text-gray-800 whitespace-pre-wrap ${isHr ? "bg-[#111827] text-white rounded-tr-none" : "bg-gray-100 rounded-tl-none"}`}>
                     {reply.body}
@@ -198,7 +204,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
 
       {/* Reply input */}
       {thread.isAnonymous ? (
-        <p className="text-xs text-gray-400 text-center py-2 bg-gray-50 rounded-xl border border-gray-100">
+        <p className="text-xs text-gray-500 text-center py-2 bg-gray-50 rounded-xl border border-gray-100">
           Cannot reply to anonymous feedback
         </p>
       ) : (
@@ -213,7 +219,8 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
           <button
             onClick={handleReply}
             disabled={!replyBody.trim() || sending}
-            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+            aria-label="Send reply"
+            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             <Send className="w-4 h-4" />
           </button>

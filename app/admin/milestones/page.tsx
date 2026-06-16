@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -108,7 +109,7 @@ export default function MilestonesPage() {
           <button
             onClick={handleSave}
             disabled={saving || loading}
-            className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+            className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             {saving ? "Saving…" : "Save All"}
           </button>
@@ -126,7 +127,7 @@ export default function MilestonesPage() {
         )}
 
         {loading ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Loading…</div>
+          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -150,13 +151,16 @@ export default function MilestonesPage() {
                       max={100000}
                       value={cfg.pointsReward}
                       onChange={(e) => updatePoints(cfg.type, e.target.value)}
-                      className="w-28 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white"
+                      className="w-28 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white focus-visible:outline-none"
                     />
                   </td>
                   <td className={tdClass}>
                     <button
                       onClick={() => toggleActive(cfg.type)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      role="switch"
+                      aria-checked={cfg.isActive}
+                      aria-label={`${TYPE_LABELS[cfg.type]} milestone`}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
                         cfg.isActive ? "bg-emerald-500" : "bg-gray-200"
                       }`}
                     >
@@ -175,7 +179,7 @@ export default function MilestonesPage() {
         )}
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-gray-500">
         Awards fire daily at 1 AM UTC. Employees need a birthday or hire date set to receive awards.
         Each milestone is awarded once per year (birthday) or once per qualifying anniversary year.
       </p>

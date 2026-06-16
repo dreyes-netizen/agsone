@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { ShieldAlert, ChevronDown, ChevronUp } from "lucide-react";
+import { ShieldAlert, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 type AuditEntry = {
   id: string;
@@ -94,7 +94,7 @@ function AuditDetails({ action, afterState, beforeState }: {
     <div className="mt-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 space-y-1.5">
       {rows.map(({ label, value }) => (
         <div key={label} className="flex gap-2 text-xs">
-          <span className="text-gray-400 font-medium shrink-0 w-28">{label}</span>
+          <span className="text-gray-500 font-medium shrink-0 w-28">{label}</span>
           <span className="text-gray-700 break-words min-w-0">{value}</span>
         </div>
       ))}
@@ -154,26 +154,24 @@ export default function AuditLogPage() {
         <select
           value={filterAction}
           onChange={(e) => handleFilterChange(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30"
         >
           <option value="">All Actions</option>
           {ALL_ACTIONS.map((a) => (
             <option key={a} value={a}>{ACTION_LABELS[a]?.label ?? a}</option>
           ))}
         </select>
-        <span className="text-sm text-gray-400">{total.toLocaleString()} entries</span>
+        <span className="text-sm text-gray-500">{total.toLocaleString()} entries</span>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-6 space-y-3 animate-pulse">
-            {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-12 bg-gray-50 rounded-xl" />)}
-          </div>
+          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-12 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading audit log…</div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <ShieldAlert className="w-8 h-8 text-gray-300" />
-            <p className="text-gray-400 text-sm">No audit entries found</p>
+            <p className="text-gray-500 text-sm">No audit entries found</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -194,7 +192,7 @@ export default function AuditLogPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-gray-900">{entry.actor.displayName}</span>
                         <ActionBadge action={entry.action} />
-                        <span className="text-xs text-gray-400 ml-auto shrink-0">
+                        <span className="text-xs text-gray-500 ml-auto shrink-0">
                           {new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
                         </span>
                       </div>
@@ -220,7 +218,7 @@ export default function AuditLogPage() {
                           <> · &quot;{String(entry.beforeState.content).slice(0, 50)}{String(entry.beforeState.content).length > 50 ? "…" : ""}&quot;</>
                         )}
                         {!entry.afterState?.toUserName && !entry.afterState?.amount && !entry.afterState?.count && !entry.afterState?.role && !entry.beforeState?.content && (
-                          <span className="text-gray-400">{entry.entityType}</span>
+                          <span className="text-gray-500">{entry.entityType}</span>
                         )}
                       </p>
 
@@ -228,7 +226,9 @@ export default function AuditLogPage() {
                       {hasDetails && (
                         <button
                           onClick={() => setExpanded(isExpanded ? null : entry.id)}
-                          className="flex items-center gap-1 text-[11px] text-indigo-500 hover:text-indigo-700 mt-1 transition-colors"
+                          aria-expanded={isExpanded}
+                          aria-controls={`details-${entry.id}`}
+                          className="flex items-center gap-1 text-[11px] text-indigo-500 hover:text-indigo-700 mt-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
                         >
                           {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                           {isExpanded ? "Hide details" : "Show details"}
@@ -236,11 +236,13 @@ export default function AuditLogPage() {
                       )}
 
                       {isExpanded && (
-                        <AuditDetails
-                          action={entry.action}
-                          afterState={entry.afterState}
-                          beforeState={entry.beforeState}
-                        />
+                        <div id={`details-${entry.id}`}>
+                          <AuditDetails
+                            action={entry.action}
+                            afterState={entry.afterState}
+                            beforeState={entry.beforeState}
+                          />
+                        </div>
                       )}
                     </div>
                   </div>
@@ -257,7 +259,7 @@ export default function AuditLogPage() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             ← Prev
           </button>
@@ -265,7 +267,7 @@ export default function AuditLogPage() {
           <button
             onClick={() => setPage((p) => Math.min(pages, p + 1))}
             disabled={page === pages}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             Next →
           </button>

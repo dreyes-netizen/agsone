@@ -76,18 +76,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav aria-label="Admin navigation" className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Management</p>
+          <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Management</p>
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 ${
                   active ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${active ? "text-gray-900" : "text-gray-400"}`} />
+                <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${active ? "text-gray-900" : "text-gray-400"}`} />
                 {label}
               </Link>
             );
@@ -97,13 +97,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-3 border-t border-gray-100 space-y-0.5">
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400"
           >
             ← Back to App
           </Link>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-red-500 hover:bg-red-50 transition-colors w-full"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-red-500 hover:bg-red-50 transition-colors w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500"
           >
             <LogOut className="w-4 h-4" />
             Sign Out
@@ -115,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="lg:hidden fixed top-0 left-0 right-0 z-10 bg-[#111827] px-4 h-14 flex items-center gap-3">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="text-white p-1 -ml-1"
+          className="text-white p-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           aria-label="Open menu"
         >
           <Menu className="w-5 h-5" />

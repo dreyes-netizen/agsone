@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import React from "react";
-import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 type Reward = {
   id: string;
@@ -33,6 +33,13 @@ export default function AdminRewardsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  function showToast(t: "success" | "error", m: string) {
+    setToast({ type: t, msg: m });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   // Multi-image state
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
@@ -114,7 +121,9 @@ export default function AdminRewardsPage() {
       await loadRewards();
     } catch (err) {
       setUploading(false);
-      setError(err instanceof Error ? err.message : "Failed to save");
+      const msg = err instanceof Error ? err.message : "Failed to save";
+      setError(msg);
+      showToast("error", msg);
     } finally {
       setSubmitting(false);
     }
@@ -136,10 +145,16 @@ export default function AdminRewardsPage() {
     setShowForm(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remove this reward from the marketplace?")) return;
-    await apiFetch(`/api/rewards/${id}`, { method: "DELETE" });
-    await loadRewards();
+  async function confirmDelete(id: string) {
+    try {
+      await apiFetch(`/api/rewards/${id}`, { method: "DELETE" });
+      setDeleteConfirmId(null);
+      showToast("success", "Reward deleted.");
+      await loadRewards();
+    } catch (err) {
+      setDeleteConfirmId(null);
+      showToast("error", err instanceof Error ? err.message : "Failed to delete reward.");
+    }
   }
 
   const inputClass =
@@ -152,6 +167,23 @@ export default function AdminRewardsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {toast && (
+        <div
+          role="alert"
+          className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-sm border ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-200 text-green-800"
+              : "bg-red-50 border-red-200 text-red-800"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          )}
+          {toast.msg}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Rewards</h1>
@@ -159,7 +191,7 @@ export default function AdminRewardsPage() {
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
-          className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 flex items-center gap-2"
+          className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
         >
           <Plus className="w-4 h-4" /> Add Reward
         </button>
@@ -198,7 +230,7 @@ export default function AdminRewardsPage() {
               {/* Photos — up to 3 */}
               <div className="col-span-2 space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">
-                  Photos <span className="text-gray-400 font-normal">(up to 3, optional)</span>
+                  Photos <span className="text-gray-500 font-normal">(up to 3, optional)</span>
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {existingImageUrls.map((src, i) => (
@@ -229,8 +261,8 @@ export default function AdminRewardsPage() {
                   ))}
                   {totalImages < 3 && (
                     <label className={`flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-navy-400 transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
-                      <ImagePlus className="w-5 h-5 text-gray-400" />
-                      <span className="text-[10px] text-gray-400 mt-0.5">{uploading ? "Uploading…" : "Add"}</span>
+                      <ImagePlus className="w-5 h-5 text-gray-500" />
+                      <span className="text-[10px] text-gray-500 mt-0.5">{uploading ? "Uploading…" : "Add"}</span>
                       <input type="file" accept="image/*" multiple className="hidden" onChange={handleImagePick} disabled={uploading} />
                     </label>
                   )}
@@ -277,14 +309,15 @@ export default function AdminRewardsPage() {
                 <button
                   type="submit"
                   disabled={submitting || uploading}
-                  className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+                  className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
+                  {(uploading || submitting) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {uploading ? "Uploading…" : submitting ? "Saving…" : editingId ? "Save Changes" : "Add Reward"}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50"
+                  className="border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
                   Cancel
                 </button>
@@ -309,7 +342,7 @@ export default function AdminRewardsPage() {
           <tbody>
             {rewards.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-400 py-8">No rewards yet. Add your first one!</td>
+                <td colSpan={5} className="text-center text-gray-500 py-8">No rewards yet. Add your first one!</td>
               </tr>
             ) : rewards.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50">
@@ -317,11 +350,11 @@ export default function AdminRewardsPage() {
                   <div className="flex items-center gap-3">
                     {(r.imageUrls?.[0]) && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.imageUrls[0]} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
+                      <img src={r.imageUrls[0]} alt={`${r.name} reward image`} className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
                     )}
                     <div>
                       <p className="font-medium text-gray-900">{r.name}</p>
-                      {r.description && <p className="text-xs text-gray-400 truncate max-w-xs">{r.description}</p>}
+                      {r.description && <p className="text-xs text-gray-500 truncate max-w-xs">{r.description}</p>}
                     </div>
                   </div>
                 </td>
@@ -337,19 +370,39 @@ export default function AdminRewardsPage() {
                   {r.stockQuantity === -1 ? "Unlimited" : r.stockQuantity}
                 </td>
                 <td className={tdClass}>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleEdit(r)}
-                      className="border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg"
+                      className="border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                      aria-label={`Edit ${r.name}`}
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      className="border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {deleteConfirmId === r.id ? (
+                      <div className="flex items-center gap-1 text-xs">
+                        <span className="text-gray-600 font-medium">Delete?</span>
+                        <button
+                          onClick={() => confirmDelete(r.id)}
+                          className="px-2 py-1 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="px-2 py-1 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirmId(r.id)}
+                        className="border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                        aria-label={`Delete ${r.name}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

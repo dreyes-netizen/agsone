@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { Pencil, Pill, Plus, Trash2, X } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
 
 type Medicine = {
   id: string;
@@ -80,6 +80,13 @@ export default function AdminMedicinePage() {
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [reqFilter, setReqFilter] = useState("");
 
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  function showToast(t: "success" | "error", m: string) {
+    setToast({ type: t, msg: m });
+    setTimeout(() => setToast(null), 4000);
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
     Promise.all([
@@ -93,7 +100,7 @@ export default function AdminMedicinePage() {
 
   async function handleAdd() {
     if (!addForm.name.trim() || !addForm.caption.trim() || !addForm.stockQuantity) {
-      alert("Please fill in all required fields.");
+      showToast("error", "Please fill in all required fields.");
       return;
     }
     setAddingMed(true);
@@ -111,8 +118,9 @@ export default function AdminMedicinePage() {
       setMedicines((prev) => [...prev, res.data].sort((a, b) => a.name.localeCompare(b.name)));
       setAddForm({ name: "", caption: "", stockQuantity: "", imageFile: null, imagePreview: "" });
       setShowAddForm(false);
+      showToast("success", "Medicine added successfully.");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add medicine");
+      showToast("error", err instanceof Error ? err.message : "Failed to add medicine");
     } finally {
       setAddingMed(false);
     }
@@ -151,8 +159,9 @@ export default function AdminMedicinePage() {
       });
       setMedicines((prev) => prev.map((m) => (m.id === editingMed.id ? res.data : m)));
       setEditingMed(null);
+      showToast("success", "Medicine updated successfully.");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      showToast("error", err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSavingEdit(false);
     }
@@ -162,7 +171,7 @@ export default function AdminMedicinePage() {
     const raw = inventoryEdits[med.id];
     if (raw === undefined) return;
     const qty = parseInt(raw, 10);
-    if (isNaN(qty) || qty < 0) { alert("Enter a valid stock number."); return; }
+    if (isNaN(qty) || qty < 0) { showToast("error", "Enter a valid stock number."); return; }
     setSavingStock(med.id);
     try {
       const res = await apiFetch<{ data: Medicine }>(`/api/admin/medicine/${med.id}`, {
@@ -171,20 +180,22 @@ export default function AdminMedicinePage() {
       });
       setMedicines((prev) => prev.map((m) => (m.id === med.id ? res.data : m)));
       setInventoryEdits((prev) => { const next = { ...prev }; delete next[med.id]; return next; });
+      showToast("success", "Stock updated.");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update stock");
+      showToast("error", err instanceof Error ? err.message : "Failed to update stock");
     } finally {
       setSavingStock(null);
     }
   }
 
-  async function handleDelete(med: Medicine) {
-    if (!confirm(`Delete "${med.name}"? This cannot be undone.`)) return;
+  async function confirmDelete(med: Medicine) {
+    setDeleteConfirmId(null);
     try {
       await apiFetch(`/api/admin/medicine/${med.id}`, { method: "DELETE" });
       setMedicines((prev) => prev.filter((m) => m.id !== med.id));
+      showToast("success", `"${med.name}" deleted.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      showToast("error", err instanceof Error ? err.message : "Failed to delete");
     }
   }
 
@@ -214,7 +225,7 @@ export default function AdminMedicinePage() {
         }
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed");
+      showToast("error", err instanceof Error ? err.message : "Failed");
     } finally {
       setActioningId(null);
     }
@@ -232,17 +243,38 @@ export default function AdminMedicinePage() {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+            toast.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              : "bg-red-50 text-red-800 border border-red-200"
+          }`}
+          role="alert"
+          aria-live="polite"
+        >
+          {toast.type === "success" ? (
+            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+          )}
+          {toast.msg}
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Medicine</h1>
         <p className="text-gray-500 text-sm mt-1">Manage the medicine cabinet and dispense requests.</p>
       </div>
 
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div role="tablist" aria-label="Medicine views" className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {(["catalog", "inventory", "requests"] as const).map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors capitalize ${
+            className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${
               activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -261,7 +293,7 @@ export default function AdminMedicinePage() {
           <div className="flex justify-end">
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
             >
               <Plus className="w-4 h-4" />
               Add Medicine
@@ -304,7 +336,7 @@ export default function AdminMedicinePage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-400">(optional)</span></label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-500">(optional)</span></label>
                 <input
                   ref={addImageRef}
                   type="file"
@@ -337,25 +369,28 @@ export default function AdminMedicinePage() {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAdd}
                   disabled={addingMed}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
                 >
-                  {addingMed ? "Uploading…" : "Add Medicine"}
+                  {addingMed ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : "Add Medicine"}
                 </button>
               </div>
             </div>
           )}
 
           {loadingMeds ? (
-            <div className="text-center text-gray-400 py-12">Loading…</div>
+            <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Loading…</span>
+            </div>
           ) : medicines.length === 0 ? (
-            <div className="text-center text-gray-400 py-12">No medicines yet. Add one above.</div>
+            <div className="text-center text-gray-500 py-12">No medicines yet. Add one above.</div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {medicines.map((med) => (
@@ -385,20 +420,38 @@ export default function AdminMedicinePage() {
                     <p className={`text-xs font-medium mt-1 ${med.stockQuantity === 0 ? "text-red-500" : "text-emerald-600"}`}>
                       {med.stockQuantity} in stock
                     </p>
-                    <div className="flex gap-1 mt-2">
-                      <button
-                        onClick={() => openEdit(med)}
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        <Pencil className="w-3 h-3" /> Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(med)}
-                        className="p-1.5 border border-gray-200 rounded-lg text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {deleteConfirmId === med.id ? (
+                      <div className="mt-2 flex items-center gap-1 text-xs">
+                        <span className="text-gray-700 font-medium flex-1">Delete?</span>
+                        <button
+                          onClick={() => confirmDelete(med)}
+                          className="px-2 py-1 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 mt-2">
+                        <button
+                          onClick={() => openEdit(med)}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+                        >
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(med.id)}
+                          className="p-1.5 border border-gray-200 rounded-lg text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -409,9 +462,12 @@ export default function AdminMedicinePage() {
 
       {activeTab === "inventory" && (
         loadingMeds ? (
-          <div className="text-center text-gray-400 py-12">Loading…</div>
+          <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Loading…</span>
+          </div>
         ) : medicines.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">No medicines yet.</div>
+          <div className="text-center text-gray-500 py-12">No medicines yet.</div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -474,9 +530,9 @@ export default function AdminMedicinePage() {
                         <button
                           onClick={() => handleStockSave(med)}
                           disabled={!isDirty || isSaving}
-                          className="px-3 py-1.5 text-xs font-semibold bg-[#111827] text-white rounded-lg hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#111827] text-white rounded-lg hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
                         >
-                          {isSaving ? "Saving…" : "Save"}
+                          {isSaving ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</> : "Save"}
                         </button>
                       </td>
                     </tr>
@@ -492,7 +548,10 @@ export default function AdminMedicinePage() {
       {activeTab === "requests" && (
         <div className="space-y-6">
           {loadingReqs ? (
-            <div className="text-center text-gray-400 py-12">Loading…</div>
+            <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Loading…</span>
+            </div>
           ) : (
             <>
               {pending.length > 0 && (
@@ -526,15 +585,17 @@ export default function AdminMedicinePage() {
                                 <button
                                   onClick={() => handleAction(r.id, "approve")}
                                   disabled={actioningId === r.id}
-                                  className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-700"
                                 >
+                                  {actioningId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                                   Approve
                                 </button>
                                 <button
                                   onClick={() => handleAction(r.id, "reject")}
                                   disabled={actioningId === r.id}
-                                  className="px-3 py-1.5 text-xs font-semibold border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500"
                                 >
+                                  {actioningId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                                   Reject
                                 </button>
                               </div>
@@ -559,7 +620,7 @@ export default function AdminMedicinePage() {
                   />
                 </div>
                 {filteredHistory.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">No history yet.</p>
+                  <p className="text-sm text-gray-500 text-center py-8">No history yet.</p>
                 ) : (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
@@ -609,10 +670,19 @@ export default function AdminMedicinePage() {
 
       {editingMed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-medicine-title"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+          >
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Edit Medicine</h2>
-              <button onClick={() => setEditingMed(null)} className="text-gray-400 hover:text-gray-600">
+              <h2 id="edit-medicine-title" className="text-lg font-bold text-gray-900">Edit Medicine</h2>
+              <button
+                onClick={() => setEditingMed(null)}
+                aria-label="Close"
+                className="text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 rounded"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -620,6 +690,7 @@ export default function AdminMedicinePage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Generic Name</label>
                 <input
+                  autoFocus
                   value={editForm.name}
                   onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                   className={inputClass}
@@ -645,7 +716,7 @@ export default function AdminMedicinePage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-400">(optional)</span></label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-500">(optional)</span></label>
                 <input
                   ref={editImageRef}
                   type="file"
@@ -680,8 +751,11 @@ export default function AdminMedicinePage() {
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active</label>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={editForm.isActive}
+                  aria-label="Active status"
                   onClick={() => setEditForm((f) => ({ ...f, isActive: !f.isActive }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.isActive ? "bg-emerald-500" : "bg-gray-200"}`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${editForm.isActive ? "bg-emerald-500" : "bg-gray-200"}`}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.isActive ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
@@ -690,16 +764,16 @@ export default function AdminMedicinePage() {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setEditingMed(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200"
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="px-4 py-2 text-sm font-semibold text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
               >
-                {savingEdit ? "Saving…" : "Save Changes"}
+                {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : "Save Changes"}
               </button>
             </div>
           </div>

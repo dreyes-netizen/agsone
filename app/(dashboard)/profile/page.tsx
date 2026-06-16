@@ -472,7 +472,7 @@ export default function ProfilePage() {
             </div>
             <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-navy-500 rounded-full transition-all"
+                className="h-full bg-navy-500 rounded-full transition-all motion-safe:duration-700 motion-safe:[transition-timing-function:cubic-bezier(0.16,1,0.3,1)]"
                 style={{ width: `${levelPct}%` }}
               />
             </div>

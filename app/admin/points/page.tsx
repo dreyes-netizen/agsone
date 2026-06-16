@@ -328,7 +328,7 @@ export default function AwardPointsPage() {
         <div
           role="status"
           aria-live="polite"
-          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium motion-safe:animate-in motion-safe:slide-in-from-top-2 motion-safe:fade-in-0 motion-safe:duration-300 ${
             toast.type === "success"
               ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
               : "bg-red-50 border border-red-200 text-red-800"

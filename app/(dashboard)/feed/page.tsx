@@ -1391,7 +1391,7 @@ export default function FeedPage() {
         posts.map((post) => {
           if (post.type === "SHOUTOUT" && post.shoutoutRecipients.length > 0) {
             return (
-              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-xl border overflow-hidden transition-shadow hover:shadow-sm ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-zinc-200 hover:border-zinc-300"}`}>
+              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-zinc-200 hover:border-zinc-300"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="px-5 py-4 space-y-3">
                   {post.isPinned && (
@@ -1671,7 +1671,7 @@ export default function FeedPage() {
 
           const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
-            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-zinc-300`}`}>
+            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-zinc-300`}`}>
               <div className="p-5">
                 {/* Pinned indicator */}
                 {post.isPinned && (

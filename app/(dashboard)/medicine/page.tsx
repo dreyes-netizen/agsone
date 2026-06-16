@@ -99,7 +99,7 @@ export default function MedicinePage() {
         <div
           role="alert"
           aria-live="assertive"
-          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
+          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:slide-in-from-bottom-3 motion-safe:fade-in-0 motion-safe:duration-300 ${
             toast.type === "success"
               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
               : "bg-red-50 text-red-800 border-red-200"
@@ -179,7 +179,7 @@ export default function MedicinePage() {
                   type="button"
                   aria-label={`View details for ${med.name}`}
                   onClick={() => setSelectedMed(med)}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
                   <div className="aspect-square bg-gray-50 overflow-hidden">
                     {med.imageUrl ? (

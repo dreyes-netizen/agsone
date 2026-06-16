@@ -163,7 +163,7 @@ export default function MarketplacePage() {
         <div
           role="alert"
           aria-live="assertive"
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200 ${
           toast.type === "success"
             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
             : "bg-red-50 text-red-800 border-red-200"
@@ -268,7 +268,7 @@ export default function MarketplacePage() {
                   <div
                     key={reward.id}
                     onClick={() => openModal(reward)}
-                    className={`bg-white rounded-xl border border-zinc-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow
+                    className={`bg-white rounded-xl border border-zinc-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
                       flex flex-row items-center
                       sm:flex-col sm:items-stretch
                       ${outOfStock ? "opacity-55" : ""}`}

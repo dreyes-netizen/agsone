@@ -39,7 +39,7 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
         active
           ? "bg-white/20 text-white font-semibold border-l-2 border-white/60 pl-[10px]"
           : "text-white/80 hover:text-white hover:bg-white/[0.10]"

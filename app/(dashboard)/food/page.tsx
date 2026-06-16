@@ -417,7 +417,7 @@ export default function FoodPage() {
         <div
           role="alert"
           aria-live="assertive"
-          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg ${
+          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:slide-in-from-bottom-3 motion-safe:fade-in-0 motion-safe:duration-300 ${
           toast.type === "success"
             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
             : "bg-red-50 text-red-800 border-red-200"

@@ -117,7 +117,7 @@ export default function DepartmentsPage() {
   return (
     <div className="space-y-6">
       {toast && (
-        <div role="alert" aria-live="assertive" className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
+        <div role="alert" aria-live="assertive" className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200 ${toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
           {toast.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" /> : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
           {toast.msg}
         </div>

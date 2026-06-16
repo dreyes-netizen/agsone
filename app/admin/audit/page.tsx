@@ -182,7 +182,7 @@ export default function AuditLogPage() {
                 <div key={entry.id} className="px-5 py-3.5 hover:bg-gray-50/60 transition-colors">
                   <div className="flex items-start gap-3">
                     {/* Actor avatar */}
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                       {entry.actor.avatarUrl
                         ? <img src={entry.actor.avatarUrl} alt={entry.actor.displayName} className="w-full h-full object-cover" />
                         : entry.actor.displayName.charAt(0).toUpperCase()}

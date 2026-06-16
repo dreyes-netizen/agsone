@@ -279,7 +279,7 @@ function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; 
   const dim = size === "md" ? "w-12 h-12 text-lg" : "w-10 h-10 text-base";
   if (url) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} />;
   return (
-    <div className={`${dim} rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white font-bold shrink-0`}>
+    <div className={`${dim} rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white font-bold shrink-0`}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -321,6 +321,7 @@ export default function FeedPage() {
   const [replySending, setReplySending] = useState<Record<string, boolean>>({});
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [selectedFlair, setSelectedFlair] = useState<string | null>(null);
+  const [showAllFlairs, setShowAllFlairs] = useState(false);
   const [deptOnly, setDeptOnly] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState(0);
@@ -484,7 +485,7 @@ export default function FeedPage() {
             body: JSON.stringify({ title, content, type: "UPDATE", flair: selectedFlair, imageUrls, deptOnly }),
           });
         }
-        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({});
+        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false);
       }
 
       setNewPost("");
@@ -1171,7 +1172,7 @@ export default function FeedPage() {
               Flair <span className="text-red-400 font-bold">*</span>
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {FLAIRS.map((flair) => (
+              {(showAllFlairs ? FLAIRS : FLAIRS.slice(0, 8)).map((flair) => (
                 <button
                   key={flair.id}
                   type="button"
@@ -1186,6 +1187,15 @@ export default function FeedPage() {
                   <span>{flair.label}</span>
                 </button>
               ))}
+              {!showAllFlairs && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllFlairs(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-all"
+                >
+                  +{FLAIRS.length - 8} more
+                </button>
+              )}
             </div>
           </div>}
 

@@ -227,7 +227,7 @@ export default function AdminDashboardPage() {
             {data.topEarners.map((e, i) => (
               <div key={e.id} className="flex items-center gap-3">
                 <span className={`w-5 text-xs font-bold tabular-nums ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-400"}`}>{i + 1}</span>
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                   {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">

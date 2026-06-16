@@ -243,7 +243,7 @@ export default function EmployeeProfilePage() {
           <button
             type="button"
             onClick={() => employee.avatarUrl && setAvatarZoomed(true)}
-            className={`w-20 h-20 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 overflow-hidden ${employee.avatarUrl ? "cursor-zoom-in hover:ring-2 hover:ring-navy-400 hover:ring-offset-2 transition-all" : "cursor-default"}`}
+            className={`w-20 h-20 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-2xl font-bold shrink-0 overflow-hidden ${employee.avatarUrl ? "cursor-zoom-in hover:ring-2 hover:ring-navy-400 hover:ring-offset-2 transition-all" : "cursor-default"}`}
           >
             {employee.avatarUrl
               ? <img src={employee.avatarUrl} alt={employee.displayName} className="w-full h-full object-cover" />

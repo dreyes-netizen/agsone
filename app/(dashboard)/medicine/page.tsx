@@ -174,14 +174,18 @@ export default function MedicinePage() {
               const isRequesting = requesting === med.id;
               const disabled = isPending || outOfStock || isRequesting;
               return (
-                <button
+                <div
                   key={med.id}
-                  type="button"
-                  aria-label={`View details for ${med.name}`}
-                  onClick={() => setSelectedMed(med)}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                  role="group"
+                  aria-label={med.name}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
                 >
-                  <div className="aspect-square bg-gray-50 overflow-hidden">
+                  <button
+                    type="button"
+                    aria-label={`View details for ${med.name}`}
+                    onClick={() => setSelectedMed(med)}
+                    className="aspect-square bg-gray-50 overflow-hidden w-full block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900"
+                  >
                     {med.imageUrl ? (
                       <img
                         src={med.imageUrl}
@@ -193,7 +197,7 @@ export default function MedicinePage() {
                     <div className={`w-full h-full flex items-center justify-center bg-gray-100 ${med.imageUrl ? "hidden" : ""}`}>
                       <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
                     </div>
-                  </div>
+                  </button>
                   <div className="p-3 flex flex-col gap-2 flex-1">
                     <div>
                       <p className="font-semibold text-gray-900 text-sm">{med.name}</p>
@@ -218,7 +222,7 @@ export default function MedicinePage() {
                       {isRequesting ? "Submitting…" : isPending ? "Request pending" : "Request"}
                     </button>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

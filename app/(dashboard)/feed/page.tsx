@@ -1184,7 +1184,7 @@ export default function FeedPage() {
           {/* Flair picker */}
           {!shoutoutMode && <div className="space-y-1.5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Flair <span className="text-red-400 font-bold">*</span>
+              Post type <span className="text-red-400 font-bold">*</span>
             </p>
             <div className="flex flex-wrap gap-1.5">
               {(showAllFlairs ? FLAIRS : FLAIRS.slice(0, 8)).map((flair) => (

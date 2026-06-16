@@ -110,9 +110,7 @@ function EngagementRing({ rate }: { rate: number }) {
         strokeLinecap="round"
         transform="rotate(-90 36 36)"
       />
-      <text x="36" y="41" textAnchor="middle" fontSize="14" fontWeight="800" fill="#111827">
-        {rate}%
-      </text>
+      {/* Rate percentage is shown in adjacent text — ring is the visual indicator only */}
     </svg>
   );
 }
@@ -281,9 +279,9 @@ export default function AdminDashboardPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Active / Total</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
+                    <th className="text-left px-4 py-2 text-xs font-semibold text-gray-700">Department</th>
+                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700">Active / Total</th>
+                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700">Points</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -322,6 +322,7 @@ export default function FeedPage() {
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [selectedFlair, setSelectedFlair] = useState<string | null>(null);
   const [showAllFlairs, setShowAllFlairs] = useState(false);
+  const [composeExpanded, setComposeExpanded] = useState(false);
   const [deptOnly, setDeptOnly] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState(0);
@@ -485,7 +486,7 @@ export default function FeedPage() {
             body: JSON.stringify({ title, content, type: "UPDATE", flair: selectedFlair, imageUrls, deptOnly }),
           });
         }
-        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false);
+        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false);
       }
 
       setNewPost("");
@@ -1034,7 +1035,21 @@ export default function FeedPage() {
         <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-1">
       {/* Compose */}
       <div className="bg-white rounded-xl border border-zinc-200 p-4">
-        <form onSubmit={handlePost} className="space-y-3">
+        {/* Collapsed trigger — click to expand */}
+        {!composeExpanded && (
+          <button
+            type="button"
+            onClick={() => setComposeExpanded(true)}
+            className="flex items-center gap-3 w-full text-left"
+            aria-label="Write a post"
+          >
+            <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
+            <span className="flex-1 text-sm text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 hover:border-zinc-300 hover:bg-white transition-all">
+              What&apos;s on your mind?
+            </span>
+          </button>
+        )}
+        <form onSubmit={handlePost} className={composeExpanded ? "space-y-3" : "hidden"}>
           <div className="flex items-start gap-3">
             <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
             <div className="flex-1 relative space-y-2">
@@ -1360,6 +1375,13 @@ export default function FeedPage() {
                 >
                   <Send className="w-3.5 h-3.5" />
                   {uploading ? "Uploading…" : posting ? "Posting…" : shoutoutMode ? "Send Shoutout" : "Post"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setShowAllFlairs(false); clearImages(); }}
+                  className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1 transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

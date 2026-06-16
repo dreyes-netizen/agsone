@@ -1413,16 +1413,16 @@ export default function FeedPage() {
                         <div className="ml-auto shrink-0 flex items-center gap-1">
                           <span className="text-xs text-zinc-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
                           {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                            <button onClick={() => togglePin(post.id)} className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"}>
+                            <button onClick={() => togglePin(post.id)} className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"}>
                               <Pin className="w-3.5 h-3.5" />
                             </button>
                           )}
                           {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
                             <>
-                              <button onClick={() => startEditPost(post)} className="text-gray-300 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50" title="Edit shoutout">
+                              <button onClick={() => startEditPost(post)} className="text-gray-400 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50" title="Edit shoutout">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => deletePost(post.id)} className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50" title="Delete post">
+                              <button onClick={() => deletePost(post.id)} className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50" title="Delete post">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </>
@@ -1718,7 +1718,7 @@ export default function FeedPage() {
                         {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
                           <button
                             onClick={() => togglePin(post.id)}
-                            className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-300 hover:text-amber-500 hover:bg-amber-50"}`}
+                            className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
                             title={post.isPinned ? "Unpin post" : "Pin post"}
                           >
                             <Pin className="w-3.5 h-3.5" />
@@ -1728,14 +1728,14 @@ export default function FeedPage() {
                           <>
                             <button
                               onClick={() => startEditPost(post)}
-                              className="text-gray-300 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50"
+                              className="text-gray-400 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50"
                               title="Edit post"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deletePost(post.id)}
-                              className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                              className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
                               title="Delete post"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

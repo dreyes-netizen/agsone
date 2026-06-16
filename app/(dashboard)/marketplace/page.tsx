@@ -35,7 +35,7 @@ type Redemption = {
 const categoryConfig: Record<string, { icon: React.ElementType; iconClass: string; label: string; accent: string; badge: string }> = {
   PHYSICAL:  { icon: Package,  iconClass: "text-orange-600", label: "Physical",  accent: "from-orange-400 to-amber-400",  badge: "bg-orange-50 text-orange-700 border-orange-200" },
   VOUCHER:   { icon: Ticket,   iconClass: "text-blue-600",   label: "Voucher",   accent: "from-blue-500 to-cyan-400",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  PRIVILEGE: { icon: Star,     iconClass: "text-violet-600", label: "Privilege", accent: "from-violet-500 to-purple-500", badge: "bg-violet-50 text-violet-700 border-violet-200" },
+  PRIVILEGE: { icon: Star,     iconClass: "text-indigo-700", label: "Privilege", accent: "from-slate-800 to-indigo-700", badge: "bg-indigo-50 text-indigo-700 border-indigo-200" },
   DIGITAL:   { icon: Monitor,  iconClass: "text-emerald-600",label: "Digital",   accent: "from-emerald-500 to-teal-400",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 

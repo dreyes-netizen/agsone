@@ -63,7 +63,7 @@ const typeLabel: Record<string, string> = {
 };
 
 function KpiCard({
-  label, value, sub, icon: Icon, iconColor, growth,
+  label, value, sub, icon: Icon, iconColor, growth, valueColor,
 }: {
   label: string;
   value: string | number;
@@ -71,6 +71,7 @@ function KpiCard({
   icon: React.ElementType;
   iconColor: string;
   growth?: number | null;
+  valueColor?: string;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -87,7 +88,7 @@ function KpiCard({
           </span>
         )}
       </div>
-      <p className="text-xl font-black text-gray-900 mt-2 tabular-nums">{value}</p>
+      <p className={`text-xl font-black mt-2 tabular-nums ${valueColor ?? "text-gray-900"}`}>{value}</p>
       <p className="text-sm font-medium text-gray-500 mt-0.5">{label}</p>
       {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
     </div>
@@ -171,6 +172,7 @@ export default function AdminDashboardPage() {
           value={data.totalEmployees.toLocaleString()}
           icon={Users}
           iconColor="bg-navy-500"
+          valueColor="text-navy-600"
         />
         <KpiCard
           label="Points Awarded"
@@ -179,6 +181,7 @@ export default function AdminDashboardPage() {
           icon={TrendingUp}
           iconColor="bg-emerald-500"
           growth={data.monthGrowth}
+          valueColor="text-emerald-600"
         />
         <KpiCard
           label="Pending Redemptions"
@@ -186,6 +189,7 @@ export default function AdminDashboardPage() {
           sub={data.pendingRedemptions > 0 ? "Needs approval" : "All cleared"}
           icon={ShoppingCart}
           iconColor={data.pendingRedemptions > 0 ? "bg-amber-500" : "bg-gray-400"}
+          valueColor={data.pendingRedemptions > 0 ? "text-amber-600" : "text-gray-700"}
         />
       </div>
 
@@ -200,8 +204,8 @@ export default function AdminDashboardPage() {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="ptGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#111827" stopOpacity={0.12} />
+                    <stop offset="95%" stopColor="#111827" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -211,7 +215,7 @@ export default function AdminDashboardPage() {
                   contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }}
                   formatter={(v) => [`${Number(v).toLocaleString()} pts`, "Awarded"]}
                 />
-                <Area type="monotone" dataKey="points" stroke="#4f46e5" strokeWidth={2} fill="url(#ptGrad)" />
+                <Area type="monotone" dataKey="points" stroke="#111827" strokeWidth={2.5} fill="url(#ptGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -222,7 +226,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-2">
             {data.topEarners.map((e, i) => (
               <div key={e.id} className="flex items-center gap-3">
-                <span className="w-5 text-xs font-bold text-gray-500 tabular-nums">{i + 1}</span>
+                <span className={`w-5 text-xs font-bold tabular-nums ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-400"}`}>{i + 1}</span>
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                   {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
                 </div>

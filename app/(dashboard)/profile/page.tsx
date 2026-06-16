@@ -636,7 +636,11 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-zinc-500 italic">No skills added yet. Click Edit Profile to add some.</p>
+                <div className="flex flex-col items-center gap-1.5 py-5 px-4 text-center bg-zinc-50 rounded-lg">
+                  <Tag className="w-5 h-5 text-zinc-300" aria-hidden="true" />
+                  <p className="text-xs font-medium text-zinc-600">No skills added yet</p>
+                  <p className="text-xs text-zinc-400">Let colleagues know what you&apos;re great at — click <span className="font-medium text-zinc-500">Edit Profile</span></p>
+                </div>
               )
             )}
           </div>
@@ -649,7 +653,11 @@ export default function ProfilePage() {
                 <Link href="/feed" className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">See all →</Link>
               </div>
               {shoutouts.length === 0 ? (
-                <p className="px-5 py-4 text-sm text-zinc-500 italic">No shoutouts yet — keep up the great work!</p>
+                <div className="flex flex-col items-center gap-1.5 py-5 px-4 text-center">
+                  <Megaphone className="w-5 h-5 text-zinc-300" aria-hidden="true" />
+                  <p className="text-xs font-medium text-zinc-600">No shoutouts yet</p>
+                  <p className="text-xs text-zinc-400">Post great work — your colleagues will recognize you</p>
+                </div>
               ) : (
                 <ul className="divide-y divide-zinc-100">
                   {shoutouts.map((s) => (
@@ -990,21 +998,32 @@ export default function ProfilePage() {
                 </button>
               </div>
               <ul className="divide-y divide-zinc-100">
-                {pointsData.transactions.slice(0, 3).map((t) => {
-                  const positive = t.amount >= 0;
-                  const meta = txTypeLabel[t.type] ?? { label: t.type, color: "text-zinc-600" };
-                  return (
-                    <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className={`text-xs font-bold shrink-0 ${positive ? "text-emerald-600" : "text-rose-500"}`}>
-                        {positive ? "+" : ""}{t.amount}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-zinc-800 truncate">{t.note ?? meta.label}</p>
-                        <p className="text-xs text-zinc-500">{new Date(t.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </li>
-                  );
-                })}
+                {(() => {
+                  const deduped: { t: PointTx; count: number }[] = [];
+                  for (const t of pointsData.transactions.slice(0, 6)) {
+                    const last = deduped[deduped.length - 1];
+                    if (last && last.t.note === t.note && last.t.type === t.type) { last.count++; }
+                    else { deduped.push({ t, count: 1 }); }
+                  }
+                  return deduped.slice(0, 3).map(({ t, count }) => {
+                    const positive = t.amount >= 0;
+                    const meta = txTypeLabel[t.type] ?? { label: t.type, color: "text-zinc-600" };
+                    return (
+                      <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <span className={`text-xs font-bold shrink-0 ${positive ? "text-emerald-600" : "text-rose-500"}`}>
+                          {positive ? "+" : ""}{t.amount}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-zinc-800 truncate">{t.note ?? meta.label}</p>
+                          <p className="text-xs text-zinc-500">{new Date(t.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        {count > 1 && (
+                          <span className="text-[10px] font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
+                        )}
+                      </li>
+                    );
+                  });
+                })()}
               </ul>
             </div>
           )}

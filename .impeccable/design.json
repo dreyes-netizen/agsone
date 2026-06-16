@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-17T00:00:00Z",
+  "title": "Design System: AGS One",
+  "extensions": {
+    "colorMeta": {
+      "command-black": {
+        "role": "primary",
+        "displayName": "Command Black",
+        "canonical": "oklch(19.9% 0.019 264)",
+        "tonalRamp": ["#0a0c10","#111827","#1f2937","#374151","#4b5563","#6b7280","#9ca3af","#d1d5db","#f3f4f6"]
+      },
+      "brand-navy": {
+        "role": "secondary",
+        "displayName": "Brand Navy",
+        "canonical": "oklch(54.6% 0.245 262.881)",
+        "tonalRamp": ["#1e3a8a","#1d4ed8","#2563eb","#3b82f6","#60a5fa","#93c5fd","#bfdbfe","#dbeafe","#eff6ff"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Office Canvas",
+        "canonical": "oklch(97.5% 0.004 264)",
+        "tonalRamp": ["#374151","#6b7280","#9ca3af","#d1d5db","#e5e7eb","#f3f4f6","#f7f8fc","#fafafa","#ffffff"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": ["#374151","#6b7280","#9ca3af","#d1d5db","#e5e7eb","#f3f4f6","#f9fafb","#fafafa","#ffffff"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "canonical": "oklch(52% 0.030 265)",
+        "tonalRamp": ["#1f2937","#374151","#4b5563","#6b7280","#9ca3af","#d1d5db","#e5e7eb","#f3f4f6","#f9fafb"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Success Emerald",
+        "canonical": "oklch(59.8% 0.151 162)",
+        "tonalRamp": ["#064e3b","#065f46","#047857","#059669","#10b981","#34d399","#6ee7b7","#a7f3d0","#ecfdf5"]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Warning Amber",
+        "canonical": "oklch(61.5% 0.143 56)",
+        "tonalRamp": ["#78350f","#92400e","#b45309","#d97706","#f59e0b","#fbbf24","#fcd34d","#fde68a","#fffbeb"]
+      },
+      "error": {
+        "role": "semantic",
+        "displayName": "Error Rose",
+        "canonical": "oklch(57.7% 0.245 27.325)",
+        "tonalRamp": ["#7f1d1d","#991b1b","#b91c1c","#dc2626","#ef4444","#f87171","#fca5a5","#fecaca","#fff1f2"]
+      }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "Page-level headings. Dashboard 'Overview', section titles. Never inside cards." },
+      "headline": { "displayName": "Headline", "purpose": "Card titles, modal headings, feature callouts." },
+      "title":    { "displayName": "Title",    "purpose": "Card section labels, table column headers, sidebar navigation labels." },
+      "body":     { "displayName": "Body",     "purpose": "Post content, descriptions, admin notes. 65–75ch max line length." },
+      "label":    { "displayName": "Label",    "purpose": "Badges, status chips, timestamps, metadata rows." }
+    },
+    "shadows": [
+      { "name": "resting-border", "value": "0 0 0 1px oklch(91% 0.010 265)", "purpose": "All cards and containers at rest. Not a shadow — a border." },
+      { "name": "hover-lift",     "value": "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)", "purpose": "Card on hover, paired with -translate-y-0.5px." },
+      { "name": "modal",          "value": "0 20px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08)", "purpose": "Modals, drawers. Signals 'above the page'." },
+      { "name": "toast",          "value": "0 4px 24px rgba(0,0,0,0.12)", "purpose": "Toast notifications, floating UI panels." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)",  "purpose": "Default for state transitions — smooth deceleration." },
+      { "name": "ease-out-expo",  "value": "cubic-bezier(0.16, 1, 0.3, 1)",  "purpose": "Progress bars, bars sweeping to position — confident arrival." },
+      { "name": "duration-micro", "value": "100ms", "purpose": "Button press, toggle, color change." },
+      { "name": "duration-state", "value": "200ms", "purpose": "Hover state, tooltip, menu open." },
+      { "name": "duration-modal", "value": "300ms", "purpose": "Modal entrance, accordion, drawer." },
+      { "name": "duration-entrance", "value": "500ms", "purpose": "Page-load content, progress bar fill on mount." }
+    ],
+    "breakpoints": [
+      { "name": "sm",  "value": "640px"  },
+      { "name": "lg",  "value": "1024px" },
+      { "name": "xl",  "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one dark button. Used for every primary action — post, create, save, submit.",
+      "html": "<button class=\"ds-btn-primary\">Create Challenge</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #111827; color: #ffffff; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1; padding: 10px 16px; border-radius: 17px; border: none; cursor: pointer; transition: background 150ms cubic-bezier(0.25,1,0.5,1); } .ds-btn-primary:hover { background: #1f2937; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #111827; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions — cancel, back, filter chips in inactive state.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: #6b7280; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; padding: 8px 12px; border-radius: 12px; border: 1px solid #e5e7eb; cursor: pointer; transition: background 150ms, border-color 150ms, color 150ms; } .ds-btn-ghost:hover { background: #f9fafb; border-color: #d1d5db; color: #111827; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #111827; }"
+    },
+    {
+      "name": "Standard Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The default content container — white, bordered, flat at rest, lifts on hover.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Card Title</p><p class=\"ds-card-body\">Supporting content goes here.</p></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #e8eaf2; border-radius: 22px; padding: 20px; transition: box-shadow 200ms cubic-bezier(0.25,1,0.5,1), transform 200ms cubic-bezier(0.25,1,0.5,1); } .ds-card:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); transform: translateY(-2px); } .ds-card-title { font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0 0 4px 0; } .ds-card-body { font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; color: #6b7280; margin: 0; line-height: 1.5; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Form fields — search, bio, award notes. White background, navy focus glow.",
+      "html": "<div class=\"ds-input-wrap\"><label class=\"ds-input-label\" for=\"ds-eg\">Field Label</label><input id=\"ds-eg\" class=\"ds-input\" type=\"text\" placeholder=\"Type something…\"></div>",
+      "css": ".ds-input-wrap { display: flex; flex-direction: column; gap: 4px; } .ds-input-label { font-family: Geist, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: #374151; } .ds-input { font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; color: #111827; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px 12px; width: 100%; box-sizing: border-box; outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: #9ca3af; } .ds-input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37,99,196,0.15); } .ds-input:disabled { background: #f9fafb; cursor: not-allowed; opacity: 0.6; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "button-ghost",
+      "description": "PENDING / APPROVED / REJECTED / FULFILLED. Tinted semantic background, matching text.",
+      "html": "<span class=\"ds-badge ds-badge--pending\">Pending</span><span class=\"ds-badge ds-badge--approved\">Approved</span><span class=\"ds-badge ds-badge--rejected\">Rejected</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; font-family: Geist, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 9999px; border: 1px solid transparent; } .ds-badge--pending { background: #fffbeb; color: #b45309; border-color: #fde68a; } .ds-badge--approved { background: #ecfdf5; color: #047857; border-color: #a7f3d0; } .ds-badge--rejected { background: #fff1f2; color: #b91c1c; border-color: #fecaca; } .ds-badge--fulfilled { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }"
+    },
+    {
+      "name": "Nav Item (Employee Sidebar)",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Employee sidebar navigation on Command Black background. Active item glows; inactive fades.",
+      "html": "<nav class=\"ds-sidebar\"><a class=\"ds-nav-item ds-nav-item--active\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg> Feed</a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"9\" cy=\"21\" r=\"1\"/><circle cx=\"20\" cy=\"21\" r=\"1\"/><path d=\"M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6\"/></svg> Marketplace</a></nav>",
+      "css": ".ds-sidebar { background: #111827; padding: 12px; display: flex; flex-direction: column; gap: 2px; } .ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 8px; font-family: Geist, system-ui, sans-serif; font-size: 0.8125rem; font-weight: 500; color: rgba(255,255,255,0.8); text-decoration: none; transition: background 150ms, color 150ms; } .ds-nav-item:hover { background: rgba(255,255,255,0.10); color: #ffffff; } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.4) inset; } .ds-nav-item--active { background: rgba(255,255,255,0.20); color: #ffffff; font-weight: 600; border-left: 2px solid rgba(255,255,255,0.6); padding-left: 10px; }"
+    },
+    {
+      "name": "Toast Notification",
+      "kind": "custom",
+      "refersTo": "button-ghost",
+      "description": "Fixed bottom toast. Slides up from below, fades out. Two variants: success and error.",
+      "html": "<div class=\"ds-toast ds-toast--success\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><polyline points=\"20 6 9 17 4 12\"/></svg> Award posted successfully!</div>",
+      "css": ".ds-toast { position: fixed; bottom: 16px; right: 16px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 17px; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; border: 1px solid transparent; box-shadow: 0 4px 24px rgba(0,0,0,0.12); animation: ds-toast-in 300ms cubic-bezier(0.25,1,0.5,1) forwards; max-width: 360px; } @keyframes ds-toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } } @media (prefers-reduced-motion: reduce) { .ds-toast { animation: none; } } .ds-toast--success { background: #ecfdf5; color: #047857; border-color: #a7f3d0; } .ds-toast--error { background: #fff1f2; color: #b91c1c; border-color: #fecaca; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Bulletin Board",
+    "overview": "The bulletin board in the break room is one of the oldest communication surfaces in the workplace. It holds a birthday list next to a compliance notice, a handwritten congratulations card next to a shift schedule. It is simultaneously official and human — and that tension is precisely what AGS One holds.\n\nThe interface must be trustworthy enough to present HR data, disciplinary records, and payroll-adjacent point balances; it must also be warm enough that employees open it to see who got a shoutout today. These requirements do not compete. The design resolves them through a single visual commitment: a dark command surface (sidebar, primary CTAs) set against a light, airy content canvas.\n\nThe system does not decorate. Every color has a job — navy for interactive states, emerald for success, amber for pending actions, rose for errors. Gamification elements (points, badges, levels) are earned visual moments, not wallpaper.",
+    "keyCharacteristics": [
+      "Dark #111827 command surface for sidebar and primary CTAs — clear authority without aggression",
+      "Light zinc-tinted canvas that feels clean and office-appropriate",
+      "Navy accent for interactive states, focus rings, and data emphasis only",
+      "Semantic color vocabulary: emerald = positive, amber = pending/caution, rose = negative",
+      "Gently curved corners (12–22px) throughout — human, not corporate-round",
+      "Flat surfaces at rest; shadow appears only as interaction feedback",
+      "Single sans-serif family (Geist) at multiple weights — no personality conflict"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule",      "body": "Brand navy is used for interactive affordances and data emphasis only — never as decoration. A navy background on a non-interactive surface is a design mistake.", "section": "colors" },
+      { "name": "The Contrast Floor Rule", "body": "No muted text (*-400 or lighter) on white or near-white backgrounds anywhere in the product. Gray-500 is the floor.", "section": "colors" },
+      { "name": "The Single Family Rule",  "body": "One font family everywhere. Do not introduce a display typeface for headings — Geist at 400/500/600/700 covers every surface.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule","body": "A card at rest has a border and no shadow. Shadow enters on hover, on modal surfaces, and on toasts. Elevation signals 'this has lifted toward me'; it should never be ambient.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use #111827 (Command Black) as the only primary CTA button background",
+      "Do pair Command Black (sidebar) with Surface White (content area)",
+      "Do reserve navy color for interactive affordances — not decoration",
+      "Do use semantic colors with both color AND an icon or text label",
+      "Do use rounded-xl (17px) for buttons; rounded-2xl (22px) for modals",
+      "Do keep shadows off resting surfaces — border at rest, shadow on hover",
+      "Do use text-zinc-500 as the floor for secondary text",
+      "Do use motion-safe: prefix on every animation and transition"
+    ],
+    "donts": [
+      "Don't create a design that looks like a startup SaaS (Notion/Linear/Vercel) — no indigo-heavy palettes",
+      "Don't create heavy enterprise software (SAP/Workday) — no dark-gray tables, no HR portal density",
+      "Don't use border-left or border-right greater than 1px as a colored accent stripe",
+      "Don't use gradient text (background-clip: text with a gradient)",
+      "Don't apply glassmorphism decoratively",
+      "Don't use violet/purple gradients as defaults — the clearest AI-generated palette tell",
+      "Don't place the same-sized card grid (icon + heading + text, repeated) on every page",
+      "Don't add tiny uppercase tracked section eyebrows to every heading block",
+      "Don't use text-*-400 on white backgrounds — 4.5:1 contrast is the floor",
+      "Don't put gray text on colored backgrounds — use a tint of the background color instead"
+    ]
+  }
+}

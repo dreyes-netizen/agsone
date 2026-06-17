@@ -3,7 +3,7 @@
 # Install: cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 # Or run: npm run setup:hooks
 
-SECRETS_PATTERN="-----BEGIN (RSA |EC |)PRIVATE KEY|sb_secret_|SUPABASE_SERVICE_ROLE_KEY\s*=\s*[a-zA-Z]|FIREBASE_PRIVATE_KEY\s*=\s*\"|AIzaSy[A-Za-z0-9_-]{30,}|gsk_[A-Za-z0-9]{40,}|CLOUDINARY_API_SECRET\s*=\s*[a-zA-Z0-9]"
+SECRETS_PATTERN="(BEGIN (RSA |EC |)PRIVATE KEY|sb_secret_|SUPABASE_SERVICE_ROLE_KEY[ ]*=[ ]*[a-zA-Z]|FIREBASE_PRIVATE_KEY[ ]*=[ ]*\"|AIzaSy[A-Za-z0-9_-]{30,}|gsk_[A-Za-z0-9]{40,}|CLOUDINARY_API_SECRET[ ]*=[ ]*[a-zA-Z0-9])"
 
 BLOCKED_EXTENSIONS=".xlsx .xls .csv .pdf .pem .p12 .pfx .key"
 
@@ -18,7 +18,7 @@ for file in $STAGED; do
     *.lock|package-lock.json|*.png|*.jpg|*.gif|*.ico|*.woff*|*.ttf) continue ;;
   esac
 
-  if git show ":$file" 2>/dev/null | grep -qiE "$SECRETS_PATTERN"; then
+  if git show ":$file" 2>/dev/null | grep -qiE -- "$SECRETS_PATTERN"; then
     echo "🚨 BLOCKED: $file contains what looks like a secret or private key."
     EXIT=1
   fi

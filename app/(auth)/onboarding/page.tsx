@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { Loader2 } from "lucide-react";
 
 type Department = { id: string; name: string };
 
@@ -52,14 +53,17 @@ export default function OnboardingPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-        <div className="text-zinc-400 text-sm">Loading…</div>
-      </div>
+      <main className="min-h-screen flex items-center justify-center bg-zinc-50">
+        <div role="status" aria-label="Loading" className="flex items-center gap-2 text-zinc-400 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+          Loading…
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-6">
+    <main className="min-h-screen flex items-center justify-center bg-zinc-50 p-6">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-8">
 
@@ -88,7 +92,8 @@ export default function OnboardingPage() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
                 minLength={2}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
+                aria-required="true"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition"
                 placeholder="Your name"
               />
             </div>
@@ -97,10 +102,10 @@ export default function OnboardingPage() {
               <div className="space-y-1.5">
                 <label htmlFor="department" className="block text-sm font-medium text-zinc-700">
                   Department{" "}
-                  <span className="text-zinc-400 font-normal">(optional)</span>
+                  <span className="text-zinc-500 font-normal">(optional)</span>
                 </label>
                 {departments.length === 0 ? (
-                  <p className="text-sm text-zinc-400 bg-zinc-50 rounded-lg px-3.5 py-2.5 border border-zinc-200">
+                  <p className="text-sm text-zinc-500 bg-zinc-50 rounded-lg px-3.5 py-2.5 border border-zinc-200">
                     No departments set up yet — an admin can assign you later.
                   </p>
                 ) : (
@@ -108,7 +113,7 @@ export default function OnboardingPage() {
                     id="department"
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition bg-white"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition bg-white"
                   >
                     <option value="">Select your department…</option>
                     {departments.map((d) => (
@@ -123,20 +128,20 @@ export default function OnboardingPage() {
               <div className="space-y-1.5">
                 <label htmlFor="birthday" className="block text-sm font-medium text-zinc-700">
                   Birthday{" "}
-                  <span className="text-zinc-400 font-normal">(optional)</span>
+                  <span className="text-zinc-500 font-normal">(optional)</span>
                 </label>
                 <input
                   id="birthday"
                   type="date"
                   value={birthday}
                   onChange={(e) => setBirthday(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition"
                 />
               </div>
             )}
 
             {error && (
-              <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-100">
+              <div role="alert" className="px-4 py-3 rounded-lg bg-red-50 border border-red-100">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
@@ -144,13 +149,15 @@ export default function OnboardingPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-[#111827] hover:bg-gray-800 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-busy={submitting}
+              className="w-full flex items-center justify-center gap-2 bg-[#111827] hover:bg-gray-800 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
             >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
               {submitting ? "Saving…" : "Get Started"}
             </button>
           </form>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

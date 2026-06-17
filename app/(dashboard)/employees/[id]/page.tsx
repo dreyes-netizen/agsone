@@ -6,7 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   ArrowLeft, Coins, Star, CalendarDays, Building2,
-  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle,
+  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle, Loader2, X,
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 
@@ -95,7 +95,6 @@ function formatDate(val: string | null) {
 
 function fullSizeAvatar(url: string | null) {
   if (!url) return url;
-  // Google profile photos: strip the =sNNN-c size suffix to get the original
   return url.replace(/=s\d+-c$/, "=s0-c");
 }
 
@@ -130,10 +129,30 @@ export default function EmployeeProfilePage() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+  const closeLightboxRef = useRef<HTMLButtonElement>(null);
 
   const isAdminOrManager = dbUser?.role === "HR_ADMIN" || dbUser?.role === "MANAGER" || dbUser?.role === "SUPER_ADMIN";
   const canAwardPoints = dbUser?.role === "SUPER_ADMIN" || (isAdminOrManager && employee?.role === "EMPLOYEE");
   const isSelf = dbUser?.id === id;
+
+  function closeLightbox() {
+    setAvatarZoomed(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  // Escape key closes the lightbox
+  useEffect(() => {
+    if (!avatarZoomed) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeLightbox();
+    }
+    window.addEventListener("keydown", onKey);
+    // Move focus to close button when lightbox opens
+    setTimeout(() => closeLightboxRef.current?.focus(), 50);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarZoomed]);
 
   function loadEmployee() {
     return apiFetch<{ data: Employee }>(`/api/employees/${id}`)
@@ -179,7 +198,6 @@ export default function EmployeeProfilePage() {
       setAwardActivity("");
       loadEmployee();
       loadBudget();
-      // Refresh history
       apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
         .then((r) => setTransactions(r.data.slice(0, 15)))
         .catch(() => {});
@@ -210,10 +228,10 @@ export default function EmployeeProfilePage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl space-y-4 animate-pulse">
-        <div className="h-6 bg-gray-100 rounded w-24" />
-        <div className="h-40 bg-gray-100 rounded-2xl" />
-        <div className="h-28 bg-gray-100 rounded-2xl" />
+      <div role="status" aria-label="Loading profile" className="max-w-2xl space-y-4">
+        <div className="h-6 bg-gray-100 rounded w-24 motion-safe:animate-pulse" />
+        <div className="h-40 bg-gray-100 rounded-2xl motion-safe:animate-pulse" />
+        <div className="h-28 bg-gray-100 rounded-2xl motion-safe:animate-pulse" />
       </div>
     );
   }
@@ -222,7 +240,7 @@ export default function EmployeeProfilePage() {
     return (
       <div className="max-w-2xl">
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-1 mb-6">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
         </button>
         <p className="text-gray-500">Employee not found.</p>
       </div>
@@ -234,21 +252,30 @@ export default function EmployeeProfilePage() {
   return (
     <div className="max-w-2xl space-y-5">
       <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-1 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back
       </button>
 
       {/* Header card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-start gap-5">
-          <button
-            type="button"
-            onClick={() => employee.avatarUrl && setAvatarZoomed(true)}
-            className={`w-20 h-20 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-2xl font-bold shrink-0 overflow-hidden ${employee.avatarUrl ? "cursor-zoom-in hover:ring-2 hover:ring-navy-400 hover:ring-offset-2 transition-all" : "cursor-default"}`}
-          >
-            {employee.avatarUrl
-              ? <img src={employee.avatarUrl} alt={employee.displayName} className="w-full h-full object-cover" />
-              : initials}
-          </button>
+          {/* Avatar — button only when photo exists */}
+          {employee.avatarUrl ? (
+            <button
+              type="button"
+              onClick={() => setAvatarZoomed(true)}
+              aria-label={`View full-size photo of ${employee.displayName}`}
+              className="w-20 h-20 rounded-full overflow-hidden shrink-0 cursor-zoom-in hover:ring-2 hover:ring-navy-400 hover:ring-offset-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2"
+            >
+              <img src={employee.avatarUrl} alt={employee.displayName} className="w-full h-full object-cover" />
+            </button>
+          ) : (
+            <div
+              className="w-20 h-20 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-2xl font-bold shrink-0"
+              aria-label={`${employee.displayName} — no photo`}
+            >
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">{employee.displayName}</h1>
@@ -265,13 +292,13 @@ export default function EmployeeProfilePage() {
               </span>
               {employee.department && (
                 <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-                  <Building2 className="w-3 h-3" />
+                  <Building2 className="w-3 h-3" aria-hidden="true" />
                   {employee.department.name}
                 </span>
               )}
               {getTenure(employee.hireDate) && (
                 <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-                  <Briefcase className="w-3 h-3" />
+                  <Briefcase className="w-3 h-3" aria-hidden="true" />
                   {getTenure(employee.hireDate)}
                 </span>
               )}
@@ -280,30 +307,30 @@ export default function EmployeeProfilePage() {
         </div>
       </div>
 
-      {/* Stats — 2×2 on mobile, 3-col on sm+ */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {/* Stats */}
+      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-          <Coins className="w-4 h-4 text-navy-400 mx-auto mb-1" />
-          <p className="text-2xl font-black text-gray-900 tabular-nums">{employee.pointsBalance.toLocaleString()}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Points</p>
+          <Coins className="w-4 h-4 text-navy-400 mx-auto mb-1" aria-hidden="true" />
+          <dd className="text-2xl font-black text-gray-900 tabular-nums">{employee.pointsBalance.toLocaleString()}</dd>
+          <dt className="text-xs text-gray-500 mt-0.5">Points</dt>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-          <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" />
-          <p className="text-2xl font-black text-violet-600">{employee.level}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Level</p>
+          <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" aria-hidden="true" />
+          <dd className="text-2xl font-black text-violet-600">{employee.level}</dd>
+          <dt className="text-xs text-gray-500 mt-0.5">Level</dt>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-          <Trophy className="w-4 h-4 text-yellow-500 mx-auto mb-1" />
-          <p className="text-2xl font-black text-yellow-600">#{employee.rank}</p>
-          <p className="text-xs text-gray-500 mt-0.5">All-Time Rank</p>
+          <Trophy className="w-4 h-4 text-yellow-500 mx-auto mb-1" aria-hidden="true" />
+          <dd className="text-2xl font-black text-yellow-600">#{employee.rank}</dd>
+          <dt className="text-xs text-gray-500 mt-0.5">All-Time Rank</dt>
         </div>
-      </div>
+      </dl>
 
       {/* Bio */}
       {employee.bio && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-gray-500" />
+            <FileText className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">About</p>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">{employee.bio}</p>
@@ -314,16 +341,16 @@ export default function EmployeeProfilePage() {
       {employee.skills.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <Tag className="w-4 h-4 text-gray-500" />
+            <Tag className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Skills</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-2" aria-label="Skills">
             {employee.skills.map((skill) => (
-              <span key={skill} className="text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
+              <li key={skill} className="text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
                 {skill}
-              </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
@@ -331,25 +358,25 @@ export default function EmployeeProfilePage() {
       {employee.shoutoutsReceived.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">
               Shoutouts Received
               <span className="ml-1.5 text-xs font-normal text-gray-500">({employee.shoutoutsReceived.length})</span>
             </p>
           </div>
-          <div className="space-y-3">
+          <ul className="space-y-3">
             {employee.shoutoutsReceived.map((s) => (
-              <div key={s.id} className="p-3 bg-amber-50/60 rounded-xl border border-amber-100 space-y-2">
+              <li key={s.id} className="p-3 bg-amber-50/60 rounded-xl border border-amber-100 space-y-2">
                 <div className="flex items-center gap-2">
-                  <a href={`/employees/${s.post.author.id}`} className="shrink-0">
+                  <a href={`/employees/${s.post.author.id}`} className="shrink-0" aria-label={`View ${s.post.author.displayName}'s profile`}>
                     {s.post.author.avatarUrl
                       ? <img src={s.post.author.avatarUrl} alt={s.post.author.displayName} className="w-8 h-8 rounded-full object-cover" />
-                      : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">{s.post.author.displayName.charAt(0).toUpperCase()}</div>
+                      : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold" aria-hidden="true">{s.post.author.displayName.charAt(0).toUpperCase()}</div>
                     }
                   </a>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <a href={`/employees/${s.post.author.id}`} className="text-xs font-semibold text-gray-900 hover:underline whitespace-nowrap truncate">
+                      <a href={`/employees/${s.post.author.id}`} className="text-xs font-semibold text-gray-900 hover:underline whitespace-nowrap truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 rounded">
                         {s.post.author.displayName}
                       </a>
                       <span className="text-xs text-gray-500 ml-auto shrink-0 whitespace-nowrap">
@@ -362,17 +389,17 @@ export default function EmployeeProfilePage() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 leading-relaxed italic whitespace-pre-wrap">&ldquo;{s.post.content}&rdquo;</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
-      {/* Award Points — not on own profile; managers can only award employees */}
+      {/* Award Points */}
       {canAwardPoints && !isSelf && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Coins className="w-4 h-4 text-navy-400" />
+            <Coins className="w-4 h-4 text-navy-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Award Points</p>
           </div>
           {budget && !budget.isExempt && (
@@ -382,30 +409,42 @@ export default function EmployeeProfilePage() {
                 <span className={`font-semibold ${budget.remaining === 0 ? "text-red-600" : "text-gray-700"}`}>{budget.remaining} pts left</span>
               </div>
               <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${budget.remaining === 0 ? "bg-red-500" : budget.remaining < 100 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, (budget.used / budget.total) * 100)}%` }} />
+                <div
+                  role="progressbar"
+                  aria-label="Monthly budget used"
+                  aria-valuenow={Math.min(100, Math.round((budget.used / budget.total) * 100))}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className={`h-full rounded-full transition-all ${budget.remaining === 0 ? "bg-red-500" : budget.remaining < 100 ? "bg-amber-500" : "bg-emerald-500"}`}
+                  style={{ width: `${Math.min(100, (budget.used / budget.total) * 100)}%` }}
+                />
               </div>
             </div>
           )}
           <form onSubmit={handleAwardPoints} className="space-y-3">
-            <select
-              value={awardActivity}
-              onChange={(e) => {
-                const key = e.target.value;
-                setAwardActivity(key);
-                const preset = findActivity(key);
-                if (preset) setAwardAmount(String(preset.points));
-              }}
-              className={inputClass}
-            >
-              <option value="">Custom amount…</option>
-              {(Object.keys(AWARD_CATEGORIES) as AwardCategory[]).map((cat) => (
-                <optgroup key={cat} label={AWARD_CATEGORIES[cat]}>
-                  {AWARD_ACTIVITIES.filter((a) => a.category === cat).map((a) => (
-                    <option key={a.key} value={a.key}>{a.label} ({a.points} pts)</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <div>
+              <label htmlFor="award-activity" className="sr-only">Award activity or preset</label>
+              <select
+                id="award-activity"
+                value={awardActivity}
+                onChange={(e) => {
+                  const key = e.target.value;
+                  setAwardActivity(key);
+                  const preset = findActivity(key);
+                  if (preset) setAwardAmount(String(preset.points));
+                }}
+                className={inputClass}
+              >
+                <option value="">Custom amount…</option>
+                {(Object.keys(AWARD_CATEGORIES) as AwardCategory[]).map((cat) => (
+                  <optgroup key={cat} label={AWARD_CATEGORIES[cat]}>
+                    {AWARD_ACTIVITIES.filter((a) => a.category === cat).map((a) => (
+                      <option key={a.key} value={a.key}>{a.label} ({a.points} pts)</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
             <div className="relative">
               <input
                 type="number"
@@ -415,6 +454,7 @@ export default function EmployeeProfilePage() {
                 value={awardAmount}
                 onChange={(e) => setAwardAmount(e.target.value)}
                 aria-label={awardActivity ? "Points amount (set by activity)" : "Points amount"}
+                aria-required="true"
                 required
                 readOnly={!!awardActivity}
                 className={inputClass + (awardActivity ? " bg-gray-50 cursor-not-allowed pr-8" : "")}
@@ -423,17 +463,24 @@ export default function EmployeeProfilePage() {
                 <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" aria-hidden="true" />
               )}
             </div>
-            <textarea
-              placeholder={`Reason for awarding ${employee.displayName.split(" ")[0]}…`}
-              value={awardNote}
-              onChange={(e) => setAwardNote(e.target.value)}
-              required
-              rows={2}
-              className={inputClass + " resize-none"}
-            />
-            {awardSuccess && <p className="text-xs text-emerald-600 font-medium">{awardSuccess}</p>}
+            <div>
+              <label htmlFor="award-note" className="sr-only">Reason for awarding points</label>
+              <textarea
+                id="award-note"
+                placeholder={`Reason for awarding ${employee.displayName.split(" ")[0]}…`}
+                value={awardNote}
+                onChange={(e) => setAwardNote(e.target.value)}
+                aria-required="true"
+                required
+                rows={2}
+                className={inputClass + " resize-none"}
+              />
+            </div>
+            {awardSuccess && (
+              <p role="status" aria-live="polite" className="text-xs text-emerald-600 font-medium">{awardSuccess}</p>
+            )}
             {awardError && (
-              <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <div role="alert" className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 {awardError}
               </div>
@@ -441,24 +488,28 @@ export default function EmployeeProfilePage() {
             <button
               type="submit"
               disabled={awardSubmitting || !awardAmount || (budget !== null && !budget.isExempt && budget.remaining === 0)}
-              className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+              aria-busy={awardSubmitting}
+              className="flex items-center gap-2 bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
+              {awardSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
               {awardSubmitting ? "Awarding…" : "Award Points"}
             </button>
           </form>
         </div>
       )}
 
-      {/* Send a Shoutout — everyone, not on own profile */}
+      {/* Send a Shoutout */}
       {!isSelf && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Send a Shoutout</p>
           </div>
           {shoutoutSuccess ? (
-            <div className="text-center py-3">
-              <p className="text-emerald-600 font-medium text-sm">Shoutout posted to the feed! <span aria-hidden="true">🎉</span></p>
+            <div className="text-center py-3" role="status" aria-live="polite">
+              <p className="text-emerald-600 font-medium text-sm">
+                Shoutout posted to the feed! <span aria-hidden="true">🎉</span>
+              </p>
               <button
                 onClick={() => setShoutoutSuccess(false)}
                 className="text-xs text-gray-500 hover:text-gray-700 mt-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 rounded"
@@ -468,22 +519,35 @@ export default function EmployeeProfilePage() {
             </div>
           ) : (
             <form onSubmit={handleShoutout} className="space-y-3">
-              <textarea
-                placeholder={`Say something great about ${employee.displayName.split(" ")[0]}…`}
-                value={shoutoutText}
-                onChange={(e) => setShoutoutText(e.target.value)}
-                required
-                rows={2}
-                maxLength={500}
-                className={inputClass + " resize-none focus:ring-amber-400/30 focus:border-amber-400"}
-              />
-              {shoutoutError && <p className="text-xs text-red-500">{shoutoutError}</p>}
+              <div>
+                <label htmlFor="shoutout-text" className="sr-only">
+                  Write a shoutout for {employee.displayName}
+                </label>
+                <textarea
+                  id="shoutout-text"
+                  placeholder={`Say something great about ${employee.displayName.split(" ")[0]}…`}
+                  value={shoutoutText}
+                  onChange={(e) => setShoutoutText(e.target.value)}
+                  aria-required="true"
+                  required
+                  rows={2}
+                  maxLength={500}
+                  className={inputClass + " resize-none focus:ring-amber-400/30 focus:border-amber-400"}
+                />
+              </div>
+              {shoutoutError && (
+                <p role="alert" className="text-xs text-red-500">{shoutoutError}</p>
+              )}
               <button
                 type="submit"
                 disabled={shoutoutSubmitting || !shoutoutText.trim()}
-                className="bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600"
+                aria-busy={shoutoutSubmitting}
+                className="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600"
               >
-                {shoutoutSubmitting ? "Sending…" : <><span aria-hidden="true">✨</span> Send Shoutout</>}
+                {shoutoutSubmitting
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Sending…</>
+                  : <><span aria-hidden="true">✨</span> Send Shoutout</>
+                }
               </button>
             </form>
           )}
@@ -496,7 +560,7 @@ export default function EmployeeProfilePage() {
           <p className="text-sm font-semibold text-gray-700">Details</p>
           {employee.hireDate && (
             <div className="flex items-center gap-3 text-sm">
-              <CalendarDays className="w-4 h-4 text-gray-500 shrink-0" />
+              <CalendarDays className="w-4 h-4 text-gray-500 shrink-0" aria-hidden="true" />
               <span className="text-gray-500">Hire date</span>
               <span className="ml-auto font-medium text-gray-900">{formatDate(employee.hireDate)}</span>
             </div>
@@ -517,21 +581,21 @@ export default function EmployeeProfilePage() {
       {employee.userBadges.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-4 h-4 text-gray-500" />
+            <Award className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Badges ({employee.userBadges.length})</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-2" aria-label="Earned badges">
             {employee.userBadges.map((ub) => (
-              <div
+              <li
                 key={ub.id}
-                title={ub.badge.description ?? ""}
+                aria-label={ub.badge.description ? `${ub.badge.name}: ${ub.badge.description}` : ub.badge.name}
                 className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 text-amber-700 text-xs font-medium px-3 py-1.5 rounded-full"
               >
-                <span>🏅</span>
+                <Award className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 {ub.badge.name}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
@@ -539,17 +603,17 @@ export default function EmployeeProfilePage() {
       {isAdminOrManager && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-            <History className="w-4 h-4 text-gray-500" />
+            <History className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Points History</p>
           </div>
           {historyLoading ? (
-            <div className="p-5 space-y-2 animate-pulse">
-              {[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-gray-50 rounded-lg" />)}
+            <div role="status" aria-label="Loading points history" className="p-5 space-y-2">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-gray-50 rounded-lg motion-safe:animate-pulse" />)}
             </div>
           ) : transactions.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-8">No transactions yet</p>
           ) : (
-            <ul>
+            <ul aria-label="Points transaction history">
               {transactions.map((t, i) => {
                 const cfg = typeConfig[t.type] ?? { label: t.type, color: "text-gray-600", bg: "bg-gray-50" };
                 const positive = t.amount > 0;
@@ -559,7 +623,7 @@ export default function EmployeeProfilePage() {
                     className={`flex items-center justify-between px-5 py-3 ${i < transactions.length - 1 ? "border-b border-gray-50" : ""}`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-7 h-7 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}>
+                      <div className={`w-7 h-7 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`} aria-hidden="true">
                         <span className={`text-xs font-black ${cfg.color}`}>{positive ? "+" : "−"}</span>
                       </div>
                       <div className="min-w-0">
@@ -584,16 +648,30 @@ export default function EmployeeProfilePage() {
           )}
         </div>
       )}
+
       {/* Avatar zoom lightbox */}
       {avatarZoomed && employee.avatarUrl && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Photo of ${employee.displayName}`}
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center select-none"
-          onClick={() => { setAvatarZoomed(false); setZoom(1); setPan({ x: 0, y: 0 }); }}
+          onClick={closeLightbox}
           onWheel={(e) => {
             e.preventDefault();
             setZoom((z) => Math.min(5, Math.max(1, z - e.deltaY * 0.002)));
           }}
         >
+          {/* Close button */}
+          <button
+            ref={closeLightboxRef}
+            onClick={closeLightbox}
+            aria-label="Close photo"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <X className="w-5 h-5" aria-hidden="true" />
+          </button>
+
           <img
             src={fullSizeAvatar(employee.avatarUrl) ?? undefined}
             alt={employee.displayName}
@@ -627,8 +705,8 @@ export default function EmployeeProfilePage() {
             onMouseUp={() => { dragStart.current = null; }}
             onMouseLeave={() => { dragStart.current = null; }}
           />
-          <p className="absolute bottom-4 text-white/50 text-xs pointer-events-none">
-            {zoom > 1 ? "Double-click or click to reset · Drag to pan" : "Click to zoom · Scroll to zoom"}
+          <p className="absolute bottom-4 text-white/50 text-xs pointer-events-none" aria-hidden="true">
+            {zoom > 1 ? "Double-click or click to reset · Drag to pan" : "Click to zoom · Scroll to zoom · Esc to close"}
           </p>
         </div>
       )}

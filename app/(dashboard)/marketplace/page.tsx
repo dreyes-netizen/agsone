@@ -206,8 +206,8 @@ export default function MarketplacePage() {
       {/* ── Browse view ── */}
       {view === "browse" && (
         <div id="panel-browse" role="tabpanel">
-          {/* Category filters with counts — horizontal scroll on mobile, wrap on desktop */}
-          <div role="group" aria-label="Filter by category" className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible mb-5">
+          {/* Category filters — wraps on all screen sizes, no overflow */}
+          <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-2 mb-5">
             {categories.map((cat) => {
               const config = categoryConfig[cat];
               const active = filter === cat;

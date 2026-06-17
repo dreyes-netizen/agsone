@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
@@ -142,7 +142,7 @@ function ReactionBar({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 flex-wrap">
       {/* React button */}
       <div
         ref={containerRef}
@@ -331,6 +331,7 @@ export default function FeedPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [postToast, setPostToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const editMentionMapRef = useRef<Record<string, string>>({});
@@ -493,6 +494,9 @@ export default function FeedPage() {
       if (composerRef.current) composerRef.current.style.height = "auto";
       clearImages();
       await load();
+    } catch {
+      setPostToast("Something went wrong. Please try again.");
+      setTimeout(() => setPostToast(null), 4000);
     } finally {
       setPosting(false);
       setUploading(false);
@@ -926,8 +930,8 @@ export default function FeedPage() {
       {/* Two-column layout: compose+posts (left), sidebar (right). Stacks on mobile. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] items-start">
 
-        {/* Sidebar — right column on desktop (spans both rows), first on mobile */}
-        <aside className="order-1 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
+        {/* Sidebar — right column on desktop (spans both rows), last on mobile */}
+        <aside className="order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
 
           {/* My Stats */}
           <div className="bg-white rounded-xl border border-zinc-100 p-4">
@@ -1032,7 +1036,7 @@ export default function FeedPage() {
         </aside>
 
         {/* Compose — left column, row 1 */}
-        <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-1">
+        <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1">
       {/* Compose */}
       <div className="bg-white rounded-xl border border-zinc-200 p-4">
         {/* Collapsed trigger — click to expand */}
@@ -1267,7 +1271,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -1391,7 +1395,7 @@ export default function FeedPage() {
         </div>
 
         {/* Posts — left column, row 2 */}
-        <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5 ">
+        <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5">
       {/* Posts */}
       {loadError ? (
         <div role="alert" className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
@@ -2032,6 +2036,18 @@ export default function FeedPage() {
         open={lightbox !== null}
         onClose={() => setLightbox(null)}
       />
+
+      {/* ── Post error toast ── */}
+      {postToast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-red-50 text-red-800 border border-red-200 shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-200"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+          {postToast}
+        </div>
+      )}
     </div>
   );
 }

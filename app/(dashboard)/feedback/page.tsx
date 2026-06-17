@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Plus, Send, MessageSquarePlus } from "lucide-react";
+import { Plus, Send, MessageSquarePlus, Loader2, AlertCircle, CheckCircle, EyeOff, AlertTriangle, Pencil, ArrowLeft } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 
 type FeedbackItem = {
@@ -40,12 +40,13 @@ type PanelState =
   | { mode: "compose" }
   | { mode: "thread"; id: string };
 
+type Toast = { type: "success" | "error"; msg: string };
+
 const CATEGORY_LABELS: Record<string, string> = {
   HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
   ETHICAL_FRAUD:             "Ethical Violations & Fraud",
   MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
   SECURITY_POLICY:           "Security Concerns & Policy Violations",
-  // Legacy labels for existing submissions
   COMPENSATION_BENEFITS: "Compensation & Benefits",
   WORK_LIFE_BALANCE: "Work-Life Balance",
   COMPANY_CULTURE: "Company Culture",
@@ -60,7 +61,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   ETHICAL_FRAUD:             "bg-orange-100 text-orange-700",
   MISCONDUCT_ABUSE:          "bg-amber-100 text-amber-800",
   SECURITY_POLICY:           "bg-rose-100 text-rose-700",
-  // Legacy colors for existing submissions
   COMPENSATION_BENEFITS: "bg-emerald-100 text-emerald-700",
   WORK_LIFE_BALANCE: "bg-sky-100 text-sky-700",
   COMPANY_CULTURE: "bg-indigo-100 text-indigo-700",
@@ -82,7 +82,6 @@ const STATUS_CHIP: Record<string, string> = {
   RESOLVED: "bg-emerald-100 text-emerald-700",
 };
 
-// MIN-1: moved to module level
 function isHrRole(role: string) {
   return role === "HR_ADMIN" || role === "MANAGER";
 }
@@ -94,6 +93,7 @@ export default function FeedbackPage() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [panel, setPanel] = useState<PanelState>({ mode: "welcome" });
+  const [toast, setToast] = useState<Toast | null>(null);
 
   // Compose state
   const [title, setTitle] = useState("");
@@ -105,14 +105,18 @@ export default function FeedbackPage() {
   // Thread state
   const [thread, setThread] = useState<FeedbackThread | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
-  const [threadError, setThreadError] = useState<string | null>(null); // CR-2
+  const [threadError, setThreadError] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [sending, setSending] = useState(false);
+  const repliesEndRef = useRef<HTMLDivElement>(null);
 
-  // CR-3: remember previous panel before entering compose
   const [prevPanel, setPrevPanel] = useState<PanelState>({ mode: "welcome" });
 
-  // CR-1: clear listLoading when auth is done but user is null
+  function showToast(type: Toast["type"], msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  }
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setListLoading(false); return; }
@@ -123,7 +127,6 @@ export default function FeedbackPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
-  // CR-2: surface thread fetch errors instead of swallowing them
   useEffect(() => {
     if (panel.mode !== "thread") { setThread(null); setThreadError(null); return; }
     setThreadLoading(true);
@@ -135,7 +138,13 @@ export default function FeedbackPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panel]);
 
-  // CR-3: save current panel before switching to compose
+  // Auto-scroll replies to bottom when new reply is added
+  useEffect(() => {
+    if (thread?.replies.length) {
+      repliesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [thread?.replies.length]);
+
   function startCompose() {
     if (panel.mode === "compose") return;
     setPrevPanel(panel);
@@ -143,14 +152,12 @@ export default function FeedbackPage() {
     setPanel({ mode: "compose" });
   }
 
-  // CR-3 + IMP-3: restore previous panel and clear replyBody on discard
   function discardCompose() {
     setTitle(""); setCategory(""); setBody(""); setIsAnonymous(true);
     setReplyBody("");
     setPanel(prevPanel);
   }
 
-  // IMP-6: Escape key dismisses compose
   useEffect(() => {
     if (panel.mode !== "compose") return;
     function onKey(e: KeyboardEvent) {
@@ -171,8 +178,9 @@ export default function FeedbackPage() {
       });
       setItems((prev) => [{ ...res.data, _count: { replies: 0 } }, ...prev]);
       setPanel({ mode: "thread", id: res.data.id });
+      showToast("success", "Report submitted. HR will follow up.");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to submit");
+      showToast("error", err instanceof Error ? err.message : "Failed to submit");
     } finally {
       setSubmitting(false);
     }
@@ -187,7 +195,6 @@ export default function FeedbackPage() {
         body: JSON.stringify({ body: replyBody }),
       });
       setThread((prev) => prev ? { ...prev, replies: [...prev.replies, res.data] } : prev);
-      // IMP-1: update reply count in left panel list
       setItems((prev) =>
         prev.map((item) =>
           item.id === thread.id
@@ -197,7 +204,7 @@ export default function FeedbackPage() {
       );
       setReplyBody("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to send");
+      showToast("error", err instanceof Error ? err.message : "Failed to send reply");
     } finally {
       setSending(false);
     }
@@ -211,40 +218,48 @@ export default function FeedbackPage() {
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Reports</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Confidential — HR & Investigators only</p>
+          <p className="text-sm text-gray-500 mt-0.5">Confidential — HR &amp; Investigators only</p>
         </div>
         <button
           onClick={startCompose}
-          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          aria-label="New report"
+          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
         >
-          <Plus className="w-4 h-4" /> New
+          <Plus className="w-4 h-4" aria-hidden="true" /> New
         </button>
       </div>
 
       {/* Split panel */}
       <div className="flex flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-0">
 
-        {/* Left panel */}
-        <div className="w-72 flex-shrink-0 border-r border-gray-100 flex flex-col overflow-y-auto">
+        {/* Left panel — report list (full-width on mobile when no thread/compose active) */}
+        <div
+          className={`flex-col overflow-y-auto border-gray-100 md:w-72 md:flex-shrink-0 md:border-r ${
+            panel.mode !== "welcome" ? "hidden md:flex" : "flex w-full"
+          }`}
+          aria-label="Your reports"
+        >
           {listLoading ? (
-            <div className="p-3 space-y-2">
+            <div role="status" aria-label="Loading reports" className="p-3 space-y-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-16 bg-gray-100 rounded-xl motion-safe:animate-pulse" />
               ))}
             </div>
           ) : items.length === 0 && panel.mode !== "compose" ? (
             <div className="flex flex-col items-center justify-center flex-1 p-6 text-center">
               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                <MessageSquarePlus className="w-5 h-5 text-gray-400" />
+                <MessageSquarePlus className="w-5 h-5 text-gray-400" aria-hidden="true" />
               </div>
               <p className="text-sm font-semibold text-gray-700">No reports yet</p>
-              <p className="text-xs text-gray-400 mt-1">Report a concern confidentially</p>
+              <p className="text-xs text-gray-500 mt-1">Report a concern confidentially</p>
             </div>
           ) : (
             <div className="p-3 space-y-1.5">
               {panel.mode === "compose" && (
-                <div className="bg-[#111827] text-white rounded-xl p-3 border border-dashed border-white/20">
-                  <p className="text-[10px] opacity-60 mb-1">✏️ New draft</p>
+                <div className="bg-[#111827] text-white rounded-xl p-3 border border-dashed border-white/20" aria-current="true">
+                  <p className="flex items-center gap-1.5 text-[10px] opacity-60 mb-1">
+                    <Pencil className="w-3 h-3" aria-hidden="true" /> New draft
+                  </p>
                   <p className="text-xs font-semibold opacity-70 italic truncate">
                     {title || "Untitled report"}
                   </p>
@@ -256,7 +271,9 @@ export default function FeedbackPage() {
                   <button
                     key={item.id}
                     onClick={() => setPanel({ mode: "thread", id: item.id })}
-                    className={`w-full text-left rounded-xl p-3 transition-colors ${
+                    aria-pressed={isActive}
+                    aria-label={`${item.title}, ${STATUS_LABEL[item.status]}`}
+                    className={`w-full text-left rounded-xl p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900/40 ${
                       isActive ? "bg-[#111827]" : "hover:bg-gray-50"
                     }`}
                   >
@@ -289,10 +306,16 @@ export default function FeedbackPage() {
                     >
                       {item.title}
                     </p>
-                    <p className={`text-[10px] mt-1 ${isActive ? "text-white/50" : "text-gray-400"}`}>
+                    <p className={`text-[10px] mt-1 flex items-center gap-1 ${isActive ? "text-white/50" : "text-gray-400"}`}>
                       {item._count.replies} {item._count.replies === 1 ? "reply" : "replies"} ·{" "}
                       {new Date(item.updatedAt).toLocaleDateString()}
-                      {item.isAnonymous && " · 👤"}
+                      {item.isAnonymous && (
+                        <>
+                          {" · "}
+                          <EyeOff className="w-3 h-3 inline" aria-hidden="true" />
+                          <span className="sr-only">anonymous</span>
+                        </>
+                      )}
                     </p>
                   </button>
                 );
@@ -301,16 +324,35 @@ export default function FeedbackPage() {
           )}
         </div>
 
-        {/* Right panel */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Right panel (full-width on mobile when thread/compose active; hidden when list is shown) */}
+        <div
+          className={`flex-col min-w-0 overflow-hidden ${
+            panel.mode !== "welcome" ? "flex flex-1" : "hidden md:flex md:flex-1"
+          }`}
+          aria-live="polite"
+          aria-atomic="false"
+        >
+          {/* Mobile back button — returns to the report list */}
+          {panel.mode !== "welcome" && (
+            <button
+              onClick={() => {
+                if (panel.mode === "compose") discardCompose();
+                else setPanel({ mode: "welcome" });
+              }}
+              className="md:hidden flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 px-4 py-3 border-b border-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900/20"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              All reports
+            </button>
+          )}
 
           {panel.mode === "welcome" && (
             <div className="flex flex-col items-center justify-center flex-1 p-10 text-center">
               <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                <WhistleIcon className="w-7 h-7 text-red-500" />
+                <WhistleIcon className="w-7 h-7 text-red-500" aria-hidden="true" />
               </div>
               <h2 className="text-base font-bold text-gray-800 mb-2">Confidential Whistleblower Channel</h2>
-              <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-4">
+              <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-4">
                 Reports are visible only to HR and authorized investigators. You may submit anonymously.
               </p>
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-left w-full max-w-xs mb-6">
@@ -322,29 +364,29 @@ export default function FeedbackPage() {
               </div>
               <button
                 onClick={startCompose}
-                className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
               >
                 {items.length === 0 ? "File your first report →" : "+ New Report"}
               </button>
             </div>
           )}
 
-          {/* IMP-4: flex-1 min-h-0 so compose scrolls on short viewports */}
           {panel.mode === "compose" && (
             <div className="p-6 flex flex-col gap-4 max-w-xl overflow-y-auto flex-1 min-h-0">
-              <h2 className="text-base font-bold text-gray-900">Report a Concern</h2>
+              <h2 className="text-base font-bold text-gray-900" id="compose-heading">Report a Concern</h2>
 
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                 <p className="text-sm font-bold text-red-700">Confidential Whistleblower Channel</p>
                 <p className="text-xs text-red-600 mt-1">Visible ONLY to HR and authorized investigators.</p>
-                <p className="text-xs text-amber-700 font-medium mt-1">
-                  ⚠ Retaliation is strictly prohibited. False malicious reporting may result in disciplinary action.
+                <p className="text-xs text-amber-700 font-medium mt-1 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden="true" />
+                  Retaliation is strictly prohibited. False malicious reporting may result in disciplinary action.
                 </p>
               </div>
 
               <div>
                 <label htmlFor="fb-title" className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Title
+                  Title <span aria-hidden="true" className="text-red-500">*</span>
                 </label>
                 <input
                   id="fb-title"
@@ -354,19 +396,21 @@ export default function FeedbackPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Brief summary of your report"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20"
+                  aria-required="true"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-400 transition"
                 />
               </div>
 
               <div>
                 <label htmlFor="fb-category" className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Category
+                  Category <span aria-hidden="true" className="text-red-500">*</span>
                 </label>
                 <select
                   id="fb-category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 bg-white"
+                  aria-required="true"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-400 bg-white transition"
                 >
                   <option value="">Select a category</option>
                   <option value="HARASSMENT_DISCRIMINATION">Harassment &amp; Discrimination</option>
@@ -378,7 +422,7 @@ export default function FeedbackPage() {
 
               <div>
                 <label htmlFor="fb-body" className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Details{" "}
+                  Details <span aria-hidden="true" className="text-red-500">*</span>{" "}
                   <span className="font-normal text-gray-400 normal-case">({body.length}/1000)</span>
                 </label>
                 <textarea
@@ -387,8 +431,9 @@ export default function FeedbackPage() {
                   maxLength={1000}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Describe the concern in detail..."
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 resize-none"
+                  placeholder="Describe the concern in detail. Include dates, names, and any evidence if available."
+                  aria-required="true"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-400 resize-none transition"
                 />
               </div>
 
@@ -397,8 +442,9 @@ export default function FeedbackPage() {
                   type="button"
                   role="switch"
                   aria-checked={isAnonymous}
+                  aria-label="Submit anonymously"
                   onClick={() => setIsAnonymous((v) => !v)}
-                  className={`relative shrink-0 mt-0.5 w-10 h-5 rounded-full transition-colors ${
+                  className={`relative shrink-0 mt-0.5 w-10 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700 ${
                     isAnonymous ? "bg-red-700" : "bg-gray-200"
                   }`}
                 >
@@ -421,16 +467,18 @@ export default function FeedbackPage() {
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={discardCompose}
-                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded-lg"
                 >
                   Discard
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={!title || !category || !body || submitting}
-                  className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-busy={submitting}
+                  className="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
                 >
-                  {submitting ? "Submitting..." : "Submit Report"}
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
+                  {submitting ? "Submitting…" : "Submit Report"}
                 </button>
               </div>
             </div>
@@ -438,34 +486,35 @@ export default function FeedbackPage() {
 
           {panel.mode === "thread" && (
             <>
-              {/* CR-2: separate loading / error / empty / content states */}
               {threadLoading ? (
-                <div className="p-6 space-y-4">
-                  <div className="h-5 w-24 bg-gray-100 rounded animate-pulse" />
-                  <div className="h-7 w-64 bg-gray-100 rounded animate-pulse" />
+                <div role="status" aria-label="Loading thread" className="p-6 space-y-4">
+                  <div className="h-5 w-24 bg-gray-100 rounded motion-safe:animate-pulse" />
+                  <div className="h-7 w-64 bg-gray-100 rounded motion-safe:animate-pulse" />
                   <div className="space-y-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-4 bg-gray-100 rounded animate-pulse" />
+                      <div key={i} className="h-4 bg-gray-100 rounded motion-safe:animate-pulse" />
                     ))}
                   </div>
                 </div>
               ) : threadError ? (
-                <div className="flex flex-col items-center justify-center flex-1 p-10 text-center">
-                  <p className="text-sm font-semibold text-red-600 mb-2">Failed to load thread</p>
-                  <p className="text-xs text-gray-400">{threadError}</p>
+                <div className="flex flex-col items-center justify-center flex-1 p-10 text-center" role="alert">
+                  <AlertCircle className="w-6 h-6 text-red-500 mb-2" aria-hidden="true" />
+                  <p className="text-sm font-semibold text-red-600 mb-1">Failed to load thread</p>
+                  <p className="text-xs text-gray-500">{threadError}</p>
                 </div>
               ) : !thread ? (
-                <div className="p-6 space-y-4">
-                  <div className="h-5 w-24 bg-gray-100 rounded animate-pulse" />
-                  <div className="h-7 w-64 bg-gray-100 rounded animate-pulse" />
+                <div role="status" aria-label="Loading thread" className="p-6 space-y-4">
+                  <div className="h-5 w-24 bg-gray-100 rounded motion-safe:animate-pulse" />
+                  <div className="h-7 w-64 bg-gray-100 rounded motion-safe:animate-pulse" />
                   <div className="space-y-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-4 bg-gray-100 rounded animate-pulse" />
+                      <div key={i} className="h-4 bg-gray-100 rounded motion-safe:animate-pulse" />
                     ))}
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col h-full overflow-hidden">
+                  {/* Thread header */}
                   <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -478,8 +527,9 @@ export default function FeedbackPage() {
                             {CATEGORY_LABELS[thread.category]}
                           </span>
                           {thread.isAnonymous && (
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                              👤 Anonymous
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                              <EyeOff className="w-3 h-3" aria-hidden="true" />
+                              Anonymous
                             </span>
                           )}
                         </div>
@@ -492,74 +542,86 @@ export default function FeedbackPage() {
                         className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${
                           STATUS_CHIP[thread.status]
                         }`}
+                        aria-label={`Status: ${STATUS_LABEL[thread.status]}`}
                       >
                         {STATUS_LABEL[thread.status]}
                       </span>
                     </div>
                   </div>
 
+                  {/* Thread body */}
                   <div className="px-6 py-4 border-b border-gray-50 flex-shrink-0">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                       {thread.body}
                     </p>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                  {/* Replies */}
+                  <div className="flex-1 overflow-y-auto px-6 py-4" aria-label="Thread replies">
                     {thread.replies.length === 0 && !thread.isAnonymous && (
                       <p className="text-xs text-gray-400 text-center py-4">
                         No replies yet. HR will respond here.
                       </p>
                     )}
-                    {thread.replies.map((reply) => {
-                      const isHrReply = isHrRole(reply.author.role);
-                      return (
-                        <div
-                          key={reply.id}
-                          className={`flex gap-3 ${isHrReply ? "" : "flex-row-reverse"}`}
-                        >
-                          <div className="w-8 h-8 rounded-full bg-gray-200 shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 overflow-hidden">
-                            {reply.author.avatarUrl ? (
-                              <img
-                                src={reply.author.avatarUrl}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              reply.author.displayName.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <div className="max-w-[75%] space-y-1">
+                    <ul className="space-y-4">
+                      {thread.replies.map((reply) => {
+                        const isHrReply = isHrRole(reply.author.role);
+                        return (
+                          <li
+                            key={reply.id}
+                            className={`flex gap-3 ${isHrReply ? "" : "flex-row-reverse"}`}
+                          >
                             <div
-                              className={`flex items-center gap-2 ${
-                                isHrReply ? "" : "flex-row-reverse"
-                              }`}
+                              className="w-8 h-8 rounded-full bg-gray-200 shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 overflow-hidden"
+                              aria-hidden="true"
                             >
-                              <span className="text-xs font-semibold text-gray-700">
-                                {isHrReply ? "HR Team" : "You"}
-                              </span>
-                              <span className="text-[10px] text-gray-400">
-                                {new Date(reply.createdAt).toLocaleString()}
-                              </span>
+                              {reply.author.avatarUrl ? (
+                                <img
+                                  src={reply.author.avatarUrl}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                reply.author.displayName.charAt(0).toUpperCase()
+                              )}
                             </div>
-                            <div
-                              className={`px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
-                                isHrReply
-                                  ? "bg-gray-100 text-gray-800 rounded-tl-none"
-                                  : "bg-[#111827] text-white rounded-tr-none"
-                              }`}
-                            >
-                              {reply.body}
+                            <div className="max-w-[75%] space-y-1">
+                              <div
+                                className={`flex items-center gap-2 ${
+                                  isHrReply ? "" : "flex-row-reverse"
+                                }`}
+                              >
+                                <span className="text-xs font-semibold text-gray-700">
+                                  {isHrReply ? "HR Team" : "You"}
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  {new Date(reply.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                              <div
+                                className={`px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
+                                  isHrReply
+                                    ? "bg-gray-100 text-gray-800 rounded-tl-none"
+                                    : "bg-[#111827] text-white rounded-tr-none"
+                                }`}
+                              >
+                                {reply.body}
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div ref={repliesEndRef} />
                   </div>
 
+                  {/* Reply input */}
                   <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
                     {thread.isAnonymous ? (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                        <p className="text-xs font-semibold text-amber-800">👤 Anonymous submission</p>
+                        <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-800">
+                          <EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> Anonymous submission
+                        </p>
                         <p className="text-xs text-amber-600 mt-0.5">
                           HR cannot reply to anonymous feedback. Your identity is protected.
                         </p>
@@ -567,22 +629,31 @@ export default function FeedbackPage() {
                     ) : (
                       <div className="flex flex-col gap-1 flex-1">
                         <div className="flex gap-3 items-end">
+                          <label htmlFor="reply-input" className="sr-only">Reply to HR</label>
                           <textarea
+                            id="reply-input"
                             rows={2}
                             value={replyBody}
                             onChange={(e) => setReplyBody(e.target.value)}
-                            placeholder="Reply to HR..."
-                            className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 resize-none"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleReply();
+                            }}
+                            placeholder="Reply to HR…"
+                            className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 focus:border-gray-400 resize-none transition"
                           />
                           <button
                             onClick={handleReply}
                             disabled={!replyBody.trim() || sending}
-                            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40 shrink-0"
+                            aria-label="Send reply"
+                            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                           >
-                            <Send className="w-4 h-4" />
+                            {sending
+                              ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                              : <Send className="w-4 h-4" aria-hidden="true" />
+                            }
                           </button>
                         </div>
-                        <p className="text-xs text-gray-400 pl-1">Press the send button to submit</p>
+                        <p className="text-xs text-gray-400 pl-1">Ctrl + Enter to send</p>
                       </div>
                     )}
                   </div>
@@ -593,6 +664,25 @@ export default function FeedbackPage() {
 
         </div>
       </div>
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-200 ${
+            toast.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-red-50 text-red-800 border-red-200"
+          }`}
+        >
+          {toast.type === "success"
+            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />
+          }
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }

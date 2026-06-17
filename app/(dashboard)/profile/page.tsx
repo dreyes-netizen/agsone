@@ -509,13 +509,13 @@ export default function ProfilePage() {
         <>
           <CompletenessBar profile={profile} />
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {[
               { icon: Coins, value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600",   bg: "bg-navy-50",   hint: null },
               { icon: Star,  value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50", hint: null },
               { icon: Medal, value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50",  hint: null },
             ].map(({ icon: Icon, value, label, color, bg, hint }) => (
-              <div key={label} className="bg-white rounded-xl border border-zinc-200 p-4 flex flex-col gap-2">
+              <div key={label} className="bg-white rounded-xl border border-zinc-200 p-3 sm:p-4 flex flex-col gap-2">
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
                   <Icon className={`w-4 h-4 ${color}`} />
                 </div>
@@ -620,7 +620,7 @@ export default function ProfilePage() {
                   id="skill-input"
                   onChange={(e) => setSkillInput(e.target.value)}
                   onKeyDown={handleSkillKeyDown}
-                  placeholder="Type a skill and press Enter…"
+                  placeholder="e.g. Leadership, Excel, Python…"
                   aria-label="Add a skill (press Enter to add)"
                   className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition"
                 />

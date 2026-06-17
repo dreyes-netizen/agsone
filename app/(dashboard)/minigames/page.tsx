@@ -170,7 +170,8 @@ export default function MinigamesPage() {
             <button
               key={s.id}
               onClick={() => router.push(`/minigames/${s.id}`)}
-              className="w-full flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 hover:bg-emerald-100/60 transition-colors text-left"
+              aria-label={`Resume ${GAME_LABEL[s.gameType]} — active game`}
+              className="w-full flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 hover:bg-emerald-100/60 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600"
             >
               <div className="flex items-center gap-3">
                 <Gamepad2 className="w-5 h-5 text-emerald-700 shrink-0" aria-hidden="true" />
@@ -192,13 +193,18 @@ export default function MinigamesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => router.push(`/minigames/${s.id}`)} className="text-xs bg-white border border-amber-300 text-amber-700 font-medium px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors">
+                <button
+                  onClick={() => router.push(`/minigames/${s.id}`)}
+                  aria-label={`Invite someone to ${GAME_LABEL[s.gameType]}`}
+                  className="text-xs bg-white border border-amber-300 text-amber-700 font-medium px-3 py-1.5 rounded-lg hover:bg-amber-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-amber-600"
+                >
                   Invite →
                 </button>
                 <button
                   onClick={() => cancelSession(s.id)}
                   disabled={cancelling === s.id}
-                  className="text-xs text-red-400 hover:text-red-600 font-medium px-2"
+                  aria-label={`Cancel ${GAME_LABEL[s.gameType]} challenge`}
+                  className="text-xs text-red-400 hover:text-red-600 font-medium px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500 rounded"
                 >
                   {cancelling === s.id ? "…" : "Cancel"}
                 </button>
@@ -264,8 +270,8 @@ export default function MinigamesPage() {
               <p className="text-xs text-gray-500 mt-0.5">Post an open challenge — anyone can join from the lobby. Or invite someone directly from the game room.</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-2">Points wager</p>
-              <div className="flex gap-2">
+              <p className="text-xs font-medium text-gray-500 mb-2" id="wager-label">Points wager</p>
+              <div className="flex gap-2" role="group" aria-labelledby="wager-label">
                 {WAGER_OPTIONS.map(w => (
                   <button
                     key={w}

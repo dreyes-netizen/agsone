@@ -4,6 +4,13 @@
 .env*.local
 firebase-service-account.json
 .mcp.json
+supabase.txt
+
+# ─── Employee PII / internal documents — never commit ──────────────────────────
+*.xlsx
+*.xls
+*.pdf
+*.csv
 
 # ─── Next.js ───────────────────────────────────────────────────────────────────
 .next/

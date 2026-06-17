@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
         });
         imported++;
       } catch (e) {
-        console.warn("Failed to create user for", row.email, e);
+        console.warn("Failed to create user during sync:", e instanceof Error ? e.message : e);
         failedEmails.push(row.email);
       }
     }

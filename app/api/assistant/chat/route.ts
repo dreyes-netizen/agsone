@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { allowed } = checkRateLimit(user.id);
+  const { allowed } = await checkRateLimit(user.id);
   if (!allowed) {
     return NextResponse.json(
       { error: "You've reached the message limit (20/hour). Please try again later." },

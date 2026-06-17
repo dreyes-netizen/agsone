@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
         displayName: u.displayName,
         avatarUrl: u.avatarUrl,
         department: u.department?.name ?? null,
-        birthday: u.birthday,
+        // Never expose the birth year — month/day + daysUntil is enough
+        birthdayMonthDay: `${String(u.birthday!.getMonth() + 1).padStart(2, "0")}-${String(u.birthday!.getDate()).padStart(2, "0")}`,
         daysUntil: match.daysUntil,
       }];
     })

@@ -19,8 +19,8 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // Next.js requires unsafe-inline for its runtime scripts; tighten with nonces if needed
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.googleapis.com",
+      // Next.js requires unsafe-inline; Firebase auth loads scripts from apis.google.com
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://apis.googleapis.com https://www.gstatic.com",
       // Tailwind + styled-jsx require unsafe-inline for styles
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",

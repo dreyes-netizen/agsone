@@ -38,21 +38,28 @@ const securityHeaders = [
         "connect-src 'self'",
         "https://*.supabase.co",
         "wss://*.supabase.co",
-        "https://identitytoolkit.googleapis.com",
-        "https://securetoken.googleapis.com",
-        "https://www.googleapis.com",
-        "https://firebaseinstallations.googleapis.com",
+        // Wildcard covers all Google/Firebase services (auth, storage, functions, etc.)
+        "https://*.googleapis.com",
+        "https://*.google.com",
+        "https://accounts.google.com",
+        "https://*.firebaseapp.com",
+        "https://*.firebase.com",
         "https://api.cloudinary.com",
         "https://res.cloudinary.com",
-        "https://generativelanguage.googleapis.com",
         "https://api.groq.com",
       ].join(" "),
-      // Firebase auth popup
-      `frame-src 'self' https://ags-one-82a7b.firebaseapp.com`,
+      // Firebase auth popup and Google OAuth page
+      [
+        "frame-src 'self'",
+        `https://ags-one-82a7b.firebaseapp.com`,
+        "https://accounts.google.com",
+        "https://*.google.com",
+      ].join(" "),
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "upgrade-insecure-requests",
+      // upgrade-insecure-requests intentionally omitted — breaks localhost (HTTP)
+      // Re-enable only when deployed on a fully HTTPS domain
     ].join("; "),
   },
 ];

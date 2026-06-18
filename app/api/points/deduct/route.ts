@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   // Balance is re-read inside the transaction so a concurrent redemption
   // can't push the balance below zero between check and write.
-  let result: { deducted: number; newBalance: number };
+  let result: { deducted: number; newBalance: number; toUserName: string | null };
   try {
     result = await prisma.$transaction(async (tx) => {
       const recipient = await tx.user.findUnique({

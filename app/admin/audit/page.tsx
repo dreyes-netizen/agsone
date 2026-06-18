@@ -199,22 +199,22 @@ export default function AuditLogPage() {
 
                       {/* Summary line */}
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {entry.afterState?.toUserName && (
+                        {!!entry.afterState?.toUserName && (
                           <>To <span className="font-medium text-gray-700">{String(entry.afterState.toUserName)}</span> · </>
                         )}
-                        {entry.afterState?.amount && (
+                        {!!entry.afterState?.amount && (
                           <span className="font-medium text-emerald-600">{entry.action.includes("DEDUCT") ? "−" : "+"}{Number(entry.afterState.amount).toLocaleString()} pts</span>
                         )}
-                        {entry.afterState?.count && !entry.afterState?.amount && (
+                        {!!entry.afterState?.count && !entry.afterState?.amount && (
                           <>{String(entry.afterState.count)} employees</>
                         )}
-                        {entry.afterState?.count && entry.afterState?.amount && (
+                        {!!entry.afterState?.count && !!entry.afterState?.amount && (
                           <> · {String(entry.afterState.count)} employees</>
                         )}
-                        {entry.afterState?.role && (
+                        {!!entry.afterState?.role && (
                           <> · Role → <span className="font-medium text-gray-700">{String(entry.afterState.role).replace(/_/g, " ")}</span></>
                         )}
-                        {entry.beforeState?.content && (
+                        {!!entry.beforeState?.content && (
                           <> · &quot;{String(entry.beforeState.content).slice(0, 50)}{String(entry.beforeState.content).length > 50 ? "…" : ""}&quot;</>
                         )}
                         {!entry.afterState?.toUserName && !entry.afterState?.amount && !entry.afterState?.count && !entry.afterState?.role && !entry.beforeState?.content && (

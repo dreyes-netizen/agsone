@@ -250,7 +250,7 @@ export default function AdminDashboardPage() {
                 <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }}
-                  formatter={(v: number, name: string) => [`${v.toLocaleString()} pts`, name]}
+                  formatter={(v, name) => [`${Number(v ?? 0).toLocaleString()} pts`, String(name)]}
                 />
                 <Area type="monotone" dataKey="Awarded" stroke="#111827" strokeWidth={2.5} fill="url(#awardedGrad)" />
                 <Area type="monotone" dataKey="Redeemed" stroke="#7c3aed" strokeWidth={2} fill="url(#redeemedGrad)" strokeDasharray="4 2" />

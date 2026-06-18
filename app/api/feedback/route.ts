@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
   const feedback = await prisma.feedback.create({
     data: {
       authorId: user.id,
-      category: parsed.data.category,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      category: parsed.data.category as any,
       title: parsed.data.title,
       body: parsed.data.body,
       isAnonymous: parsed.data.isAnonymous,

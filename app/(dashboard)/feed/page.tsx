@@ -609,6 +609,7 @@ export default function FeedPage() {
       content,
       createdAt: new Date().toISOString(),
       parentId,
+      authorId: user?.uid ?? "",
       author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
     };
     setCommentsCache((prev) => ({

@@ -1,0 +1,56 @@
+#!/bin/sh
+# Pre-commit hook — blocks accidental commits of secrets or PII files.
+# Install: cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Or run: npm run setup:hooks
+
+SECRETS_PATTERN="(BEGIN (RSA |EC |)PRIVATE KEY|sb_secret_|SUPABASE_SERVICE_ROLE_KEY[ ]*=[ ]*[a-zA-Z]|FIREBASE_PRIVATE_KEY[ ]*=[ ]*\"|AIzaSy[A-Za-z0-9_-]{30,}|gsk_[A-Za-z0-9]{40,}|CLOUDINARY_API_SECRET[ ]*=[ ]*[a-zA-Z0-9])"
+
+BLOCKED_EXTENSIONS=".xlsx .xls .csv .pdf .pem .p12 .pfx .key"
+
+EXIT=0
+
+# ─── Check for secret patterns in staged files ───────────────────────────────
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+
+for file in $STAGED; do
+  # Skip binary files and lock files
+  case "$file" in
+    *.lock|package-lock.json|*.png|*.jpg|*.gif|*.ico|*.woff*|*.ttf) continue ;;
+  esac
+
+  if git show ":$file" 2>/dev/null | grep -qiE -- "$SECRETS_PATTERN"; then
+    echo "🚨 BLOCKED: $file contains what looks like a secret or private key."
+    EXIT=1
+  fi
+done
+
+# ─── Block sensitive file extensions ─────────────────────────────────────────
+for file in $STAGED; do
+  ext=".${file##*.}"
+  for blocked in $BLOCKED_EXTENSIONS; do
+    if [ "$ext" = "$blocked" ]; then
+      echo "🚨 BLOCKED: $file — $ext files must not be committed (contains PII or credentials)."
+      EXIT=1
+    fi
+  done
+done
+
+# ─── Block known sensitive filenames ─────────────────────────────────────────
+BLOCKED_FILES="supabase.txt .env .env.local firebase-service-account.json"
+for file in $STAGED; do
+  basename=$(basename "$file")
+  for blocked in $BLOCKED_FILES; do
+    if [ "$basename" = "$blocked" ]; then
+      echo "🚨 BLOCKED: $file is a sensitive file that must not be committed."
+      EXIT=1
+    fi
+  done
+done
+
+if [ $EXIT -ne 0 ]; then
+  echo ""
+  echo "Commit aborted. Remove the sensitive content and try again."
+  echo "If this is a false positive, use: git commit --no-verify (use sparingly)"
+fi
+
+exit $EXIT

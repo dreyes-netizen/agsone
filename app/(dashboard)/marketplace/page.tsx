@@ -35,7 +35,7 @@ type Redemption = {
 const categoryConfig: Record<string, { icon: React.ElementType; iconClass: string; label: string; accent: string; badge: string }> = {
   PHYSICAL:  { icon: Package,  iconClass: "text-orange-600", label: "Physical",  accent: "from-orange-400 to-amber-400",  badge: "bg-orange-50 text-orange-700 border-orange-200" },
   VOUCHER:   { icon: Ticket,   iconClass: "text-blue-600",   label: "Voucher",   accent: "from-blue-500 to-cyan-400",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  PRIVILEGE: { icon: Star,     iconClass: "text-indigo-700", label: "Privilege", accent: "from-slate-800 to-indigo-700", badge: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  PRIVILEGE: { icon: Star,     iconClass: "text-indigo-600", label: "Privilege", accent: "from-indigo-500 to-blue-500",  badge: "bg-indigo-50 text-indigo-700 border-indigo-200" },
   DIGITAL:   { icon: Monitor,  iconClass: "text-emerald-600",label: "Digital",   accent: "from-emerald-500 to-teal-400",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
@@ -206,20 +206,23 @@ export default function MarketplacePage() {
       {/* ── Browse view ── */}
       {view === "browse" && (
         <div id="panel-browse" role="tabpanel">
-          {/* Category filters with counts — horizontal scroll on mobile, wrap on desktop */}
-          <div role="group" aria-label="Filter by category" className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible mb-5">
+          {/* Category filters — wraps on all screen sizes, no overflow */}
+          <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-2 mb-5">
             {categories.map((cat) => {
               const config = categoryConfig[cat];
               const active = filter === cat;
               const count = cat === "ALL" ? rewards.length : (categoryCounts[cat] ?? 0);
-              if (count === 0 && cat !== "ALL") return null;
+              // Keep empty categories visible but disabled so the UI stays stable
               return (
                 <button
                   key={cat}
                   onClick={() => setFilter(cat)}
                   aria-pressed={active}
+                  disabled={count === 0 && cat !== "ALL"}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
-                    active
+                    count === 0 && cat !== "ALL"
+                      ? "opacity-40 cursor-not-allowed bg-white border-zinc-200 text-zinc-500"
+                      : active
                       ? "bg-[#111827] text-white border-[#111827]"
                       : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
                   }`}
@@ -268,10 +271,10 @@ export default function MarketplacePage() {
                   <div
                     key={reward.id}
                     onClick={() => openModal(reward)}
-                    className={`bg-white rounded-xl border border-zinc-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
+                    className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
                       flex flex-row items-center
                       sm:flex-col sm:items-stretch
-                      ${outOfStock ? "opacity-55" : ""}`}
+                      ${outOfStock ? "opacity-55 border-zinc-200" : !canAfford ? "opacity-70 border-amber-200" : "border-zinc-200"}`}
                   >
                     {/* ── Image / accent ── */}
                     {images.length > 0 ? (

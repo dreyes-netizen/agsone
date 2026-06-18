@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
@@ -142,7 +142,7 @@ function ReactionBar({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 flex-wrap">
       {/* React button */}
       <div
         ref={containerRef}
@@ -279,7 +279,7 @@ function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; 
   const dim = size === "md" ? "w-12 h-12 text-lg" : "w-10 h-10 text-base";
   if (url) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} />;
   return (
-    <div className={`${dim} rounded-full bg-gradient-to-br from-navy-400 to-violet-500 flex items-center justify-center text-white font-bold shrink-0`}>
+    <div className={`${dim} rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white font-bold shrink-0`}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -321,6 +321,8 @@ export default function FeedPage() {
   const [replySending, setReplySending] = useState<Record<string, boolean>>({});
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [selectedFlair, setSelectedFlair] = useState<string | null>(null);
+  const [showAllFlairs, setShowAllFlairs] = useState(false);
+  const [composeExpanded, setComposeExpanded] = useState(false);
   const [deptOnly, setDeptOnly] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState(0);
@@ -329,6 +331,7 @@ export default function FeedPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [postToast, setPostToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const editMentionMapRef = useRef<Record<string, string>>({});
@@ -484,13 +487,16 @@ export default function FeedPage() {
             body: JSON.stringify({ title, content, type: "UPDATE", flair: selectedFlair, imageUrls, deptOnly }),
           });
         }
-        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({});
+        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false);
       }
 
       setNewPost("");
       if (composerRef.current) composerRef.current.style.height = "auto";
       clearImages();
       await load();
+    } catch {
+      setPostToast("Something went wrong. Please try again.");
+      setTimeout(() => setPostToast(null), 4000);
     } finally {
       setPosting(false);
       setUploading(false);
@@ -924,8 +930,8 @@ export default function FeedPage() {
       {/* Two-column layout: compose+posts (left), sidebar (right). Stacks on mobile. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] items-start">
 
-        {/* Sidebar — right column on desktop (spans both rows), first on mobile */}
-        <aside className="order-1 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
+        {/* Sidebar — right column on desktop (spans both rows), last on mobile */}
+        <aside className="order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
 
           {/* My Stats */}
           <div className="bg-white rounded-xl border border-zinc-100 p-4">
@@ -1030,10 +1036,24 @@ export default function FeedPage() {
         </aside>
 
         {/* Compose — left column, row 1 */}
-        <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-1">
+        <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1">
       {/* Compose */}
       <div className="bg-white rounded-xl border border-zinc-200 p-4">
-        <form onSubmit={handlePost} className="space-y-3">
+        {/* Collapsed trigger — click to expand */}
+        {!composeExpanded && (
+          <button
+            type="button"
+            onClick={() => setComposeExpanded(true)}
+            className="flex items-center gap-3 w-full text-left"
+            aria-label="Write a post"
+          >
+            <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
+            <span className="flex-1 text-sm text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 hover:border-zinc-300 hover:bg-white transition-all">
+              What&apos;s on your mind?
+            </span>
+          </button>
+        )}
+        <form onSubmit={handlePost} className={composeExpanded ? "space-y-3" : "hidden"}>
           <div className="flex items-start gap-3">
             <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
             <div className="flex-1 relative space-y-2">
@@ -1168,10 +1188,10 @@ export default function FeedPage() {
           {/* Flair picker */}
           {!shoutoutMode && <div className="space-y-1.5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Flair <span className="text-red-400 font-bold">*</span>
+              Post type <span className="text-red-400 font-bold">*</span>
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {FLAIRS.map((flair) => (
+              {(showAllFlairs ? FLAIRS : FLAIRS.slice(0, 8)).map((flair) => (
                 <button
                   key={flair.id}
                   type="button"
@@ -1186,6 +1206,15 @@ export default function FeedPage() {
                   <span>{flair.label}</span>
                 </button>
               ))}
+              {!showAllFlairs && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllFlairs(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-all"
+                >
+                  +{FLAIRS.length - 8} more
+                </button>
+              )}
             </div>
           </div>}
 
@@ -1242,7 +1271,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -1351,6 +1380,13 @@ export default function FeedPage() {
                   <Send className="w-3.5 h-3.5" />
                   {uploading ? "Uploading…" : posting ? "Posting…" : shoutoutMode ? "Send Shoutout" : "Post"}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setShowAllFlairs(false); clearImages(); }}
+                  className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
@@ -1359,7 +1395,7 @@ export default function FeedPage() {
         </div>
 
         {/* Posts — left column, row 2 */}
-        <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5 ">
+        <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-2 space-y-5">
       {/* Posts */}
       {loadError ? (
         <div role="alert" className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
@@ -2000,6 +2036,18 @@ export default function FeedPage() {
         open={lightbox !== null}
         onClose={() => setLightbox(null)}
       />
+
+      {/* ── Post error toast ── */}
+      {postToast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-red-50 text-red-800 border border-red-200 shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-200"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+          {postToast}
+        </div>
+      )}
     </div>
   );
 }

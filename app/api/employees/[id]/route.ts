@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
 
-  const isPrivileged = authUser && (authUser.role === 'HR_ADMIN' || authUser.role === 'MANAGER');
+  const isPrivileged = authUser && (authUser.role === 'HR_ADMIN' || authUser.role === 'MANAGER' || authUser.role === 'SUPER_ADMIN');
 
   const employee = await prisma.user.findUnique({
     where: { id },

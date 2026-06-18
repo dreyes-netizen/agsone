@@ -50,11 +50,12 @@ function buildEmailHtml(name: string, points: number | null): string {
 }
 
 export async function GET(req: NextRequest) {
-  if (!process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Not configured' }, { status: 500 });
+  const secret = process.env.CRON_SECRET;
+  if (!secret || secret.length < 20 || secret === "change-this-to-a-random-secret") {
+    return NextResponse.json({ error: "Cron secret not properly configured" }, { status: 500 });
   }
   const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

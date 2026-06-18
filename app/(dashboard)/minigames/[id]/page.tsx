@@ -9,7 +9,7 @@ import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
 import { GameResultOverlay } from "@/components/minigames/GameResultOverlay";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
-import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ function WaitingDots() {
     const t = setInterval(() => setTick(x => (x + 1) % 3), 500);
     return () => clearInterval(t);
   }, []);
-  return <span aria-hidden>{"·".repeat(tick + 1)}</span>;
+  return <span aria-hidden="true">{"·".repeat(tick + 1)}</span>;
 }
 
 // ─── Forfeit Modal ────────────────────────────────────────────────────────────
@@ -179,9 +179,10 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
               autoFocus
               type="text"
               placeholder="Search by name…"
+              aria-label="Search employees to invite"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400 transition"
             />
           </div>
           <div className="max-h-52 overflow-y-auto">
@@ -252,7 +253,9 @@ function TTTBoard({ session, onMove }: { session: Session; onMove: (data: unknow
               key={i}
               onClick={() => isMyTurn && !cell && onMove({ cellIndex: i })}
               disabled={!isMyTurn || !!cell}
-              className={`aspect-square rounded-2xl text-5xl font-bold border-2 transition-all ${
+              aria-label={`Row ${Math.floor(i / 3) + 1}, Column ${(i % 3) + 1}${cell ? ` — ${cell}` : " — empty"}`}
+              aria-pressed={!!cell}
+              className={`aspect-square rounded-2xl text-5xl font-bold border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 inWin ? "border-indigo-500 bg-indigo-50 scale-105" :
                 isLast ? "border-indigo-300 bg-indigo-50/40 ring-2 ring-indigo-200" :
                 cell ? "border-gray-200 bg-gray-50" :
@@ -260,8 +263,8 @@ function TTTBoard({ session, onMove }: { session: Session; onMove: (data: unknow
                 "border-gray-100 bg-gray-50/50 cursor-default"
               }`}
             >
-              {cell === "X" && <span className="text-indigo-600">X</span>}
-              {cell === "O" && <span className="text-rose-500">O</span>}
+              {cell === "X" && <span className="text-indigo-600" aria-hidden="true">X</span>}
+              {cell === "O" && <span className="text-rose-500" aria-hidden="true">O</span>}
             </button>
           );
         })}
@@ -322,7 +325,7 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
   return (
     <div className="flex flex-col items-center py-2 gap-2">
       <style>{`@keyframes c4drop{0%{transform:translateY(-230px);opacity:.5}70%{transform:translateY(0)}85%{transform:translateY(-7px)}100%{transform:translateY(0);opacity:1}}.c4-drop{animation:c4drop .35s ease-out}`}</style>
-      <div className="bg-indigo-700 p-2 sm:p-2.5 rounded-2xl shadow-md w-full" style={{ width: "min(100%, calc(100vw - 32px))" }}>
+      <div className="bg-indigo-700 p-2 sm:p-2.5 rounded-2xl shadow-md w-full">
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-1">
           {Array.from({ length: 7 }, (_, col) => (
             <button
@@ -575,11 +578,10 @@ function DnBBoard({ session, onMove }: { session: Session; onMove: (data: unknow
 
       <div className="flex justify-center">
         <div
-          className="inline-grid gap-1.5 p-4 bg-gray-50 border border-gray-200 rounded-2xl"
+          className="inline-grid gap-1.5 p-4 bg-gray-50 border border-gray-200 rounded-2xl w-full"
           style={{
             gridTemplateColumns: Array.from({ length: gridCols }, (_, i) => i % 2 === 0 ? "12px" : "1fr").join(" "),
             gridTemplateRows: Array.from({ length: gridRows }, (_, i) => i % 2 === 0 ? "12px" : "1fr").join(" "),
-            width: "min(100%, calc(100vw - 32px))",
             aspectRatio: "1",
           }}
         >
@@ -655,7 +657,7 @@ function BSGrid({
   onShoot?: (cell: number) => void;
 }) {
   return (
-    <div className="w-full overflow-x-auto" style={{ maxWidth: "min(320px, calc(100vw - 32px))" }}>
+    <div className="w-full overflow-x-auto max-w-[320px]">
       <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 text-center">{label}</p>
       <div className="grid gap-0.5 w-full" style={{ gridTemplateColumns: `repeat(${BS_GRID}, 1fr)` }}>
         {Array.from({ length: BS_GRID * BS_GRID }, (_, i) => {
@@ -721,7 +723,7 @@ function BSBoard({ session, onMove }: { session: Session; onMove: (data: unknown
       <div className="space-y-4 py-2">
         <p className="text-sm font-bold text-gray-700 text-center">Deploy your fleet</p>
         <div className="flex justify-center">
-          <div className="grid gap-0.5 w-full" style={{ gridTemplateColumns: `repeat(${BS_GRID}, 1fr)`, maxWidth: "min(320px, calc(100vw - 32px))" }}>
+          <div className="grid gap-0.5 w-full max-w-[320px]" style={{ gridTemplateColumns: `repeat(${BS_GRID}, 1fr)` }}>
             {Array.from({ length: BS_GRID * BS_GRID }, (_, i) => {
               const ship = pending.find(s => s.cells.includes(i));
               return (
@@ -1290,6 +1292,12 @@ export default function MinigameSessionPage() {
   const [forfeiting, setForfeiting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showForfeitModal, setShowForfeitModal] = useState(false);
+  const [moveToast, setMoveToast] = useState<string | null>(null);
+
+  function showMoveError(msg: string) {
+    setMoveToast(msg);
+    setTimeout(() => setMoveToast(null), 4000);
+  }
   const [h2h, setH2h] = useState<{ wins: number; losses: number; draws: number } | null>(null);
   const prevStatus = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1355,7 +1363,7 @@ export default function MinigameSessionPage() {
       sounds.move();
     } catch (e: unknown) {
       const msg = (e as Error).message || "Invalid move";
-      if (!msg.includes("Not your turn")) alert(msg);
+      if (!msg.includes("Not your turn")) showMoveError(msg);
     } finally {
       setMoving(false);
     }
@@ -1379,8 +1387,9 @@ export default function MinigameSessionPage() {
   }
 
   if (loading) return (
-    <div className="max-w-3xl mx-auto flex items-center justify-center min-h-[300px]">
-      <p className="text-sm text-gray-400">Loading game…</p>
+    <div role="status" aria-label="Loading game" className="max-w-3xl mx-auto flex items-center justify-center gap-2 min-h-[300px] text-gray-400">
+      <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+      <p className="text-sm">Loading game…</p>
     </div>
   );
 
@@ -1417,18 +1426,34 @@ export default function MinigameSessionPage() {
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.push("/minigames")} className="text-sm text-gray-400 hover:text-gray-700 transition-colors font-medium">
-          ← Lobby
+        <button
+          onClick={() => router.push("/minigames")}
+          aria-label="Back to lobby"
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-0.5"
+        >
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Lobby
         </button>
         <h1 className="text-xl font-bold text-gray-900 flex-1">{GAME_LABELS[session.gameType] ?? session.gameType}</h1>
         <button
           onClick={() => setShowHelp(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-sm font-bold"
-          title="How to play"
+          aria-label="How to play"
+          className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500"
         >
-          ?
+          <span aria-hidden="true">?</span>
         </button>
       </div>
+
+      {/* Move error toast */}
+      {moveToast && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-red-50 text-red-800 border border-red-200 shadow-lg motion-safe:animate-in motion-safe:slide-in-from-bottom-3 motion-safe:fade-in-0 motion-safe:duration-300"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />
+          {moveToast}
+        </div>
+      )}
 
       {/* Mobile: compact status bar (players, status, wager, actions) */}
       <div className="lg:hidden">

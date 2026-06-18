@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup:hooks": "cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Git hooks installed.'"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -22,6 +23,8 @@
     "@tanstack/react-query-devtools": "^5.100.11",
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.10.0",

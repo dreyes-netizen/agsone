@@ -387,28 +387,32 @@ export default function AdminDashboardPage() {
               {data.disengaged.length} employee{data.disengaged.length !== 1 ? "s" : ""}
             </span>
           </div>
-          <ul className="divide-y divide-gray-50">
+          <div className="p-4">
             {(() => {
               const maxBal = Math.max(...data.disengaged.map(e => e.pointsBalance), 1);
-              return data.disengaged.map((e) => (
-                <li key={e.id} className="grid grid-cols-[28px_1fr_96px_72px] items-center gap-3 px-4 py-2 hover:bg-gray-50/60 transition-colors">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
-                    {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{e.displayName}</p>
-                    <p className="text-xs text-gray-500 truncate">{e.department?.name ?? "No department"}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
-                      <div className="h-full bg-gray-300 rounded-full" style={{ width: `${Math.round((e.pointsBalance / maxBal) * 100)}%` }} />
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-500 tabular-nums text-right">{e.pointsBalance.toLocaleString()} pts</span>
-                </li>
-              ));
+              return (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                  {data.disengaged.map((e) => (
+                    <li key={e.id} className="grid grid-cols-[28px_1fr_72px] items-center gap-2.5 py-1.5 hover:bg-gray-50/60 rounded-lg px-1 transition-colors">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
+                        {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate leading-tight">{e.displayName}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
+                            <div className="h-full bg-gray-300 rounded-full" style={{ width: `${Math.round((e.pointsBalance / maxBal) * 100)}%` }} />
+                          </div>
+                          <span className="text-[10px] text-gray-400 shrink-0 truncate">{e.department?.name ?? "—"}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 tabular-nums text-right">{e.pointsBalance.toLocaleString()} pts</span>
+                    </li>
+                  ))}
+                </ul>
+              );
             })()}
-          </ul>
+          </div>
         </div>
       )}
 

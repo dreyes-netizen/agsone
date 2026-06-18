@@ -318,7 +318,10 @@ export default function AdminDashboardPage() {
               <p className="text-sm text-gray-500 mt-0.5">
                 {data.engagedCount} of {data.totalEmployees} active
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-400 mt-0.5">
+                posted, reacted, played, or redeemed
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
                 {data.disengaged.length > 0
                   ? `${data.disengaged.length} employee${data.disengaged.length !== 1 ? "s" : ""} need follow-up`
                   : "Everyone is active!"}

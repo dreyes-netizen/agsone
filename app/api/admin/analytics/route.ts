@@ -26,6 +26,11 @@ export async function GET(req: NextRequest) {
     disengaged,
     deptEmployeesRaw,
     deptPointsRaw,
+    openReports,
+    pendingMedicineRequests,
+    redeemedThisMonth,
+    avgBalanceRaw,
+    dailyRedemptionsRaw,
   ] = await Promise.all([
     prisma.user.count({ where: { role: "EMPLOYEE", isActive: true } }),
 
@@ -111,6 +116,31 @@ export async function GET(req: NextRequest) {
       },
       select: { amount: true, toUser: { select: { departmentId: true } } },
     }),
+
+    // Open + in-review whistleblower reports needing HR attention
+    prisma.feedback.count({ where: { status: { in: ["OPEN", "IN_REVIEW"] } } }),
+
+    // Pending medicine requests awaiting approval
+    prisma.medicineRequest.count({ where: { status: "PENDING" } }),
+
+    // Points redeemed (approved + fulfilled) this month
+    prisma.redemption.aggregate({
+      where: { createdAt: { gte: monthStart }, status: { in: ["APPROVED", "FULFILLED"] } },
+      _sum: { pointsSpent: true },
+    }),
+
+    // Average points balance across active employees
+    prisma.user.aggregate({
+      where: { role: "EMPLOYEE", isActive: true },
+      _avg: { pointsBalance: true },
+    }),
+
+    // Daily approved/fulfilled redemptions for the last 30 days (chart overlay)
+    prisma.redemption.findMany({
+      where: { createdAt: { gte: thirtyDaysAgo }, status: { in: ["APPROVED", "FULFILLED"] } },
+      select: { createdAt: true, pointsSpent: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   // Engagement metrics
@@ -148,13 +178,21 @@ export async function GET(req: NextRequest) {
     .map(([id, row]) => ({ id, ...row }))
     .sort((a, b) => b.pointsThisMonth - a.pointsThisMonth);
 
-  // Daily chart data
+  // Daily awarded chart data
   const dailyMap: Record<string, number> = {};
   for (const tx of dailyPointsRaw) {
     const day = tx.createdAt.toISOString().slice(0, 10);
     dailyMap[day] = (dailyMap[day] ?? 0) + tx.amount;
   }
   const dailyPoints = Object.entries(dailyMap).map(([date, points]) => ({ date, points }));
+
+  // Daily redeemed chart data
+  const dailyRedemptionMap: Record<string, number> = {};
+  for (const r of dailyRedemptionsRaw) {
+    const day = r.createdAt.toISOString().slice(0, 10);
+    dailyRedemptionMap[day] = (dailyRedemptionMap[day] ?? 0) + r.pointsSpent;
+  }
+  const dailyRedemptions = Object.entries(dailyRedemptionMap).map(([date, points]) => ({ date, points }));
 
   const thisMonth = pointsThisMonth._sum.amount ?? 0;
   const lastMonth = pointsLastMonth._sum.amount ?? 0;
@@ -170,10 +208,15 @@ export async function GET(req: NextRequest) {
       topEarners,
       recentTransactions,
       dailyPoints,
+      dailyRedemptions,
       engagementRate,
       engagedCount,
       disengaged,
       departmentBreakdown,
+      openReports,
+      pendingMedicineRequests,
+      pointsRedeemedThisMonth: redeemedThisMonth._sum.pointsSpent ?? 0,
+      avgPointsBalance: Math.round(avgBalanceRaw._avg.pointsBalance ?? 0),
     },
   });
 }

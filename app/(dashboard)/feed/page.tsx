@@ -571,6 +571,7 @@ export default function FeedPage() {
       id: optimisticId,
       content,
       createdAt: new Date().toISOString(),
+      authorId: user?.uid ?? "",
       author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
       replies: [],
     };

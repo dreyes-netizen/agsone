@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     pendingRedemptions,
     activeGames,
     topEarners,
-    recentTransactions,
+    _recentTransactions, // removed from UI — kept as placeholder to preserve array indices
     dailyPointsRaw,
     // Full employee list — used for dept breakdown, disengaged, and engagement
     allEmployeesRaw,
@@ -61,16 +61,8 @@ export async function GET(req: NextRequest) {
       select: { id: true, displayName: true, pointsBalance: true, level: true, avatarUrl: true },
     }),
 
-    prisma.pointTransaction.findMany({
-      where: { amount: { gt: 0 }, type: { in: ["MANUAL_AWARD", "GAME_WIN"] } },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: {
-        id: true, amount: true, type: true, note: true, createdAt: true,
-        toUser: { select: { displayName: true } },
-        fromUser: { select: { displayName: true } },
-      },
-    }),
+    // recentTransactions removed — no longer shown on overview
+    Promise.resolve([]),
 
     prisma.pointTransaction.findMany({
       where: { createdAt: { gte: thirtyDaysAgo }, amount: { gt: 0 }, type: "MANUAL_AWARD" },
@@ -243,7 +235,6 @@ export async function GET(req: NextRequest) {
       pendingRedemptions,
       activeGames,
       topEarners,
-      recentTransactions,
       dailyPoints,
       dailyRedemptions,
       engagementRate,

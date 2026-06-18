@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import {
-  Users, TrendingUp, ShoppingCart,
-  ArrowUpRight, ArrowDownRight, Minus, Cake, Activity, AlertCircle, MessageSquareWarning, Pill,
+  Users, TrendingUp, ClipboardList,
+  ArrowUpRight, ArrowDownRight, Minus, Cake, Activity, AlertCircle, MessageSquareWarning, CheckCircle2,
 } from "lucide-react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 
 type UpcomingBirthday = {
@@ -45,15 +45,6 @@ type Analytics = {
   pointsRedeemedThisMonth: number;
   avgPointsBalance: number;
   topEarners: { id: string; displayName: string; pointsBalance: number; level: number; avatarUrl: string | null }[];
-  recentTransactions: {
-    id: string;
-    amount: number;
-    type: string;
-    note: string | null;
-    createdAt: string;
-    toUser: { displayName: string };
-    fromUser: { displayName: string } | null;
-  }[];
   dailyPoints: { date: string; points: number }[];
   dailyRedemptions: { date: string; points: number }[];
   engagementRate: number;
@@ -62,10 +53,6 @@ type Analytics = {
   departmentBreakdown: DeptRow[];
 };
 
-const typeLabel: Record<string, string> = {
-  MANUAL_AWARD: "Award",
-  GAME_WIN: "Game Win",
-};
 
 function KpiCard({
   label, value, sub, icon: Icon, iconColor, growth, valueColor,
@@ -172,6 +159,15 @@ export default function AdminDashboardPage() {
     ? 0
     : Math.round((data.pointsRedeemedThisMonth / data.pointsThisMonth) * 100);
 
+  const totalPending = data.pendingRedemptions + data.pendingMedicineRequests;
+  const pendingSubText = (() => {
+    if (totalPending === 0) return "All clear";
+    const parts: string[] = [];
+    if (data.pendingRedemptions > 0) parts.push(`${data.pendingRedemptions} redemption${data.pendingRedemptions !== 1 ? "s" : ""}`);
+    if (data.pendingMedicineRequests > 0) parts.push(`${data.pendingMedicineRequests} medicine`);
+    return parts.join(" · ");
+  })();
+
   return (
     <div className="space-y-5">
       <div>
@@ -181,8 +177,8 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* KPI Cards — 2 cols mobile, 3 cols md, 5 cols xl */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+      {/* KPI Cards — 2 cols mobile, 4 cols xl */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
           label="Total Employees"
           value={data.totalEmployees.toLocaleString()}
@@ -201,28 +197,20 @@ export default function AdminDashboardPage() {
           valueColor="text-emerald-600"
         />
         <KpiCard
-          label="Pending Redemptions"
-          value={data.pendingRedemptions}
-          sub={data.pendingRedemptions > 0 ? "Needs approval" : "All cleared"}
-          icon={ShoppingCart}
-          iconColor={data.pendingRedemptions > 0 ? "bg-amber-500" : "bg-gray-400"}
-          valueColor={data.pendingRedemptions > 0 ? "text-amber-600" : "text-gray-700"}
+          label="Pending Actions"
+          value={totalPending === 0 ? "All clear" : totalPending}
+          sub={pendingSubText}
+          icon={totalPending === 0 ? CheckCircle2 : ClipboardList}
+          iconColor={totalPending === 0 ? "bg-emerald-500" : "bg-amber-500"}
+          valueColor={totalPending === 0 ? "text-emerald-600" : "text-amber-600"}
         />
         <KpiCard
           label="Open Reports"
-          value={data.openReports}
+          value={data.openReports === 0 ? "All clear" : data.openReports}
           sub={data.openReports > 0 ? "Awaiting HR review" : "No open reports"}
-          icon={MessageSquareWarning}
-          iconColor={data.openReports > 0 ? "bg-red-500" : "bg-gray-400"}
-          valueColor={data.openReports > 0 ? "text-red-600" : "text-gray-700"}
-        />
-        <KpiCard
-          label="Medicine Requests"
-          value={data.pendingMedicineRequests}
-          sub={data.pendingMedicineRequests > 0 ? "Pending approval" : "All cleared"}
-          icon={Pill}
-          iconColor={data.pendingMedicineRequests > 0 ? "bg-violet-500" : "bg-gray-400"}
-          valueColor={data.pendingMedicineRequests > 0 ? "text-violet-600" : "text-gray-700"}
+          icon={data.openReports === 0 ? CheckCircle2 : MessageSquareWarning}
+          iconColor={data.openReports > 0 ? "bg-red-500" : "bg-emerald-500"}
+          valueColor={data.openReports > 0 ? "text-red-600" : "text-emerald-600"}
         />
       </div>
 
@@ -419,74 +407,41 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Birthdays + Recent Awards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Upcoming Birthdays */}
+      {/* Upcoming Birthdays — only shown when there are birthdays in the next 14 days */}
+      {birthdays.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
             <Cake aria-hidden="true" className="w-4 h-4 text-pink-400" />
             <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>
             <span className="text-xs text-gray-500 ml-auto">Next 14 days</span>
           </div>
-          {birthdays.length === 0 ? (
-            <div className="py-6 text-center text-sm text-gray-500">No birthdays in the next 14 days</div>
-          ) : (
-            <ul className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+          <div className="p-4">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
               {birthdays.map((b) => {
-                // birthdayMonthDay is "MM-DD" — parse as a display date without year
                 const [mm, dd] = b.birthdayMonthDay.split("-");
                 const displayDate = new Date(2000, parseInt(mm) - 1, parseInt(dd))
                   .toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 const labelText = b.daysUntil === 0 ? "Today!" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`;
                 const labelColor = b.daysUntil === 0 ? "text-pink-600 bg-pink-50" : b.daysUntil <= 3 ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50";
                 return (
-                  <li key={b.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50/60 transition-colors">
+                  <li key={b.id} className="grid grid-cols-[28px_1fr_auto] items-center gap-2.5 py-1.5 px-1 hover:bg-gray-50/60 rounded-lg transition-colors">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                       {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{b.displayName}</p>
-                      <p className="text-xs text-gray-500">{b.department ?? "No department"} · {displayDate}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate leading-tight">{b.displayName}</p>
+                      <p className="text-xs text-gray-400 truncate">{b.department ?? "No dept"} · {displayDate}</p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${labelColor}`}>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${labelColor}`}>
                       {labelText}{b.daysUntil === 0 && <> <span aria-hidden="true">🎂</span></>}
                     </span>
                   </li>
                 );
               })}
             </ul>
-          )}
-        </div>
-
-        {/* Recent Awards */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50">
-            <p className="font-semibold text-gray-900 text-sm">Recent Awards</p>
           </div>
-          {data.recentTransactions.length === 0 ? (
-            <div className="py-6 text-center text-sm text-gray-500">No transactions yet</div>
-          ) : (
-            <ul className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
-              {data.recentTransactions.map((t) => (
-                <li key={t.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-50/60 transition-colors">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{t.toUser.displayName}</p>
-                    <p className="text-xs text-gray-500">
-                      {typeLabel[t.type] ?? t.type}
-                      {t.fromUser ? ` · from ${t.fromUser.displayName}` : ""}
-                      {t.note ? ` · "${t.note}"` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0 ml-4">
-                    <p className="text-sm font-bold text-emerald-600">+{t.amount.toLocaleString()} pts</p>
-                    <p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -273,20 +273,28 @@ export default function AdminDashboardPage() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="font-semibold text-gray-900 text-sm mb-3">Top Earners</p>
-          <div className="space-y-2">
-            {data.topEarners.map((e, i) => (
-              <div key={e.id} className="flex items-center gap-3">
-                <span className={`w-5 text-xs font-bold tabular-nums ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-400"}`}>{i + 1}</span>
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
-                  {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
+          <div className="space-y-1.5">
+            {(() => {
+              const maxBal = Math.max(...data.topEarners.map(e => e.pointsBalance), 1);
+              return data.topEarners.map((e, i) => (
+                <div key={e.id} className="grid grid-cols-[16px_28px_1fr_64px] items-center gap-2.5">
+                  <span className={`text-xs font-bold tabular-nums text-center ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-400"}`}>{i + 1}</span>
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                    {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate leading-tight">{e.displayName}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
+                        <div className="h-full bg-navy-400 rounded-full" style={{ width: `${Math.round((e.pointsBalance / maxBal) * 100)}%` }} />
+                      </div>
+                      <span className="text-[10px] text-gray-400 shrink-0">Lv {e.level}</span>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-navy-600 tabular-nums text-right">{e.pointsBalance.toLocaleString()}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{e.displayName}</p>
-                  <p className="text-xs text-gray-500">Lv {e.level}</p>
-                </div>
-                <span className="text-sm font-bold text-navy-600 tabular-nums">{e.pointsBalance.toLocaleString()}</span>
-              </div>
-            ))}
+              ));
+            })()}
             {data.topEarners.length === 0 && <p className="text-sm text-gray-500">No employees yet</p>}
           </div>
         </div>
@@ -332,24 +340,31 @@ export default function AdminDashboardPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left px-4 py-2 text-xs font-semibold text-gray-700">Department</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700">Active / Total</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700">Points</th>
+                    <th className="px-4 py-2 text-xs font-semibold text-gray-700 w-40">Engagement</th>
+                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-16">Active</th>
+                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-24">Points</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.departmentBreakdown.map((d, i) => {
                     const pct = d.totalEmployees === 0 ? 0 : Math.round((d.activeEmployees / d.totalEmployees) * 100);
+                    const barColor = pct >= 70 ? "bg-emerald-400" : pct >= 40 ? "bg-amber-400" : "bg-red-400";
+                    const textColor = pct >= 70 ? "text-emerald-600" : pct >= 40 ? "text-amber-600" : "text-red-500";
                     return (
                       <tr key={d.id} className={`border-t border-gray-50 hover:bg-gray-50/60 transition-colors ${i === 0 ? "border-t-0" : ""}`}>
-                        <td className="px-4 py-2.5 font-medium text-gray-900">{d.name}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums">
-                          <span className={pct >= 70 ? "text-emerald-600 font-semibold" : pct >= 40 ? "text-amber-600" : "text-red-500"}>
-                            {d.activeEmployees}
-                          </span>
-                          <span className="text-gray-500">/{d.totalEmployees}</span>
-                          <span className="text-gray-500 text-xs ml-1">({pct}%)</span>
+                        <td className="px-4 py-2 font-medium text-gray-900">{d.name}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className={`text-xs tabular-nums w-8 text-right font-medium ${textColor}`}>{pct}%</span>
+                          </div>
                         </td>
-                        <td className="px-4 py-2.5 text-right font-bold text-navy-600 tabular-nums">
+                        <td className="px-4 py-2 text-right tabular-nums text-gray-500 text-xs">
+                          {d.activeEmployees}/{d.totalEmployees}
+                        </td>
+                        <td className="px-4 py-2 text-right font-bold text-navy-600 tabular-nums">
                           {d.pointsThisMonth.toLocaleString()}
                         </td>
                       </tr>
@@ -373,18 +388,26 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <ul className="divide-y divide-gray-50">
-            {data.disengaged.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
-                  {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{e.displayName}</p>
-                  <p className="text-xs text-gray-500">{e.department?.name ?? "No department"}</p>
-                </div>
-                <span className="text-xs text-gray-500 tabular-nums">{e.pointsBalance.toLocaleString()} pts</span>
-              </li>
-            ))}
+            {(() => {
+              const maxBal = Math.max(...data.disengaged.map(e => e.pointsBalance), 1);
+              return data.disengaged.map((e) => (
+                <li key={e.id} className="grid grid-cols-[28px_1fr_96px_72px] items-center gap-3 px-4 py-2 hover:bg-gray-50/60 transition-colors">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                    {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{e.displayName}</p>
+                    <p className="text-xs text-gray-500 truncate">{e.department?.name ?? "No department"}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
+                      <div className="h-full bg-gray-300 rounded-full" style={{ width: `${Math.round((e.pointsBalance / maxBal) * 100)}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-500 tabular-nums text-right">{e.pointsBalance.toLocaleString()} pts</span>
+                </li>
+              ));
+            })()}
           </ul>
         </div>
       )}
@@ -410,7 +433,7 @@ export default function AdminDashboardPage() {
                 const labelText = b.daysUntil === 0 ? "Today!" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`;
                 const labelColor = b.daysUntil === 0 ? "text-pink-600 bg-pink-50" : b.daysUntil <= 3 ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50";
                 return (
-                  <li key={b.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                  <li key={b.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50/60 transition-colors">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                       {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
                     </div>
@@ -438,7 +461,7 @@ export default function AdminDashboardPage() {
           ) : (
             <ul className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
               {data.recentTransactions.map((t) => (
-                <li key={t.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                <li key={t.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-50/60 transition-colors">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{t.toUser.displayName}</p>
                     <p className="text-xs text-gray-500">

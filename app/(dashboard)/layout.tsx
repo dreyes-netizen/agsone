@@ -227,10 +227,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AllyWidget />
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-[216px] min-h-screen overflow-x-hidden">
+      <main className="flex-1 lg:ml-[216px] min-h-screen overflow-x-clip">
         <div className="lg:hidden h-14" />
-        <div className="p-4 pb-24 lg:p-8 lg:pb-10 overflow-x-hidden">{children}</div>
-        <div className="lg:hidden h-16" />
+        <div className="p-4 pb-20 lg:p-8 lg:pb-10 overflow-x-clip">{children}</div>
       </main>
 
       {/* Mobile bottom nav */}

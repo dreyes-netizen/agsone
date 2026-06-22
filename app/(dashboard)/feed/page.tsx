@@ -930,13 +930,29 @@ export default function FeedPage() {
       )}
 
       {/* Two-column layout: compose+posts (left), sidebar (right). Stacks on mobile. */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] items-start">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] items-start">
 
         {/* Sidebar — right column on desktop (spans both rows), last on mobile */}
         <aside className="order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
 
-          {/* My Stats */}
-          <div className="bg-white rounded-xl border border-zinc-100 p-4">
+          {/* My Stats — compact strip on mobile, full card on desktop */}
+          <div className="lg:hidden bg-white rounded-xl border border-zinc-100 px-4 py-3 flex items-center justify-between">
+            {widgetsLoading ? (
+              <div className="h-4 bg-zinc-100 rounded animate-pulse w-32" />
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                  <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-black text-zinc-900 tabular-nums">{profile?.pointsBalance?.toLocaleString() ?? "—"}</span>
+                  <span className="text-xs text-zinc-500">pts</span>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="hidden lg:block bg-white rounded-xl border border-zinc-100 p-4">
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">My Stats</p>
             {widgetsLoading ? (
               <div className="space-y-3 animate-pulse">
@@ -989,8 +1005,8 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Top Performers */}
-          <div className="bg-white rounded-xl border border-zinc-100 overflow-hidden">
+          {/* Top Performers — desktop only; use /leaderboard on mobile */}
+          <div className="hidden lg:block bg-white rounded-xl border border-zinc-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50">
               <div className="flex items-center gap-1.5">
                 <Star className="w-3.5 h-3.5 text-yellow-500" />
@@ -1023,8 +1039,8 @@ export default function FeedPage() {
             )}
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Quick Actions — desktop only; bottom nav covers these on mobile */}
+          <div className="hidden lg:grid grid-cols-2 gap-2">
             <Link href="/minigames" className="flex flex-col items-center gap-1.5 bg-white border border-zinc-100 rounded-xl py-3 px-2 hover:border-zinc-200 hover:shadow-sm transition-all text-center">
               <Gamepad2 className="w-5 h-5 text-violet-500" />
               <span className="text-xs font-semibold text-zinc-700 leading-tight">Play a<br/>Minigame</span>
@@ -1451,16 +1467,16 @@ export default function FeedPage() {
                         <div className="ml-auto shrink-0 flex items-center gap-1">
                           <span className="text-xs text-zinc-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
                           {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                            <button onClick={() => togglePin(post.id)} className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"}>
+                            <button onClick={() => togglePin(post.id)} className={`p-2 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"}>
                               <Pin className="w-3.5 h-3.5" />
                             </button>
                           )}
                           {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
                             <>
-                              <button onClick={() => startEditPost(post)} className="text-gray-400 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50" title="Edit shoutout">
+                              <button onClick={() => startEditPost(post)} className="text-gray-400 hover:text-navy-500 transition-colors p-2 rounded-lg hover:bg-navy-50" title="Edit shoutout">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => deletePost(post.id)} className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50" title="Delete post">
+                              <button onClick={() => deletePost(post.id)} className="text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50" title="Delete post">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </>
@@ -1756,7 +1772,7 @@ export default function FeedPage() {
                         {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
                           <button
                             onClick={() => togglePin(post.id)}
-                            className={`p-1 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
+                            className={`p-2 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
                             title={post.isPinned ? "Unpin post" : "Pin post"}
                           >
                             <Pin className="w-3.5 h-3.5" />
@@ -1766,14 +1782,14 @@ export default function FeedPage() {
                           <>
                             <button
                               onClick={() => startEditPost(post)}
-                              className="text-gray-400 hover:text-navy-500 transition-colors p-1 rounded-lg hover:bg-navy-50"
+                              className="text-gray-400 hover:text-navy-500 transition-colors p-2 rounded-lg hover:bg-navy-50"
                               title="Edit post"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deletePost(post.id)}
-                              className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50"
+                              className="text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50"
                               title="Delete post"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

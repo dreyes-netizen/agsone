@@ -250,7 +250,7 @@ export default function AdminRewardsPage() {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Optional description"
                   className={inputClass + " resize-none"}
-                  style={{ minHeight: "2.5rem", overflowY: "auto" }}
+                  style={{ minHeight: "2.5rem", overflowY: "auto", scrollbarGutter: "stable" }}
                 />
               </div>
 

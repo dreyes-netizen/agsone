@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
@@ -36,6 +36,15 @@ export default function AdminRewardsPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = descriptionRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
+  }, [form.description]);
 
   function showToast(t: "success" | "error", m: string) {
     setToast({ type: t, msg: m });
@@ -236,11 +245,12 @@ export default function AdminRewardsPage() {
               <div className="col-span-2 space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Description</label>
                 <textarea
+                  ref={descriptionRef}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Optional description"
-                  rows={3}
                   className={inputClass + " resize-none"}
+                  style={{ minHeight: "2.5rem", overflowY: "auto" }}
                 />
               </div>
 

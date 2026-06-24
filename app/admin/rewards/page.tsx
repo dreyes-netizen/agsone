@@ -35,6 +35,7 @@ export default function AdminRewardsPage() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   function showToast(t: "success" | "error", m: string) {
     setToast({ type: t, msg: m });
@@ -154,6 +155,22 @@ export default function AdminRewardsPage() {
     } catch (err) {
       setDeleteConfirmId(null);
       showToast("error", err instanceof Error ? err.message : "Failed to delete reward.");
+    }
+  }
+
+  async function toggleActive(r: Reward) {
+    setTogglingId(r.id);
+    try {
+      await apiFetch(`/api/rewards/${r.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: !r.isActive }),
+      });
+      showToast("success", r.isActive ? "Reward hidden." : "Reward is now visible.");
+      await loadRewards();
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Failed to update.");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -336,16 +353,17 @@ export default function AdminRewardsPage() {
               <th className={thClass}>Category</th>
               <th className={thClass}>Cost</th>
               <th className={thClass}>Stock</th>
+              <th className={thClass}>Status</th>
               <th className={thClass}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {rewards.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-500 py-8">No rewards yet. Add your first one!</td>
+                <td colSpan={6} className="text-center text-gray-500 py-8">No rewards yet. Add your first one!</td>
               </tr>
             ) : rewards.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50">
+              <tr key={r.id} className={`hover:bg-gray-50/60 transition-colors border-b border-gray-50 ${!r.isActive ? "opacity-60" : ""}`}>
                 <td className={tdClass}>
                   <div className="flex items-center gap-3">
                     {(r.imageUrls?.[0]) && (
@@ -353,7 +371,14 @@ export default function AdminRewardsPage() {
                       <img src={r.imageUrls[0]} alt={`${r.name} reward image`} className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
                     )}
                     <div>
-                      <p className="font-medium text-gray-900">{r.name}</p>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        {r.name}
+                        {!r.isActive && (
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                            Hidden
+                          </span>
+                        )}
+                      </p>
                       {r.description && <p className="text-xs text-gray-500 truncate max-w-xs">{r.description}</p>}
                     </div>
                   </div>
@@ -368,6 +393,20 @@ export default function AdminRewardsPage() {
                 </td>
                 <td className={`${tdClass} text-gray-600`}>
                   {r.stockQuantity === -1 ? "Unlimited" : r.stockQuantity}
+                </td>
+                <td className={tdClass}>
+                  <button
+                    role="switch"
+                    aria-checked={r.isActive}
+                    aria-label={r.isActive ? `Hide ${r.name}` : `Show ${r.name}`}
+                    disabled={togglingId === r.id}
+                    onClick={() => toggleActive(r)}
+                    className={`relative inline-flex h-5 w-10 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed ${r.isActive ? "bg-emerald-500" : "bg-gray-300"}`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${r.isActive ? "translate-x-5" : "translate-x-0.5"}`}
+                    />
+                  </button>
                 </td>
                 <td className={tdClass}>
                   <div className="flex items-center gap-2">

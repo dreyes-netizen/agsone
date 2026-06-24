@@ -47,6 +47,8 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  // Soft-delete: rewards are never hard-deleted so redemption history stays intact.
+  // Admins can restore a hidden reward by toggling isActive back to true.
   await prisma.reward.update({ where: { id }, data: { isActive: false } });
 
   return NextResponse.json({ success: true });

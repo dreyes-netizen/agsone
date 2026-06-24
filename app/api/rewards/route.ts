@@ -7,8 +7,9 @@ export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const isAdmin = requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"]);
   const rewards = await prisma.reward.findMany({
-    where: { isActive: true },
+    where: isAdmin ? {} : { isActive: true },
     orderBy: { pointCost: "asc" },
   });
 

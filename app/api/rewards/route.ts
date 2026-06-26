@@ -7,9 +7,14 @@ export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Only the admin management view should see hidden (inactive) rewards, and only
+  // when it explicitly asks via ?includeInactive=true. The employee-facing
+  // Marketplace omits the flag, so it always gets active rewards only — even when
+  // an admin is the one browsing it.
   const isAdmin = requireRole(user, ["HR_ADMIN", "SUPER_ADMIN"]);
+  const includeInactive = new URL(req.url).searchParams.get("includeInactive") === "true";
   const rewards = await prisma.reward.findMany({
-    where: isAdmin ? {} : { isActive: true },
+    where: isAdmin && includeInactive ? {} : { isActive: true },
     orderBy: { pointCost: "asc" },
   });
 

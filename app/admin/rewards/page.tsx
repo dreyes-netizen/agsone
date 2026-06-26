@@ -66,7 +66,7 @@ export default function AdminRewardsPage() {
   }, [authLoading, user]);
 
   async function loadRewards() {
-    const res = await apiFetch<{ data: Reward[] }>("/api/rewards");
+    const res = await apiFetch<{ data: Reward[] }>("/api/rewards?includeInactive=true");
     setRewards(res.data);
   }
 

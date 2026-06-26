@@ -28,11 +28,14 @@ export function useApiClient() {
     if (res.status === 401) {
       res = await doFetch(true); // retry with fresh token
       if (res.status === 401) {
-        // Persistent 401 — session is invalid, force sign-out
-        import('@/lib/firebase/client').then(({ auth }) => {
-          import('firebase/auth').then(({ signOut }) => signOut(auth));
-        });
-        throw new Error('Session expired. Please sign in again.');
+        // Only sign out if Firebase itself has no session; otherwise this is a
+        // transient/endpoint error — surface it without logging the user out app-wide.
+        if (!auth.currentUser) {
+          const { signOut } = await import("firebase/auth");
+          await signOut(auth);
+          throw new Error("Session expired. Please sign in again.");
+        }
+        throw new Error("Request failed (401). Please try again.");
       }
     }
 
@@ -74,11 +77,14 @@ export function useApiClient() {
     if (res.status === 401) {
       res = await doFetch(true); // retry with fresh token
       if (res.status === 401) {
-        // Persistent 401 — session is invalid, force sign-out
-        import('@/lib/firebase/client').then(({ auth }) => {
-          import('firebase/auth').then(({ signOut }) => signOut(auth));
-        });
-        throw new Error('Session expired. Please sign in again.');
+        // Only sign out if Firebase itself has no session; otherwise this is a
+        // transient/endpoint error — surface it without logging the user out app-wide.
+        if (!auth.currentUser) {
+          const { signOut } = await import("firebase/auth");
+          await signOut(auth);
+          throw new Error("Session expired. Please sign in again.");
+        }
+        throw new Error("Request failed (401). Please try again.");
       }
     }
 

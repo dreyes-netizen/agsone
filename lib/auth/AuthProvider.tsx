@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { onIdTokenChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { getBrowserSupabase } from "@/lib/supabase/browserClient";
 
@@ -39,7 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [dbUser, setDbUser] = useState<DbProfile | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    // onIdTokenChanged fires on login/logout AND on every silent token refresh
+    // (~hourly), so the stored token + firebase-token cookie stay fresh for the
+    // life of the session instead of going stale after the first hour.
+    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
           const idToken = await firebaseUser.getIdToken();

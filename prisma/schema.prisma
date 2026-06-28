@@ -94,7 +94,6 @@ enum MilestoneType {
   WORK_ANNIVERSARY_10
 }
 
-
 enum MedicineRequestStatus {
   PENDING
   APPROVED
@@ -147,37 +146,40 @@ model User {
   manager    User?       @relation("ManagerReports", fields: [managerId], references: [id])
   reports    User[]      @relation("ManagerReports")
 
-  pointsReceived    PointTransaction[] @relation("PointsReceived")
-  pointsGiven       PointTransaction[] @relation("PointsGiven")
-  pointsCreatedBy   PointTransaction[] @relation("PointsCreatedBy")
-  redemptions       Redemption[]
-  redemptionsProcessed Redemption[]   @relation("ProcessedBy")
-  userBadges        UserBadge[]
-  badgesAwarded     UserBadge[]        @relation("BadgeAwardedBy")
-  rewardsCreated    Reward[]
-  gamesCreated      Game[]
-  gamePlays         GamePlay[]
-  posts             SocialPost[]
-  shoutoutsReceived ShoutoutRecipient[] @relation("ShoutoutsReceived")
-  reactions         SocialReaction[]
-  comments          SocialComment[]
-  pollVotes         PollVote[]
-  notifications     Notification[]
-  auditLogs         AuditLog[]
-  foodListings FoodListing[] @relation("FoodListingsCreated")
-  foodOrders   FoodOrder[]   @relation("FoodOrdersPlaced")
-  feedbacks       Feedback[]
-  feedbackReplies FeedbackReply[]
-  milestoneAwards  MilestoneAward[]
-  milestoneConfigs MilestoneConfig[]
-  policyDocuments PolicyDocument[]
-  chatSessions    ChatSession[]
-  medicineItems    MedicineItem[]    @relation("MedicineItemsCreated")
-  medicineRequests MedicineRequest[] @relation("MedicineRequestsMade")
-  medicineApprovals MedicineRequest[] @relation("MedicineRequestsApproved")
-  gameSessionsHosted GameSession[]   @relation("GameSessionHost")
-  gameSessionsJoined GameSession[]   @relation("GameSessionGuest")
-  gameSessionsWon    GameSession[]   @relation("GameSessionWinner")
+  pointsReceived       PointTransaction[]  @relation("PointsReceived")
+  pointsGiven          PointTransaction[]  @relation("PointsGiven")
+  pointsCreatedBy      PointTransaction[]  @relation("PointsCreatedBy")
+  redemptions          Redemption[]
+  redemptionsProcessed Redemption[]        @relation("ProcessedBy")
+  userBadges           UserBadge[]
+  badgesAwarded        UserBadge[]         @relation("BadgeAwardedBy")
+  rewardsCreated       Reward[]
+  gamesCreated         Game[]
+  gamePlays            GamePlay[]
+  posts                SocialPost[]
+  shoutoutsReceived    ShoutoutRecipient[] @relation("ShoutoutsReceived")
+  reactions            SocialReaction[]
+  comments             SocialComment[]
+  pollVotes            PollVote[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  foodListings         FoodListing[]       @relation("FoodListingsCreated")
+  foodOrders           FoodOrder[]         @relation("FoodOrdersPlaced")
+  feedbacks            Feedback[]
+  feedbackReplies      FeedbackReply[]
+  milestoneAwards      MilestoneAward[]
+  milestoneConfigs     MilestoneConfig[]
+  policyDocuments      PolicyDocument[]
+  chatSessions         ChatSession[]
+  medicineItems        MedicineItem[]      @relation("MedicineItemsCreated")
+  medicineRequests     MedicineRequest[]   @relation("MedicineRequestsMade")
+  medicineApprovals    MedicineRequest[]   @relation("MedicineRequestsApproved")
+  gameSessionsHosted   GameSession[]       @relation("GameSessionHost")
+  gameSessionsJoined   GameSession[]       @relation("GameSessionGuest")
+  gameSessionsWon      GameSession[]       @relation("GameSessionWinner")
+
+  @@index([pointsBalance])
+  @@index([role, isActive])
 }
 
 model PointTransaction {
@@ -193,9 +195,9 @@ model PointTransaction {
   createdById       String
   createdAt         DateTime             @default(now())
 
-  fromUser    User? @relation("PointsGiven", fields: [fromUserId], references: [id])
-  toUser      User  @relation("PointsReceived", fields: [toUserId], references: [id])
-  createdBy   User  @relation("PointsCreatedBy", fields: [createdById], references: [id])
+  fromUser  User? @relation("PointsGiven", fields: [fromUserId], references: [id])
+  toUser    User  @relation("PointsReceived", fields: [toUserId], references: [id])
+  createdBy User  @relation("PointsCreatedBy", fields: [createdById], references: [id])
 
   @@index([toUserId])
   @@index([createdAt])
@@ -218,22 +220,27 @@ model Reward {
 
   createdBy   User         @relation(fields: [createdById], references: [id])
   redemptions Redemption[]
+
+  @@index([isActive, pointCost])
 }
 
 model Redemption {
-  id           String           @id @default(uuid())
-  userId       String
-  rewardId     String
-  pointsSpent  Int
-  status       RedemptionStatus @default(PENDING)
-  adminNote    String?
+  id            String           @id @default(uuid())
+  userId        String
+  rewardId      String
+  pointsSpent   Int
+  status        RedemptionStatus @default(PENDING)
+  adminNote     String?
   processedById String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
-  user        User    @relation(fields: [userId], references: [id])
-  reward      Reward  @relation(fields: [rewardId], references: [id])
-  processedBy User?   @relation("ProcessedBy", fields: [processedById], references: [id])
+  user        User   @relation(fields: [userId], references: [id])
+  reward      Reward @relation(fields: [rewardId], references: [id])
+  processedBy User?  @relation("ProcessedBy", fields: [processedById], references: [id])
+
+  @@index([status])
+  @@index([userId, createdAt])
 }
 
 model Badge {
@@ -256,26 +263,26 @@ model UserBadge {
   awardedAt   DateTime @default(now())
   note        String?
 
-  user      User   @relation(fields: [userId], references: [id])
-  badge     Badge  @relation(fields: [badgeId], references: [id])
-  awardedBy User?  @relation("BadgeAwardedBy", fields: [awardedById], references: [id])
+  user      User  @relation(fields: [userId], references: [id])
+  badge     Badge @relation(fields: [badgeId], references: [id])
+  awardedBy User? @relation("BadgeAwardedBy", fields: [awardedById], references: [id])
 
   @@unique([userId, badgeId])
 }
 
 model Game {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   type            GameType
   name            String
   description     String?
   config          Json
-  entryCostPoints Int      @default(0)
-  isActive        Boolean  @default(true)
+  entryCostPoints Int       @default(0)
+  isActive        Boolean   @default(true)
   startDate       DateTime?
   endDate         DateTime?
-  dailyPlaysLimit Int      @default(1)
+  dailyPlaysLimit Int       @default(1)
   createdById     String
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
 
   createdBy User       @relation(fields: [createdById], references: [id])
   plays     GamePlay[]
@@ -309,14 +316,18 @@ model SocialPost {
   updatedAt   DateTime @updatedAt
 
   departmentId String?
-  department   Department?      @relation(fields: [departmentId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
 
-  author             User               @relation(fields: [authorId], references: [id])
+  author             User                @relation(fields: [authorId], references: [id])
   shoutoutRecipients ShoutoutRecipient[]
   reactions          SocialReaction[]
   comments           SocialComment[]
   pollOptions        PollOption[]
   pollVotes          PollVote[]
+
+  @@index([isPinned, createdAt])
+  @@index([departmentId])
+  @@index([createdAt])
 }
 
 model ShoutoutRecipient {
@@ -341,6 +352,7 @@ model SocialReaction {
   user User       @relation(fields: [userId], references: [id])
 
   @@unique([postId, userId, emoji])
+  @@index([createdAt])
 }
 
 model SocialComment {
@@ -358,6 +370,7 @@ model SocialComment {
   replies SocialComment[] @relation("CommentReplies")
 
   @@index([postId])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -412,35 +425,36 @@ model PollVote {
   user   User       @relation(fields: [userId], references: [id])
 
   @@unique([postId, userId])
+  @@index([createdAt])
 }
 
 model FoodListing {
-  id           String      @id @default(uuid())
+  id           String    @id @default(uuid())
   title        String
   description  String?
-  price        Decimal     @db.Decimal(10, 2)
+  price        Decimal   @db.Decimal(10, 2)
   imageUrls    String[]
   cutoffAt     DateTime
   deliveryDate DateTime?
-  addOns       Json        @default("[]")
-  isActive     Boolean     @default(true)
+  addOns       Json      @default("[]")
+  isActive     Boolean   @default(true)
   createdById  String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   createdBy User        @relation("FoodListingsCreated", fields: [createdById], references: [id])
   orders    FoodOrder[]
 }
 
 model FoodOrder {
-  id             String      @id @default(uuid())
+  id             String    @id @default(uuid())
   listingId      String
   userId         String
   quantity       Int
   note           String?
-  selectedAddOns Json        @default("[]")
+  selectedAddOns Json      @default("[]")
   paidAt         DateTime?
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime  @default(now())
 
   listing FoodListing @relation(fields: [listingId], references: [id])
   user    User        @relation("FoodOrdersPlaced", fields: [userId], references: [id])
@@ -503,22 +517,22 @@ model MilestoneAward {
 }
 
 model ChatSession {
-  id        String        @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  title     String        @default("New conversation")
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  title     String   @default("New conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 }
 
 model ChatMessage {
-  id        String      @id @default(uuid())
+  id        String   @id @default(uuid())
   sessionId String
   role      String
   content   String
-  createdAt DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
@@ -564,6 +578,9 @@ model MedicineRequest {
   medicine   MedicineItem @relation(fields: [medicineId], references: [id])
   user       User         @relation("MedicineRequestsMade", fields: [userId], references: [id])
   approvedBy User?        @relation("MedicineRequestsApproved", fields: [approvedById], references: [id])
+
+  @@index([status])
+  @@index([userId])
 }
 
 model GameSession {
@@ -579,8 +596,8 @@ model GameSession {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  host   User  @relation("GameSessionHost",   fields: [hostId],   references: [id])
-  guest  User? @relation("GameSessionGuest",  fields: [guestId],  references: [id])
+  host   User  @relation("GameSessionHost", fields: [hostId], references: [id])
+  guest  User? @relation("GameSessionGuest", fields: [guestId], references: [id])
   winner User? @relation("GameSessionWinner", fields: [winnerId], references: [id])
 
   @@index([status, hostId])

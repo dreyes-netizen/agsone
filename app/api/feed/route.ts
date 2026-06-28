@@ -14,15 +14,21 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const typeFilter = searchParams.get("type");
+  const POST_TYPES = ["UPDATE", "ACHIEVEMENT", "CELEBRATION", "ANNOUNCEMENT", "POLL", "SHOUTOUT"] as const;
+  const rawType    = searchParams.get("type");
+  // Validate against the enum: an unknown ?type= used to be cast `as never` and
+  // passed straight to Prisma → a 500. Ignore invalid values instead.
+  const typeFilter = POST_TYPES.includes(rawType as (typeof POST_TYPES)[number]) ? rawType : null;
   const deptFilter = searchParams.get("dept");
   const cursor     = searchParams.get("cursor") ?? undefined;
-  const limit      = Math.min(parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10), PAGE_SIZE);
+  // Guard against NaN / negative limits (e.g. ?limit=abc → take: NaN, ?limit=-5 → reverse paging).
+  const parsedLimit = parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10);
+  const limit      = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), PAGE_SIZE) : PAGE_SIZE;
 
   const visibilityWhere = user.role === "HR_ADMIN"
     ? {}
     : { OR: [{ departmentId: null }, { departmentId: user.departmentId }] };
-  const typeWhere = typeFilter ? { type: typeFilter as never } : {};
+  const typeWhere = typeFilter ? { type: typeFilter as (typeof POST_TYPES)[number] } : {};
   const deptWhere = (deptFilter === "mine" && user.departmentId)
     ? { departmentId: user.departmentId }
     : {};
@@ -158,15 +164,20 @@ export async function POST(req: NextRequest) {
         shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
       },
     });
-    for (const recipientId of parsed.data.recipientIds) {
-      createNotification({
-        userId: recipientId,
-        type: "SHOUTOUT_RECEIVED",
-        title: `${user.displayName} gave you a shoutout!`,
-        body: parsed.data.content.slice(0, 100),
-        data: { postId: post.id },
-      });
-    }
+    // createNotification is async (DB insert + realtime broadcast). Awaiting
+    // allSettled prevents unhandled rejections and matches the fire-and-forget
+    // convention used elsewhere (a failed notification can't break the post).
+    await Promise.allSettled(
+      parsed.data.recipientIds.map((recipientId) =>
+        createNotification({
+          userId: recipientId,
+          type: "SHOUTOUT_RECEIVED",
+          title: `${user.displayName} gave you a shoutout!`,
+          body: parsed.data.content.slice(0, 100),
+          data: { postId: post.id },
+        })
+      )
+    );
     broadcast("feed").catch(() => {});
     return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
   }

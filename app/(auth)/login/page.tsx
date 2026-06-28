@@ -61,6 +61,15 @@ export default function LoginPage() {
         return;
       }
 
+      // fetch() doesn't throw on HTTP errors, so a 500/502/network blip would
+      // otherwise fall through to the dashboard with a Firebase session but no
+      // synced DB user — breaking every /api/me-backed page. Fail closed.
+      if (!syncRes.ok) {
+        await signOut(auth);
+        setError("Something went wrong while signing you in. Please try again.");
+        return;
+      }
+
       router.push("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Sign-in failed";

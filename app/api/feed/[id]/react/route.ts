@@ -39,6 +39,16 @@ export async function POST(
     }
   }
 
-  await prisma.socialReaction.create({ data: { postId: id, userId: user.id, emoji } });
+  try {
+    await prisma.socialReaction.create({ data: { postId: id, userId: user.id, emoji } });
+  } catch (err) {
+    // Two concurrent first-time reactions can both pass the findFirst check and
+    // race to create, the second hitting the @@unique([postId,userId,emoji])
+    // constraint. That's a benign no-op (the reaction exists), not a 500.
+    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
+      return NextResponse.json({ action: "added", emoji });
+    }
+    throw err;
+  }
   return NextResponse.json({ action: "added", emoji });
 }

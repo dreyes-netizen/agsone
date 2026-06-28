@@ -30,6 +30,7 @@ export default function AdminRedemptionsPage() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -39,19 +40,31 @@ export default function AdminRedemptionsPage() {
 
   async function load() {
     setLoading(true);
-    const res = await apiFetch<{ data: Redemption[] }>("/api/redemptions");
-    setRedemptions(res.data);
-    setLoading(false);
+    setError(null);
+    try {
+      const res = await apiFetch<{ data: Redemption[] }>("/api/redemptions");
+      setRedemptions(res.data);
+    } catch (err) {
+      // Without this, a failed fetch left setLoading(false) unreached → the
+      // table spun forever with no way to recover.
+      setError(err instanceof Error ? err.message : "Failed to load redemptions.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function updateStatus(id: string, status: "APPROVED" | "REJECTED" | "FULFILLED") {
     setActionId(id);
+    setError(null);
     try {
       await apiFetch(`/api/redemptions/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status, adminNote: noteMap[id] || undefined }),
       });
       await load();
+    } catch (err) {
+      // Previously swallowed: a rejected approve/reject looked like a no-op.
+      setError(err instanceof Error ? err.message : "Failed to update this redemption.");
     } finally {
       setActionId(null);
     }
@@ -69,6 +82,12 @@ export default function AdminRedemptionsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Redemptions</h1>
         <p className="text-gray-500 text-sm mt-1">Review and process employee reward redemptions.</p>
       </div>
+
+      {error && (
+        <div role="alert" className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <div>
         <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">

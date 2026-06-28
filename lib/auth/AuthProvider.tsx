@@ -49,8 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(firebaseUser);
           setToken(idToken);
 
-          const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
-          document.cookie = `firebase-token=${idToken}; path=/; max-age=3600; SameSite=Strict${secure}`;
+          // Set the HttpOnly session cookie server-side (replaces the old
+          // JS-readable document.cookie write). Kept fresh on each token change.
+          fetch("/api/auth/session", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${idToken}` },
+          }).catch(() => {});
 
           const syncRes = await fetch("/api/auth/sync", {
             method: "POST",
@@ -73,7 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setToken(null);
           setDbUser(null);
-          document.cookie = "firebase-token=; path=/; max-age=0";
+          // Clear the HttpOnly session cookie server-side.
+          fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
         }
       } catch {
         setUser(null);

@@ -70,6 +70,14 @@ export default function LoginPage() {
         return;
       }
 
+      // Establish the HttpOnly session cookie BEFORE navigating, so the proxy
+      // (which gates pages on this cookie) doesn't bounce the first /dashboard
+      // request back to /login. AuthProvider also refreshes it on token change.
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
       router.push("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Sign-in failed";

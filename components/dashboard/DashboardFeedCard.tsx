@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Send, SmilePlus, Sparkles } from "lucide-react";
@@ -237,6 +237,17 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [contentExpanded, setContentExpanded] = useState(false);
   const isLongContent = initialPost.content.length > 180;
+
+  // Re-seed interaction state when this card is reused for a different post
+  // (same DOM position, new post id). Keyed on id only — deliberately NOT on the
+  // reaction/comment values, so a parent re-render can't clobber an in-flight
+  // optimistic update. (Same-id content refresh would need an updatedAt field.)
+  useEffect(() => {
+    setReactions(initialPost.reactions);
+    setMyReactions(initialPost.myReactions);
+    setCommentCount(initialPost.commentCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPost.id]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 

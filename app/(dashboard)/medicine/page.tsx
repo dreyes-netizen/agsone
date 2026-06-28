@@ -39,6 +39,9 @@ export default function MedicinePage() {
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  // Track images that failed to load so we render the placeholder via React
+  // instead of imperatively mutating the DOM in onError (which React reverts).
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -186,17 +189,18 @@ export default function MedicinePage() {
                     onClick={() => setSelectedMed(med)}
                     className="aspect-square bg-gray-50 overflow-hidden w-full block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900"
                   >
-                    {med.imageUrl ? (
+                    {med.imageUrl && !failedImages.has(med.id) ? (
                       <img
                         src={med.imageUrl}
                         alt={med.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                        onError={() => setFailedImages((prev) => new Set(prev).add(med.id))}
                       />
-                    ) : null}
-                    <div className={`w-full h-full flex items-center justify-center bg-gray-100 ${med.imageUrl ? "hidden" : ""}`}>
-                      <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
-                    </div>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
+                      </div>
+                    )}
                   </button>
                   <div className="p-3 flex flex-col gap-2 flex-1">
                     <div>
@@ -285,17 +289,18 @@ export default function MedicinePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative">
-              {selectedMed.imageUrl ? (
+              {selectedMed.imageUrl && !failedImages.has(selectedMed.id) ? (
                 <img
                   src={selectedMed.imageUrl}
                   alt={selectedMed.name}
                   className="w-full aspect-square object-cover rounded-t-2xl"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                  onError={() => setFailedImages((prev) => new Set(prev).add(selectedMed.id))}
                 />
-              ) : null}
-              <div className={`w-full aspect-square flex items-center justify-center bg-gray-100 rounded-t-2xl ${selectedMed.imageUrl ? "hidden" : ""}`}>
-                <Pill className="w-16 h-16 text-gray-300" aria-hidden="true" />
-              </div>
+              ) : (
+                <div className="w-full aspect-square flex items-center justify-center bg-gray-100 rounded-t-2xl">
+                  <Pill className="w-16 h-16 text-gray-300" aria-hidden="true" />
+                </div>
+              )}
               <button
                 autoFocus
                 aria-label="Close"

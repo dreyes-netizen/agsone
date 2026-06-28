@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Loader2, Pencil, Upload, UserPlus, X } from "lucide-react";
 
 type Employee = {
@@ -85,6 +86,8 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [showUploadGuide, setShowUploadGuide] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const addModalRef = useModalA11y(addModalOpen, () => setAddModalOpen(false));
+  const editModalRef = useModalA11y(!!editingEmployee, () => setEditingEmployee(null));
   const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
@@ -545,6 +548,7 @@ export default function EmployeesPage() {
       {addModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div
+            ref={addModalRef}
             className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
             role="dialog"
             aria-modal="true"
@@ -668,6 +672,7 @@ export default function EmployeesPage() {
       {editingEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div
+            ref={editModalRef}
             className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5"
             role="dialog"
             aria-modal="true"

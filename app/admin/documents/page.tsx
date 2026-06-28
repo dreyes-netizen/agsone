@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
@@ -39,6 +40,7 @@ export default function DocumentsPage() {
   const [promptCopied, setPromptCopied] = useState(false);
   const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
+  const uploadModalRef = useModalA11y(modalOpen, () => setModalOpen(false));
 
   function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
 
@@ -326,6 +328,7 @@ export default function DocumentsPage() {
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div
+            ref={uploadModalRef}
             className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
             role="dialog"
             aria-modal="true"

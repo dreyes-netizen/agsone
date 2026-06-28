@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { AlertCircle, CheckCircle, Loader2, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
 
@@ -65,6 +66,7 @@ export default function AdminMedicinePage() {
   });
   const [addingMed, setAddingMed] = useState(false);
   const [editingMed, setEditingMed] = useState<Medicine | null>(null);
+  const editMedModalRef = useModalA11y(!!editingMed, () => setEditingMed(null));
   const [editForm, setEditForm] = useState<EditForm>({
     name: "", caption: "", stockQuantity: "", imageUrl: "", imageFile: null, imagePreview: "", isActive: true,
   });
@@ -671,6 +673,7 @@ export default function AdminMedicinePage() {
       {editingMed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div
+            ref={editMedModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-medicine-title"

@@ -11,6 +11,27 @@ const orderSchema = z.object({
   selectedAddOns: z.array(addOnSchema).max(10).default([]),
 });
 
+type AddOn = { name: string; price: number };
+
+// Cross-check client-selected add-ons against the listing's authoritative list.
+// Returns the listing's own {name, price} entries so a tampered client price is
+// never persisted; rejects any selection that isn't offered on the listing.
+function validateAddOns(
+  selected: AddOn[],
+  listingAddOns: unknown,
+): { value: AddOn[] } | { error: string } {
+  const available: AddOn[] = Array.isArray(listingAddOns)
+    ? (listingAddOns as AddOn[]).filter((a) => a && typeof a.name === "string" && typeof a.price === "number")
+    : [];
+  const value: AddOn[] = [];
+  for (const sel of selected) {
+    const match = available.find((a) => a.name === sel.name);
+    if (!match) return { error: `Unknown add-on: ${sel.name}` };
+    value.push({ name: match.name, price: match.price });
+  }
+  return { value };
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,17 +61,30 @@ export async function POST(
   });
   if (existing) return NextResponse.json({ error: "Already ordered" }, { status: 409 });
 
-  const order = await prisma.foodOrder.create({
-    data: {
-      listingId: id,
-      userId: authUser.id,
-      quantity: parsed.data.quantity,
-      note: parsed.data.note ?? null,
-      selectedAddOns: parsed.data.selectedAddOns,
-    },
-  });
+  // Don't trust client-supplied add-on prices: each selection must match one on
+  // the listing, and we persist the listing's authoritative name + price.
+  const addOns = validateAddOns(parsed.data.selectedAddOns, listing.addOns);
+  if ("error" in addOns) return NextResponse.json({ error: addOns.error }, { status: 400 });
 
-  return NextResponse.json({ data: order }, { status: 201 });
+  try {
+    const order = await prisma.foodOrder.create({
+      data: {
+        listingId: id,
+        userId: authUser.id,
+        quantity: parsed.data.quantity,
+        note: parsed.data.note ?? null,
+        selectedAddOns: addOns.value,
+      },
+    });
+    return NextResponse.json({ data: order }, { status: 201 });
+  } catch (err) {
+    // Concurrent double-submit can race past the existing-order check and hit
+    // the listingId_userId unique constraint — that's a 409, not a 500.
+    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
+      return NextResponse.json({ error: "Already ordered" }, { status: 409 });
+    }
+    throw err;
+  }
 }
 
 export async function PATCH(
@@ -70,19 +104,22 @@ export async function PATCH(
 
   const order = await prisma.foodOrder.findUnique({
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
-    include: { listing: { select: { cutoffAt: true, isActive: true } } },
+    include: { listing: { select: { cutoffAt: true, isActive: true, addOns: true } } },
   });
   if (!order) return NextResponse.json({ error: "No order found" }, { status: 404 });
   if (!order.listing.isActive || order.listing.cutoffAt <= new Date()) {
     return NextResponse.json({ error: "Cannot edit after cutoff" }, { status: 410 });
   }
 
+  const addOns = validateAddOns(parsed.data.selectedAddOns, order.listing.addOns);
+  if ("error" in addOns) return NextResponse.json({ error: addOns.error }, { status: 400 });
+
   const updated = await prisma.foodOrder.update({
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
     data: {
       quantity: parsed.data.quantity,
       note: parsed.data.note ?? null,
-      selectedAddOns: parsed.data.selectedAddOns,
+      selectedAddOns: addOns.value,
     },
   });
 

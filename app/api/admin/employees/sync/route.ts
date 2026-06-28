@@ -67,6 +67,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // Cap upload size before buffering/parsing to avoid a memory-pressure DoS
+    // from an oversized workbook (matches the documents/attendance routes).
+    const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 413 });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Dynamic import avoids ESM/CJS bundling issues with xlsx

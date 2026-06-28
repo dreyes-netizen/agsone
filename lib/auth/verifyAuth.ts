@@ -33,7 +33,11 @@ export async function verifyAuth(req: NextRequest): Promise<AuthUser | null> {
     });
 
     return user as AuthUser | null;
-  } catch {
+  } catch (err) {
+    // Returning null (→ 401) is intentional and the client retry logic depends
+    // on it, but log so a Firebase/DB outage during verification is visible
+    // rather than silently surfacing as a wave of 401s.
+    console.error("[verifyAuth]", err);
     return null;
   }
 }

@@ -31,10 +31,16 @@ export async function POST(
 
   const winnerId = isHost ? session.guestId : session.hostId;
 
-  await prisma.gameSession.update({
-    where: { id },
+  // Atomically flip ACTIVE -> FINISHED. If count === 0 another request (a
+  // finishing move, or a concurrent forfeit) already ended the game, so we
+  // must NOT run the payout again — otherwise the pot is awarded twice.
+  const finishRes = await prisma.gameSession.updateMany({
+    where: { id, status: "ACTIVE" },
     data: { status: "FINISHED", winnerId, currentTurn: null },
   });
+  if (finishRes.count === 0) {
+    return NextResponse.json({ error: "Game not active" }, { status: 409 });
+  }
 
   if (session.pointsWager > 0) {
     const prize = session.pointsWager * 2;

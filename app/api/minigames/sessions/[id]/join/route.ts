@@ -21,6 +21,7 @@ export async function POST(
   if (session.status !== "WAITING") return NextResponse.json({ error: "Game not open" }, { status: 409 });
   if (session.hostId === authUser.id) return NextResponse.json({ error: "Cannot join your own game" }, { status: 403 });
 
+  // Validate balances up front (read-only) so we can reject before touching the seat.
   if (session.pointsWager > 0) {
     const guest = await prisma.user.findUnique({ where: { id: authUser.id }, select: { pointsBalance: true } });
     if (!guest || guest.pointsBalance < session.pointsWager) {
@@ -29,13 +30,6 @@ export async function POST(
     if (session.host.pointsBalance < session.pointsWager) {
       return NextResponse.json({ error: "Host no longer has enough points" }, { status: 400 });
     }
-
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: session.hostId }, data: { pointsBalance: { decrement: session.pointsWager } } }),
-      prisma.user.update({ where: { id: authUser.id }, data: { pointsBalance: { decrement: session.pointsWager } } }),
-      prisma.pointTransaction.create({ data: { toUserId: session.hostId, fromUserId: session.hostId, amount: -session.pointsWager, type: "GAME_SPEND", createdById: session.hostId } }),
-      prisma.pointTransaction.create({ data: { toUserId: authUser.id, fromUserId: authUser.id, amount: -session.pointsWager, type: "GAME_SPEND", createdById: authUser.id } }),
-    ]);
   }
 
   const joinResult = await prisma.gameSession.updateMany({
@@ -44,6 +38,19 @@ export async function POST(
   });
   if (joinResult.count === 0) {
     return NextResponse.json({ error: 'Game no longer available' }, { status: 409 });
+  }
+
+  // Debit the wagers only AFTER we've atomically secured the seat. Doing it
+  // before the guarded join meant a player who lost a race for the same game
+  // (count === 0 above) would still have had their points — and the host's —
+  // decremented for a game they never actually joined.
+  if (session.pointsWager > 0) {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: session.hostId }, data: { pointsBalance: { decrement: session.pointsWager } } }),
+      prisma.user.update({ where: { id: authUser.id }, data: { pointsBalance: { decrement: session.pointsWager } } }),
+      prisma.pointTransaction.create({ data: { toUserId: session.hostId, fromUserId: session.hostId, amount: -session.pointsWager, type: "GAME_SPEND", createdById: session.hostId } }),
+      prisma.pointTransaction.create({ data: { toUserId: authUser.id, fromUserId: authUser.id, amount: -session.pointsWager, type: "GAME_SPEND", createdById: authUser.id } }),
+    ]);
   }
 
   const updated = await prisma.gameSession.findUnique({

@@ -116,30 +116,52 @@ export async function POST(
   const winnerId = rawWinnerId === "draw" ? null : rawWinnerId;
   const isDraw = rawWinnerId === "draw";
 
-  const updated = await prisma.gameSession.update({
-    where: { id },
-    data: {
-      state: JSON.parse(JSON.stringify(newState)),
-      currentTurn: nextTurn,
-      status: isFinished ? "FINISHED" : "ACTIVE",
-      winnerId: winnerId ?? undefined,
-    },
-    select: {
-      id: true,
-      gameType: true,
-      status: true,
-      state: true,
-      currentTurn: true,
-      winnerId: true,
-      pointsWager: true,
-      createdAt: true,
-      updatedAt: true,
-      host: { select: { id: true, displayName: true, avatarUrl: true } },
-      guest: { select: { id: true, displayName: true, avatarUrl: true } },
-    },
-  });
+  const selectFields = {
+    id: true,
+    gameType: true,
+    status: true,
+    state: true,
+    currentTurn: true,
+    winnerId: true,
+    pointsWager: true,
+    createdAt: true,
+    updatedAt: true,
+    host: { select: { id: true, displayName: true, avatarUrl: true } },
+    guest: { select: { id: true, displayName: true, avatarUrl: true } },
+  } as const;
 
-  if (isFinished && session.pointsWager > 0 && session.guestId) {
+  // `didFinish` is true only for the request that actually performs the
+  // ACTIVE -> FINISHED transition. Guarding the wager payout on it (rather than
+  // the locally-computed isFinished) makes the finish atomic and idempotent, so
+  // two racing finishing-moves — or a move racing a forfeit — can't pay the pot
+  // out twice. updateMany returns a count; only count === 1 performed the flip.
+  let didFinish = false;
+  let updated;
+  if (isFinished) {
+    const res = await prisma.gameSession.updateMany({
+      where: { id, status: "ACTIVE" },
+      data: {
+        state: JSON.parse(JSON.stringify(newState)),
+        currentTurn: null,
+        status: "FINISHED",
+        winnerId: winnerId ?? undefined,
+      },
+    });
+    didFinish = res.count === 1;
+    updated = await prisma.gameSession.findUnique({ where: { id }, select: selectFields });
+  } else {
+    updated = await prisma.gameSession.update({
+      where: { id },
+      data: {
+        state: JSON.parse(JSON.stringify(newState)),
+        currentTurn: nextTurn,
+      },
+      select: selectFields,
+    });
+  }
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (didFinish && session.pointsWager > 0 && session.guestId) {
     const prize = session.pointsWager * 2;
     if (isDraw) {
       await prisma.$transaction([
@@ -157,7 +179,7 @@ export async function POST(
     }
   }
 
-  if (isFinished && session.guestId) {
+  if (didFinish && session.guestId) {
     const opponentId = isHost ? session.guestId : session.hostId;
     const gameLabel: Record<string, string> = {
       TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",

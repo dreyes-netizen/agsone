@@ -88,7 +88,8 @@ function MessageBubble({ msg, isStreaming }: { msg: Message; isStreaming: boolea
 }
 
 export function AllyWidget() {
-  const { streamFetch } = useApiClient();
+  const { apiFetch, streamFetch } = useApiClient();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -97,6 +98,17 @@ export function AllyWidget() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Check the global on/off switch once on mount. Until we know, render
+  // nothing so a disabled Ally never flashes on screen.
+  useEffect(() => {
+    apiFetch<{ data: { allyEnabled: boolean } }>("/api/settings")
+      .then((res) => setEnabled(res.data.allyEnabled))
+      .catch(() => setEnabled(false));
+    // apiFetch is recreated each render; run this once on mount like the rest
+    // of the codebase's data-loading effects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -188,6 +200,10 @@ export function AllyWidget() {
       send(input);
     }
   }
+
+  // Hidden entirely when an admin has turned Ally off (or while we don't yet
+  // know the flag's value).
+  if (!enabled) return null;
 
   return (
     <>

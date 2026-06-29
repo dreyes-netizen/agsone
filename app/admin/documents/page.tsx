@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useModalA11y } from "@/lib/hooks/useModalA11y";
-import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, CheckCircle, AlertCircle, Bot } from "lucide-react";
 
 const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
 
@@ -40,6 +40,8 @@ export default function DocumentsPage() {
   const [promptCopied, setPromptCopied] = useState(false);
   const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
+  const [allyEnabled, setAllyEnabled] = useState<boolean | null>(null);
+  const [togglingAlly, setTogglingAlly] = useState(false);
   const uploadModalRef = useModalA11y(modalOpen, () => setModalOpen(false));
 
   function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
@@ -61,6 +63,31 @@ export default function DocumentsPage() {
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    apiFetch<{ data: { allyEnabled: boolean } }>("/api/admin/settings")
+      .then((res) => setAllyEnabled(res.data.allyEnabled))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleToggleAlly() {
+    if (allyEnabled === null || togglingAlly) return;
+    const next = !allyEnabled;
+    setTogglingAlly(true);
+    try {
+      await apiFetch("/api/admin/settings", {
+        method: "PATCH",
+        body: JSON.stringify({ allyEnabled: next }),
+      });
+      setAllyEnabled(next);
+      showToast("success", next ? "Ally is now ON for everyone." : "Ally is now OFF for everyone.");
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Failed to update Ally.");
+    } finally {
+      setTogglingAlly(false);
+    }
+  }
 
   async function handleUpload() {
     if (!file || !docName.trim()) return;
@@ -195,6 +222,42 @@ export default function DocumentsPage() {
             Upload Document
           </button>
         </div>
+      </div>
+
+      {/* Ally global on/off switch */}
+      <div className="mb-6 flex items-center justify-between gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#111827] flex items-center justify-center shrink-0 mt-0.5">
+            <Bot className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">Ally HR Assistant</p>
+            <p className="text-gray-500 text-xs mt-0.5 max-w-md">
+              {allyEnabled === null
+                ? "Checking status…"
+                : allyEnabled
+                ? "Ally is available to all employees. Turn off to hide the chatbot for everyone."
+                : "Ally is turned off. The chatbot is hidden for all employees."}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={allyEnabled === true}
+          aria-label="Toggle Ally HR Assistant"
+          disabled={allyEnabled === null || togglingAlly}
+          onClick={handleToggleAlly}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+            allyEnabled ? "bg-emerald-500" : "bg-gray-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+              allyEnabled ? "translate-x-[22px]" : "translate-x-0.5"
+            }`}
+          />
+        </button>
       </div>
 
       {reindexResult && (

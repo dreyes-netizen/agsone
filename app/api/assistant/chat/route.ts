@@ -4,6 +4,7 @@ import { generateChatReplyStream } from "@/lib/groq/client";
 import { searchRelevantChunks } from "@/lib/rag/search";
 import { isJailbreakAttempt } from "@/lib/guardrails/jailbreak";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { getAllyEnabled } from "@/lib/settings/appSettings";
 import { z } from "zod";
 
 const MAX_HISTORY_TURNS = 10;
@@ -30,6 +31,15 @@ function sseChunk(data: object) {
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Respect the global on/off switch — disabling Ally must stop the AI, not
+  // just hide the widget (a user could still hit this endpoint directly).
+  if (!(await getAllyEnabled())) {
+    return NextResponse.json(
+      { error: "Ally is currently unavailable." },
+      { status: 403 },
+    );
+  }
 
   const body = await req.json();
   const parsed = bodySchema.safeParse(body);

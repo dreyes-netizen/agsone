@@ -170,6 +170,7 @@ model User {
   milestoneAwards      MilestoneAward[]
   milestoneConfigs     MilestoneConfig[]
   policyDocuments      PolicyDocument[]
+  appSettings          AppSetting[]
   chatSessions         ChatSession[]
   medicineItems        MedicineItem[]      @relation("MedicineItemsCreated")
   medicineRequests     MedicineRequest[]   @relation("MedicineRequestsMade")
@@ -535,6 +536,15 @@ model ChatMessage {
   createdAt DateTime @default(now())
 
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model AppSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  updatedBy User? @relation(fields: [updatedById], references: [id])
 }
 
 model PolicyDocument {

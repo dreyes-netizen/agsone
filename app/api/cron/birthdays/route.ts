@@ -78,6 +78,18 @@ export async function GET(req: NextRequest) {
     (u) => u.birthday!.getMonth() === todayMonth && u.birthday!.getDate() === todayDay
   );
 
+  // Birthday posts must come from an HR/system account, not the celebrant themselves —
+  // otherwise the feed reads as the employee wishing themselves a happy birthday.
+  const systemAuthorId =
+    birthdayConfig?.updatedById ??
+    (
+      await prisma.user.findFirst({
+        where: { role: { in: ["HR_ADMIN", "SUPER_ADMIN"] }, isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })
+    )?.id;
+
   let processed = 0;
 
   for (const user of birthdayUsers) {
@@ -117,7 +129,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.socialPost.create({
         data: {
-          authorId: user.id,
+          authorId: systemAuthorId ?? user.id,
           type: "CELEBRATION",
           content: `🎂 Happy Birthday, ${user.displayName}!${awardPoints ? ` They received ${awardPoints} birthday points today!` : " Wishing them a wonderful day!"}`,
         },

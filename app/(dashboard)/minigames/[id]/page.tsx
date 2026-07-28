@@ -8,6 +8,7 @@ import { useConfetti } from "@/lib/hooks/useConfetti";
 import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
 import { GameResultOverlay } from "@/components/minigames/GameResultOverlay";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
 import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
 
@@ -1300,7 +1301,6 @@ export default function MinigameSessionPage() {
   }
   const [h2h, setH2h] = useState<{ wins: number; losses: number; draws: number } | null>(null);
   const prevStatus = useRef<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -1315,20 +1315,17 @@ export default function MinigameSessionPage() {
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
 
-  // Real-time: re-fetch the instant the opponent moves/joins/forfeits.
+  // Real-time: re-fetch the instant the opponent moves/joins/forfeits. Like
+  // every other channel, suspended after the tab has been hidden a while and
+  // resynced on return — see lib/hooks/useRealtimeChannel.ts. A player who's
+  // been tabbed out for 2+ minutes isn't actively playing, so the game
+  // channel isn't exempted via keepAliveWhenHidden.
   useRealtimeChannel(session ? `game:${id}` : null, fetchSession);
 
   // Slow fallback poll — only catches the rare dropped Realtime message.
-  // Stops once the game is over.
-  useEffect(() => {
-    if (!session) return;
-    if (session.status === "FINISHED" || session.status === "CANCELLED") {
-      if (pollRef.current) clearInterval(pollRef.current);
-      return;
-    }
-    pollRef.current = setInterval(fetchSession, 10_000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [session?.status, fetchSession]);
+  // Stops once the game is over, and paused while the tab is hidden.
+  const gameInProgress = !!session && session.status !== "FINISHED" && session.status !== "CANCELLED";
+  useVisibleInterval(fetchSession, 10_000, gameInProgress);
 
   useEffect(() => {
     if (!session || !dbUser) return;

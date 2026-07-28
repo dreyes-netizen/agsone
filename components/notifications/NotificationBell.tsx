@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 type Notification = {
   id: string;
@@ -46,12 +47,14 @@ export function NotificationBell() {
   useEffect(() => {
     if (authLoading || !user) return;
     load();
-    // Slow fallback poll — Realtime delivers new notifications instantly; this
-    // only backstops a rare dropped message.
-    const interval = setInterval(load, 60_000);
-    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
+
+  // Slow fallback poll — Realtime delivers new notifications instantly; this
+  // only backstops a rare dropped message. Paused while the tab is hidden
+  // (this hook mounts on every dashboard page, so an idle background tab
+  // would otherwise poll /api/notifications for no one).
+  useVisibleInterval(load, 60_000, !authLoading && !!user);
 
   // Real-time: refresh the bell the moment a notification (invite, win, etc.)
   // is created for this user.

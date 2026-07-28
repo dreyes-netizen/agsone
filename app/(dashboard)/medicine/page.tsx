@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Pill, Search, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { ImageLightbox } from "@/components/ImageLightbox";
 
 type Medicine = {
   id: string;
@@ -37,6 +38,7 @@ export default function MedicinePage() {
   const [requesting, setRequesting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"catalog" | "requests">("catalog");
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   // Track images that failed to load so we render the placeholder via React
@@ -122,6 +124,8 @@ export default function MedicinePage() {
             key={tab}
             role="tab"
             aria-selected={activeTab === tab}
+            aria-controls={`panel-${tab}`}
+            tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => { setActiveTab(tab); if (tab !== "catalog") setSearchQuery(""); }}
             className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${
               activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-800"
@@ -139,7 +143,8 @@ export default function MedicinePage() {
 
       {/* Catalog tab */}
       {activeTab === "catalog" && (
-        loading ? (
+        <div id="panel-catalog" role="tabpanel">
+        {loading ? (
           <div role="status" aria-live="polite" className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
             <Loader2 className="w-6 h-6 animate-spin text-gray-500" aria-hidden="true" />
             <span className="text-sm">Loading medicines…</span>
@@ -170,7 +175,7 @@ export default function MedicinePage() {
                 <p className="text-gray-500 text-sm mt-1">Try a different name.</p>
               </div>
             ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {visibleMedicines.map((med) => {
               const isPending = pendingIds.has(med.id);
               const outOfStock = med.stockQuantity <= 0;
@@ -181,13 +186,11 @@ export default function MedicinePage() {
                   key={med.id}
                   role="group"
                   aria-label={med.name}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
+                  onClick={() => setSelectedMed(med)}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
                 >
-                  <button
-                    type="button"
-                    aria-label={`View details for ${med.name}`}
-                    onClick={() => setSelectedMed(med)}
-                    className="aspect-square bg-gray-50 overflow-hidden w-full block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900"
+                  <div
+                    className="aspect-square bg-gray-50 overflow-hidden w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900"
                   >
                     {med.imageUrl && !failedImages.has(med.id) ? (
                       <img
@@ -201,7 +204,7 @@ export default function MedicinePage() {
                         <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
                       </div>
                     )}
-                  </button>
+                  </div>
                   <div className="p-3 flex flex-col gap-2 flex-1">
                     <div>
                       <p className="font-semibold text-gray-900 text-sm">{med.name}</p>
@@ -219,7 +222,7 @@ export default function MedicinePage() {
                           ? "bg-amber-50 text-amber-600 cursor-not-allowed"
                           : outOfStock
                           ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                          : "bg-[#111827] text-white hover:bg-gray-800"
+                          : "bg-command-black text-white hover:bg-gray-800"
                       }`}
                     >
                       {isRequesting && <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />}
@@ -232,12 +235,14 @@ export default function MedicinePage() {
           </div>
             )}
           </div>
-        )
+        )}
+        </div>
       )}
 
       {/* My Requests tab */}
       {activeTab === "requests" && (
-        myRequests.length === 0 ? (
+        <div id="panel-requests" role="tabpanel">
+        {myRequests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-gray-100">
             <Pill className="w-10 h-10 text-gray-300 mb-3" aria-hidden="true" />
             <p className="text-gray-700 font-medium">No requests yet</p>
@@ -272,7 +277,8 @@ export default function MedicinePage() {
             </table>
             </div>
           </div>
-        )
+        )}
+        </div>
       )}
 
       {/* Detail modal */}
@@ -293,7 +299,8 @@ export default function MedicinePage() {
                 <img
                   src={selectedMed.imageUrl}
                   alt={selectedMed.name}
-                  className="w-full aspect-square object-cover rounded-t-2xl"
+                  className="w-full aspect-square object-cover rounded-t-2xl cursor-zoom-in"
+                  onClick={() => setLightbox({ images: [selectedMed.imageUrl], index: 0 })}
                   onError={() => setFailedImages((prev) => new Set(prev).add(selectedMed.id))}
                 />
               ) : (
@@ -326,7 +333,7 @@ export default function MedicinePage() {
                     ? "bg-amber-50 text-amber-600 cursor-not-allowed"
                     : selectedMed.stockQuantity <= 0
                     ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-[#111827] text-white hover:bg-gray-800"
+                    : "bg-command-black text-white hover:bg-gray-800"
                 }`}
               >
                 {requesting === selectedMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
@@ -335,6 +342,15 @@ export default function MedicinePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          open={!!lightbox}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );

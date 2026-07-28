@@ -393,8 +393,8 @@ export default function FoodPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Food Board</h1>
-          <p className="text-zinc-500 text-sm mt-1">Order food from your colleagues</p>
+          <h1 className="text-2xl font-bold text-gray-900">Food Board</h1>
+          <p className="text-gray-500 text-sm mt-1">Order food from your colleagues</p>
         </div>
         <button
           onClick={() => {
@@ -405,7 +405,7 @@ export default function FoodPage() {
               setShowForm(true);
             }
           }}
-          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
+           className="flex items-center gap-2 bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
         >
           <UtensilsCrossed className="w-4 h-4" aria-hidden="true" />
           Sell Food
@@ -431,61 +431,61 @@ export default function FoodPage() {
 
       {/* Create / edit form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-4">
-          <h2 className="font-semibold text-zinc-900">{editingId ? "Edit Listing" : "New Listing"}</h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+          <h2 className="font-semibold text-gray-900">{editingId ? "Edit Listing" : "New Listing"}</h2>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-zinc-600 mb-1">Title</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
                 <input
                   required value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Homemade Lumpia"
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
               <div className="sm:col-span-2">
                 <div className="flex justify-between items-baseline mb-1">
-                  <label className="block text-xs font-medium text-zinc-600">Description <span className="text-zinc-500 font-normal">(optional)</span></label>
-                  <span className={`text-xs ${newDesc.length > 1800 ? "text-red-500" : "text-zinc-500"}`}>{newDesc.length}/2000</span>
+                  <label className="block text-xs font-medium text-gray-600">Description <span className="text-gray-500 font-normal">(optional)</span></label>
+                  <span className={`text-xs ${newDesc.length > 1800 ? "text-red-500" : "text-gray-500"}`}>{newDesc.length}/2000</span>
                 </div>
                 <textarea
                   value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={3}
                   maxLength={2000}
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-600 mb-1">Price (₱)</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Price (₱)</label>
                 <input
                   required type="number" min="1" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)}
                   placeholder="120.00"
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-600 mb-1">Order cutoff</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Order cutoff</label>
                 <input
                   required type="datetime-local" value={newCutoff} onChange={(e) => setNewCutoff(e.target.value)}
                   min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-600 mb-1">Delivery date & time <span className="text-zinc-500 font-normal">(optional)</span></label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Delivery date & time <span className="text-gray-500 font-normal">(optional)</span></label>
                 <input
                   type="datetime-local" value={newDeliveryDate} onChange={(e) => setNewDeliveryDate(e.target.value)}
                   min={new Date().toISOString().slice(0, 16)}
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                 />
               </div>
             </div>
 
             {/* Image picker */}
             <div>
-              <label className="block text-xs font-medium text-zinc-600 mb-1">Photos <span className="text-zinc-500 font-normal">(up to 3, optional)</span></label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Photos <span className="text-gray-500 font-normal">(up to 3, optional)</span></label>
               <div className="flex items-center gap-2 flex-wrap">
                 {existingImageUrls.map((src, i) => (
-                  <div key={src} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
+                  <div key={src} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" className="w-full h-full object-cover" />
                     <button type="button" aria-label="Remove image" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 text-white transition-colors">
@@ -494,7 +494,7 @@ export default function FoodPage() {
                   </div>
                 ))}
                 {imagePreviews.map((src, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200">
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt="" className="w-full h-full object-cover" />
                     <button type="button" aria-label="Remove image" onClick={() => removeNewImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 text-white transition-colors">
@@ -503,9 +503,9 @@ export default function FoodPage() {
                   </div>
                 ))}
                 {totalImages < 3 && (
-                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-zinc-300 flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 transition-colors">
-                    <ImagePlus className="w-5 h-5 text-zinc-500" />
-                    <span className="text-[10px] text-zinc-500 mt-0.5">Add</span>
+                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 transition-colors">
+                    <ImagePlus className="w-5 h-5 text-gray-500" />
+                    <span className="text-[10px] text-gray-500 mt-0.5">Add</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleImagePick} multiple />
                   </label>
                 )}
@@ -514,15 +514,15 @@ export default function FoodPage() {
 
             {/* Add-ons */}
             <div>
-              <label className="block text-xs font-medium text-zinc-600 mb-1">
-                Add-ons / Options <span className="text-zinc-500 font-normal">(optional — e.g. Extra Rice ₱15, Spicy ₱0)</span>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Add-ons / Options <span className="text-gray-500 font-normal">(optional — e.g. Extra Rice ₱15, Spicy ₱0)</span>
               </label>
               {newAddOns.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {newAddOns.map((a, i) => (
-                    <span key={i} className="flex items-center gap-1.5 bg-zinc-100 text-zinc-700 text-xs px-2.5 py-1 rounded-full">
+                    <span key={i} className="flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">
                       {a.name}{a.price > 0 ? ` — ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " — Free"}
-                      <button type="button" onClick={() => removeAddOn(i)} className="text-zinc-500 hover:text-zinc-700">
+                      <button type="button" onClick={() => removeAddOn(i)} className="text-gray-500 hover:text-gray-700">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -535,17 +535,17 @@ export default function FoodPage() {
                     value={addOnName} onChange={(e) => setAddOnName(e.target.value)}
                     placeholder="Name (e.g. Extra Rice)"
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAddOn())}
-                    className="flex-1 border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                   />
                   <input
                     value={addOnPrice} onChange={(e) => setAddOnPrice(e.target.value)}
                     type="number" min="0" step="0.01" placeholder="₱ (0 = free)"
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAddOn())}
-                    className="w-20 border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
+                    className="w-20 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
                   />
                   <button
                     type="button" onClick={addAddOn}
-                    className="flex items-center gap-1 text-sm font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />Add
                   </button>
@@ -556,12 +556,12 @@ export default function FoodPage() {
             <div className="flex gap-2">
               <button
                 type="submit" disabled={creating}
-                className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                 className="flex items-center gap-2 bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
                 {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {creating ? (editingId ? "Saving…" : "Creating…") : editingId ? "Save Changes" : "Post Listing"}
               </button>
-              <button type="button" onClick={resetForm} className="text-sm text-zinc-500 hover:text-zinc-700 px-3 py-2">
+              <button type="button" onClick={resetForm} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
                 Cancel
               </button>
             </div>
@@ -576,11 +576,13 @@ export default function FoodPage() {
             key={t}
             role="tab"
             aria-selected={tab === t}
+            aria-controls={`panel-${t}`}
+            tabIndex={tab === t ? 0 : -1}
             onClick={() => setTab(t)}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
               tab === t
-                ? "bg-[#111827] text-white border-[#111827]"
-                : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                ? "bg-command-black text-white border-command-black"
+                : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
             }`}
           >
             {label}
@@ -589,24 +591,25 @@ export default function FoodPage() {
       </div>
 
       {/* Listings */}
+      <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={tab}>
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-zinc-200 overflow-hidden animate-pulse">
-              <div className="h-36 bg-zinc-100" />
+            <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
+              <div className="h-36 bg-gray-100" />
               <div className="p-4 space-y-2">
-                <div className="h-4 bg-zinc-100 rounded w-2/3" />
-                <div className="h-3 bg-zinc-100 rounded w-full" />
-                <div className="h-8 bg-zinc-100 rounded-lg w-full mt-3" />
+                <div className="h-4 bg-gray-100 rounded w-2/3" />
+                <div className="h-3 bg-gray-100 rounded w-full" />
+                <div className="h-8 bg-gray-100 rounded-lg w-full mt-3" />
               </div>
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-zinc-200 text-center">
-          <UtensilsCrossed className="w-10 h-10 text-zinc-500 mb-4" aria-hidden="true" />
-          <p className="text-zinc-600 font-medium">Nothing here</p>
-          <p className="text-zinc-500 text-sm mt-1">
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-200 text-center">
+          <UtensilsCrossed className="w-10 h-10 text-gray-500 mb-4" aria-hidden="true" />
+          <p className="text-gray-600 font-medium">Nothing here</p>
+          <p className="text-gray-500 text-sm mt-1">
             {tab === "AVAILABLE" ? "No food listings right now — be the first to post!" : "Nothing to show for this tab."}
           </p>
         </div>
@@ -620,7 +623,11 @@ export default function FoodPage() {
             const orderTotal = (parseFloat(listing.price) + addOnsTotal) * qty;
 
             return (
-              <div key={listing.id} className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow">
+              <div
+                key={listing.id}
+                onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}
+                className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow cursor-pointer"
+              >
 
                 {/* Mobile: image left + content right | Desktop: image top + content below */}
                 <div className="flex flex-row items-center sm:flex-col sm:items-stretch">
@@ -633,15 +640,13 @@ export default function FoodPage() {
                     return (
                       <div
                         className="relative group shrink-0 w-[120px] h-[120px] sm:w-full sm:h-auto"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={listing.imageUrls[idx]}
                           alt={listing.title}
                           loading="lazy"
-                          className="w-full h-full object-contain bg-white cursor-zoom-in sm:aspect-square"
-                          onClick={() => setLightbox({ images: listing.imageUrls, index: idx })}
+                          className="w-full h-full object-contain bg-white sm:aspect-square"
                         />
                         {/* Carousel — desktop only */}
                         {total > 1 && (
@@ -673,12 +678,18 @@ export default function FoodPage() {
                             </div>
                           </div>
                         )}
+                        {/* Mobile image counter */}
+                        {total > 1 && (
+                          <span className="sm:hidden absolute bottom-1 right-1 bg-black/50 text-white text-[9px] font-medium px-1 py-px rounded">
+                            {idx + 1}/{total}
+                          </span>
+                        )}
                       </div>
                     );
                   })() : (
                     // Mobile: thin left strip | Desktop: square gradient placeholder
                     <>
-                      <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:hidden ${closed ? "bg-zinc-300" : "bg-emerald-500"}`} />
+                      <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:hidden ${closed ? "bg-gray-300" : "bg-emerald-500"}`} />
                       <div className={`hidden sm:flex sm:w-full sm:aspect-square sm:items-center sm:justify-center sm:bg-gradient-to-br ${closed ? "from-zinc-200 to-zinc-300" : "from-emerald-400 to-teal-500"}`}>
                         <UtensilsCrossed className="w-12 h-12 text-white/70" aria-hidden="true" />
                       </div>
@@ -703,9 +714,9 @@ export default function FoodPage() {
                             {listing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
                           </div>
                         )}
-                        <span className="text-xs text-zinc-500 truncate">{listing.createdBy.displayName}</span>
+                        <span className="text-xs text-gray-500 truncate">{listing.createdBy.displayName}</span>
                       </button>
-                      <span className="hidden sm:inline shrink-0 text-xs text-zinc-500">{listing._count.orders} orders</span>
+                      <span className="hidden sm:inline shrink-0 text-xs text-gray-500">{listing._count.orders} orders</span>
                     </div>
 
                     {/* Title — click to open modal */}
@@ -715,10 +726,10 @@ export default function FoodPage() {
                       onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}
                       className="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 rounded"
                     >
-                      <h3 className="font-bold text-zinc-900 leading-snug hover:text-emerald-700 transition-colors line-clamp-2 text-sm sm:text-base">{listing.title}</h3>
+                      <h3 className="font-bold text-gray-900 leading-snug hover:text-emerald-700 transition-colors line-clamp-2 text-sm sm:text-base">{listing.title}</h3>
                       {listing.description && (
                         <div className="hidden sm:block">
-                          <p className="text-sm text-zinc-500 mt-0.5 line-clamp-2">{listing.description}</p>
+                          <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{listing.description}</p>
                         </div>
                       )}
                     </button>
@@ -726,7 +737,7 @@ export default function FoodPage() {
                     {/* Price + cutoff */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-base sm:text-lg font-bold text-emerald-600 shrink-0">{formatPrice(listing.price)}</span>
-                      <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-zinc-500" : "text-amber-600"}`}>
+                      <span className={`flex items-center gap-1 text-xs shrink-0 ${closed ? "text-gray-500" : "text-amber-600"}`}>
                         <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                         {closed ? "Closed" : `By ${formatCutoff(listing.cutoffAt)}`}
                       </span>
@@ -752,9 +763,9 @@ export default function FoodPage() {
                     )}
 
                   {/* Action area */}
-                  <div className="mt-auto pt-2 sm:pt-3 border-t border-zinc-100 space-y-2">
+                  <div className="mt-auto pt-2 sm:pt-3 border-t border-gray-100 space-y-2">
                     {closed && !isMine && (
-                      <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg w-full block text-center">
                         Orders closed
                       </span>
                     )}
@@ -784,15 +795,15 @@ export default function FoodPage() {
                         <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 space-y-2">
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1 flex-1 min-w-0">
-                              <p className="text-xs font-bold text-zinc-700">Your Order</p>
-                              <p className="text-xs text-zinc-600">×{oQty} {listing.title} <span className="text-zinc-500">@ {formatPrice(listing.price)} each</span></p>
-                              <p className="text-[11px] text-zinc-500">
+                              <p className="text-xs font-bold text-gray-700">Your Order</p>
+                              <p className="text-xs text-gray-600">×{oQty} {listing.title} <span className="text-gray-500">@ {formatPrice(listing.price)} each</span></p>
+                              <p className="text-[11px] text-gray-500">
                                 Ordered {new Date(listing.myOrder.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                               </p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-base font-bold text-emerald-700">₱{total.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-500">total</p>
+                              <p className="text-[10px] text-gray-500">total</p>
                             </div>
                           </div>
                           {!closed && (
@@ -803,9 +814,9 @@ export default function FoodPage() {
                               >
                                 Edit order
                               </button>
-                              <span className="text-zinc-200">|</span>
+                              <span className="text-gray-200">|</span>
                               <button
-                                onClick={() => handleCancel(listing)}
+                                onClick={(e) => { e.stopPropagation(); handleCancel(listing); }}
                                 className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
                               >
                                 Cancel order
@@ -820,24 +831,24 @@ export default function FoodPage() {
                     {isMine && (
                       <div className="space-y-2">
                         <button
-                          onClick={() => toggleSellerOrders(listing)}
+                          onClick={(e) => { e.stopPropagation(); toggleSellerOrders(listing); }}
                           aria-expanded={isExpanded}
                           aria-label={`${isExpanded ? "Hide" : "View"} orders for ${listing.title}`}
-                          className="w-full flex items-center justify-between text-sm font-medium text-zinc-700 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
+                           className="w-full flex items-center justify-between text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
                         >
                           <span>View Orders ({listing._count.orders})</span>
                           {isExpanded ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
                         </button>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleEdit(listing)}
-                            className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-zinc-700 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors"
+                            onClick={(e) => { e.stopPropagation(); handleEdit(listing); }}
+                            className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors"
                           >
                             <Pencil className="w-3.5 h-3.5" />Edit
                           </button>
                           {!closed && (
                             <button
-                              onClick={() => handleClose(listing)}
+                              onClick={(e) => { e.stopPropagation(); handleClose(listing); }}
                               className="flex-1 text-sm text-red-500 hover:text-red-600 font-medium border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
                             >
                               Close
@@ -846,15 +857,15 @@ export default function FoodPage() {
                         </div>
                         {closed && (
                           <button
-                            onClick={() => handleSellAgain(listing)}
+                            onClick={(e) => { e.stopPropagation(); handleSellAgain(listing); }}
                             className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600"
                           >
                             <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" /> Sell Again
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(listing)}
-                          className="w-full text-xs text-zinc-500 hover:text-red-500 transition-colors text-center py-0.5"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(listing); }}
+                          className="w-full text-xs text-gray-500 hover:text-red-500 transition-colors text-center py-0.5"
                         >
                           Delete listing
                         </button>
@@ -866,11 +877,11 @@ export default function FoodPage() {
 
                 {/* Seller order list (expanded) — always full width */}
                 {isMine && isExpanded && (
-                  <div className="border-t border-zinc-100 bg-zinc-50">
+                  <div className="border-t border-gray-100 bg-gray-50">
                     {!sellerOrders[listing.id] ? (
-                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-zinc-500" /></div>
+                      <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-gray-500" /></div>
                     ) : sellerOrders[listing.id].length === 0 ? (
-                      <p className="text-xs text-zinc-500 text-center py-4">No orders yet.</p>
+                      <p className="text-xs text-gray-500 text-center py-4">No orders yet.</p>
                     ) : (() => {
                       const orders = sellerOrders[listing.id];
                       const totalQty = orders.reduce((s, o) => s + o.quantity, 0);
@@ -892,28 +903,28 @@ export default function FoodPage() {
                       return (
                         <>
                           {/* Summary bar */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-zinc-200">
-                            <div className="text-center px-3 py-3 border-r border-b sm:border-b-0 border-zinc-200">
-                              <p className="text-base font-black text-zinc-800">{orders.length}</p>
-                              <p className="text-[10px] text-zinc-500">orders</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-gray-200">
+                            <div className="text-center px-3 py-3 border-r border-b sm:border-b-0 border-gray-200">
+                              <p className="text-base font-black text-gray-800">{orders.length}</p>
+                              <p className="text-[10px] text-gray-500">orders</p>
                             </div>
-                            <div className="text-center px-3 py-3 border-b sm:border-b-0 sm:border-r border-zinc-200">
-                              <p className="text-base font-black text-zinc-800">{totalQty}</p>
-                              <p className="text-[10px] text-zinc-500">to prep</p>
+                            <div className="text-center px-3 py-3 border-b sm:border-b-0 sm:border-r border-gray-200">
+                              <p className="text-base font-black text-gray-800">{totalQty}</p>
+                              <p className="text-[10px] text-gray-500">to prep</p>
                             </div>
-                            <div className="text-center px-3 py-3 border-r border-zinc-200">
+                            <div className="text-center px-3 py-3 border-r border-gray-200">
                               <p className="text-base font-black text-emerald-600">₱{collected.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-500">collected</p>
+                              <p className="text-[10px] text-gray-500">collected</p>
                             </div>
                             <div className="text-center px-3 py-3">
                               <p className="text-base font-black text-rose-500">₱{outstanding.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-500">outstanding</p>
+                              <p className="text-[10px] text-gray-500">outstanding</p>
                             </div>
                           </div>
 
                           {/* Add-on breakdown */}
                           {Object.keys(addOnCounts).length > 0 && (
-                            <div className="px-4 py-2 border-b border-zinc-200 flex flex-wrap gap-1.5">
+                            <div className="px-4 py-2 border-b border-gray-200 flex flex-wrap gap-1.5">
                               {Object.entries(addOnCounts).map(([name, count]) => (
                                 <span key={name} className="text-[11px] bg-amber-50 border border-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                                   {name} ×{count}
@@ -934,37 +945,37 @@ export default function FoodPage() {
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <button
                                         type="button"
-                                        onClick={() => router.push(`/employees/${o.user.id}`)}
-                                        className="text-xs font-semibold text-zinc-800 hover:underline hover:text-navy-600 transition-colors"
+                                        onClick={(e) => { e.stopPropagation(); router.push(`/employees/${o.user.id}`); }}
+                                        className="text-xs font-semibold text-gray-800 hover:underline hover:text-navy-600 transition-colors"
                                       >
                                         {o.user.displayName}
                                       </button>
                                       {o.user.department && (
-                                        <span className="text-[10px] bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded-full">{o.user.department.name}</span>
+                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{o.user.department.name}</span>
                                       )}
                                       {isPaid && (
                                         <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">✓ Paid</span>
                                       )}
                                     </div>
-                                    <p className="text-[11px] text-zinc-500 mt-0.5">×{o.quantity} @ {formatPrice(listing.price)} each</p>
+                                    <p className="text-[11px] text-gray-500 mt-0.5">×{o.quantity} @ {formatPrice(listing.price)} each</p>
                                     {(o.selectedAddOns?.length ?? 0) > 0 && (
                                       <p className="text-[11px] text-amber-600 mt-0.5">
                                         {(o.selectedAddOns ?? []).map((a) => `+ ${a.name} (₱${a.price.toFixed(2)})`).join(", ")}
                                       </p>
                                     )}
-                                    {o.note && <p className="text-[11px] text-zinc-500 italic mt-0.5">"{o.note}"</p>}
-                                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                                    {o.note && <p className="text-[11px] text-gray-500 italic mt-0.5">"{o.note}"</p>}
+                                    <p className="text-[10px] text-gray-500 mt-0.5">
                                       {new Date(o.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                                     </p>
                                   </div>
                                   <div className="text-right shrink-0 space-y-1.5">
-                                    <p className={`text-sm font-bold ${isPaid ? "text-emerald-600" : "text-zinc-700"}`}>₱{rowTotal.toFixed(2)}</p>
+                                    <p className={`text-sm font-bold ${isPaid ? "text-emerald-600" : "text-gray-700"}`}>₱{rowTotal.toFixed(2)}</p>
                                     <button
                                       type="button"
-                                      onClick={() => togglePaid(listing.id, o.id, !isPaid)}
+                                      onClick={(e) => { e.stopPropagation(); togglePaid(listing.id, o.id, !isPaid); }}
                                       className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
                                         isPaid
-                                          ? "border-zinc-200 text-zinc-500 hover:text-red-500 hover:border-red-200"
+                                          ? "border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200"
                                           : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                                       }`}
                                     >
@@ -985,6 +996,7 @@ export default function FoodPage() {
           })}
         </div>
       )}
+      </div>
 
       {lightbox && (
         <ImageLightbox
@@ -1015,11 +1027,6 @@ export default function FoodPage() {
               className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Drag handle */}
-              <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
-                <div className="w-10 h-1 bg-zinc-300 rounded-full" />
-              </div>
-
               <button
                 autoFocus
                 aria-label="Close"
@@ -1081,12 +1088,12 @@ export default function FoodPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-emerald-600">{formatPrice(selectedListing.price)}</span>
                     {closed && (
-                      <span className="text-xs font-semibold bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">Closed</span>
+                      <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Closed</span>
                     )}
                   </div>
 
                   {/* Title */}
-                  <h2 id="food-modal-title" className="text-xl font-bold text-zinc-900">{selectedListing.title}</h2>
+                  <h2 id="food-modal-title" className="text-xl font-bold text-gray-900">{selectedListing.title}</h2>
 
                   {/* Seller avatar + name + order count */}
                   <div className="flex items-center justify-between gap-3">
@@ -1103,16 +1110,16 @@ export default function FoodPage() {
                           {selectedListing.createdBy.displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
                         </div>
                       )}
-                      <span className="text-xs text-zinc-500 truncate">by {selectedListing.createdBy.displayName}</span>
+                      <span className="text-xs text-gray-500 truncate">by {selectedListing.createdBy.displayName}</span>
                     </button>
-                    <span className="text-xs text-zinc-500 shrink-0">
+                    <span className="text-xs text-gray-500 shrink-0">
                       {selectedListing._count.orders} {selectedListing._count.orders === 1 ? "order" : "orders"}
                     </span>
                   </div>
 
                   {/* Description */}
                   {selectedListing.description && (
-                    <p className="text-sm text-zinc-600 whitespace-pre-wrap leading-relaxed">{selectedListing.description}</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedListing.description}</p>
                   )}
 
                   {/* Add-ons list */}
@@ -1120,7 +1127,7 @@ export default function FoodPage() {
                     <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 space-y-1">
                       <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons available</p>
                       {selectedListing.addOns.map((a, i) => (
-                        <div key={i} className="flex justify-between text-xs text-zinc-700">
+                        <div key={i} className="flex justify-between text-xs text-gray-700">
                           <span>{a.name}</span>
                           <span className="font-semibold text-amber-700">+₱{a.price % 1 === 0 ? a.price : a.price.toFixed(2)}</span>
                         </div>
@@ -1135,7 +1142,7 @@ export default function FoodPage() {
                         {urgency}
                       </span>
                     )}
-                    <span className="flex items-center gap-1 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
                       <Clock className="w-3.5 h-3.5" />
                       Orders close {formatCutoff(selectedListing.cutoffAt)}
                     </span>
@@ -1147,11 +1154,11 @@ export default function FoodPage() {
                   )}
 
                   {/* Action area */}
-                  <div className="pt-3 border-t border-zinc-100 space-y-3">
+                  <div className="pt-3 border-t border-gray-100 space-y-3">
 
                     {/* Closed */}
                     {closed && !isMine && (
-                      <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-lg w-full block text-center">
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg w-full block text-center">
                         Orders closed
                       </span>
                     )}
@@ -1170,11 +1177,11 @@ export default function FoodPage() {
                     {!closed && !isMine && !hasOrder && modalOrderMode === "order" && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
+                          <label className="text-xs text-gray-500 w-16 shrink-0">Quantity</label>
                           <div className="flex items-center gap-1">
-                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
+                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
                             <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
-                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
+                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
                           </div>
                         </div>
                         {(selectedListing.addOns?.length ?? 0) > 0 && (
@@ -1187,9 +1194,9 @@ export default function FoodPage() {
                                   <input
                                     type="checkbox" checked={checked}
                                     onChange={(e) => setSelectedAddOns((prev) => e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name))}
-                                    className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                                   />
-                                  <span className="text-xs text-zinc-700 flex-1">{a.name}</span>
+                                  <span className="text-xs text-gray-700 flex-1">{a.name}</span>
                                   <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
                                 </label>
                               );
@@ -1199,10 +1206,10 @@ export default function FoodPage() {
                         <input
                           value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
                           placeholder="e.g. no onions (optional)"
-                          className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                         <div className="flex items-center justify-between text-xs px-0.5">
-                          <span className="text-zinc-500">Total</span>
+                          <span className="text-gray-500">Total</span>
                           <span className="font-bold text-emerald-700 text-sm">₱{orderTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex gap-2">
@@ -1212,7 +1219,7 @@ export default function FoodPage() {
                           >
                             Review Order
                           </button>
-                          <button onClick={() => setModalOrderMode(null)} className="text-sm text-zinc-500 hover:text-zinc-700 px-3">
+                          <button onClick={() => setModalOrderMode(null)} className="text-sm text-gray-500 hover:text-gray-700 px-3">
                             Cancel
                           </button>
                         </div>
@@ -1224,35 +1231,35 @@ export default function FoodPage() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                          <h3 className="font-bold text-zinc-900">Confirm your order</h3>
+                          <h3 className="font-bold text-gray-900">Confirm your order</h3>
                         </div>
-                        <div className="bg-zinc-50 rounded-xl p-4 space-y-2 text-sm">
+                        <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-zinc-500">Item</span>
-                            <span className="font-semibold text-zinc-900 text-right max-w-[60%] leading-snug">{selectedListing.title}</span>
+                            <span className="text-gray-500">Item</span>
+                            <span className="font-semibold text-gray-900 text-right max-w-[60%] leading-snug">{selectedListing.title}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-zinc-500">Qty</span>
-                            <span className="font-semibold text-zinc-900">{qty}</span>
+                            <span className="text-gray-500">Qty</span>
+                            <span className="font-semibold text-gray-900">{qty}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-zinc-500">Price each</span>
-                            <span className="font-semibold text-zinc-900">{formatPrice(selectedListing.price)}</span>
+                            <span className="text-gray-500">Price each</span>
+                            <span className="font-semibold text-gray-900">{formatPrice(selectedListing.price)}</span>
                           </div>
                           {selectedAddOns.length > 0 && selectedAddOns.map((a, i) => (
                             <div key={i} className="flex justify-between">
-                              <span className="text-zinc-500">+ {a.name}</span>
+                              <span className="text-gray-500">+ {a.name}</span>
                               <span className="font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
                             </div>
                           ))}
                           {orderNote && (
                             <div className="flex justify-between">
-                              <span className="text-zinc-500">Note</span>
-                              <span className="text-zinc-600 italic text-right max-w-[60%]">&ldquo;{orderNote}&rdquo;</span>
+                              <span className="text-gray-500">Note</span>
+                              <span className="text-gray-600 italic text-right max-w-[60%]">&ldquo;{orderNote}&rdquo;</span>
                             </div>
                           )}
-                          <div className="border-t border-zinc-200 pt-2 flex justify-between">
-                            <span className="font-semibold text-zinc-700">Total</span>
+                          <div className="border-t border-gray-200 pt-2 flex justify-between">
+                            <span className="font-semibold text-gray-700">Total</span>
                             <span className="font-bold text-emerald-700 text-base">₱{orderTotal.toFixed(2)}</span>
                           </div>
                         </div>
@@ -1260,7 +1267,7 @@ export default function FoodPage() {
                           <button
                             onClick={() => setModalOrderMode("order")}
                             disabled={submittingOrder}
-                            className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors"
+                            className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                           >
                             Back
                           </button>
@@ -1286,26 +1293,26 @@ export default function FoodPage() {
                         <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 space-y-2">
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1 flex-1 min-w-0">
-                              <p className="text-xs font-bold text-zinc-700">Your Order</p>
-                              <p className="text-xs text-zinc-600">×{oQty} {selectedListing.title} <span className="text-zinc-500">@ {formatPrice(selectedListing.price)} each</span></p>
+                              <p className="text-xs font-bold text-gray-700">Your Order</p>
+                              <p className="text-xs text-gray-600">×{oQty} {selectedListing.title} <span className="text-gray-500">@ {formatPrice(selectedListing.price)} each</span></p>
                               {(selectedListing.myOrder!.selectedAddOns?.length ?? 0) > 0 && (
                                 <div className="space-y-0.5">
                                   {selectedListing.myOrder!.selectedAddOns.map((a, i) => (
-                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-zinc-500">(₱{a.price.toFixed(2)} × {oQty})</span></p>
+                                    <p key={i} className="text-xs text-amber-700">+ {a.name} <span className="text-gray-500">(₱{a.price.toFixed(2)} × {oQty})</span></p>
                                   ))}
                                 </div>
                               )}
-                              <p className="text-[11px] text-zinc-500">
+                              <p className="text-[11px] text-gray-500">
                                 Ordered {new Date(selectedListing.myOrder!.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                               </p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-base font-bold text-emerald-700">₱{oTotal.toFixed(2)}</p>
-                              <p className="text-[10px] text-zinc-500">total</p>
+                              <p className="text-[10px] text-gray-500">total</p>
                             </div>
                           </div>
                           {selectedListing.myOrder!.note && (
-                            <p className="text-xs text-zinc-500 italic border-t border-emerald-100 pt-2"><span aria-hidden="true">📝 </span>&ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
+                            <p className="text-xs text-gray-500 italic border-t border-emerald-100 pt-2"><span aria-hidden="true">📝 </span>&ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
                           )}
                           {!closed && (
                             <div className="flex items-center gap-3 pt-1">
@@ -1320,7 +1327,7 @@ export default function FoodPage() {
                               >
                                 Edit order
                               </button>
-                              <span className="text-zinc-200">|</span>
+                              <span className="text-gray-200">|</span>
                               <button
                                 onClick={() => handleCancel(selectedListing)}
                                 className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
@@ -1337,11 +1344,11 @@ export default function FoodPage() {
                     {!closed && !isMine && hasOrder && modalOrderMode === "edit" && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <label className="text-xs text-zinc-500 w-16 shrink-0">Quantity</label>
+                          <label className="text-xs text-gray-500 w-16 shrink-0">Quantity</label>
                           <div className="flex items-center gap-1">
-                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
+                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
                             <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
-                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
+                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
                           </div>
                         </div>
                         {(selectedListing.addOns?.length ?? 0) > 0 && (
@@ -1354,9 +1361,9 @@ export default function FoodPage() {
                                   <input
                                     type="checkbox" checked={checked}
                                     onChange={(e) => setSelectedAddOns((prev) => e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name))}
-                                    className="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                                   />
-                                  <span className="text-xs text-zinc-700 flex-1">{a.name}</span>
+                                  <span className="text-xs text-gray-700 flex-1">{a.name}</span>
                                   <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
                                 </label>
                               );
@@ -1366,10 +1373,10 @@ export default function FoodPage() {
                         <input
                           value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
                           placeholder="e.g. no onions (optional)"
-                          className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                         <div className="flex items-center justify-between text-xs px-0.5">
-                          <span className="text-zinc-500">Total</span>
+                          <span className="text-gray-500">Total</span>
                           <span className="font-bold text-emerald-700 text-sm">₱{((parseFloat(selectedListing.price) + selectedAddOns.reduce((s, a) => s + a.price, 0)) * qty).toFixed(2)}</span>
                         </div>
                         <div className="flex gap-2">
@@ -1381,7 +1388,7 @@ export default function FoodPage() {
                             {submittingOrder && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                             Save Changes
                           </button>
-                          <button onClick={() => setModalOrderMode(null)} className="text-sm text-zinc-500 hover:text-zinc-700 px-3">
+                          <button onClick={() => setModalOrderMode(null)} className="text-sm text-gray-500 hover:text-gray-700 px-3">
                             Cancel
                           </button>
                         </div>

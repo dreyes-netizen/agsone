@@ -97,16 +97,73 @@ export default function AdminRedemptionsPage() {
           Pending Approval
         </h2>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          {/* Mobile card layout */}
+          <div className="md:hidden">
+            {loading ? (
+              <div className="py-8"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></div>
+            ) : pending.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No pending redemptions.</div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {pending.map((r) => (
+                  <div key={r.id} className="px-4 py-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900">{r.user.displayName}</p>
+                        <p className="text-xs text-gray-500">{r.user.email}</p>
+                      </div>
+                      <span className="font-semibold text-navy-600 text-sm shrink-0">{r.pointsSpent.toLocaleString()} pts</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span className="font-medium text-gray-700">{r.reward.name}</span>
+                      <span>·</span>
+                      <span>{r.reward.category}</span>
+                      <span>·</span>
+                      <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <textarea
+                      placeholder="Optional note..."
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 resize-none"
+                      value={noteMap[r.id] ?? ""}
+                      onChange={(e) => setNoteMap({ ...noteMap, [r.id]: e.target.value })}
+                      aria-label={`Admin note for ${r.user.displayName}`}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600"
+                        disabled={actionId === r.id}
+                        onClick={() => updateStatus(r.id, "APPROVED")}
+                        aria-label={`Approve ${r.user.displayName}'s redemption of ${r.reward.name}`}
+                      >
+                        <CheckCircle className="w-3 h-3" aria-hidden="true" /> Approve
+                      </button>
+                      <button
+                        className="flex-1 bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500"
+                        disabled={actionId === r.id}
+                        onClick={() => updateStatus(r.id, "REJECTED")}
+                        aria-label={`Reject ${r.user.displayName}'s redemption of ${r.reward.name}`}
+                      >
+                        <XCircle className="w-3 h-3" aria-hidden="true" /> Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm" aria-label="Pending redemptions">
             <thead className="bg-gray-50">
               <tr>
-                <th className={thClass}>Employee</th>
-                <th className={thClass}>Reward</th>
-                <th className={thClass}>Points</th>
-                <th className={thClass}>Requested</th>
-                <th className={thClass}>Admin Note</th>
-                <th className={thClass}>Actions</th>
+                <th scope="col" className={thClass}>Employee</th>
+                <th scope="col" className={thClass}>Reward</th>
+                <th scope="col" className={thClass}>Points</th>
+                <th scope="col" className={thClass}>Requested</th>
+                <th scope="col" className={thClass}>Admin Note</th>
+                <th scope="col" className={thClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -150,7 +207,7 @@ export default function AdminRedemptionsPage() {
                         onClick={() => updateStatus(r.id, "APPROVED")}
                         aria-label={`Approve ${r.user.displayName}'s redemption of ${r.reward.name}`}
                       >
-                        <CheckCircle className="w-3 h-3" /> Approve
+                        <CheckCircle className="w-3 h-3" aria-hidden="true" /> Approve
                       </button>
                       <button
                         className="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-100 disabled:opacity-50 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500"
@@ -158,7 +215,7 @@ export default function AdminRedemptionsPage() {
                         onClick={() => updateStatus(r.id, "REJECTED")}
                         aria-label={`Reject ${r.user.displayName}'s redemption of ${r.reward.name}`}
                       >
-                        <XCircle className="w-3 h-3" /> Reject
+                        <XCircle className="w-3 h-3" aria-hidden="true" /> Reject
                       </button>
                     </div>
                   </td>
@@ -173,17 +230,59 @@ export default function AdminRedemptionsPage() {
       <div>
         <h2 className="text-base font-semibold text-gray-700 mb-3">History</h2>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          {/* Mobile card layout */}
+          <div className="md:hidden">
+            {processed.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No processed redemptions yet.</div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {processed.map((r) => (
+                  <div key={r.id} className="px-4 py-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900">{r.user.displayName}</p>
+                        <p className="text-xs text-gray-500">{r.reward.name}</p>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${statusBadgeClass[r.status]}`}>
+                        {r.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span className="font-semibold text-navy-600">{r.pointsSpent.toLocaleString()} pts</span>
+                      <span>·</span>
+                      <span>{r.processedBy?.displayName ?? "—"}</span>
+                    </div>
+                    {r.adminNote && (
+                      <p className="text-xs text-gray-500 truncate">{r.adminNote}</p>
+                    )}
+                    {r.status === "APPROVED" && (
+                      <button
+                        className="w-full bg-blue-50 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600"
+                        disabled={actionId === r.id}
+                        onClick={() => updateStatus(r.id, "FULFILLED")}
+                        aria-label={`Mark ${r.reward.name} as fulfilled for ${r.user.displayName}`}
+                      >
+                        <Package className="w-3 h-3" aria-hidden="true" /> Mark Fulfilled
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm" aria-label="Processed redemptions">
             <thead className="bg-gray-50">
               <tr>
-                <th className={thClass}>Employee</th>
-                <th className={thClass}>Reward</th>
-                <th className={thClass}>Points</th>
-                <th className={thClass}>Status</th>
-                <th className={thClass}>Processed By</th>
-                <th className={thClass}>Note</th>
-                <th className={thClass}>Actions</th>
+                <th scope="col" className={thClass}>Employee</th>
+                <th scope="col" className={thClass}>Reward</th>
+                <th scope="col" className={thClass}>Points</th>
+                <th scope="col" className={thClass}>Status</th>
+                <th scope="col" className={thClass}>Processed By</th>
+                <th scope="col" className={thClass}>Note</th>
+                <th scope="col" className={thClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -216,7 +315,7 @@ export default function AdminRedemptionsPage() {
                         onClick={() => updateStatus(r.id, "FULFILLED")}
                         aria-label={`Mark ${r.reward.name} as fulfilled for ${r.user.displayName}`}
                       >
-                        <Package className="w-3 h-3" /> Mark Fulfilled
+                        <Package className="w-3 h-3" aria-hidden="true" /> Mark Fulfilled
                       </button>
                     )}
                   </td>

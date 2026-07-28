@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2 } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
@@ -140,6 +140,19 @@ function ReactionBar({
       setPickerOpen((v) => !v);
     }
   }
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (myReaction) {
+        onReact(postId, myReaction);
+      } else {
+        setPickerOpen((v) => !v);
+      }
+    } else if (e.key === "Escape" && pickerOpen) {
+      e.preventDefault();
+      closePicker();
+    }
+  }
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
@@ -149,20 +162,25 @@ function ReactionBar({
         className="relative"
         onMouseEnter={openPicker}
         onMouseLeave={closePicker}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label="Add reaction"
       >
         {/* Floating picker — pb-2 bridges the gap so mouse doesn't leave container */}
         {pickerOpen && (
           <div className="absolute bottom-full left-0 z-20 pb-2">
-            <div className="flex items-center gap-1 bg-white rounded-full shadow-xl border border-gray-100 px-3 py-2.5">
+            <div className="flex items-center gap-1 bg-white rounded-full shadow-xl border border-gray-100 px-3 py-2.5" role="group" aria-label="Emoji reactions">
               {EMOJIS.map(({ emoji, label }) => (
                 <button
                   key={emoji}
                   type="button"
                   title={label}
                   onClick={() => { onReact(postId, emoji); closePicker(); }}
-                  className={`text-xl leading-none transition-all duration-150 hover:scale-[1.4] active:scale-110 ${
+                  className={`text-xl leading-none transition-all duration-150 hover:scale-[1.4] active:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400 focus-visible:ring-offset-1 ${
                     myReaction === emoji ? "scale-125" : ""
                   }`}
+                  aria-label={label}
                 >
                   {emoji}
                 </button>
@@ -188,7 +206,7 @@ function ReactionBar({
           ) : (
             <SmilePlus className="w-3.5 h-3.5" />
           )}
-          <span>{myReaction ? EMOJIS.find((e) => e.emoji === myReaction)?.label ?? "Reacted" : "React"}</span>
+          <span>{myReaction ? EMOJIS.find((e) => e.emoji === myReaction)?.label ?? "Reacted" : "Add reaction"}</span>
         </button>
       </div>
 
@@ -221,8 +239,8 @@ const postTypeMeta: Record<string, { bg: string; chip: string; label: string; ic
   CELEBRATION:  { bg: "bg-amber-50 border-amber-200",   chip: "bg-amber-100 text-amber-700",   label: "Celebration", icon: PartyPopper },
   ANNOUNCEMENT: { bg: "bg-navy-50 border-navy-200",     chip: "bg-navy-100 text-navy-700",     label: "Announcement", icon: Megaphone },
   ACHIEVEMENT:  { bg: "bg-violet-50 border-violet-200", chip: "bg-violet-100 text-violet-700", label: "Achievement", icon: Trophy },
-  UPDATE:       { bg: "bg-white border-zinc-200",        chip: "",                              label: "" },
-  POLL:         { bg: "bg-white border-zinc-200",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
+  UPDATE:       { bg: "bg-white border-gray-200",        chip: "",                              label: "" },
+  POLL:         { bg: "bg-white border-gray-200",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
 };
 
 function PollBlock({
@@ -334,6 +352,7 @@ export default function FeedPage() {
   const [postToast, setPostToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const editMentionMapRef = useRef<Record<string, string>>({});
   const mentionDropdownRef = useRef<HTMLDivElement>(null);
   const recipientSearchRef = useRef<HTMLDivElement>(null);
@@ -383,6 +402,12 @@ export default function FeedPage() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (composeExpanded && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [composeExpanded]);
 
   async function load(filter = "ALL") {
     setLoading(true);
@@ -907,12 +932,12 @@ export default function FeedPage() {
     <div className="space-y-5">
       {/* Greeting */}
       <div>
-        <p className="text-sm text-zinc-500 font-medium">
+        <p className="text-sm text-gray-500 font-medium">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </p>
-        <h1 className="text-2xl font-bold text-zinc-900 mt-0.5">
+        <h1 className="text-2xl font-bold text-gray-900 mt-0.5">
           {authLoading ? (
-            <span className="inline-block h-8 w-48 bg-zinc-100 animate-pulse rounded align-middle" />
+            <span className="inline-block h-8 w-48 bg-gray-100 animate-pulse rounded align-middle" />
           ) : (
             <>{getGreeting()}, {firstName}</>
           )}
@@ -936,9 +961,9 @@ export default function FeedPage() {
         <aside className="order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
 
           {/* My Stats — compact strip on mobile, full card on desktop */}
-          <div className="lg:hidden bg-white rounded-xl border border-zinc-100 px-4 py-3 flex items-center justify-between">
+          <div className="lg:hidden bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center justify-between">
             {widgetsLoading ? (
-              <div className="h-4 bg-zinc-100 rounded animate-pulse w-32" />
+              <div className="h-4 bg-gray-100 rounded animate-pulse w-32" />
             ) : (
               <>
                 <div className="flex items-center gap-1.5">
@@ -946,28 +971,28 @@ export default function FeedPage() {
                   <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
                 </div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-black text-zinc-900 tabular-nums">{profile?.pointsBalance?.toLocaleString() ?? "—"}</span>
-                  <span className="text-xs text-zinc-500">pts</span>
+                  <span className="text-sm font-black text-gray-900 tabular-nums">{profile?.pointsBalance?.toLocaleString() ?? "—"}</span>
+                  <span className="text-xs text-gray-500">pts</span>
                 </div>
               </>
             )}
           </div>
-          <div className="hidden lg:block bg-white rounded-xl border border-zinc-100 p-4">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">My Stats</p>
+          <div className="hidden lg:block bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">My Stats</p>
             {widgetsLoading ? (
               <div className="space-y-3 animate-pulse">
-                <div className="h-8 bg-zinc-100 rounded w-1/2" />
-                <div className="h-3 bg-zinc-100 rounded w-1/3" />
+                <div className="h-8 bg-gray-100 rounded w-1/2" />
+                <div className="h-3 bg-gray-100 rounded w-1/3" />
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
-                  <p className="text-3xl font-black text-zinc-900 tabular-nums leading-none">
+                  <p className="text-3xl font-black text-gray-900 tabular-nums leading-none">
                     {profile?.pointsBalance?.toLocaleString() ?? "—"}
                   </p>
-                  <p className="text-xs text-zinc-500 mt-1">points available</p>
+                  <p className="text-xs text-gray-500 mt-1">points available</p>
                 </div>
-                <div className="flex items-center gap-4 pt-1 border-t border-zinc-50">
+                <div className="flex items-center gap-4 pt-1 border-t border-gray-50">
                   <div className="flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
                     <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
@@ -994,8 +1019,8 @@ export default function FeedPage() {
                   <Link key={b.id} href={`/employees/${b.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <Avatar name={b.displayName} url={b.avatarUrl} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-zinc-900 truncate hover:underline">{b.displayName}</p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-xs font-semibold text-gray-900 truncate hover:underline">{b.displayName}</p>
+                      <p className="text-[10px] text-gray-500">
                         {b.daysUntil === 0 ? "Today 🎉" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
                       </p>
                     </div>
@@ -1006,31 +1031,31 @@ export default function FeedPage() {
           )}
 
           {/* Top Performers — desktop only; use /leaderboard on mobile */}
-          <div className="hidden lg:block bg-white rounded-xl border border-zinc-100 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-50">
+          <div className="hidden lg:block bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
               <div className="flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="text-xs font-semibold text-zinc-700">Top Performers</span>
+                <Star className="w-3.5 h-3.5 text-yellow-500" aria-hidden="true" />
+                <span className="text-xs font-semibold text-gray-700">Top Performers</span>
               </div>
               <Link href="/leaderboard" className="text-xs text-navy-600 hover:text-navy-700 font-medium">See all →</Link>
             </div>
             {widgetsLoading ? (
               <div className="p-4 space-y-3 animate-pulse">
-                {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-zinc-100 rounded" />)}
+                {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-gray-100 rounded" />)}
               </div>
             ) : leaderboard.length === 0 ? (
-              <p className="text-xs text-zinc-500 text-center py-6">No data yet</p>
+              <p className="text-xs text-gray-500 text-center py-6">No data yet</p>
             ) : (
               <div>
                 {leaderboard.slice(0, 5).map((entry) => (
-                  <div key={entry.userId} className={`flex items-center gap-2.5 px-4 py-2.5 ${entry.isCurrentUser ? "bg-navy-50/50" : "hover:bg-zinc-50/60"} transition-colors`}>
+                  <div key={entry.userId} className={`flex items-center gap-2.5 px-4 py-2.5 ${entry.isCurrentUser ? "bg-navy-50/50" : "hover:bg-gray-50/60"} transition-colors`}>
                     <Link href={`/employees/${entry.userId}`}>
                       <Avatar name={entry.displayName} url={entry.avatarUrl} size="sm" />
                     </Link>
-                    <Link href={`/employees/${entry.userId}`} className={`text-xs font-medium truncate flex-1 min-w-0 hover:underline ${entry.isCurrentUser ? "text-navy-700 font-semibold" : "text-zinc-700"}`}>
+                    <Link href={`/employees/${entry.userId}`} className={`text-xs font-medium truncate flex-1 min-w-0 hover:underline ${entry.isCurrentUser ? "text-navy-700 font-semibold" : "text-gray-700"}`}>
                       {entry.isCurrentUser ? `${entry.displayName} (You)` : entry.displayName}
                     </Link>
-                    <span className="text-xs font-bold tabular-nums text-zinc-500 shrink-0">
+                    <span className="text-xs font-bold tabular-nums text-gray-500 shrink-0">
                       {entry.points.toLocaleString()}
                     </span>
                   </div>
@@ -1041,13 +1066,13 @@ export default function FeedPage() {
 
           {/* Quick Actions — desktop only; bottom nav covers these on mobile */}
           <div className="hidden lg:grid grid-cols-2 gap-2">
-            <Link href="/minigames" className="flex flex-col items-center gap-1.5 bg-white border border-zinc-100 rounded-xl py-3 px-2 hover:border-zinc-200 hover:shadow-sm transition-all text-center">
+            <Link href="/minigames" className="flex flex-col items-center gap-1.5 bg-white border border-gray-100 rounded-xl py-3 px-2 hover:border-gray-200 hover:shadow-sm transition-all text-center">
               <Gamepad2 className="w-5 h-5 text-violet-500" />
-              <span className="text-xs font-semibold text-zinc-700 leading-tight">Play a<br/>Minigame</span>
+              <span className="text-xs font-semibold text-gray-700 leading-tight">Play a<br/>Minigame</span>
             </Link>
-            <Link href="/marketplace" className="flex flex-col items-center gap-1.5 bg-white border border-zinc-100 rounded-xl py-3 px-2 hover:border-zinc-200 hover:shadow-sm transition-all text-center">
+            <Link href="/marketplace" className="flex flex-col items-center gap-1.5 bg-white border border-gray-100 rounded-xl py-3 px-2 hover:border-gray-200 hover:shadow-sm transition-all text-center">
               <ShoppingBag className="w-5 h-5 text-orange-400" />
-              <span className="text-xs font-semibold text-zinc-700 leading-tight">Redeem<br/>Points</span>
+              <span className="text-xs font-semibold text-gray-700 leading-tight">Redeem<br/>Points</span>
             </Link>
           </div>
 
@@ -1056,7 +1081,7 @@ export default function FeedPage() {
         {/* Compose — left column, row 1 */}
         <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1">
       {/* Compose */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
         {/* Collapsed trigger — click to expand */}
         {!composeExpanded && (
           <button
@@ -1066,7 +1091,7 @@ export default function FeedPage() {
             aria-label="Write a post"
           >
             <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
-            <span className="flex-1 text-sm text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 hover:border-zinc-300 hover:bg-white transition-all">
+            <span className="flex-1 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 hover:border-gray-300 hover:bg-white transition-all">
               What&apos;s on your mind?
             </span>
           </button>
@@ -1077,13 +1102,14 @@ export default function FeedPage() {
             <div className="flex-1 relative space-y-2">
               {!shoutoutMode && (
                 <input
+                  ref={titleInputRef}
                   type="text"
                   placeholder="Title *"
                   aria-label="Post title"
                   value={postTitle}
                   onChange={(e) => setPostTitle(e.target.value)}
                   maxLength={120}
-                  className="w-full text-sm font-semibold bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-500 placeholder:font-normal transition-all"
+                  className="w-full text-sm font-semibold bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 placeholder:font-normal transition-all"
                 />
               )}
               {shoutoutMode && (
@@ -1108,7 +1134,7 @@ export default function FeedPage() {
                       onChange={(e) => { setRecipientSearch(e.target.value); setRecipientSearchOpen(true); }}
                       onFocus={() => setRecipientSearchOpen(true)}
                       placeholder={recipients.length === 0 ? "Who are you recognizing?…" : "Add another person…"}
-                      className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 placeholder:text-zinc-500 transition-all"
+                      className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/30 focus:border-amber-400 placeholder:text-gray-500 transition-all"
                     />
                     {recipientSearchOpen && (
                       <div role="listbox" aria-label="Select recipient" className="absolute z-30 top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
@@ -1125,7 +1151,7 @@ export default function FeedPage() {
                             </button>
                           ))}
                         {employees.filter((e) => !recipients.some((r) => r.id === e.id) && (!recipientSearch || e.displayName.toLowerCase().includes(recipientSearch.toLowerCase()))).length === 0 && (
-                          <p className="px-3 py-2 text-sm text-zinc-500">{recipientSearch ? "No results" : "All employees added"}</p>
+                          <p className="px-3 py-2 text-sm text-gray-500">{recipientSearch ? "No results" : "All employees added"}</p>
                         )}
                       </div>
                     )}
@@ -1139,7 +1165,7 @@ export default function FeedPage() {
                   value={shoutoutTitle}
                   onChange={(e) => setShoutoutTitle(e.target.value)}
                   maxLength={120}
-                  className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 placeholder:text-zinc-500 transition-all"
+                  className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/30 focus:border-amber-400 placeholder:text-gray-500 transition-all"
                 />
               )}
               <textarea
@@ -1149,14 +1175,14 @@ export default function FeedPage() {
                 value={newPost}
                 onChange={handleComposerChange}
                 rows={2}
-                className="w-full resize-none overflow-hidden text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-500 transition-all"
+                className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
               />
               {mentionQuery !== null && mentionResults.length > 0 && (
                 <div
                   ref={mentionDropdownRef}
                   role="listbox"
                   aria-label="Mention an employee"
-                  className="absolute z-30 top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                  className="absolute z-30 top-full left-0 mt-1 w-full max-w-64 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
                 >
                   {mentionResults.map((emp) => (
                     <button
@@ -1238,13 +1264,13 @@ export default function FeedPage() {
 
           {!shoutoutMode && dbUser?.department && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500 font-medium shrink-0">Visible to:</span>
-              <div className="flex items-center gap-1 p-0.5 bg-zinc-100 rounded-lg">
+              <span className="text-xs text-gray-500 font-medium shrink-0">Visible to:</span>
+              <div className="flex items-center gap-1 p-0.5 bg-gray-100 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setDeptOnly(false)}
                   className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    !deptOnly ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    !deptOnly ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   Everyone
@@ -1253,7 +1279,7 @@ export default function FeedPage() {
                   type="button"
                   onClick={() => setDeptOnly(true)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    deptOnly ? "bg-white text-navy-700 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    deptOnly ? "bg-white text-navy-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <span>🏢</span>
@@ -1264,13 +1290,13 @@ export default function FeedPage() {
           )}
           {shoutoutMode && dbUser?.department && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500 font-medium shrink-0">Visible to:</span>
-              <div className="flex items-center gap-1 p-0.5 bg-zinc-100 rounded-lg">
+              <span className="text-xs text-gray-500 font-medium shrink-0">Visible to:</span>
+              <div className="flex items-center gap-1 p-0.5 bg-gray-100 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setShoutoutDeptOnly(false)}
                   className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    !shoutoutDeptOnly ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    !shoutoutDeptOnly ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   Everyone
@@ -1279,7 +1305,7 @@ export default function FeedPage() {
                   type="button"
                   onClick={() => setShoutoutDeptOnly(true)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    shoutoutDeptOnly ? "bg-white text-amber-700 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    shoutoutDeptOnly ? "bg-white text-amber-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <span>🏢</span>
@@ -1318,7 +1344,7 @@ export default function FeedPage() {
               }}
               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
                 pollMode
-                  ? "bg-[#111827] border-[#111827] text-white"
+                  ? "bg-command-black border-command-black text-white"
                   : "bg-white border-gray-200 text-gray-600 hover:border-navy-300 hover:text-navy-600"
               }`}
             >
@@ -1353,7 +1379,7 @@ export default function FeedPage() {
                     onChange={(e) =>
                       setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))
                     }
-                    className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
+                    className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
                   />
                   {pollOptions.length > 2 && (
                     <button
@@ -1393,7 +1419,7 @@ export default function FeedPage() {
                 <button
                   type="submit"
                   disabled={posting || (shoutoutMode ? recipients.length === 0 || !newPost.trim() : !postTitle.trim() || !selectedFlair || (pollMode && pollOptions.filter((o) => o.trim()).length < 2))}
-                  className="flex items-center gap-2 bg-[#111827] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 bg-command-black text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3.5 h-3.5" />
                   {uploading ? "Uploading…" : posting ? "Posting…" : shoutoutMode ? "Send Shoutout" : "Post"}
@@ -1401,7 +1427,7 @@ export default function FeedPage() {
                 <button
                   type="button"
                   onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setShowAllFlairs(false); clearImages(); }}
-                  className="text-xs text-zinc-500 hover:text-zinc-700 px-2 py-1 transition-colors"
+                  className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1423,7 +1449,7 @@ export default function FeedPage() {
       ) : loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-zinc-200 p-5 animate-pulse">
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-gray-100" />
                 <div className="flex-1 space-y-2">
@@ -1445,7 +1471,7 @@ export default function FeedPage() {
         posts.map((post) => {
           if (post.type === "SHOUTOUT" && post.shoutoutRecipients.length > 0) {
             return (
-              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-zinc-200 hover:border-zinc-300"}`}>
+              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-gray-200 hover:border-gray-300"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="px-5 py-4 space-y-3">
                   {post.isPinned && (
@@ -1461,30 +1487,30 @@ export default function FeedPage() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="font-semibold text-sm text-zinc-800 hover:underline whitespace-nowrap min-w-0 truncate">
+                        <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="font-semibold text-sm text-gray-800 hover:underline whitespace-nowrap min-w-0 truncate">
                           {post.author.displayName}
                         </button>
-                        <div className="ml-auto shrink-0 flex items-center gap-1">
-                          <span className="text-xs text-zinc-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
-                          {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                            <button onClick={() => togglePin(post.id)} className={`p-2 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"}>
-                              <Pin className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
+                        {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                          <button onClick={() => togglePin(post.id)} className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"} aria-label={post.isPinned ? "Unpin post" : "Pin post"}>
+                            <Pin className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                          <>
+                            <button onClick={() => startEditPost(post)} className="text-gray-400 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50" title="Edit shoutout" aria-label="Edit shoutout">
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
-                          )}
-                          {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                            <>
-                              <button onClick={() => startEditPost(post)} className="text-gray-400 hover:text-navy-500 transition-colors p-2 rounded-lg hover:bg-navy-50" title="Edit shoutout">
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => deletePost(post.id)} className="text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50" title="Delete post">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
-                        </div>
+                            <button onClick={() => deletePost(post.id)} className="text-gray-400 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Delete post" aria-label="Delete post">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                       {post.author.department && (
-                        <span className="text-xs text-zinc-500 font-medium block">{post.author.department.name}</span>
+                        <span className="text-xs text-gray-500 font-medium block">{post.author.department.name}</span>
                       )}
                     </div>
                   </div>
@@ -1520,10 +1546,10 @@ export default function FeedPage() {
                         onChange={(e) => { setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev)); autoResize(e.target); }}
                         rows={3}
                         maxLength={500}
-                        className="w-full resize-none overflow-hidden text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 placeholder:text-zinc-500 transition-all"
+                        className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/30 focus:border-amber-400 placeholder:text-gray-500 transition-all"
                       />
                       <div className="flex items-center gap-2">
-                        <button onClick={() => saveEditPost(post)} disabled={savingPostEdit || !editingPost.content.trim()} className="flex items-center gap-1.5 bg-[#111827] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button onClick={() => saveEditPost(post)} disabled={savingPostEdit || !editingPost.content.trim()} className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                           <Check className="w-3.5 h-3.5" /> Save
                         </button>
                         <button onClick={() => setEditingPost(null)} className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors">
@@ -1538,10 +1564,10 @@ export default function FeedPage() {
                           <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
                         </button>
                         <div className="flex-1 min-w-0">
-                          <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-zinc-900 hover:underline block">
+                          <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-gray-900 hover:underline block">
                             {post.shoutoutRecipients[0].user.displayName}
                           </button>
-                          <p className="text-sm text-zinc-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
+                          <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
                         </div>
                       </div>
                       {post.imageUrls?.length > 0 && (
@@ -1558,7 +1584,7 @@ export default function FeedPage() {
                           </button>
                         ))}
                       </div>
-                      <p className="text-sm text-zinc-600 italic leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
+                      <p className="text-sm text-gray-600 italic leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
                       {post.imageUrls?.length > 0 && (
                         <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
                       )}
@@ -1578,9 +1604,11 @@ export default function FeedPage() {
                           ? "bg-navy-50 border-navy-200 text-navy-700"
                           : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
                       }`}
+                      aria-expanded={!!openComments[post.id]}
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
                       {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+                      <ChevronDown className={`w-3 h-3 transition-transform ${openComments[post.id] ? "rotate-180" : ""}`} />
                     </button>
                   </div>
                   {openComments[post.id] && (
@@ -1589,10 +1617,10 @@ export default function FeedPage() {
                         <div className="space-y-3 animate-pulse">
                           {[1, 2].map((i) => (
                             <div key={i} className="flex gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-zinc-100 shrink-0" />
+                              <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
                               <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-zinc-100 rounded w-1/4" />
-                                <div className="h-3 bg-zinc-100 rounded w-3/4" />
+                                <div className="h-3 bg-gray-100 rounded w-1/4" />
+                                <div className="h-3 bg-gray-100 rounded w-3/4" />
                               </div>
                             </div>
                           ))}
@@ -1653,13 +1681,13 @@ export default function FeedPage() {
                                       onKeyDown={(e) => {
                                         if (e.key === "Escape") setReplyingTo(null);
                                       }}
-                                      className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+                                      className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
                                     />
                                     <button
                                       onClick={() => submitReply(post.id, c.id)}
                                       disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                                      aria-label="Submit comment"
-                                      className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                                      aria-label="Submit reply"
+                                      className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                                     >
                                       <Send className="w-3.5 h-3.5" />
                                     </button>
@@ -1704,13 +1732,13 @@ export default function FeedPage() {
                             placeholder="Write a comment…"
                             value={commentDraft[post.id] ?? ""}
                             onChange={(e) => { setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value })); autoResize(e.target); }}
-                            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+                            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
                           />
                           <button
                             onClick={() => submitComment(post.id)}
                             disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
                             aria-label="Submit comment"
-                            className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                            className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -1725,7 +1753,7 @@ export default function FeedPage() {
 
           const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
-            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-zinc-300`}`}>
+            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-gray-300`}`}>
               <div className="p-5">
                 {/* Pinned indicator */}
                 {post.isPinned && (
@@ -1767,39 +1795,42 @@ export default function FeedPage() {
                       <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="font-semibold text-sm text-gray-900 hover:underline transition-colors whitespace-nowrap min-w-0 truncate">
                         {post.author.displayName}
                       </button>
-                      <div className="ml-auto shrink-0 flex items-center gap-1">
-                        <span className="text-xs text-gray-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
-                        {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-gray-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
+                      {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
+                        <button
+                          onClick={() => togglePin(post.id)}
+                          className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
+                          title={post.isPinned ? "Unpin post" : "Pin post"}
+                          aria-label={post.isPinned ? "Unpin post" : "Pin post"}
+                        >
+                          <Pin className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
+                        <>
                           <button
-                            onClick={() => togglePin(post.id)}
-                            className={`p-2 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
-                            title={post.isPinned ? "Unpin post" : "Pin post"}
+                            onClick={() => startEditPost(post)}
+                            className="text-gray-400 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50"
+                            title="Edit post"
+                            aria-label="Edit post"
                           >
-                            <Pin className="w-3.5 h-3.5" />
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                        {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                          <>
-                            <button
-                              onClick={() => startEditPost(post)}
-                              className="text-gray-400 hover:text-navy-500 transition-colors p-2 rounded-lg hover:bg-navy-50"
-                              title="Edit post"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => deletePost(post.id)}
-                              className="text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50"
-                              title="Delete post"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
+                          <button
+                            onClick={() => deletePost(post.id)}
+                            className="text-gray-400 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                            title="Delete post"
+                            aria-label="Delete post"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                     {post.author.department && (
-                      <span className="text-xs text-zinc-500 font-medium block">{post.author.department.name}</span>
+                      <span className="text-xs text-gray-500 font-medium block">{post.author.department.name}</span>
                     )}
                     {editingPost?.id === post.id ? (
                       <div className="mt-2 space-y-2">
@@ -1809,19 +1840,19 @@ export default function FeedPage() {
                           onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
                           maxLength={120}
                           placeholder="Title *"
-                          className="w-full text-sm font-semibold bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:font-normal placeholder:text-zinc-500 transition-all"
+                          className="w-full text-sm font-semibold bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:font-normal placeholder:text-gray-500 transition-all"
                         />
                         <textarea
                           value={editingPost.content}
                           onChange={(e) => { setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev)); autoResize(e.target); }}
                           rows={3}
-                          className="w-full resize-none overflow-hidden text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-zinc-500 transition-all"
+                          className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
                         />
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => saveEditPost(post)}
                             disabled={savingPostEdit || !editingPost.content.trim() || !editingPost.title.trim()}
-                            className="flex items-center gap-1.5 bg-[#111827] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Check className="w-3.5 h-3.5" /> Save
                           </button>
@@ -1836,7 +1867,7 @@ export default function FeedPage() {
                     ) : (
                       <>
                         {post.title && (
-                          <p className="text-base font-bold text-zinc-900 mt-1 leading-snug">{post.title}</p>
+                          <p className="text-base font-bold text-gray-900 mt-1 leading-snug">{post.title}</p>
                         )}
                         <p className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
                       </>
@@ -1878,9 +1909,11 @@ export default function FeedPage() {
                         ? "bg-navy-50 border-navy-200 text-navy-700"
                         : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
                     }`}
+                    aria-expanded={!!openComments[post.id]}
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
                     {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${openComments[post.id] ? "rotate-180" : ""}`} />
                   </button>
                 </div>
 
@@ -1891,10 +1924,10 @@ export default function FeedPage() {
                       <div className="space-y-3 animate-pulse">
                         {[1, 2].map((i) => (
                           <div key={i} className="flex gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-zinc-100 shrink-0" />
+                            <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
                             <div className="flex-1 space-y-1.5">
-                              <div className="h-3 bg-zinc-100 rounded w-1/4" />
-                              <div className="h-3 bg-zinc-100 rounded w-3/4" />
+                              <div className="h-3 bg-gray-100 rounded w-1/4" />
+                              <div className="h-3 bg-gray-100 rounded w-3/4" />
                             </div>
                           </div>
                         ))}
@@ -1960,12 +1993,13 @@ export default function FeedPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === "Escape") setReplyingTo(null);
                                     }}
-                                    className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+                                    className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
                                   />
                                   <button
                                     onClick={() => submitReply(post.id, c.id)}
                                     disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                                    className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                                    className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                                    aria-label="Submit reply"
                                   >
                                     <Send className="w-3.5 h-3.5" />
                                   </button>
@@ -2014,12 +2048,13 @@ export default function FeedPage() {
                           placeholder="Write a comment…"
                           value={commentDraft[post.id] ?? ""}
                           onChange={(e) => { setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value })); autoResize(e.target); }}
-                          className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+                          className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
                         />
                         <button
                           onClick={() => submitComment(post.id)}
                           disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
-                          className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                          className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                          aria-label="Submit comment"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>
@@ -2038,8 +2073,9 @@ export default function FeedPage() {
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:border-gray-300 hover:text-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {loadingMore ? "Loading…" : "Load more posts"}
           </button>
         </div>

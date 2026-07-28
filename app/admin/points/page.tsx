@@ -360,7 +360,7 @@ export default function AwardPointsPage() {
                 tab === t
                   ? t === "deduct"
                     ? "text-red-600 border-b-2 border-red-600"
-                    : "text-gray-900 border-b-2 border-[#111827]"
+                    : "text-gray-900 border-b-2 border-command-black"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -401,7 +401,7 @@ export default function AwardPointsPage() {
                   type="button"
                   onClick={() => attendanceFileRef.current?.click()}
                   disabled={attendanceUploading}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-command-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
                   {attendanceUploading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Upload className="w-4 h-4" aria-hidden="true" />}
                   {attendanceUploading ? "Processing…" : "Upload Attendance File (.xlsx)"}
@@ -606,7 +606,7 @@ export default function AwardPointsPage() {
               <button
                 type="submit"
                 disabled={submitting || !toUserId}
-                className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {submitting ? (
                   <span className="flex items-center gap-2">
@@ -641,7 +641,7 @@ export default function AwardPointsPage() {
                   <label className="text-sm font-medium text-gray-700">
                     Select Recipients
                     {bulkSelected.size > 0 && (
-                      <span className="ml-2 text-xs font-normal text-indigo-600">
+                      <span className="ml-2 text-xs font-normal text-navy-600">
                         {bulkSelected.size} selected
                       </span>
                     )}
@@ -649,7 +649,7 @@ export default function AwardPointsPage() {
                   <button
                     type="button"
                     onClick={toggleSelectAll}
-                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                    className="text-xs text-navy-600 hover:text-navy-800 font-medium"
                   >
                     {allFilteredSelected ? "Deselect All" : "Select All"}
                   </button>
@@ -664,13 +664,13 @@ export default function AwardPointsPage() {
                         key={e.id}
                         className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${
                           i !== 0 ? "border-t border-gray-100" : ""
-                        } ${bulkSelected.has(e.id) ? "bg-indigo-50/50" : ""}`}
+                         } ${bulkSelected.has(e.id) ? "bg-navy-50/50" : ""}`}
                       >
                         <input
                           type="checkbox"
                           checked={bulkSelected.has(e.id)}
                           onChange={() => toggleEmployee(e.id)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                           className="rounded border-gray-300 text-navy-600 focus:ring-navy-500/30"
                         />
                         <span className="flex-1 text-sm text-gray-800">{e.displayName}</span>
                         {e.department && (
@@ -729,7 +729,7 @@ export default function AwardPointsPage() {
               <button
                 type="submit"
                 disabled={bulkSubmitting || bulkSelected.size === 0 || !bulkAmount || !bulkNote}
-                className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {bulkSubmitting ? (
                   <span className="flex items-center gap-2">
@@ -749,16 +749,16 @@ export default function AwardPointsPage() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">Recent Transactions</h2>
         </div>
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto scroll-hint">
+        <table className="w-full text-sm" aria-label="Recent transactions">
           <thead className="bg-gray-50">
             <tr>
-              <th className={thClass}>Recipient</th>
-              <th className={thClass}>Awarded By</th>
-              <th className={thClass}>Points</th>
-              <th className={thClass}>Category</th>
-              <th className={thClass}>Note</th>
-              <th className={thClass}>Date</th>
+              <th scope="col" className={thClass}>Recipient</th>
+              <th scope="col" className={thClass}>Awarded By</th>
+              <th scope="col" className={thClass}>Points</th>
+              <th scope="col" className={thClass}>Category</th>
+              <th scope="col" className={thClass}>Note</th>
+              <th scope="col" className={thClass}>Date</th>
             </tr>
           </thead>
           <tbody>

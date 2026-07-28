@@ -91,7 +91,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex bg-white">
 
       {/* ── Left panel — desktop only ── */}
-      <div className="hidden lg:flex w-[52%] bg-[#111827] flex-col justify-between p-12 relative overflow-hidden">
+      <div className="hidden lg:flex w-[52%] bg-command-black flex-col justify-between p-12 relative overflow-hidden">
         {/* Subtle grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.035]"
@@ -150,7 +150,7 @@ export default function LoginPage() {
         <div
           className="absolute inset-0 opacity-[0.025] pointer-events-none"
           style={{
-            backgroundImage: "radial-gradient(circle, #111827 1px, transparent 1px)",
+             backgroundImage: "radial-gradient(circle, var(--color-command-black) 1px, transparent 1px)",
             backgroundSize: "28px 28px",
           }}
           aria-hidden="true"
@@ -188,7 +188,7 @@ export default function LoginPage() {
               onClick={handleGoogleSignIn}
               disabled={loading}
               aria-busy={loading}
-              className="cursor-pointer w-full flex items-center justify-center gap-3 bg-white border border-zinc-200 rounded-xl px-5 py-3 text-sm text-zinc-700 font-medium hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
+               className="cursor-pointer w-full flex items-center justify-center gap-3 bg-white border border-zinc-200 rounded-xl px-5 py-3 text-sm text-zinc-700 font-medium hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 shrink-0 animate-spin text-zinc-500" aria-hidden="true" />

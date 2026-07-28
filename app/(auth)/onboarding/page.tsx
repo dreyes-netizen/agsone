@@ -150,7 +150,7 @@ export default function OnboardingPage() {
               type="submit"
               disabled={submitting}
               aria-busy={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-[#111827] hover:bg-gray-800 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]"
+               className="w-full flex items-center justify-center gap-2 bg-command-black hover:bg-gray-800 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
               {submitting ? "Saving…" : "Get Started"}

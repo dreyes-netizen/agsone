@@ -189,9 +189,9 @@ export default function DocumentsPage() {
           }`}
         >
           {toast.type === "success" ? (
-            <CheckCircle className="w-4 h-4 shrink-0" />
+            <CheckCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           )}
           {toast.msg}
         </div>
@@ -209,16 +209,16 @@ export default function DocumentsPage() {
             onClick={handleReindex}
             disabled={reindexing}
             title="Re-index all active documents for Ally"
-            className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30"
           >
-            <RefreshCw className={`w-4 h-4 ${reindexing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${reindexing ? "animate-spin" : ""}`} aria-hidden="true" />
             {reindexing ? "Re-indexing…" : "Re-index Ally"}
           </button>
           <button
             onClick={() => { setModalOpen(true); setUploadError(""); setDocName(""); setFile(null); }}
-            className="flex items-center gap-2 bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1f2937] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="flex items-center gap-2 bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30"
           >
-            <Upload className="w-4 h-4" />
+            <Upload className="w-4 h-4" aria-hidden="true" />
             Upload Document
           </button>
         </div>
@@ -227,8 +227,8 @@ export default function DocumentsPage() {
       {/* Ally global on/off switch */}
       <div className="mb-6 flex items-center justify-between gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#111827] flex items-center justify-center shrink-0 mt-0.5">
-            <Bot className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-lg bg-command-black flex items-center justify-center shrink-0 mt-0.5">
+            <Bot className="w-5 h-5 text-white" aria-hidden="true" />
           </div>
           <div>
             <p className="font-semibold text-gray-900 text-sm">Ally HR Assistant</p>
@@ -248,7 +248,7 @@ export default function DocumentsPage() {
           aria-label="Toggle Ally HR Assistant"
           disabled={allyEnabled === null || togglingAlly}
           onClick={handleToggleAlly}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
             allyEnabled ? "bg-emerald-500" : "bg-gray-300"
           }`}
         >
@@ -261,35 +261,35 @@ export default function DocumentsPage() {
       </div>
 
       {reindexResult && (
-        <div className="mb-4 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3">
-          <p className="text-xs font-semibold text-zinc-500 mb-1">Re-index result</p>
-          <pre className="text-xs text-zinc-700 whitespace-pre-wrap">{reindexResult}</pre>
+        <div className="mb-4 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+          <p className="text-xs font-semibold text-gray-500 mb-1">Re-index result</p>
+          <pre className="text-xs text-gray-700 whitespace-pre-wrap">{reindexResult}</pre>
         </div>
       )}
 
       {loading ? (
         <div className="flex justify-center items-center py-16 text-gray-500 text-sm gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
+          <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
           Loading…
         </div>
       ) : documents.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
-          <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
           <p className="text-gray-500 font-medium">No documents uploaded yet</p>
           <p className="text-gray-500 text-sm mt-1">Upload a document to make it available to the chatbot.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto scroll-hint">
+          <table className="w-full text-sm" aria-label="Policy documents">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Name</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500">File</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Size</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Uploaded</th>
-                <th className="px-5 py-3" />
+                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Name</th>
+                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">File</th>
+                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Size</th>
+                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
+                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Uploaded</th>
+                <th scope="col" className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -306,10 +306,10 @@ export default function DocumentsPage() {
                             if (e.key === "Enter") handleRename(doc.id);
                             if (e.key === "Escape") setRenamingId(null);
                           }}
-                          className="border border-indigo-300 rounded px-2 py-1 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48"
+                           className="border border-gray-300 rounded px-2 py-1 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 w-48"
                         />
                         <button onClick={() => handleRename(doc.id)} className="text-emerald-500 hover:text-emerald-700">
-                          <Check className="w-4 h-4" />
+                          <Check className="w-4 h-4" aria-hidden="true" />
                         </button>
                         <button onClick={() => setRenamingId(null)} className="text-gray-500 hover:text-gray-600">
                           <X className="w-4 h-4" />
@@ -320,10 +320,10 @@ export default function DocumentsPage() {
                         <span className="font-medium text-gray-900">{doc.name}</span>
                         <button
                           onClick={() => { setRenamingId(doc.id); setRenameValue(doc.name); }}
-                          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-indigo-500 transition-opacity"
+                           className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-navy-600 transition-opacity"
                           title="Rename"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
+                          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     )}
@@ -333,7 +333,7 @@ export default function DocumentsPage() {
                   <td className="px-5 py-3">
                     <button
                       onClick={() => handleToggle(doc.id, doc.isActive)}
-                      className="flex items-center gap-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                       className="flex items-center gap-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 rounded"
                     >
                       {doc.isActive ? (
                         <>
@@ -364,7 +364,7 @@ export default function DocumentsPage() {
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(null)}
-                          className="text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                           className="text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 rounded"
                         >
                           No
                         </button>
@@ -375,7 +375,7 @@ export default function DocumentsPage() {
                         className="text-red-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
                         title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
                     )}
                   </td>
@@ -401,7 +401,7 @@ export default function DocumentsPage() {
               <h2 id="upload-modal-title" className="font-semibold text-gray-900">Upload Document</h2>
               <button
                 onClick={() => setModalOpen(false)}
-                className="text-gray-500 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                 className="text-gray-500 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 rounded"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -416,7 +416,7 @@ export default function DocumentsPage() {
                   value={docName}
                   onChange={(e) => setDocName(e.target.value)}
                   placeholder="e.g. Employee Handbook"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                 />
               </div>
 
@@ -436,7 +436,7 @@ export default function DocumentsPage() {
                       className="shrink-0 text-indigo-400 hover:text-indigo-600 transition-colors mt-0.5"
                       title="Copy prompt"
                     >
-                      {promptCopied ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      {promptCopied ? <CheckCheck className="w-4 h-4 text-emerald-500" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -453,7 +453,7 @@ export default function DocumentsPage() {
                 />
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-200 rounded-lg px-4 py-6 text-center text-sm text-gray-500 hover:border-indigo-300 hover:text-indigo-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  className="w-full border-2 border-dashed border-gray-200 rounded-lg px-4 py-6 text-center text-sm text-gray-500 hover:border-navy-300 hover:text-navy-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30"
                 >
                   {file ? (
                     <span className="text-gray-700 font-medium">{file.name} ({formatBytes(file.size)})</span>
@@ -470,11 +470,11 @@ export default function DocumentsPage() {
               <button
                 onClick={handleUpload}
                 disabled={uploading || !file || !docName.trim()}
-                className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="w-full bg-navy-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-navy-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30"
               >
                 {uploading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                     Uploading…
                   </span>
                 ) : "Upload"}

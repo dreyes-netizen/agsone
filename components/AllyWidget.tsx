@@ -35,7 +35,7 @@ function MessageBubble({ msg, isStreaming }: { msg: Message; isStreaming: boolea
   return (
     <div className={`flex gap-2 ${isModel ? "justify-start" : "justify-end"}`}>
       {isModel && (
-        <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5 bg-[#111827] p-1">
+        <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5 bg-command-black p-1">
           <Image src="/ally-eagle.svg" alt="Ally" width={28} height={28} className="w-full h-full object-contain invert" />
         </div>
       )}
@@ -44,7 +44,7 @@ function MessageBubble({ msg, isStreaming }: { msg: Message; isStreaming: boolea
           className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
             isModel
               ? "bg-white border border-zinc-100 text-zinc-700 rounded-tl-sm shadow-sm"
-              : "bg-[#111827] text-white rounded-tr-sm whitespace-pre-wrap"
+              : "bg-command-black text-white rounded-tr-sm whitespace-pre-wrap"
           }`}
         >
           {isModel && isStreaming && isEmpty ? (
@@ -215,7 +215,7 @@ export function AllyWidget() {
 
           <div className="fixed z-50 bg-zinc-50 shadow-2xl flex flex-col rounded-2xl border border-zinc-200 overflow-hidden inset-x-3 bottom-[88px] top-16 lg:inset-auto lg:bottom-24 lg:right-6 lg:w-[400px] lg:h-[560px]">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#111827] shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 bg-command-black shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center p-1.5">
                   <Image src="/ally-eagle.svg" alt="Ally" width={32} height={32} className="w-full h-full object-contain invert" />
@@ -236,7 +236,7 @@ export function AllyWidget() {
                 <div className="space-y-3">
                   <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
                     <div className="flex items-start gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-[#111827] p-1 shrink-0 mt-0.5">
+                      <div className="w-7 h-7 rounded-full bg-command-black p-1 shrink-0 mt-0.5">
                         <Image src="/ally-eagle.svg" alt="Ally" width={28} height={28} className="w-full h-full object-contain invert" />
                       </div>
                       <p className="text-zinc-600 text-sm leading-relaxed">
@@ -249,7 +249,7 @@ export function AllyWidget() {
                     <button
                       key={q}
                       onClick={() => send(q)}
-                      className="w-full text-left text-xs text-zinc-600 bg-white border border-zinc-100 rounded-xl px-3.5 py-2.5 hover:border-[#111827]/20 hover:text-[#111827] transition-colors shadow-sm"
+                      className="w-full text-left text-xs text-zinc-600 bg-white border border-zinc-100 rounded-xl px-3.5 py-2.5 hover:border-command-black/20 hover:text-command-black transition-colors shadow-sm"
                     >
                       {q}
                     </button>
@@ -277,14 +277,14 @@ export function AllyWidget() {
                   placeholder="Ask about company policies…"
                   rows={1}
                   disabled={loading}
-                  className="flex-1 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#111827]/30 disabled:opacity-50 max-h-28 overflow-y-auto"
+                  className="flex-1 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-command-black/30 disabled:opacity-50 max-h-28 overflow-y-auto"
                   style={{ minHeight: "42px" }}
                 />
                 <button
                   onClick={() => send(input)}
                   disabled={loading || !input.trim()}
                   aria-label="Send message"
-                  className="w-9 h-9 bg-[#111827] rounded-xl flex items-center justify-center hover:bg-[#1f2937] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="w-9 h-9 bg-command-black rounded-xl flex items-center justify-center hover:bg-[#1f2937] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   <Send className="w-4 h-4 text-white" />
                 </button>
@@ -299,7 +299,7 @@ export function AllyWidget() {
       <button
         onClick={() => (open ? handleClose() : setOpen(true))}
         className={`fixed z-50 shadow-lg flex items-center gap-2 px-4 py-2.5 rounded-full transition-all bottom-20 right-4 lg:bottom-6 lg:right-6 ${
-          open ? "bg-[#1f2937]" : "bg-[#111827] hover:bg-[#1f2937] hover:scale-105 active:scale-95"
+          open ? "bg-[#1f2937]" : "bg-command-black hover:bg-[#1f2937] hover:scale-105 active:scale-95"
         }`}
         aria-label="Open Ally HR Assistant"
       >

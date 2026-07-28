@@ -99,7 +99,7 @@ function fullSizeAvatar(url: string | null) {
 }
 
 const inputClass =
-  "w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400";
+  "w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400";
 
 export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -384,7 +384,7 @@ export default function EmployeeProfilePage() {
                       </span>
                     </div>
                     {s.post.author.department && (
-                      <span className="text-xs text-zinc-500 font-medium block">{s.post.author.department.name}</span>
+                      <span className="text-xs text-gray-500 font-medium block">{s.post.author.department.name}</span>
                     )}
                   </div>
                 </div>
@@ -489,7 +489,7 @@ export default function EmployeeProfilePage() {
               type="submit"
               disabled={awardSubmitting || !awardAmount || (budget !== null && !budget.isExempt && budget.remaining === 0)}
               aria-busy={awardSubmitting}
-              className="flex items-center gap-2 bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+              className="flex items-center gap-2 bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
               {awardSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
               {awardSubmitting ? "Awarding…" : "Award Points"}
@@ -532,7 +532,7 @@ export default function EmployeeProfilePage() {
                   required
                   rows={2}
                   maxLength={500}
-                  className={inputClass + " resize-none focus:ring-amber-400/30 focus:border-amber-400"}
+                  className={inputClass + " resize-none focus-visible:ring-amber-400/30 focus-visible:border-amber-400"}
                 />
               </div>
               {shoutoutError && (

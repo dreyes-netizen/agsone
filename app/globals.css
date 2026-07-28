@@ -7,6 +7,22 @@
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* Mobile scroll hint — fade right edge to indicate more content */
+@media (max-width: 767px) {
+  .scroll-hint {
+    position: relative;
+  }
+  .scroll-hint::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 24px;
+    background: linear-gradient(to right, transparent, white);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
 /* Easing tokens */
 :root {
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
@@ -34,6 +50,7 @@
   --color-navy-700: oklch(0.488 0.243 264.376);
   --color-navy-800: oklch(0.424 0.199 265.638);
   --color-navy-900: oklch(0.379 0.146 265.522);
+  --color-command-black: #111827;
 }
 
 @theme inline {

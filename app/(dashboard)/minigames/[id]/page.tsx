@@ -183,7 +183,7 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
               aria-label="Search employees to invite"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400 transition"
+              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-400 transition"
             />
           </div>
           <div className="max-h-52 overflow-y-auto">
@@ -336,7 +336,7 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
               onMouseEnter={() => setHoverCol(col)}
               onMouseLeave={() => setHoverCol(c => (c === col ? null : c))}
               disabled={!isMyTurn || board[col][5] !== null}
-              className="w-full h-8 flex items-center justify-center text-white/60 hover:text-white disabled:opacity-0 transition-colors text-sm focus-visible:outline-none focus-visible:text-white"
+              className="w-full h-8 flex items-center justify-center text-white/60 hover:text-white disabled:opacity-0 transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
             >
               ▼
             </button>
@@ -743,14 +743,15 @@ function BSBoard({ session, onMove }: { session: Session; onMove: (data: unknown
         <div className="flex gap-2 justify-center">
           <button
             onClick={() => setPending(generateRandomPlacement())}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors"
+            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             🔀 Shuffle
           </button>
           <button
             onClick={async () => { setConfirming(true); await onMove({ action: "place", ships: pending }); }}
             disabled={confirming}
-            className="px-6 py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
+            aria-label="Deploy fleet"
+            className="px-6 py-2.5 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
           >
             {confirming ? "Deploying…" : "Deploy Fleet ⚓"}
           </button>
@@ -892,7 +893,7 @@ function MemoryBoard({ session, onMove }: { session: Session; onMove: (data: unk
               <p className="text-sm text-gray-500">No match — memorize them!</p>
               <button
                 onClick={() => onMove({ confirm: true })}
-                className="px-6 py-2.5 bg-[#111827] hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors"
+                className="px-6 py-2.5 bg-command-black hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors"
               >
                 Flip back →
               </button>
@@ -1030,7 +1031,7 @@ function MobileBar({
         <div className="flex gap-2">
           {rematchId ? (
             iStartedRematch ? (
-              <button onClick={() => router.push(`/minigames/${rematchId}`)} className="flex-1 py-2.5 bg-[#111827] text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">
+              <button onClick={() => router.push(`/minigames/${rematchId}`)} className="flex-1 py-2.5 bg-command-black text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">
                 Go to rematch →
               </button>
             ) : (
@@ -1041,13 +1042,13 @@ function MobileBar({
             )
           ) : (
             opponent && (
-              <button onClick={startRematch} disabled={rematching} className="flex-1 py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5">
+              <button onClick={startRematch} disabled={rematching} className="flex-1 py-2.5 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5">
                 <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 {rematching ? "Sending…" : "Rematch"}
               </button>
             )
           )}
-          <button onClick={() => router.push("/minigames")} className="flex-1 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900">
+          <button onClick={() => router.push("/minigames")} aria-label="Back to lobby" className="flex-1 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900">
             Back
           </button>
         </div>
@@ -1055,7 +1056,7 @@ function MobileBar({
 
       {/* Forfeit */}
       {session.status === "ACTIVE" && (session.myRole === "host" || session.myRole === "guest") && (
-        <button onClick={onForfeit} disabled={forfeiting} className="w-full py-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-60 text-sm font-medium rounded-xl transition-colors">
+        <button onClick={onForfeit} disabled={forfeiting} className="w-full py-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-60 text-sm font-medium rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500">
           {forfeiting ? "Forfeiting…" : "Forfeit"}
         </button>
       )}
@@ -1219,7 +1220,7 @@ function RightPanel({
             iStartedRematch ? (
               <button
                 onClick={() => router.push(`/minigames/${rematchId}`)}
-                className="w-full py-3 bg-[#111827] hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors"
+                className="w-full py-3 bg-command-black hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors"
               >
                 Go to your rematch →
               </button>
@@ -1238,7 +1239,7 @@ function RightPanel({
               <button
                 onClick={startRematch}
                 disabled={rematching}
-                className="w-full py-3 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
+                className="w-full py-3 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
               >
                 {rematching ? "Sending…" : `🔁 Rematch ${opponent.displayName}`}
               </button>
@@ -1247,7 +1248,7 @@ function RightPanel({
 
           <button
             onClick={() => router.push("/minigames")}
-            className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors hover:border-gray-300"
+            className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
           >
             Back to lobby
           </button>
@@ -1257,7 +1258,7 @@ function RightPanel({
         <button
           onClick={onForfeit}
           disabled={forfeiting}
-          className="w-full py-2.5 bg-white border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-60 text-sm font-medium rounded-xl transition-colors"
+          className="w-full py-2.5 bg-white border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-60 text-sm font-medium rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500"
         >
           {forfeiting ? "Forfeiting…" : "Forfeit game"}
         </button>

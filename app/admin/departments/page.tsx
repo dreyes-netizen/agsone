@@ -130,7 +130,7 @@ export default function DepartmentsPage() {
         {!showCreateForm && (
           <button
             onClick={() => { setShowCreateForm(true); setCreateError(""); }}
-            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
+            className="bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
           >
             New Department
           </button>
@@ -167,7 +167,7 @@ export default function DepartmentsPage() {
             <button
               onClick={handleCreate}
               disabled={saving}
-              className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
+                            className="bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -187,14 +187,14 @@ export default function DepartmentsPage() {
         ) : departments.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No departments yet.</div>
         ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full">
+          <div className="overflow-x-auto scroll-hint">
+          <table className="w-full" aria-label="Departments">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Name</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Description</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Employees</th>
-                <th className="px-6 py-3"></th>
+                <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Name</th>
+                <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Description</th>
+                <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Employees</th>
+                <th scope="col" className="px-6 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -222,7 +222,7 @@ export default function DepartmentsPage() {
                           <button
                             onClick={() => handleEdit(dept.id)}
                             disabled={saving}
-                            className="bg-[#111827] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
+              className="bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
                           >
                             {saving ? "Saving..." : "Save"}
                           </button>

@@ -192,7 +192,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
                     <span className="text-xs font-semibold text-gray-700">{reply.author.displayName}</span>
                     <span className="text-[10px] text-gray-500">{new Date(reply.createdAt).toLocaleString()}</span>
                   </div>
-                  <div className={`px-4 py-3 rounded-2xl text-sm text-gray-800 whitespace-pre-wrap ${isHr ? "bg-[#111827] text-white rounded-tr-none" : "bg-gray-100 rounded-tl-none"}`}>
+                  <div className={`px-4 py-3 rounded-2xl text-sm text-gray-800 whitespace-pre-wrap ${isHr ? "bg-command-black text-white rounded-tr-none" : "bg-gray-100 rounded-tl-none"}`}>
                     {reply.body}
                   </div>
                 </div>
@@ -220,7 +220,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
             onClick={handleReply}
             disabled={!replyBody.trim() || sending}
             aria-label="Send reply"
-            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+            className="flex items-center justify-center w-10 h-10 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             <Send className="w-4 h-4" />
           </button>

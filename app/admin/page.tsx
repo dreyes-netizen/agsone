@@ -127,7 +127,7 @@ export default function AdminDashboardPage() {
     return (
       <div role="status" aria-label="Loading dashboard" className="space-y-5 animate-pulse">
         <div className="h-8 bg-gray-100 rounded w-1/3" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
         </div>
         <div className="h-56 bg-gray-100 rounded-2xl" />
@@ -135,7 +135,25 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (!data) return <p className="text-gray-500">Failed to load analytics.</p>;
+  if (!data) return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
+        <p className="text-sm text-gray-500 mt-0.5">
+          {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </p>
+      </div>
+      <div role="alert" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center space-y-3">
+        <p className="text-gray-500">Failed to load analytics.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="text-sm text-gray-700 font-medium underline underline-offset-2 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
   // Merge daily awarded + redeemed into a single chart dataset by date
   const allDates = new Set([
@@ -192,9 +210,9 @@ export default function AdminDashboardPage() {
           value={data.pointsThisMonth.toLocaleString()}
           sub={`${redemptionRate}% redeemed this month`}
           icon={TrendingUp}
-          iconColor="bg-emerald-500"
+          iconColor="bg-gray-500"
           growth={data.monthGrowth}
-          valueColor="text-emerald-600"
+          valueColor="text-gray-900"
         />
         <KpiCard
           label="Pending Actions"
@@ -221,11 +239,11 @@ export default function AdminDashboardPage() {
             <p className="font-semibold text-gray-900 text-sm">Points Flow — Last 30 Days</p>
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-[#111827] inline-block rounded" />
+                 <span className="w-3 h-0.5 bg-command-black inline-block rounded" />
                 Awarded
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-violet-500 inline-block rounded" />
+                <span className="w-3 h-0.5 bg-gray-400 inline-block rounded" />
                 Redeemed
               </span>
             </div>
@@ -233,16 +251,16 @@ export default function AdminDashboardPage() {
           {chartData.length === 0 ? (
             <div className="h-40 flex items-center justify-center text-gray-500 text-sm">No data yet</div>
           ) : (
-            <ResponsiveContainer width="100%" height={160}>
+            <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="awardedGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#111827" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#111827" stopOpacity={0} />
+                     <stop offset="5%" stopColor="var(--color-command-black)" stopOpacity={0.12} />
+                     <stop offset="95%" stopColor="var(--color-command-black)" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="redeemedGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                     <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.1} />
+                     <stop offset="95%" stopColor="#9ca3af" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -252,8 +270,8 @@ export default function AdminDashboardPage() {
                   contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }}
                   formatter={(v, name) => [`${Number(v ?? 0).toLocaleString()} pts`, String(name)]}
                 />
-                <Area type="monotone" dataKey="Awarded" stroke="#111827" strokeWidth={2.5} fill="url(#awardedGrad)" />
-                <Area type="monotone" dataKey="Redeemed" stroke="#7c3aed" strokeWidth={2} fill="url(#redeemedGrad)" strokeDasharray="4 2" />
+                 <Area type="monotone" dataKey="Awarded" stroke="var(--color-command-black)" strokeWidth={2.5} fill="url(#awardedGrad)" />
+                <Area type="monotone" dataKey="Redeemed" stroke="#9ca3af" strokeWidth={2} fill="url(#redeemedGrad)" strokeDasharray="4 2" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -266,7 +284,7 @@ export default function AdminDashboardPage() {
               const maxBal = Math.max(...data.topEarners.map(e => e.pointsBalance), 1);
               return data.topEarners.map((e, i) => (
                 <div key={e.id} className="grid grid-cols-[16px_28px_1fr_64px] items-center gap-2.5">
-                  <span className={`text-xs font-bold tabular-nums text-center ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-400"}`}>{i + 1}</span>
+                  <span className={`text-xs font-bold tabular-nums text-center ${i === 0 ? "text-gray-700" : i === 1 ? "text-gray-400" : i === 2 ? "text-gray-500" : "text-gray-400"}`}>{i + 1}</span>
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                     {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
                   </div>
@@ -326,14 +344,14 @@ export default function AdminDashboardPage() {
           {data.departmentBreakdown.length === 0 ? (
             <div className="py-8 text-center text-sm text-gray-500">No department data</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto scroll-hint">
+              <table className="w-full text-sm" aria-label="Department activity this month">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-4 py-2 text-xs font-semibold text-gray-700">Department</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-700 w-40">Engagement</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-16">Active</th>
-                    <th className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-24">Points</th>
+                    <th scope="col" className="text-left px-4 py-2 text-xs font-semibold text-gray-700">Department</th>
+                    <th scope="col" className="px-4 py-2 text-xs font-semibold text-gray-700 w-40">Engagement</th>
+                    <th scope="col" className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-16">Active</th>
+                    <th scope="col" className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-24">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -411,7 +429,7 @@ export default function AdminDashboardPage() {
       {birthdays.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
-            <Cake aria-hidden="true" className="w-4 h-4 text-pink-400" />
+            <Cake aria-hidden="true" className="w-4 h-4 text-gray-400" />
             <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>
             <span className="text-xs text-gray-500 ml-auto">Next 14 days</span>
           </div>
@@ -422,10 +440,10 @@ export default function AdminDashboardPage() {
                 const displayDate = new Date(2000, parseInt(mm) - 1, parseInt(dd))
                   .toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 const labelText = b.daysUntil === 0 ? "Today!" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`;
-                const labelColor = b.daysUntil === 0 ? "text-pink-600 bg-pink-50" : b.daysUntil <= 3 ? "text-amber-600 bg-amber-50" : "text-gray-500 bg-gray-50";
+                const labelColor = b.daysUntil === 0 ? "text-gray-700 bg-gray-100" : b.daysUntil <= 3 ? "text-gray-600 bg-gray-100" : "text-gray-500 bg-gray-50";
                 return (
                   <li key={b.id} className="grid grid-cols-[28px_1fr_auto] items-center gap-2.5 py-1.5 px-1 hover:bg-gray-50/60 rounded-lg transition-colors">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
                       {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">

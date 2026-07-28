@@ -67,7 +67,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   TEAM_DYNAMICS: "bg-orange-100 text-orange-700",
   PROCESSES_TOOLS: "bg-gray-100 text-gray-700",
   RECOGNITION: "bg-amber-100 text-amber-700",
-  OTHER: "bg-zinc-100 text-zinc-600",
+  OTHER: "bg-gray-100 text-gray-600",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -213,17 +213,17 @@ export default function FeedbackPage() {
   const activeId = panel.mode === "thread" ? panel.id : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-112px)]">
+    <div className="flex flex-col h-[calc(100vh-120px)]">
       {/* Page header */}
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Reports</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Confidential — HR &amp; Investigators only</p>
+          <p className="text-sm text-gray-500 mt-0.5 hidden sm:block">Confidential — HR &amp; Investigators only</p>
         </div>
         <button
           onClick={startCompose}
           aria-label="New report"
-          className="flex items-center gap-2 bg-[#111827] hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+          className="flex items-center gap-2 bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
         >
           <Plus className="w-4 h-4" aria-hidden="true" /> New
         </button>
@@ -256,7 +256,7 @@ export default function FeedbackPage() {
           ) : (
             <div className="p-3 space-y-1.5">
               {panel.mode === "compose" && (
-                <div className="bg-[#111827] text-white rounded-xl p-3 border border-dashed border-white/20" aria-current="true">
+                <div className="bg-command-black text-white rounded-xl p-3 border border-dashed border-white/20" aria-current="true">
                   <p className="flex items-center gap-1.5 text-[10px] opacity-60 mb-1">
                     <Pencil className="w-3 h-3" aria-hidden="true" /> New draft
                   </p>
@@ -274,7 +274,7 @@ export default function FeedbackPage() {
                     aria-pressed={isActive}
                     aria-label={`${item.title}, ${STATUS_LABEL[item.status]}`}
                     className={`w-full text-left rounded-xl p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900/40 ${
-                      isActive ? "bg-[#111827]" : "hover:bg-gray-50"
+                      isActive ? "bg-command-black" : "hover:bg-gray-50"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -339,7 +339,7 @@ export default function FeedbackPage() {
                 if (panel.mode === "compose") discardCompose();
                 else setPanel({ mode: "welcome" });
               }}
-              className="md:hidden flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 px-4 py-3 border-b border-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900/20"
+              className="md:hidden flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 px-4 py-3.5 border-b border-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900/20"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               All reports
@@ -364,7 +364,7 @@ export default function FeedbackPage() {
               </div>
               <button
                 onClick={startCompose}
-                className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
+                className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
               >
                 {items.length === 0 ? "File your first report →" : "+ New Report"}
               </button>
@@ -372,7 +372,7 @@ export default function FeedbackPage() {
           )}
 
           {panel.mode === "compose" && (
-            <div className="p-6 flex flex-col gap-4 max-w-xl overflow-y-auto flex-1 min-h-0">
+            <div className="p-4 sm:p-6 flex flex-col gap-4 max-w-xl overflow-y-auto flex-1 min-h-0">
               <h2 className="text-base font-bold text-gray-900" id="compose-heading">Report a Concern</h2>
 
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -397,7 +397,7 @@ export default function FeedbackPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Brief summary of your report"
                   aria-required="true"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-400 transition"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700/20 focus-visible:border-red-400 transition"
                 />
               </div>
 
@@ -410,7 +410,7 @@ export default function FeedbackPage() {
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   aria-required="true"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-400 bg-white transition"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700/20 focus-visible:border-red-400 bg-white transition"
                 >
                   <option value="">Select a category</option>
                   <option value="HARASSMENT_DISCRIMINATION">Harassment &amp; Discrimination</option>
@@ -433,7 +433,7 @@ export default function FeedbackPage() {
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="Describe the concern in detail. Include dates, names, and any evidence if available."
                   aria-required="true"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-400 resize-none transition"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700/20 focus-visible:border-red-400 resize-none transition"
                 />
               </div>
 
@@ -444,13 +444,13 @@ export default function FeedbackPage() {
                   aria-checked={isAnonymous}
                   aria-label="Submit anonymously"
                   onClick={() => setIsAnonymous((v) => !v)}
-                  className={`relative shrink-0 mt-0.5 w-10 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700 ${
+                  className={`relative shrink-0 mt-0.5 w-12 h-6 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700 ${
                     isAnonymous ? "bg-red-700" : "bg-gray-200"
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      isAnonymous ? "translate-x-5" : "translate-x-0"
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      isAnonymous ? "translate-x-6" : "translate-x-0"
                     }`}
                   />
                 </button>
@@ -467,7 +467,7 @@ export default function FeedbackPage() {
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={discardCompose}
-                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded-lg"
+                  className="px-4 py-2.5 sm:py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded-lg"
                 >
                   Discard
                 </button>
@@ -475,7 +475,7 @@ export default function FeedbackPage() {
                   onClick={handleSubmit}
                   disabled={!title || !category || !body || submitting}
                   aria-busy={submitting}
-                  className="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
+                  className="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2.5 sm:py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
                 >
                   {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
                   {submitting ? "Submitting…" : "Submit Report"}
@@ -515,7 +515,7 @@ export default function FeedbackPage() {
               ) : (
                 <div className="flex flex-col h-full overflow-hidden">
                   {/* Thread header */}
-                  <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
+                  <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -550,14 +550,14 @@ export default function FeedbackPage() {
                   </div>
 
                   {/* Thread body */}
-                  <div className="px-6 py-4 border-b border-gray-50 flex-shrink-0">
+                  <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-50 flex-shrink-0">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                       {thread.body}
                     </p>
                   </div>
 
                   {/* Replies */}
-                  <div className="flex-1 overflow-y-auto px-6 py-4" aria-label="Thread replies">
+                  <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4" aria-label="Thread replies">
                     {thread.replies.length === 0 && !thread.isAnonymous && (
                       <p className="text-xs text-gray-400 text-center py-4">
                         No replies yet. HR will respond here.
@@ -602,7 +602,7 @@ export default function FeedbackPage() {
                                 className={`px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${
                                   isHrReply
                                     ? "bg-gray-100 text-gray-800 rounded-tl-none"
-                                    : "bg-[#111827] text-white rounded-tr-none"
+                                    : "bg-command-black text-white rounded-tr-none"
                                 }`}
                               >
                                 {reply.body}
@@ -616,7 +616,7 @@ export default function FeedbackPage() {
                   </div>
 
                   {/* Reply input */}
-                  <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
+                  <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex-shrink-0">
                     {thread.isAnonymous ? (
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
                         <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-800">
@@ -639,13 +639,13 @@ export default function FeedbackPage() {
                               if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleReply();
                             }}
                             placeholder="Reply to HR…"
-                            className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/20 focus:border-gray-400 resize-none transition"
+                            className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 focus-visible:border-gray-400 resize-none transition"
                           />
                           <button
                             onClick={handleReply}
                             disabled={!replyBody.trim() || sending}
                             aria-label="Send reply"
-                            className="flex items-center justify-center w-10 h-10 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                            className="flex items-center justify-center w-11 h-11 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                           >
                             {sending
                               ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
@@ -670,7 +670,7 @@ export default function FeedbackPage() {
         <div
           role="alert"
           aria-live="assertive"
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-200 ${
+          className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-200 ${
             toast.type === "success"
               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
               : "bg-red-50 text-red-800 border-red-200"

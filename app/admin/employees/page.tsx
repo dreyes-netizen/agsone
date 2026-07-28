@@ -61,8 +61,8 @@ const roleLabel: Record<string, string> = {
 const roleBadgeClass: Record<string, string> = {
   EMPLOYEE:    "bg-gray-100 text-gray-600",
   MANAGER:     "bg-navy-100 text-navy-700",
-  HR_ADMIN:    "bg-violet-100 text-violet-700",
-  SUPER_ADMIN: "bg-red-100 text-red-700",
+  HR_ADMIN:    "bg-navy-100 text-navy-700",
+  SUPER_ADMIN: "bg-navy-200 text-navy-800",
 };
 
 export default function EmployeesPage() {
@@ -391,15 +391,15 @@ export default function EmployeesPage() {
               onClick={() => { setAddModalOpen(true); setAddForm(EMPTY_ADD_FORM); setAddError(""); }}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus className="w-4 h-4" aria-hidden="true" />
               Add Employee
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={syncing}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#111827] text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-command-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="w-4 h-4" aria-hidden="true" />
               {syncing ? "Syncing…" : "Upload Employee List"}
             </button>
             <input
@@ -421,20 +421,78 @@ export default function EmployeesPage() {
             <p className="text-gray-500">No employees found. You may need to set up the first admin.</p>
             <button
               onClick={handleBootstrap}
-              className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800"
+              className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800"
             >
               Make me HR Admin
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <>
+          {/* Mobile card layout */}
+          <div className="md:hidden divide-y divide-gray-50">
+            {filtered.length === 0 ? (
+              <div className="px-6 py-8 text-center text-gray-500 text-sm">
+                No employees match the current filters.
+              </div>
+            ) : filtered.map((employee) => (
+              <div key={employee.id} className={`px-4 py-4 space-y-3 ${!employee.isActive ? "opacity-50" : ""}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{employee.displayName}</p>
+                    <p className="text-xs text-gray-500 truncate">{employee.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass[employee.role]}`}>
+                      {roleLabel[employee.role]}
+                    </span>
+                    {employee.isActive
+                      ? <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
+                      : <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
+                    }
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span>{employee.employeeId ?? "—"}</span>
+                  <span>{employee.department?.name ?? "No dept"}</span>
+                  <span className="font-semibold text-navy-600">{employee.pointsBalance.toLocaleString()} pts</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  {employee.birthday && <span>Birthday: {formatDate(employee.birthday)}</span>}
+                  {employee.hireDate && <span>Hire: {formatDate(employee.hireDate)}</span>}
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                  <select
+                    value={employee.role}
+                    onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
+                    disabled={updatingId === employee.id}
+                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white flex-1"
+                  >
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="HR_ADMIN">HR Admin</option>
+                    {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
+                  </select>
+                  <button
+                    onClick={() => handleEdit(employee)}
+                    className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                    aria-label={`Edit ${employee.displayName}`}
+                  >
+                    <Pencil className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm" aria-label="Employee list">
             <thead className="bg-gray-50">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Emp ID</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
-                <th className="text-left px-6 py-3">
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Emp ID</th>
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
+                <th scope="col" className="text-left px-6 py-3">
                   <select
                     value={filterDept}
                     onChange={(e) => setFilterDept(e.target.value)}
@@ -446,8 +504,8 @@ export default function EmployeesPage() {
                     ))}
                   </select>
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
-                <th className="text-left px-6 py-3">
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Points</th>
+                <th scope="col" className="text-left px-6 py-3">
                   <select
                     value={filterRole}
                     onChange={(e) => setFilterRole(e.target.value)}
@@ -460,8 +518,8 @@ export default function EmployeesPage() {
                     {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                   </select>
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Role</th>
-                <th className="text-left px-6 py-3">
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Change Role</th>
+                <th scope="col" className="text-left px-6 py-3">
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
@@ -472,9 +530,9 @@ export default function EmployeesPage() {
                     <option value="inactive">Inactive</option>
                   </select>
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Birthday</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Hire Date</th>
-                <th className="px-6 py-3" />
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Birthday</th>
+                <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Hire Date</th>
+                <th scope="col" className="px-6 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -533,7 +591,7 @@ export default function EmployeesPage() {
                       className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                       aria-label={`Edit ${employee.displayName}`}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-4 h-4" aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -541,6 +599,7 @@ export default function EmployeesPage() {
             </tbody>
           </table>
           </div>
+          </>
         )}
       </div>
 
@@ -576,7 +635,7 @@ export default function EmployeesPage() {
                   value={addForm.displayName}
                   onChange={(e) => setAddForm((f) => ({ ...f, displayName: e.target.value }))}
                   placeholder="e.g. Juan Dela Cruz"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                 />
               </div>
 
@@ -589,7 +648,7 @@ export default function EmployeesPage() {
                   value={addForm.email}
                   onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
                   placeholder="j.delacruz@allianceglobalsolutions.com"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                 />
               </div>
 
@@ -599,7 +658,7 @@ export default function EmployeesPage() {
                   <select
                     value={addForm.departmentId}
                     onChange={(e) => setAddForm((f) => ({ ...f, departmentId: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
                   >
                     <option value="">No department</option>
                     {departments.map((d) => (
@@ -613,7 +672,7 @@ export default function EmployeesPage() {
                   <select
                     value={addForm.role}
                     onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value as Employee["role"] }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
                   >
                     <option value="EMPLOYEE">Employee</option>
                     <option value="MANAGER">Manager</option>
@@ -630,7 +689,7 @@ export default function EmployeesPage() {
                   value={addForm.employeeId}
                   onChange={(e) => setAddForm((f) => ({ ...f, employeeId: e.target.value }))}
                   placeholder="e.g. EMP-001"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                 />
               </div>
 
@@ -641,7 +700,7 @@ export default function EmployeesPage() {
                     type="date"
                     value={addForm.hireDate}
                     onChange={(e) => setAddForm((f) => ({ ...f, hireDate: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                   />
                 </div>
                 <div>
@@ -650,7 +709,7 @@ export default function EmployeesPage() {
                     type="date"
                     value={addForm.birthday}
                     onChange={(e) => setAddForm((f) => ({ ...f, birthday: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                   />
                 </div>
               </div>
@@ -660,7 +719,7 @@ export default function EmployeesPage() {
               <button
                 type="submit"
                 disabled={adding || !addForm.displayName.trim() || !addForm.email.trim()}
-                className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                className="w-full bg-navy-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-navy-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {adding ? "Adding…" : "Add Employee"}
               </button>
@@ -796,7 +855,7 @@ export default function EmployeesPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                className="px-4 py-2 text-sm font-medium text-white bg-command-black rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {saving ? "Saving…" : "Save Changes"}
               </button>

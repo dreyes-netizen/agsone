@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       } lg:translate-x-0`}>
         {/* Dark header */}
-        <div className="bg-[#111827] px-5 py-4">
+        <div className="bg-command-black px-5 py-4">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm shrink-0">
               <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-0.5" />
@@ -112,7 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-10 bg-[#111827] px-4 h-14 flex items-center gap-3">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-10 bg-command-black px-4 h-14 flex items-center gap-3">
         <button
           onClick={() => setSidebarOpen(true)}
           className="text-white p-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"

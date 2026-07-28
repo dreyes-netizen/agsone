@@ -256,9 +256,9 @@ export default function AdminMedicinePage() {
           aria-live="polite"
         >
           {toast.type === "success" ? (
-            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
           ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" aria-hidden="true" />
           )}
           {toast.msg}
         </div>
@@ -295,9 +295,9 @@ export default function AdminMedicinePage() {
           <div className="flex justify-end">
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
             >
-              <Plus className="w-4 h-4" />
+               <Plus className="w-4 h-4" aria-hidden="true" />
               Add Medicine
             </button>
           </div>
@@ -356,7 +356,7 @@ export default function AdminMedicinePage() {
                       onClick={() => setAddForm((f) => ({ ...f, imageFile: null, imagePreview: "" }))}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-800 text-white rounded-full flex items-center justify-center"
                     >
-                      <X className="w-3 h-3" />
+                       <X className="w-3 h-3" aria-hidden="true" />
                     </button>
                   </div>
                 ) : (
@@ -378,9 +378,9 @@ export default function AdminMedicinePage() {
                 <button
                   onClick={handleAdd}
                   disabled={addingMed}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-command-black rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
                 >
-                  {addingMed ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : "Add Medicine"}
+                   {addingMed ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Uploading…</> : "Add Medicine"}
                 </button>
               </div>
             </div>
@@ -388,7 +388,7 @@ export default function AdminMedicinePage() {
 
           {loadingMeds ? (
             <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
               <span>Loading…</span>
             </div>
           ) : medicines.length === 0 ? (
@@ -405,7 +405,7 @@ export default function AdminMedicinePage() {
                       <img src={med.imageUrl} alt={med.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                        <Pill className="w-10 h-10 text-gray-300" />
+                         <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
                       </div>
                     )}
                     {!med.isActive && (
@@ -444,13 +444,13 @@ export default function AdminMedicinePage() {
                           onClick={() => openEdit(med)}
                           className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
                         >
-                          <Pencil className="w-3 h-3" /> Edit
+                           <Pencil className="w-3 h-3" aria-hidden="true" /> Edit
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(med.id)}
                           className="p-1.5 border border-gray-200 rounded-lg text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     )}
@@ -465,21 +465,21 @@ export default function AdminMedicinePage() {
       {activeTab === "inventory" && (
         loadingMeds ? (
           <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
             <span>Loading…</span>
           </div>
         ) : medicines.length === 0 ? (
           <div className="text-center text-gray-500 py-12">No medicines yet.</div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto scroll-hint">
+            <table className="w-full text-sm" aria-label="Medicine catalog">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                  <th className="px-5 py-3" />
+                  <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
+                  <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock</th>
+                  <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                  <th scope="col" className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -495,7 +495,7 @@ export default function AdminMedicinePage() {
                             <img src={med.imageUrl} alt={med.name} className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0" />
                           ) : (
                             <div className="w-9 h-9 rounded-lg border border-gray-100 bg-gray-100 flex items-center justify-center shrink-0">
-                              <Pill className="w-4 h-4 text-gray-300" />
+                               <Pill className="w-4 h-4 text-gray-300" aria-hidden="true" />
                             </div>
                           )}
                           <span className="font-medium text-gray-900">{med.name}</span>
@@ -532,9 +532,9 @@ export default function AdminMedicinePage() {
                         <button
                           onClick={() => handleStockSave(med)}
                           disabled={!isDirty || isSaving}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#111827] text-white rounded-lg hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-command-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
                         >
-                          {isSaving ? <><Loader2 className="w-3 h-3 animate-spin" /> Saving…</> : "Save"}
+                           {isSaving ? <><Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> Saving…</> : "Save"}
                         </button>
                       </td>
                     </tr>
@@ -551,7 +551,7 @@ export default function AdminMedicinePage() {
         <div className="space-y-6">
           {loadingReqs ? (
             <div className="flex items-center justify-center gap-2 text-gray-500 py-12">
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
               <span>Loading…</span>
             </div>
           ) : (
@@ -561,17 +561,17 @@ export default function AdminMedicinePage() {
                   <h2 className="text-base font-semibold text-gray-900 mb-3">
                     Pending ({pending.length})
                   </h2>
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee</th>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
-                          <th className="px-5 py-3" />
-                        </tr>
-                      </thead>
+                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                     <div className="overflow-x-auto scroll-hint">
+                     <table className="w-full text-sm" aria-label="Pending medicine requests">
+                       <thead className="bg-gray-50">
+                         <tr>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee</th>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
+                           <th scope="col" className="px-5 py-3" />
+                         </tr>
+                       </thead>
                       <tbody>
                         {pending.map((r) => (
                           <tr key={r.id} className="border-t border-gray-50">
@@ -624,18 +624,18 @@ export default function AdminMedicinePage() {
                 {filteredHistory.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">No history yet.</p>
                 ) : (
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee</th>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actioned by</th>
-                        </tr>
-                      </thead>
+                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                     <div className="overflow-x-auto scroll-hint">
+                     <table className="w-full text-sm" aria-label="Medicine request history">
+                       <thead className="bg-gray-50">
+                         <tr>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee</th>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actioned by</th>
+                         </tr>
+                       </thead>
                       <tbody>
                         {filteredHistory.map((r) => (
                           <tr
@@ -686,7 +686,7 @@ export default function AdminMedicinePage() {
                 aria-label="Close"
                 className="text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 rounded"
               >
-                <X className="w-5 h-5" />
+                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-3">
@@ -739,7 +739,7 @@ export default function AdminMedicinePage() {
                     />
                   ) : (
                     <div className="w-16 h-16 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
-                      <Pill className="w-6 h-6 text-gray-300" />
+                       <Pill className="w-6 h-6 text-gray-300" aria-hidden="true" />
                     </div>
                   )}
                   <button
@@ -774,9 +774,9 @@ export default function AdminMedicinePage() {
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#111827] rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-command-black rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
               >
-                {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : "Save Changes"}
+                 {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Saving…</> : "Save Changes"}
               </button>
             </div>
           </div>

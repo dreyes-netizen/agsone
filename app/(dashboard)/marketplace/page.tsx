@@ -148,10 +148,10 @@ export default function MarketplacePage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">Marketplace</h1>
-          <p className="text-zinc-500 text-sm mt-1">Spend your points on something nice</p>
+          <h1 className="text-2xl font-bold text-gray-900">Marketplace</h1>
+          <p className="text-gray-500 text-sm mt-1">Spend your points on something nice</p>
         </div>
-        <div className="flex items-center gap-2 bg-[#111827] text-white px-3.5 py-2 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 bg-command-black text-white px-3.5 py-2 rounded-lg shadow-sm">
           <Coins className="w-4 h-4 text-navy-200" />
           <span className="font-bold text-sm tabular-nums">{balance.toLocaleString()}</span>
           <span className="text-navy-300 text-xs">pts</span>
@@ -176,14 +176,14 @@ export default function MarketplacePage() {
       )}
 
       {/* ── View tabs ── */}
-      <div role="tablist" aria-label="Marketplace views" className="flex gap-1 bg-zinc-100 p-1 rounded-lg w-fit">
+      <div role="tablist" aria-label="Marketplace views" className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
         <button
           role="tab"
           aria-selected={view === "browse"}
           aria-controls="panel-browse"
           onClick={() => setView("browse")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#111827] ${
-            view === "browse" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-800"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-command-black ${
+            view === "browse" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-800"
           }`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
@@ -194,8 +194,8 @@ export default function MarketplacePage() {
           aria-selected={view === "requests"}
           aria-controls="panel-requests"
           onClick={() => setView("requests")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#111827] ${
-            view === "requests" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-600 hover:text-zinc-800"
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-command-black ${
+            view === "requests" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-800"
           }`}
         >
           <Receipt className="w-3.5 h-3.5" />
@@ -219,18 +219,18 @@ export default function MarketplacePage() {
                   onClick={() => setFilter(cat)}
                   aria-pressed={active}
                   disabled={count === 0 && cat !== "ALL"}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
                     count === 0 && cat !== "ALL"
-                      ? "opacity-40 cursor-not-allowed bg-white border-zinc-200 text-zinc-500"
+                      ? "opacity-40 cursor-not-allowed bg-white border-gray-200 text-gray-500"
                       : active
-                      ? "bg-[#111827] text-white border-[#111827]"
-                      : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                      ? "bg-command-black text-white border-command-black"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {cat !== "ALL" && <config.icon className={`w-3.5 h-3.5 ${active ? "text-white" : config.iconClass}`} aria-hidden="true" />}
                   {cat === "ALL" ? "All Rewards" : config.label}
                   {!loading && (
-                    <span className={`text-xs tabular-nums ${active ? "text-white/70" : "text-zinc-500"}`} aria-label={`${count} items`}>
+                    <span className={`text-xs tabular-nums ${active ? "text-white/70" : "text-gray-500"}`} aria-label={`${count} items`}>
                       {count}
                     </span>
                   )}
@@ -242,20 +242,20 @@ export default function MarketplacePage() {
           {/* ── Card grid / list ── */}
           {loading ? (
             // Skeleton: single column on mobile, grid on sm+
-            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
+            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-zinc-200 animate-pulse h-[88px] sm:h-64" />
+                <div key={i} className="bg-white rounded-xl border border-gray-200 animate-pulse h-[88px] sm:h-64" />
               ))}
             </div>
           ) : sorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-zinc-200">
-              <ShoppingBag className="w-10 h-10 text-zinc-200 mb-4" />
-              <p className="text-zinc-600 font-medium">No rewards here yet</p>
-              <p className="text-zinc-400 text-sm mt-1">Ask HR to add items to the marketplace.</p>
+            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-gray-200">
+              <ShoppingBag className="w-10 h-10 text-gray-200 mb-4" />
+              <p className="text-gray-600 font-medium">No rewards here yet</p>
+              <p className="text-gray-400 text-sm mt-1">Ask HR to add items to the marketplace.</p>
             </div>
           ) : (
             // Mobile: single-column horizontal list  |  sm+: grid
-            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
+            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
               {sorted.map((reward) => {
                 const cfg = categoryConfig[reward.category] ?? categoryConfig.PHYSICAL;
                 const canAfford = balance >= reward.pointCost;
@@ -271,10 +271,10 @@ export default function MarketplacePage() {
                   <div
                     key={reward.id}
                     onClick={() => openModal(reward)}
-                    className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-md transition-shadow motion-safe:hover:-translate-y-0.5 motion-safe:transition-transform motion-safe:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
+                    className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
                       flex flex-row items-center
                       sm:flex-col sm:items-stretch
-                      ${outOfStock ? "opacity-55 border-zinc-200" : !canAfford ? "opacity-70 border-amber-200" : "border-zinc-200"}`}
+                      ${outOfStock ? "opacity-55 border-gray-200" : !canAfford ? "opacity-70 border-amber-200" : "border-gray-200"}`}
                   >
                     {/* ── Image / accent ── */}
                     {images.length > 0 ? (
@@ -282,21 +282,25 @@ export default function MarketplacePage() {
                         className="relative group shrink-0
                           w-[88px] h-[88px]
                           sm:w-full sm:h-auto"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={images[idx]}
                           alt={reward.name}
-                          className="w-full h-full object-contain bg-zinc-50 cursor-zoom-in sm:aspect-square"
-                          onClick={() => setLightbox({ images, index: idx })}
+                          className="w-full h-full object-contain bg-gray-50 sm:aspect-square"
                         />
                         {/* Low-stock badge */}
                         {lowStock && (
                           <span className="absolute top-1.5 left-1.5 bg-red-500 text-white font-bold rounded-full shadow-sm
-                            text-[9px] px-1.5 py-px
+                            text-[10px] px-1.5 py-px
                             sm:text-xs sm:px-2 sm:py-0.5 sm:top-2 sm:left-2">
                             Only {reward.stockQuantity} left!
+                          </span>
+                        )}
+                        {/* Mobile image counter */}
+                        {images.length > 1 && (
+                          <span className="sm:hidden absolute bottom-1 right-1 bg-black/50 text-white text-[9px] font-medium px-1 py-px rounded">
+                            {idx + 1}/{images.length}
                           </span>
                         )}
                         {/* Carousel arrows */}
@@ -353,7 +357,7 @@ export default function MarketplacePage() {
 
                       {/* Name row — badge shown inline on mobile */}
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-zinc-900 leading-snug line-clamp-2
+                        <h3 className="font-bold text-gray-900 leading-snug line-clamp-2
                           text-sm
                           sm:text-base">
                           {reward.name}
@@ -365,7 +369,7 @@ export default function MarketplacePage() {
 
                       {/* Description */}
                       {reward.description && (
-                        <p className="text-zinc-500 leading-relaxed line-clamp-1 sm:line-clamp-2
+                        <p className="text-gray-500 leading-relaxed line-clamp-1 sm:line-clamp-2
                           text-xs
                           sm:text-sm">
                           {reward.description}
@@ -373,18 +377,18 @@ export default function MarketplacePage() {
                       )}
 
                       {/* Price + Redeem */}
-                      <div className="flex items-center justify-between border-t border-zinc-100 mt-auto
+                      <div className="flex items-center justify-between border-t border-gray-100 mt-auto
                         pt-2
                         sm:pt-3">
                         <div>
-                          <p className={`font-bold tabular-nums leading-none ${canAfford && !outOfStock ? "text-navy-600" : "text-zinc-400"}
+                          <p className={`font-bold tabular-nums leading-none ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-400"}
                             text-sm
                             sm:text-lg`}>
                             {reward.pointCost.toLocaleString()}
                             <span className="font-medium ml-1 text-xs sm:text-sm">pts</span>
                           </p>
                           {outOfStock ? (
-                            <p className="text-xs text-zinc-500 mt-0.5">Out of stock</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Out of stock</p>
                           ) : !canAfford ? (
                             <p className="text-xs text-red-500 mt-0.5">Need {deficit.toLocaleString()} more</p>
                           ) : lowStock ? (
@@ -392,7 +396,7 @@ export default function MarketplacePage() {
                               Only {reward.stockQuantity} left!
                             </p>
                           ) : (
-                            <p className="text-xs text-zinc-500 mt-0.5">
+                            <p className="text-xs text-gray-500 mt-0.5">
                               {reward.stockQuantity === -1 ? "Unlimited" : `${reward.stockQuantity} left`}
                             </p>
                           )}
@@ -401,12 +405,12 @@ export default function MarketplacePage() {
                           disabled={!canAfford || outOfStock || busy}
                           aria-label={outOfStock ? `${reward.name} — sold out` : !canAfford ? `${reward.name} — need ${deficit.toLocaleString()} more pts` : `Redeem ${reward.name} for ${reward.pointCost.toLocaleString()} pts`}
                           onClick={(e) => { e.stopPropagation(); openModal(reward, true); }}
-                          className={`rounded-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827]
+                          className={`rounded-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black
                             text-xs px-3 py-1.5
                             sm:text-sm sm:px-4 sm:py-2
                             ${outOfStock || !canAfford
-                              ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                              : "bg-[#111827] text-white hover:bg-gray-800"
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : "bg-command-black text-white hover:bg-gray-800"
                             }`}
                         >
                           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
@@ -427,14 +431,14 @@ export default function MarketplacePage() {
           {redemptionsLoading ? (
             <div className="space-y-3" aria-label="Loading requests" aria-busy="true">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-zinc-200 h-20 animate-pulse" />
+                <div key={i} className="bg-white rounded-xl border border-gray-200 h-20 animate-pulse" />
               ))}
             </div>
           ) : redemptions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-zinc-200">
-              <Receipt className="w-10 h-10 text-zinc-200 mb-4" aria-hidden="true" />
-              <p className="text-zinc-600 font-medium">No requests yet</p>
-              <p className="text-zinc-500 text-sm mt-1">Redeem a reward and it will appear here.</p>
+            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-gray-200">
+              <Receipt className="w-10 h-10 text-gray-200 mb-4" aria-hidden="true" />
+              <p className="text-gray-600 font-medium">No requests yet</p>
+              <p className="text-gray-500 text-sm mt-1">Redeem a reward and it will appear here.</p>
             </div>
           ) : (
             <ul role="list" className="space-y-3">
@@ -442,17 +446,17 @@ export default function MarketplacePage() {
                 const cfg = categoryConfig[r.reward.category] ?? categoryConfig.PHYSICAL;
                 const status = statusConfig[r.status];
                 return (
-                  <li key={r.id} className="bg-white rounded-xl border border-zinc-200 p-4 flex items-center gap-4">
+                  <li key={r.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
                     <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} aria-hidden="true" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-zinc-900 truncate">{r.reward.name}</p>
+                      <p className="font-semibold text-gray-900 truncate">{r.reward.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <Clock className="w-3 h-3 text-zinc-500" aria-hidden="true" />
-                        <span className="text-xs text-zinc-500">
+                        <Clock className="w-3 h-3 text-gray-500" aria-hidden="true" />
+                        <span className="text-xs text-gray-500">
                           {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </span>
-                        <span className="text-xs text-zinc-500" aria-hidden="true">·</span>
-                        <span className="text-xs font-medium text-zinc-500 tabular-nums">{r.pointsSpent.toLocaleString()} pts</span>
+                        <span className="text-xs text-gray-500" aria-hidden="true">·</span>
+                        <span className="text-xs font-medium text-gray-500 tabular-nums">{r.pointsSpent.toLocaleString()} pts</span>
                       </div>
                       {r.adminNote && r.status === "REJECTED" && (
                         <p className="text-xs text-red-600 mt-1">Note: {r.adminNote}</p>
@@ -503,11 +507,6 @@ export default function MarketplacePage() {
               className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Drag handle — bottom-sheet affordance on mobile */}
-              <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
-                <div className="w-10 h-1 bg-zinc-300 rounded-full" />
-              </div>
-
               <button
                 onClick={closeModal}
                 aria-label="Close"
@@ -572,19 +571,19 @@ export default function MarketplacePage() {
                     <>
                       <div className="flex items-center justify-between">
                         <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>{cfg.label}</span>
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-xs text-gray-400">
                           {outOfStock ? "Out of stock" : selectedReward.stockQuantity === -1 ? "Unlimited" : `${selectedReward.stockQuantity} left`}
                         </span>
                       </div>
                       <div>
-                        <h2 id="reward-modal-title" className="text-xl font-bold text-zinc-900">{selectedReward.name}</h2>
+                        <h2 id="reward-modal-title" className="text-xl font-bold text-gray-900">{selectedReward.name}</h2>
                         {selectedReward.description && (
-                          <p className="text-sm text-zinc-600 mt-2 whitespace-pre-wrap leading-relaxed">{selectedReward.description}</p>
+                          <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{selectedReward.description}</p>
                         )}
                       </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div>
-                          <p className={`font-bold text-lg tabular-nums ${canAfford && !outOfStock ? "text-navy-600" : "text-zinc-400"}`}>
+                          <p className={`font-bold text-lg tabular-nums ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-400"}`}>
                             {selectedReward.pointCost.toLocaleString()} <span className="text-sm font-medium">pts</span>
                           </p>
                           {!canAfford && !outOfStock && (
@@ -594,10 +593,10 @@ export default function MarketplacePage() {
                         <button
                           disabled={!canAfford || outOfStock}
                           onClick={() => setConfirming(true)}
-                          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] ${
+                          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
                             outOfStock || !canAfford
-                              ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                              : "bg-[#111827] text-white hover:bg-gray-800"
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : "bg-command-black text-white hover:bg-gray-800"
                           }`}
                         >
                           {outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
@@ -610,40 +609,40 @@ export default function MarketplacePage() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                        <h3 className="font-bold text-zinc-900">Confirm Redemption</h3>
+                        <h3 className="font-bold text-gray-900">Confirm Redemption</h3>
                       </div>
-                      <div className="bg-zinc-50 rounded-xl p-4 space-y-2 text-sm">
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-zinc-500">Reward</span>
-                          <span className="font-semibold text-zinc-900 text-right max-w-[60%] leading-snug">{selectedReward.name}</span>
+                          <span className="text-gray-500">Reward</span>
+                          <span className="font-semibold text-gray-900 text-right max-w-[60%] leading-snug">{selectedReward.name}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-500">Cost</span>
-                          <span className="font-semibold text-zinc-900 tabular-nums">{selectedReward.pointCost.toLocaleString()} pts</span>
+                          <span className="text-gray-500">Cost</span>
+                          <span className="font-semibold text-gray-900 tabular-nums">{selectedReward.pointCost.toLocaleString()} pts</span>
                         </div>
-                        <div className="border-t border-zinc-200 my-1" />
+                        <div className="border-t border-gray-200 my-1" />
                         <div className="flex justify-between">
-                          <span className="text-zinc-500">Your balance</span>
-                          <span className="text-zinc-700 tabular-nums">{balance.toLocaleString()} pts</span>
+                          <span className="text-gray-500">Your balance</span>
+                          <span className="text-gray-700 tabular-nums">{balance.toLocaleString()} pts</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-zinc-500">After redemption</span>
+                          <span className="text-gray-500">After redemption</span>
                           <span className="font-bold text-navy-600 tabular-nums">{(balance - selectedReward.pointCost).toLocaleString()} pts</span>
                         </div>
                       </div>
-                      <p className="text-xs text-zinc-500 text-center">HR will review your request and confirm delivery.</p>
+                      <p className="text-xs text-gray-500 text-center">HR will review your request and confirm delivery.</p>
                       <div className="flex gap-3 pt-1">
                         <button
                           onClick={() => setConfirming(false)}
                           disabled={busy}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-500 disabled:opacity-60"
+                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 disabled:opacity-60"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleRedeem(selectedReward)}
                           disabled={busy}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#111827] text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#111827] disabled:opacity-60 flex items-center justify-center gap-2"
+                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold bg-command-black text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black disabled:opacity-60 flex items-center justify-center gap-2"
                         >
                           {busy ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Redeeming…</span></> : "Confirm"}
                         </button>

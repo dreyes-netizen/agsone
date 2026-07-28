@@ -148,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {initials}
               </div>
             )}
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-[1.5px] border-[#111827]" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-[1.5px] border-command-black" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-xs font-semibold truncate leading-tight">{user?.displayName ?? "—"}</p>
@@ -170,10 +170,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <div className="flex min-h-screen bg-zinc-50">
+    <div className="flex min-h-screen bg-gray-50">
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-[216px] bg-[#111827] flex-col fixed h-full z-10 border-r border-white/[0.05]">
+      <aside className="hidden lg:flex w-[216px] bg-command-black flex-col fixed h-full z-10 border-r border-white/[0.05]">
         {sidebarContent}
       </aside>
 
@@ -188,7 +188,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile drawer */}
       <aside
-        className={`fixed top-0 left-0 h-full w-[216px] bg-[#111827] flex flex-col z-30 lg:hidden transition-transform duration-300 ease-in-out border-r border-white/[0.05] ${
+        className={`fixed top-0 left-0 h-full w-[216px] bg-command-black flex flex-col z-30 lg:hidden transition-transform duration-300 ease-in-out border-r border-white/[0.05] ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -196,7 +196,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#111827]/95 backdrop-blur-md flex items-center justify-between px-4 z-10 border-b border-white/[0.06]">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-command-black/95 backdrop-blur-md flex items-center justify-between px-4 z-10 border-b border-white/[0.06]">
         <button
           onClick={() => setSidebarOpen(true)}
           aria-label="Open menu"
@@ -233,14 +233,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
 
       {/* Mobile bottom nav */}
-      <nav aria-label="Mobile navigation" className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111827]/95 backdrop-blur-md flex items-center justify-around z-10 border-t border-white/[0.06]">
+      <nav aria-label="Mobile navigation" className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-command-black/95 backdrop-blur-md flex items-center justify-around z-10 border-t border-white/[0.06]">
         {bottomNavItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center justify-center gap-1 flex-1 h-full text-white transition-colors relative"
+              className="flex flex-col items-center justify-center gap-1 flex-1 min-h-[44px] text-white transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset"
             >
               {active && (
                 <span className="absolute inset-x-1.5 top-1.5 bottom-1.5 bg-white/15 rounded-xl" />

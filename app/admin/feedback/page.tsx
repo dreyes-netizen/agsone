@@ -95,7 +95,7 @@ export default function AdminFeedbackPage() {
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${statusFilter === tab ? "bg-[#111827] text-white" : "text-gray-600 hover:bg-gray-50"}`}
+              className={`px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${statusFilter === tab ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`}
             >
               {STATUS_TAB_LABELS[tab]}
             </button>
@@ -115,16 +115,16 @@ export default function AdminFeedbackPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto scroll-hint">
+        <table className="w-full text-sm" aria-label="Whistleblower reports">
           <thead className="bg-gray-50">
             <tr>
-              <th className={thClass}>Status</th>
-              <th className={thClass}>Category</th>
-              <th className={thClass}>Title</th>
-              <th className={thClass}>Submitted By</th>
-              <th className={thClass}>Date</th>
-              <th className={thClass}>Replies</th>
+              <th scope="col" className={thClass}>Status</th>
+              <th scope="col" className={thClass}>Category</th>
+              <th scope="col" className={thClass}>Title</th>
+              <th scope="col" className={thClass}>Submitted By</th>
+              <th scope="col" className={thClass}>Date</th>
+              <th scope="col" className={thClass}>Replies</th>
             </tr>
           </thead>
           <tbody>

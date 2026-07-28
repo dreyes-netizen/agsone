@@ -109,7 +109,7 @@ export default function MilestonesPage() {
           <button
             onClick={handleSave}
             disabled={saving || loading}
-            className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+            className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             {saving ? "Saving…" : "Save All"}
           </button>
@@ -129,13 +129,13 @@ export default function MilestonesPage() {
         {loading ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div>
         ) : (
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto scroll-hint">
+          <table className="w-full text-sm" aria-label="Milestone rewards configuration">
             <thead className="bg-gray-50">
               <tr>
-                <th className={thClass}>Milestone</th>
-                <th className={thClass}>Points Awarded</th>
-                <th className={thClass}>Active</th>
+                <th scope="col" className={thClass}>Milestone</th>
+                <th scope="col" className={thClass}>Points Awarded</th>
+                <th scope="col" className={thClass}>Active</th>
               </tr>
             </thead>
             <tbody>

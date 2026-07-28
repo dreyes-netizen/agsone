@@ -110,7 +110,7 @@ export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClos
         <div className="px-5 pb-4">
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-[#111827] hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+             className="w-full py-2.5 bg-command-black hover:bg-gray-800 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
           >
             Got it
           </button>

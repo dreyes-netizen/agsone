@@ -228,6 +228,8 @@ export default function MinigamesPage() {
                   key={g.key}
                   role="tab"
                   aria-selected={activeTab === g.key}
+                  aria-controls={`panel-${g.key}`}
+                  tabIndex={activeTab === g.key ? 0 : -1}
                   aria-label={g.label.replace(/^[^\w]*/, "").trim()}
                   onClick={() => setActiveTab(g.key)}
                   className={`flex-1 min-w-[52px] sm:min-w-[80px] px-1 sm:px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 ${
@@ -246,6 +248,8 @@ export default function MinigamesPage() {
                 g.key === activeTab && (
                   <div
                     key={g.key}
+                    id={`panel-${g.key}`}
+                    role="tabpanel"
                     className="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-100"
                   >
                     <div className="flex-1 min-w-0">
@@ -254,7 +258,7 @@ export default function MinigamesPage() {
                     </div>
                     <button
                       onClick={() => setShowHelp(true)}
-                      className="shrink-0 text-xs text-indigo-500 hover:text-indigo-700 font-semibold underline underline-offset-2 whitespace-nowrap"
+                      className="shrink-0 text-xs text-indigo-500 hover:text-indigo-700 font-semibold underline underline-offset-2 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
                     >
                       How to play
                     </button>
@@ -280,7 +284,7 @@ export default function MinigamesPage() {
                     onClick={() => setWager(w)}
                     className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 ${
                       wager === w
-                        ? "bg-[#111827] border-[#111827] text-white"
+                        ? "bg-command-black border-command-black text-white"
                         : "border-gray-200 text-gray-600 hover:border-gray-400"
                     }`}
                   >
@@ -292,7 +296,7 @@ export default function MinigamesPage() {
             <button
               onClick={createChallenge}
               disabled={creating}
-              className="w-full py-2.5 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+              className="w-full py-2.5 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
               {creating ? "Creating…" : `Create ${GAME_LABEL[activeTab]} Challenge`}
             </button>
@@ -341,7 +345,7 @@ export default function MinigamesPage() {
                     <button
                       onClick={() => joinSession(s.id)}
                       disabled={joining === s.id}
-                      className="shrink-0 px-4 py-2 bg-[#111827] hover:bg-gray-800 disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-colors min-w-[60px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                      className="shrink-0 px-4 py-2 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-colors min-w-[60px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                     >
                       {joining === s.id ? "…" : "Join"}
                     </button>

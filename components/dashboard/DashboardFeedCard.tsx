@@ -660,7 +660,7 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
                             type="button"
                             onClick={() => submitReply(c.id)}
                             disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                            className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                             className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -724,7 +724,7 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
                     type="button"
                     onClick={submitComment}
                     disabled={commentSending || !commentDraft.trim()}
-                    className="flex items-center justify-center w-8 h-8 bg-[#111827] text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+                     className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
                   >
                     <Send className="w-3.5 h-3.5" />
                   </button>

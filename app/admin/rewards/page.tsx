@@ -198,14 +198,14 @@ export default function AdminRewardsPage() {
           role="alert"
           className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-sm border ${
             toast.type === "success"
-              ? "bg-green-50 border-green-200 text-green-800"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
               : "bg-red-50 border-red-200 text-red-800"
           }`}
         >
           {toast.type === "success" ? (
-            <CheckCircle className="w-4 h-4 shrink-0" />
+            <CheckCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           )}
           {toast.msg}
         </div>
@@ -217,9 +217,9 @@ export default function AdminRewardsPage() {
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
-          className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+           className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
         >
-          <Plus className="w-4 h-4" /> Add Reward
+          <Plus className="w-4 h-4" aria-hidden="true" /> Add Reward
         </button>
       </div>
 
@@ -288,7 +288,7 @@ export default function AdminRewardsPage() {
                   ))}
                   {totalImages < 3 && (
                     <label className={`flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-navy-400 transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
-                      <ImagePlus className="w-5 h-5 text-gray-500" />
+                      <ImagePlus className="w-5 h-5 text-gray-500" aria-hidden="true" />
                       <span className="text-[10px] text-gray-500 mt-0.5">{uploading ? "Uploading…" : "Add"}</span>
                       <input type="file" accept="image/*" multiple className="hidden" onChange={handleImagePick} disabled={uploading} />
                     </label>
@@ -336,7 +336,7 @@ export default function AdminRewardsPage() {
                 <button
                   type="submit"
                   disabled={submitting || uploading}
-                  className="bg-[#111827] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                   className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
                   {(uploading || submitting) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {uploading ? "Uploading…" : submitting ? "Saving…" : editingId ? "Save Changes" : "Add Reward"}
@@ -355,16 +355,89 @@ export default function AdminRewardsPage() {
       )}
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        {/* Mobile card layout */}
+        <div className="md:hidden">
+          {rewards.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">No rewards yet. Add your first one!</div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {rewards.map((r) => (
+                <div key={r.id} className={`px-4 py-4 space-y-3 ${!r.isActive ? "opacity-60" : ""}`}>
+                  <div className="flex items-start gap-3">
+                    {r.imageUrls?.[0] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrls[0]} alt={`${r.name} reward image`} className="w-14 h-14 rounded-lg object-cover border border-gray-100 shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 truncate">{r.name}</p>
+                        {!r.isActive && (
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full shrink-0">Hidden</span>
+                        )}
+                      </div>
+                      {r.description && <p className="text-xs text-gray-500 truncate">{r.description}</p>}
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span className="bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                          {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} aria-hidden="true" /> : null; })()} {r.category}
+                        </span>
+                        <span className="font-semibold text-navy-600">{r.pointCost.toLocaleString()} pts</span>
+                        <span>{r.stockQuantity === -1 ? "Unlimited" : `Stock: ${r.stockQuantity}`}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <button
+                      role="switch"
+                      aria-checked={r.isActive}
+                      aria-label={r.isActive ? `Hide ${r.name}` : `Show ${r.name}`}
+                      disabled={togglingId === r.id}
+                      onClick={() => toggleActive(r)}
+                      className={`relative inline-flex h-5 w-10 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed ${r.isActive ? "bg-emerald-500" : "bg-gray-300"}`}
+                    >
+                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${r.isActive ? "translate-x-5" : "translate-x-0.5"}`} />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(r)}
+                        className="border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                        aria-label={`Edit ${r.name}`}
+                      >
+                        <Pencil className="w-3 h-3" aria-hidden="true" />
+                      </button>
+                      {deleteConfirmId === r.id ? (
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-gray-600 font-medium">Delete?</span>
+                          <button onClick={() => confirmDelete(r.id)} className="px-2 py-1 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">Yes</button>
+                          <button onClick={() => setDeleteConfirmId(null)} className="px-2 py-1 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">No</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirmId(r.id)}
+                          className="border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                          aria-label={`Delete ${r.name}`}
+                        >
+                          <Trash2 className="w-3 h-3" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table layout */}
+        <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm" aria-label="Rewards">
           <thead className="bg-gray-50">
             <tr>
-              <th className={thClass}>Reward</th>
-              <th className={thClass}>Category</th>
-              <th className={thClass}>Cost</th>
-              <th className={thClass}>Stock</th>
-              <th className={thClass}>Status</th>
-              <th className={thClass}>Actions</th>
+              <th scope="col" className={thClass}>Reward</th>
+              <th scope="col" className={thClass}>Category</th>
+              <th scope="col" className={thClass}>Cost</th>
+              <th scope="col" className={thClass}>Stock</th>
+              <th scope="col" className={thClass}>Status</th>
+              <th scope="col" className={thClass}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -425,7 +498,7 @@ export default function AdminRewardsPage() {
                       className="border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                       aria-label={`Edit ${r.name}`}
                     >
-                      <Pencil className="w-3 h-3" />
+                      <Pencil className="w-3 h-3" aria-hidden="true" />
                     </button>
                     {deleteConfirmId === r.id ? (
                       <div className="flex items-center gap-1 text-xs">
@@ -449,7 +522,7 @@ export default function AdminRewardsPage() {
                         className="border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                         aria-label={`Delete ${r.name}`}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3" aria-hidden="true" />
                       </button>
                     )}
                   </div>

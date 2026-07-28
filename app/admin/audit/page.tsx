@@ -170,7 +170,7 @@ export default function AuditLogPage() {
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-12 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading audit log…</div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <ShieldAlert className="w-8 h-8 text-gray-300" />
+            <ShieldAlert className="w-8 h-8 text-gray-300" aria-hidden="true" />
             <p className="text-gray-500 text-sm">No audit entries found</p>
           </div>
         ) : (
@@ -228,9 +228,9 @@ export default function AuditLogPage() {
                           onClick={() => setExpanded(isExpanded ? null : entry.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`details-${entry.id}`}
-                          className="flex items-center gap-1 text-[11px] text-indigo-500 hover:text-indigo-700 mt-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                          className="flex items-center gap-1 text-[11px] text-navy-600 hover:text-navy-800 mt-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 rounded"
                         >
-                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          {isExpanded ? <ChevronUp className="w-3 h-3" aria-hidden="true" /> : <ChevronDown className="w-3 h-3" aria-hidden="true" />}
                           {isExpanded ? "Hide details" : "Show details"}
                         </button>
                       )}

@@ -51,8 +51,8 @@ function RankBadge({ rank }: { rank: number }) {
     </div>
   );
   if (rank === 2) return (
-    <div className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center shrink-0" aria-label="Rank 2">
-      <Medal className="w-3.5 h-3.5 text-zinc-500" aria-hidden="true" />
+    <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0" aria-label="Rank 2">
+      <Medal className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" />
     </div>
   );
   if (rank === 3) return (
@@ -61,7 +61,7 @@ function RankBadge({ rank }: { rank: number }) {
     </div>
   );
   return (
-    <span className="w-7 text-center text-xs font-semibold text-zinc-400 shrink-0" aria-label={`Rank ${rank}`}>
+    <span className="w-7 text-center text-xs font-semibold text-gray-400 shrink-0" aria-label={`Rank ${rank}`}>
       {rank}
     </span>
   );
@@ -145,8 +145,8 @@ export default function LeaderboardPage() {
 
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Top Performers</h1>
-        <p className="text-zinc-500 text-sm mt-1">{period === "monthly" ? "This month's" : "All-time"} highest earners.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Top Performers</h1>
+        <p className="text-gray-500 text-sm mt-1">{period === "monthly" ? "This month's" : "All-time"} highest earners.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
@@ -161,7 +161,7 @@ export default function LeaderboardPage() {
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 aria-label="Filter by department"
-                className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-700 bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 transition max-w-[180px] min-w-0"
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition max-w-[180px] min-w-0"
               >
                 <option value="ALL">All Departments</option>
                 {departments.map((d) => (
@@ -169,13 +169,13 @@ export default function LeaderboardPage() {
                 ))}
               </select>
             )}
-            <div role="tablist" aria-label="Leaderboard period" className="flex rounded-lg border border-zinc-200 overflow-hidden bg-white text-sm">
+            <div role="tablist" aria-label="Leaderboard period" className="flex rounded-lg border border-gray-200 overflow-hidden bg-white text-sm">
               <button
                 role="tab"
                 aria-selected={period === "monthly"}
                 onClick={() => setPeriod("monthly")}
                 className={`px-4 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-navy-500 ${
-                  period === "monthly" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"
+                  period === "monthly" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 This Month
@@ -185,7 +185,7 @@ export default function LeaderboardPage() {
                 aria-selected={period === "alltime"}
                 onClick={() => setPeriod("alltime")}
                 className={`px-4 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-navy-500 ${
-                  period === "alltime" ? "bg-[#111827] text-white" : "text-zinc-600 hover:bg-zinc-50"
+                  period === "alltime" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 All Time
@@ -194,23 +194,23 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Rankings list */}
-          <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {loading ? (
-              <div role="status" aria-label="Loading leaderboard" className="flex items-center justify-center gap-2 py-12 text-zinc-400">
+              <div role="status" aria-label="Loading leaderboard" className="flex items-center justify-center gap-2 py-12 text-gray-400">
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 <span className="text-sm">Loading…</span>
               </div>
             ) : entries.length === 0 ? (
-              <div className="text-center py-12 text-zinc-400 text-sm">No data yet. Start earning points!</div>
+              <div className="text-center py-12 text-gray-400 text-sm">No data yet. Start earning points!</div>
             ) : (
-              <ul aria-label="Leaderboard rankings" className="divide-y divide-zinc-100">
+              <ul aria-label="Leaderboard rankings" className="divide-y divide-gray-100">
                 {entries.map((e, i) => {
                   const rank = i + 1;
                   return (
                     <li
                       key={e.userId}
                       className={`flex items-center gap-3 px-5 py-3 transition-colors motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${
-                        e.isCurrentUser ? "bg-navy-50" : "hover:bg-zinc-50"
+                        e.isCurrentUser ? "bg-navy-50" : "hover:bg-gray-50"
                       }`}
                       style={{ animationDelay: `${Math.min(i * 25, 400)}ms` }}
                       aria-current={e.isCurrentUser ? "true" : undefined}
@@ -218,12 +218,12 @@ export default function LeaderboardPage() {
                       <RankBadge rank={rank} />
                       <Avatar name={e.displayName} url={e.avatarUrl} />
                       <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm truncate ${e.isCurrentUser ? "text-navy-800 font-semibold" : "text-zinc-900"}`}>
+                        <p className={`font-medium text-sm truncate ${e.isCurrentUser ? "text-navy-800 font-semibold" : "text-gray-900"}`}>
                           {e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}
                         </p>
-                        {e.department && <p className="text-xs text-zinc-400 truncate">{e.department}</p>}
+                        {e.department && <p className="text-xs text-gray-400 truncate">{e.department}</p>}
                       </div>
-                      <span className={`font-bold text-sm tabular-nums shrink-0 ${rank === 1 ? "text-amber-600" : rank <= 3 ? "text-zinc-700" : "text-navy-600"}`}>
+                      <span className={`font-bold text-sm tabular-nums shrink-0 ${rank === 1 ? "text-amber-600" : rank <= 3 ? "text-gray-700" : "text-navy-600"}`}>
                         {e.points.toLocaleString()} pts
                       </span>
                     </li>
@@ -238,23 +238,23 @@ export default function LeaderboardPage() {
         <div className="space-y-4 sticky top-6 self-start">
 
           {/* Card 1: Your Stats */}
-          <div className="bg-white rounded-xl border border-zinc-100 p-4">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Your Stats</p>
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Your Stats</p>
             {profileLoading ? (
               <div className="space-y-3 motion-safe:animate-pulse">
-                <div className="h-8 bg-zinc-100 rounded w-1/2" />
-                <div className="h-3 bg-zinc-100 rounded w-1/3" />
-                <div className="h-3 bg-zinc-100 rounded w-1/4" />
+                <div className="h-8 bg-gray-100 rounded w-1/2" />
+                <div className="h-3 bg-gray-100 rounded w-1/3" />
+                <div className="h-3 bg-gray-100 rounded w-1/4" />
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
-                  <p className="text-3xl font-black text-zinc-900 tabular-nums leading-none">
+                  <p className="text-3xl font-black text-gray-900 tabular-nums leading-none">
                     {profile?.pointsBalance?.toLocaleString() ?? "—"}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">points balance</p>
+                  <p className="text-xs text-gray-400 mt-1">points balance</p>
                 </div>
-                <div className="flex items-center gap-4 pt-1 border-t border-zinc-50">
+                <div className="flex items-center gap-4 pt-1 border-t border-gray-50">
                   <div className="flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" aria-hidden="true" />
                     <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
@@ -262,12 +262,12 @@ export default function LeaderboardPage() {
                   {myRank > 0 && !loading && (
                     <div className="flex items-center gap-1.5">
                       <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-hidden="true" />
-                      <span className="text-sm font-bold text-zinc-700">#{myRank}</span>
+                      <span className="text-sm font-bold text-gray-700">#{myRank}</span>
                     </div>
                   )}
                 </div>
                 {profile?.department && (
-                  <p className="text-xs text-zinc-400 truncate">{profile.department.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{profile.department.name}</p>
                 )}
               </div>
             )}
@@ -275,20 +275,20 @@ export default function LeaderboardPage() {
 
           {/* Card 2: Period Summary */}
           {!loading && entries.length > 0 && (
-            <div className="bg-white rounded-xl border border-zinc-100 p-4">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Period Summary</p>
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Period Summary</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Participants</span>
-                  <span className="font-semibold text-zinc-900">{entries.length}</span>
+                  <span className="text-gray-500">Participants</span>
+                  <span className="font-semibold text-gray-900">{entries.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Total points</span>
-                  <span className="font-semibold text-zinc-900">{totalPoints.toLocaleString()}</span>
+                  <span className="text-gray-500">Total points</span>
+                  <span className="font-semibold text-gray-900">{totalPoints.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Avg per person</span>
-                  <span className="font-semibold text-zinc-900">{avgPoints.toLocaleString()}</span>
+                  <span className="text-gray-500">Avg per person</span>
+                  <span className="font-semibold text-gray-900">{avgPoints.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -296,16 +296,16 @@ export default function LeaderboardPage() {
 
           {/* Card 3: Top Departments */}
           {!loading && topDepts.length > 0 && (
-            <div className="bg-white rounded-xl border border-zinc-100 p-4">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Top Departments</p>
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Top Departments</p>
               <div className="space-y-3">
                 {topDepts.map(({ name, points, pct }) => (
                   <div key={name}>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-zinc-700 font-medium truncate mr-2">{name}</span>
-                      <span className="text-zinc-500 tabular-nums shrink-0">{points.toLocaleString()}</span>
+                      <span className="text-gray-700 font-medium truncate mr-2">{name}</span>
+                      <span className="text-gray-500 tabular-nums shrink-0">{points.toLocaleString()}</span>
                     </div>
-                    <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                       <div
                         role="progressbar"
                         aria-label={`${name} department points`}
@@ -323,26 +323,26 @@ export default function LeaderboardPage() {
           )}
 
           {/* Card 4: Recent Achievers */}
-          <div className="bg-white rounded-xl border border-zinc-100 overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-50">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Recent Achievers</p>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-50">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Achievers</p>
             </div>
             {achieversLoading ? (
               <div className="p-4 space-y-3 motion-safe:animate-pulse">
-                {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-zinc-100 rounded" />)}
+                {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-gray-100 rounded" />)}
               </div>
             ) : achievers.length === 0 ? (
-              <p className="text-xs text-zinc-400 text-center py-6">No recent achievements</p>
+              <p className="text-xs text-gray-400 text-center py-6">No recent achievements</p>
             ) : (
-              <div className="divide-y divide-zinc-50">
+              <div className="divide-y divide-gray-50">
                 {achievers.map((a, i) => (
-                  <div key={`${a.userId}-${i}`} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-50/60 transition-colors">
+                  <div key={`${a.userId}-${i}`} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
                     <Avatar name={a.displayName} url={a.avatarUrl} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-zinc-800 truncate">{a.displayName}</p>
-                      <p className="text-[10px] text-zinc-500 truncate">{a.label}</p>
+                      <p className="text-xs font-semibold text-gray-800 truncate">{a.displayName}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{a.label}</p>
                     </div>
-                    <span className="text-[10px] text-zinc-400 shrink-0">{timeAgo(a.achievedAt)}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0">{timeAgo(a.achievedAt)}</span>
                   </div>
                 ))}
               </div>

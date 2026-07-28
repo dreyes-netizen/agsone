@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { onIdTokenChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
-import { getBrowserSupabase } from "@/lib/supabase/browserClient";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 
 type DbProfile = {
   id: string;
@@ -105,18 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Real-time: refresh points balance whenever the server broadcasts a points change
+  // Real-time: refresh points balance whenever the server broadcasts a points
+  // change. Uses the shared hook (rather than a hand-rolled channel) so this
+  // subscription participates in the tab-hidden idle-disconnect + resync
+  // behavior like every other channel — see lib/hooks/useRealtimeChannel.ts.
   const refreshRef = useRef(refreshProfile);
   refreshRef.current = refreshProfile;
-  useEffect(() => {
-    if (!dbUser?.id) return;
-    const supabase = getBrowserSupabase();
-    const channel = supabase
-      .channel(`points:${dbUser.id}`)
-      .on("broadcast", { event: "update" }, () => refreshRef.current())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [dbUser?.id]);
+  useRealtimeChannel(dbUser?.id ? `points:${dbUser.id}` : null, () => refreshRef.current());
 
   return (
     <AuthContext.Provider value={{ user, loading, token, dbUser, refreshProfile }}>

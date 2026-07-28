@@ -20,6 +20,16 @@ export function getBrowserSupabase(): SupabaseClient {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: { persistSession: false, autoRefreshToken: false },
+      realtime: {
+        // Dev-only: surfaces "transport: close", "deferred disconnect
+        // scheduled in ...ms", "Not reconnecting as page is hidden!" etc. —
+        // useful for verifying the tab-hidden idle disconnect actually
+        // fires (see lib/realtime/lifecycle.ts). No-op in production.
+        ...(process.env.NODE_ENV !== "production" && {
+          logger: (kind: string, msg: string, data?: unknown) =>
+            console.debug(`[realtime:${kind}] ${msg}`, data ?? ""),
+        }),
+      },
     },
   );
   return client;

@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { BarChart2, Gamepad2, Clock, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 const GAME_TYPES = [
@@ -73,12 +74,12 @@ export default function MinigamesPage() {
 
   useEffect(() => {
     load();
-    // Slow fallback poll — Realtime handles the common case; this only catches
-    // a rare dropped message.
-    const interval = setInterval(load, 15_000);
-    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Slow fallback poll — Realtime handles the common case; this only catches
+  // a rare dropped message. Paused while the tab is hidden.
+  useVisibleInterval(load, 15_000);
 
   async function createChallenge() {
     setCreating(true);

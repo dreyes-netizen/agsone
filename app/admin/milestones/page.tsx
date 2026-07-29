@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { Pagination } from "@/components/ui/pagination";
 
 type MilestoneType =
   | "BIRTHDAY"
@@ -42,11 +43,17 @@ export default function MilestonesPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: MilestoneConfig[] }>("/api/admin/milestones")
+    apiFetch<{ data: MilestoneConfig[]; total: number; page: number; pages: number }>(
+      `/api/admin/milestones?page=${page}`
+    )
       .then((res) => {
+        setPages(res.pages);
+        setPage(res.page);
         if (res.data.length > 0) {
           const merged = DEFAULTS.map((d) => {
             const found = res.data.find((c) => c.type === d.type);
@@ -58,7 +65,7 @@ export default function MilestonesPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, page]);
 
   function updatePoints(type: MilestoneType, value: string) {
     const num = parseInt(value, 10);
@@ -91,8 +98,8 @@ export default function MilestonesPage() {
     }
   }
 
-  const thClass = "text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide";
-  const tdClass = "px-6 py-4";
+  const thClass = "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
+  const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -103,7 +110,7 @@ export default function MilestonesPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-clip">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-800">Milestone Configuration</h2>
           <button
@@ -129,18 +136,18 @@ export default function MilestonesPage() {
         {loading ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div>
         ) : (
-          <div className="overflow-x-auto scroll-hint">
-          <table className="w-full text-sm" aria-label="Milestone rewards configuration">
-            <thead className="bg-gray-50">
-              <tr>
+          <div className="overflow-auto max-h-[70vh] scroll-hint">
+          <table className="w-full border-collapse" aria-label="Milestone rewards configuration">
+            <thead className="sticky top-0 z-10 bg-table-head">
+              <tr className="border-b border-table-border">
                 <th scope="col" className={thClass}>Milestone</th>
                 <th scope="col" className={thClass}>Points Awarded</th>
                 <th scope="col" className={thClass}>Active</th>
               </tr>
             </thead>
             <tbody>
-              {configs.map((cfg) => (
-                <tr key={cfg.type} className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors">
+              {configs.map((cfg, i) => (
+                <tr key={cfg.type} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
                   <td className={`${tdClass} font-medium text-gray-900`}>
                     {TYPE_LABELS[cfg.type]}
                   </td>
@@ -177,6 +184,8 @@ export default function MilestonesPage() {
           </table>
           </div>
         )}
+
+      <Pagination page={page} pages={pages} onPageChange={setPage} />
       </div>
 
       <p className="text-xs text-gray-500">

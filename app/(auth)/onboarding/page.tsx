@@ -65,7 +65,7 @@ export default function OnboardingPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-zinc-50 p-6">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-8">
+        <div className="bg-white rounded-card border border-table-border p-8">
 
           {/* Header */}
           <div className="flex items-center gap-2.5 mb-7">

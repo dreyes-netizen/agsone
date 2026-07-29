@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 type Department = {
   id: string;
@@ -28,6 +29,8 @@ export default function DepartmentsPage() {
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -36,12 +39,12 @@ export default function DepartmentsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Department[] }>("/api/admin/departments")
-      .then((res) => setDepartments(res.data))
+    apiFetch<{ data: Department[]; pages: number }>(`/api/admin/departments?page=${page}`)
+      .then((r) => { setDepartments(r.data); setPages(r.pages); })
       .catch(console.error)
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, page]);
 
   async function handleCreate() {
     if (!createName.trim()) {
@@ -138,7 +141,7 @@ export default function DepartmentsPage() {
       </div>
 
       {showCreateForm && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="bg-white rounded-card border border-table-border p-6 space-y-4">
           <h2 className="text-base font-semibold text-gray-800">New Department</h2>
           {createError && <p className="text-sm text-red-500">{createError}</p>}
           <div className="space-y-3">
@@ -181,27 +184,27 @@ export default function DepartmentsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+      <div className="bg-white rounded-card border border-table-border overflow-clip">
         {loading ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div>
         ) : departments.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No departments yet.</div>
         ) : (
-          <div className="overflow-x-auto scroll-hint">
-          <table className="w-full" aria-label="Departments">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Name</th>
-                <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Description</th>
-                <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3">Employees</th>
-                <th scope="col" className="px-6 py-3"></th>
+          <div className="overflow-auto max-h-[70vh] scroll-hint">
+          <table className="w-full border-collapse" aria-label="Departments">
+            <thead className="sticky top-0 z-10 bg-table-head">
+              <tr className="border-b border-table-border">
+                <th scope="col" className="text-left font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted px-3.5 py-2.5 first:pl-5 last:pr-5">Name</th>
+                <th scope="col" className="text-left font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted px-3.5 py-2.5 first:pl-5 last:pr-5">Description</th>
+                <th scope="col" className="text-left font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted px-3.5 py-2.5 first:pl-5 last:pr-5">Employees</th>
+                <th scope="col" className="px-3.5 py-2.5 last:pr-5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {departments.map((dept) => (
-                <tr key={dept.id}>
+            <tbody>
+              {departments.map((dept, i) => (
+                <tr key={dept.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 && editingId !== dept.id ? "bg-row-alt" : ""}`}>
                   {editingId === dept.id ? (
-                    <td colSpan={4} className="px-6 py-4">
+                    <td colSpan={4} className="px-3.5 py-4 first:pl-5 last:pr-5">
                       <div className="space-y-3">
                         {editError && <p className="text-sm text-red-500">{editError}</p>}
                         <div className="flex flex-wrap gap-3">
@@ -237,10 +240,10 @@ export default function DepartmentsPage() {
                     </td>
                   ) : (
                     <>
-                      <td className="px-6 py-4 font-medium text-gray-900 text-sm">{dept.name}</td>
-                      <td className="px-6 py-4 text-gray-500 text-sm">{dept.description ?? "—"}</td>
-                      <td className="px-6 py-4 text-gray-500 text-sm">{dept.employeeCount}</td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 font-medium text-gray-900">{dept.name}</td>
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">{dept.description ?? "—"}</td>
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">{dept.employeeCount}</td>
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-right">
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => startEdit(dept)}
@@ -268,6 +271,7 @@ export default function DepartmentsPage() {
           </div>
         )}
       </div>
+      <Pagination page={page} pages={pages} onPageChange={setPage} />
     </div>
   );
 }

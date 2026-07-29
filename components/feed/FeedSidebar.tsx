@@ -32,7 +32,7 @@ export function FeedSidebar({
   return (
     <div className="space-y-4">
       {/* ── Filters ── */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-2">
+      <div className="bg-white rounded-card border border-table-border p-2">
         {/* Mobile: collapsible toggle */}
         <button
           type="button"
@@ -68,7 +68,7 @@ export function FeedSidebar({
 
       {/* ── Pinned announcements ── */}
       {pinned.length > 0 && (
-        <div className="bg-white rounded-xl border border-zinc-200 p-3">
+        <div className="bg-white rounded-card border border-table-border p-3">
           <p className="flex items-center gap-1.5 px-1 pb-2 text-[11px] font-semibold text-amber-600 uppercase tracking-wide">
             <Pin className="w-3 h-3" /> Pinned
           </p>

@@ -135,7 +135,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
       </div>
 
       {/* Original submission */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
+      <div className="bg-white rounded-card border border-table-border p-6 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -208,7 +208,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
           Cannot reply to anonymous feedback
         </p>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-3 items-end">
+        <div className="bg-white rounded-card border border-table-border p-4 flex gap-3 items-end">
           <textarea
             rows={2}
             value={replyBody}

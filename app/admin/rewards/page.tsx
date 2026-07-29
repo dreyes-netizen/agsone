@@ -6,6 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import React from "react";
 import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 type Reward = {
   id: string;
@@ -36,6 +37,8 @@ export default function AdminRewardsPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,11 +66,12 @@ export default function AdminRewardsPage() {
     if (authLoading || !user) return;
     loadRewards();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, page]);
 
   async function loadRewards() {
-    const res = await apiFetch<{ data: Reward[] }>("/api/rewards?includeInactive=true");
+    const res = await apiFetch<{ data: Reward[]; pages: number }>(`/api/rewards?includeInactive=true&page=${page}`);
     setRewards(res.data);
+    setPages(res.pages);
   }
 
   function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -188,8 +192,8 @@ export default function AdminRewardsPage() {
   const selectClass =
     "w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white";
   const thClass =
-    "text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide";
-  const tdClass = "px-6 py-3";
+    "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
+  const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -224,7 +228,7 @@ export default function AdminRewardsPage() {
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="text-base font-semibold text-gray-800">
               {editingId ? "Edit Reward" : "New Reward"}
@@ -354,7 +358,7 @@ export default function AdminRewardsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-clip">
         {/* Mobile card layout */}
         <div className="md:hidden">
           {rewards.length === 0 ? (
@@ -428,10 +432,10 @@ export default function AdminRewardsPage() {
         </div>
 
         {/* Desktop table layout */}
-        <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm" aria-label="Rewards">
-          <thead className="bg-gray-50">
-            <tr>
+        <div className="hidden md:block overflow-auto max-h-[70vh] scroll-hint">
+        <table className="w-full border-collapse" aria-label="Rewards">
+          <thead className="sticky top-0 z-10 bg-table-head">
+            <tr className="border-b border-table-border">
               <th scope="col" className={thClass}>Reward</th>
               <th scope="col" className={thClass}>Category</th>
               <th scope="col" className={thClass}>Cost</th>
@@ -443,10 +447,10 @@ export default function AdminRewardsPage() {
           <tbody>
             {rewards.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-500 py-8">No rewards yet. Add your first one!</td>
+                <td colSpan={6} className="text-center text-table-muted text-[13px] py-12">No rewards yet. Add your first one!</td>
               </tr>
-            ) : rewards.map((r) => (
-              <tr key={r.id} className={`hover:bg-gray-50/60 transition-colors border-b border-gray-50 ${!r.isActive ? "opacity-60" : ""}`}>
+            ) : rewards.map((r, i) => (
+              <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""} ${!r.isActive ? "opacity-60" : ""}`}>
                 <td className={tdClass}>
                   <div className="flex items-center gap-3">
                     {(r.imageUrls?.[0]) && (
@@ -533,6 +537,7 @@ export default function AdminRewardsPage() {
         </table>
         </div>
       </div>
+      <Pagination page={page} pages={pages} onPageChange={setPage} />
     </div>
   );
 }

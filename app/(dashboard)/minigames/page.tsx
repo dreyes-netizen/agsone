@@ -221,7 +221,7 @@ export default function MinigamesPage() {
         {/* Left: game type selector + create */}
         <div className="flex-1 min-w-0 space-y-4">
           {/* Game type tabs */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white border border-table-border rounded-card overflow-hidden">
             <div role="tablist" aria-label="Game type" className="flex border-b border-gray-100 overflow-x-auto">
               {GAME_TYPES.map(g => (
                 <button
@@ -269,7 +269,7 @@ export default function MinigamesPage() {
           </div>
 
           {/* Create challenge */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="bg-white border border-table-border rounded-card p-4 space-y-3">
             <div>
               <p className="text-sm font-bold text-gray-800">Create a Challenge</p>
               <p className="text-xs text-gray-500 mt-0.5">Post an open challenge — anyone can join from the lobby. Or invite someone directly from the game room.</p>
@@ -305,7 +305,7 @@ export default function MinigamesPage() {
 
         {/* Right: open challenges */}
         <div className="w-full lg:w-96 shrink-0">
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white border border-table-border rounded-card overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-sm font-bold text-gray-800">Open Challenges</p>
               <span className="text-xs text-gray-400">{openChallenges.length > 0 ? `${openChallenges.length} open · all games` : "all games"}</span>

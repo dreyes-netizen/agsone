@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
+import { Pagination } from "@/components/ui/pagination";
 
 type FeedbackItem = {
   id: string;
@@ -51,23 +52,27 @@ export default function AdminFeedbackPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   useEffect(() => {
     if (authLoading || !user) return;
     const params = new URLSearchParams();
+    params.set("page", String(page));
     if (statusFilter !== "ALL") params.set("status", statusFilter);
     if (categoryFilter) params.set("category", categoryFilter);
-    const query = params.toString() ? `?${params}` : "";
     setLoading(true);
-    apiFetch<{ data: FeedbackItem[] }>(`/api/admin/feedback${query}`)
-      .then((r) => setFeedbacks(r.data))
+    apiFetch<{ data: FeedbackItem[]; pages: number }>(`/api/admin/feedback?${params}`)
+      .then((r) => { setFeedbacks(r.data); setPages(r.pages); })
       .catch(console.error)
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, statusFilter, categoryFilter]);
+  }, [authLoading, user, statusFilter, categoryFilter, page]);
 
-  const thClass = "text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide";
-  const tdClass = "px-5 py-3";
+  useEffect(() => { setPage(1); }, [statusFilter, categoryFilter]);
+
+  const thClass = "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
+  const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";
 
   return (
     <div className="space-y-6">
@@ -114,11 +119,11 @@ export default function AdminFeedbackPage() {
         </select>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto scroll-hint">
-        <table className="w-full text-sm" aria-label="Whistleblower reports">
-          <thead className="bg-gray-50">
-            <tr>
+      <div className="bg-white rounded-card border border-table-border overflow-clip">
+        <div className="overflow-auto max-h-[70vh] scroll-hint">
+        <table className="w-full border-collapse" aria-label="Whistleblower reports">
+          <thead className="sticky top-0 z-10 bg-table-head">
+            <tr className="border-b border-table-border">
               <th scope="col" className={thClass}>Status</th>
               <th scope="col" className={thClass}>Category</th>
               <th scope="col" className={thClass}>Title</th>
@@ -132,14 +137,14 @@ export default function AdminFeedbackPage() {
               <tr><td colSpan={6}><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></td></tr>
             ) : feedbacks.length === 0 ? (
               <tr><td colSpan={6}><div className="flex flex-col items-center justify-center gap-2 py-10 text-gray-500 text-sm"><ShieldAlert className="w-8 h-8 text-gray-300" aria-hidden="true" /><span>No feedback found.</span></div></td></tr>
-            ) : feedbacks.map((f) => (
+            ) : feedbacks.map((f, i) => (
               <tr
                 key={f.id}
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/admin/feedback/${f.id}`)}
                 onKeyDown={(e) => e.key === "Enter" && router.push(`/admin/feedback/${f.id}`)}
-                className="hover:bg-gray-50/60 cursor-pointer transition-colors border-b border-gray-50 focus-visible:outline-none focus-visible:bg-gray-100"
+                className={`border-b border-row-border transition-colors hover:bg-row-hover cursor-pointer focus-visible:outline-none focus-visible:bg-gray-100 ${i % 2 === 1 ? "bg-row-alt" : ""}`}
               >
                 <td className={tdClass}>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_CHIP[f.status]}`}>
@@ -161,6 +166,7 @@ export default function AdminFeedbackPage() {
         </table>
         </div>
       </div>
+      {pages > 1 && <Pagination page={page} pages={pages} onPageChange={setPage} />}
     </div>
   );
 }

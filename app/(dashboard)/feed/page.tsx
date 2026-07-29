@@ -239,8 +239,8 @@ const postTypeMeta: Record<string, { bg: string; chip: string; label: string; ic
   CELEBRATION:  { bg: "bg-amber-50 border-amber-200",   chip: "bg-amber-100 text-amber-700",   label: "Celebration", icon: PartyPopper },
   ANNOUNCEMENT: { bg: "bg-navy-50 border-navy-200",     chip: "bg-navy-100 text-navy-700",     label: "Announcement", icon: Megaphone },
   ACHIEVEMENT:  { bg: "bg-violet-50 border-violet-200", chip: "bg-violet-100 text-violet-700", label: "Achievement", icon: Trophy },
-  UPDATE:       { bg: "bg-white border-gray-200",        chip: "",                              label: "" },
-  POLL:         { bg: "bg-white border-gray-200",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
+  UPDATE:       { bg: "bg-white border-table-border",        chip: "",                              label: "" },
+  POLL:         { bg: "bg-white border-table-border",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
 };
 
 function PollBlock({
@@ -961,7 +961,7 @@ export default function FeedPage() {
         <aside className="order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-8 space-y-4">
 
           {/* My Stats — compact strip on mobile, full card on desktop */}
-          <div className="lg:hidden bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div className="lg:hidden bg-white rounded-card border border-table-border px-4 py-3 flex items-center justify-between">
             {widgetsLoading ? (
               <div className="h-4 bg-gray-100 rounded animate-pulse w-32" />
             ) : (
@@ -977,7 +977,7 @@ export default function FeedPage() {
               </>
             )}
           </div>
-          <div className="hidden lg:block bg-white rounded-xl border border-gray-100 p-4">
+          <div className="hidden lg:block bg-white rounded-card border border-table-border p-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">My Stats</p>
             {widgetsLoading ? (
               <div className="space-y-3 animate-pulse">
@@ -1031,7 +1031,7 @@ export default function FeedPage() {
           )}
 
           {/* Top Performers — desktop only; use /leaderboard on mobile */}
-          <div className="hidden lg:block bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="hidden lg:block bg-white rounded-card border border-table-border overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
               <div className="flex items-center gap-1.5">
                 <Star className="w-3.5 h-3.5 text-yellow-500" aria-hidden="true" />
@@ -1081,7 +1081,7 @@ export default function FeedPage() {
         {/* Compose — left column, row 1 */}
         <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1">
       {/* Compose */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border p-4 overflow-hidden">
         {/* Collapsed trigger — click to expand */}
         {!composeExpanded && (
           <button
@@ -1449,7 +1449,7 @@ export default function FeedPage() {
       ) : loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
+            <div key={i} className="bg-white rounded-card border border-table-border p-5 animate-pulse">
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-gray-100" />
                 <div className="flex-1 space-y-2">
@@ -1471,7 +1471,7 @@ export default function FeedPage() {
         posts.map((post) => {
           if (post.type === "SHOUTOUT" && post.shoutoutRecipients.length > 0) {
             return (
-              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-gray-200 hover:border-gray-300"}`}>
+              <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
                 <div className="px-5 py-4 space-y-3">
                   {post.isPinned && (
@@ -1753,7 +1753,7 @@ export default function FeedPage() {
 
           const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
-            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-xl border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-gray-300`}`}>
+            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-gray-300`}`}>
               <div className="p-5">
                 {/* Pinned indicator */}
                 {post.isPinned && (

@@ -96,7 +96,7 @@ export default function MinigamesStatsPage() {
       </div>
 
       {/* Personal summary */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+      <div className="bg-white border border-table-border rounded-card p-5">
         <div className="grid grid-cols-4 gap-3 text-center">
           <div>
             <p className="text-2xl font-bold text-emerald-600">{stats?.wins ?? 0}</p>
@@ -124,7 +124,7 @@ export default function MinigamesStatsPage() {
 
       {/* Per-game breakdown */}
       {stats && Object.keys(stats.perGame).length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <div className="bg-white border border-table-border rounded-card p-5">
           <p className="text-sm font-bold text-gray-800 mb-3">By game</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(stats.perGame).map(([g, r]) => (
@@ -139,7 +139,7 @@ export default function MinigamesStatsPage() {
       )}
 
       {/* Leaderboard */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
           <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-yellow-500" /> Leaderboard</p>
           <div role="group" aria-label="Leaderboard period" className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
@@ -173,7 +173,7 @@ export default function MinigamesStatsPage() {
       </div>
 
       {/* Recent history */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100">
           <p className="text-sm font-bold text-gray-800">Recent games</p>
         </div>

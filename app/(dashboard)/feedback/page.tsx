@@ -230,7 +230,7 @@ export default function FeedbackPage() {
       </div>
 
       {/* Split panel */}
-      <div className="flex flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-0">
+      <div className="flex flex-1 bg-white rounded-card border border-table-border overflow-hidden min-h-0">
 
         {/* Left panel — report list (full-width on mobile when no thread/compose active) */}
         <div

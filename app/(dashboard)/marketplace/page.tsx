@@ -248,7 +248,7 @@ export default function MarketplacePage() {
               ))}
             </div>
           ) : sorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-gray-200">
+            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-card border border-table-border">
               <ShoppingBag className="w-10 h-10 text-gray-200 mb-4" />
               <p className="text-gray-600 font-medium">No rewards here yet</p>
               <p className="text-gray-400 text-sm mt-1">Ask HR to add items to the marketplace.</p>
@@ -271,10 +271,10 @@ export default function MarketplacePage() {
                   <div
                     key={reward.id}
                     onClick={() => openModal(reward)}
-                    className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
+                    className={`bg-white rounded-card border overflow-hidden cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
                       flex flex-row items-center
                       sm:flex-col sm:items-stretch
-                      ${outOfStock ? "opacity-55 border-gray-200" : !canAfford ? "opacity-70 border-amber-200" : "border-gray-200"}`}
+                      ${outOfStock ? "opacity-55 border-gray-200" : !canAfford ? "opacity-70 border-amber-200" : "border-table-border"}`}
                   >
                     {/* ── Image / accent ── */}
                     {images.length > 0 ? (
@@ -435,7 +435,7 @@ export default function MarketplacePage() {
               ))}
             </div>
           ) : redemptions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-xl border border-gray-200">
+            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-card border border-table-border">
               <Receipt className="w-10 h-10 text-gray-200 mb-4" aria-hidden="true" />
               <p className="text-gray-600 font-medium">No requests yet</p>
               <p className="text-gray-500 text-sm mt-1">Redeem a reward and it will appear here.</p>
@@ -446,7 +446,7 @@ export default function MarketplacePage() {
                 const cfg = categoryConfig[r.reward.category] ?? categoryConfig.PHYSICAL;
                 const status = statusConfig[r.status];
                 return (
-                  <li key={r.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
+                  <li key={r.id} className="bg-white rounded-card border border-table-border p-4 flex items-center gap-4">
                     <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} aria-hidden="true" />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 truncate">{r.reward.name}</p>

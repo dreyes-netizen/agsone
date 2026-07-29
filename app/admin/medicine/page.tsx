@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { AlertCircle, CheckCircle, Loader2, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 type Medicine = {
   id: string;
@@ -18,12 +19,14 @@ type Medicine = {
 
 type MedicineRequest = {
   id: string;
+  quantity: number;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  notes: string;
   createdAt: string;
-  approvedAt: string | null;
-  medicine: { id: string; name: string; imageUrl: string };
-  user: { id: string; displayName: string; avatarUrl: string | null };
-  approvedBy: { id: string; displayName: string } | null;
+  approvedAt?: string | null;
+  user: { id: string; displayName: string; avatarUrl?: string | null };
+  medicine: { id: string; name: string; imageUrl?: string | null };
+  approvedBy?: { id: string; displayName: string } | null;
 };
 
 type AddForm = {
@@ -81,24 +84,63 @@ export default function AdminMedicinePage() {
   const [loadingReqs, setLoadingReqs] = useState(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [reqFilter, setReqFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [invPage, setInvPage] = useState(1);
+  const [invPages, setInvPages] = useState(1);
+  const [reqPage, setReqPage] = useState(1);
+  const [reqPages, setReqPages] = useState(1);
+
   function showToast(t: "success" | "error", m: string) {
     setToast({ type: t, msg: m });
     setTimeout(() => setToast(null), 4000);
   }
 
+  function handleTabChange(tab: "catalog" | "inventory" | "requests") {
+    setActiveTab(tab);
+    if (tab === "inventory") setInvPage(1);
+    if (tab === "requests") setReqPage(1);
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    Promise.all([
-      apiFetch<{ data: Medicine[] }>("/api/admin/medicine").then((r) => setMedicines(r.data)),
-      apiFetch<{ data: MedicineRequest[] }>("/api/admin/medicine/requests").then((r) => setRequests(r.data)),
-    ])
+    setLoadingMeds(true);
+    apiFetch<{ data: Medicine[]; pages: number }>(`/api/admin/medicine?page=${invPage}`)
+      .then((r) => { setMedicines(r.data); setInvPages(r.pages); })
       .catch(console.error)
-      .finally(() => { setLoadingMeds(false); setLoadingReqs(false); });
+      .finally(() => setLoadingMeds(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, invPage]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    setLoadingReqs(true);
+    const params = new URLSearchParams({ page: String(reqPage) });
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    if (statusFilter) params.set("status", statusFilter);
+    apiFetch<{ data: MedicineRequest[]; pages: number }>(`/api/admin/medicine/requests?${params}`)
+      .then((r) => { setRequests(r.data); setReqPages(r.pages); })
+      .catch(console.error)
+      .finally(() => setLoadingReqs(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, reqPage, dateFrom, dateTo, statusFilter]);
+
+  useEffect(() => {
+    setReqPage(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo, statusFilter]);
+
+  function clearFilters() {
+    setDateFrom("");
+    setDateTo("");
+    setStatusFilter("");
+    setReqFilter("");
+  }
 
   async function handleAdd() {
     if (!addForm.name.trim() || !addForm.caption.trim() || !addForm.stockQuantity) {
@@ -221,7 +263,7 @@ export default function AdminMedicinePage() {
         if (req) {
           setMedicines((prev) =>
             prev.map((m) =>
-              m.id === req.medicine.id ? { ...m, stockQuantity: Math.max(0, m.stockQuantity - 1) } : m
+              m.id === req.medicine.id ? { ...m, stockQuantity: Math.max(0, m.stockQuantity - req.quantity) } : m
             )
           );
         }
@@ -275,8 +317,8 @@ export default function AdminMedicinePage() {
             key={tab}
             role="tab"
             aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${
+            onClick={() => handleTabChange(tab)}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${
               activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -303,7 +345,7 @@ export default function AdminMedicinePage() {
           </div>
 
           {showAddForm && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+            <div className="bg-white rounded-card border border-table-border p-5 space-y-4">
               <h3 className="font-semibold text-gray-900">New Medicine</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -317,14 +359,15 @@ export default function AdminMedicinePage() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Starting Stock</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={addForm.stockQuantity}
-                    onChange={(e) => setAddForm((f) => ({ ...f, stockQuantity: e.target.value }))}
-                    className={inputClass}
-                    placeholder="0"
-                  />
+                   <input
+                     type="number"
+                     inputMode="numeric"
+                     min="0"
+                     value={addForm.stockQuantity}
+                     onChange={(e) => setAddForm((f) => ({ ...f, stockQuantity: e.target.value }))}
+                     className={inputClass}
+                     placeholder="0"
+                   />
                 </div>
               </div>
               <div>
@@ -398,7 +441,7 @@ export default function AdminMedicinePage() {
               {medicines.map((med) => (
                 <div
                   key={med.id}
-                  className={`bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col ${!med.isActive ? "opacity-50" : ""}`}
+                  className={`bg-white rounded-card border border-table-border overflow-hidden flex flex-col ${!med.isActive ? "opacity-50" : ""}`}
                 >
                   <div className="aspect-square bg-gray-50 overflow-hidden relative">
                     {med.imageUrl ? (
@@ -423,17 +466,17 @@ export default function AdminMedicinePage() {
                       {med.stockQuantity} in stock
                     </p>
                     {deleteConfirmId === med.id ? (
-                      <div className="mt-2 flex items-center gap-1 text-xs">
+                      <div className="mt-2 flex items-center gap-1.5 text-xs">
                         <span className="text-gray-700 font-medium flex-1">Delete?</span>
                         <button
                           onClick={() => confirmDelete(med)}
-                          className="px-2 py-1 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                          className="px-2.5 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(null)}
-                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                          className="px-2.5 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
                         >
                           No
                         </button>
@@ -471,25 +514,27 @@ export default function AdminMedicinePage() {
         ) : medicines.length === 0 ? (
           <div className="text-center text-gray-500 py-12">No medicines yet.</div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto scroll-hint">
-            <table className="w-full text-sm" aria-label="Medicine catalog">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
-                  <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock</th>
-                  <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                  <th scope="col" className="px-5 py-3" />
+          <>
+          {/* Desktop table */}
+          <div className="hidden sm:block bg-white rounded-card border border-table-border overflow-clip">
+            <div className="overflow-auto max-h-[70vh] scroll-hint">
+            <table className="w-full border-collapse" aria-label="Medicine catalog">
+              <thead className="sticky top-0 z-10 bg-table-head">
+                <tr className="border-b border-table-border">
+                  <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Medicine</th>
+                  <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Stock</th>
+                  <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Status</th>
+                  <th scope="col" className="px-3.5 py-2.5 last:pr-5" />
                 </tr>
               </thead>
               <tbody>
-                {medicines.map((med) => {
+                {medicines.map((med, i) => {
                   const editVal = inventoryEdits[med.id];
                   const isDirty = editVal !== undefined && editVal !== String(med.stockQuantity);
                   const isSaving = savingStock === med.id;
                   return (
-                    <tr key={med.id} className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-3">
+                    <tr key={med.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                         <div className="flex items-center gap-3">
                           {med.imageUrl ? (
                             <img src={med.imageUrl} alt={med.name} className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0" />
@@ -501,16 +546,17 @@ export default function AdminMedicinePage() {
                           <span className="font-medium text-gray-900">{med.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
+                            inputMode="numeric"
                             min="0"
                             value={editVal ?? String(med.stockQuantity)}
                             onChange={(e) =>
                               setInventoryEdits((prev) => ({ ...prev, [med.id]: e.target.value }))
                             }
-                            className="w-20 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                            className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
                           />
                           <span className={`text-xs font-medium ${
                             med.stockQuantity === 0
@@ -523,12 +569,12 @@ export default function AdminMedicinePage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                         <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${med.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
                           {med.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-right">
+                      <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-right">
                         <button
                           onClick={() => handleStockSave(med)}
                           disabled={!isDirty || isSaving}
@@ -544,6 +590,67 @@ export default function AdminMedicinePage() {
             </table>
             </div>
           </div>
+
+          {/* Mobile cards */}
+          <div className="block sm:hidden space-y-3">
+            {medicines.map((med) => {
+              const editVal = inventoryEdits[med.id];
+              const isDirty = editVal !== undefined && editVal !== String(med.stockQuantity);
+              const isSaving = savingStock === med.id;
+              return (
+                <div key={med.id} className="bg-white rounded-card border border-table-border p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    {med.imageUrl ? (
+                      <img src={med.imageUrl} alt={med.name} className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg border border-gray-100 bg-gray-100 flex items-center justify-center shrink-0">
+                        <Pill className="w-5 h-5 text-gray-300" aria-hidden="true" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{med.name}</p>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${med.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                        {med.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500 shrink-0">Stock</label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={editVal ?? String(med.stockQuantity)}
+                      onChange={(e) =>
+                        setInventoryEdits((prev) => ({ ...prev, [med.id]: e.target.value }))
+                      }
+                      className="flex-1 w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                    />
+                    <span className={`text-xs font-medium shrink-0 ${
+                      med.stockQuantity === 0
+                        ? "text-red-500"
+                        : med.stockQuantity <= 3
+                        ? "text-amber-500"
+                        : "text-emerald-600"
+                    }`}>
+                      {med.stockQuantity === 0 ? "Out" : med.stockQuantity <= 3 ? "Low" : "OK"}
+                    </span>
+                    <button
+                      onClick={() => handleStockSave(med)}
+                      disabled={!isDirty || isSaving}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-command-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 shrink-0"
+                    >
+                      {isSaving ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : "Save"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="pt-3">
+            <Pagination page={invPage} pages={invPages} onPageChange={setInvPage} />
+          </div>
+          </>
         )
       )}
 
@@ -561,28 +668,31 @@ export default function AdminMedicinePage() {
                   <h2 className="text-base font-semibold text-gray-900 mb-3">
                     Pending ({pending.length})
                   </h2>
-                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                     <div className="overflow-x-auto scroll-hint">
-                     <table className="w-full text-sm" aria-label="Pending medicine requests">
-                       <thead className="bg-gray-50">
-                         <tr>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee</th>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
-                           <th scope="col" className="px-5 py-3" />
-                         </tr>
+                   {/* Desktop table */}
+                   <div className="hidden sm:block bg-white rounded-card border border-table-border overflow-clip">
+                     <div className="overflow-auto max-h-[70vh] scroll-hint">
+                     <table className="w-full border-collapse" aria-label="Pending medicine requests">
+                       <thead className="sticky top-0 z-10 bg-table-head">
+                          <tr className="border-b border-table-border">
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Employee</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Medicine</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Qty</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Requested</th>
+                            <th scope="col" className="px-3.5 py-2.5 last:pr-5" />
+                          </tr>
                        </thead>
                       <tbody>
-                        {pending.map((r) => (
-                          <tr key={r.id} className="border-t border-gray-50">
-                            <td className="px-5 py-3 font-medium text-gray-900">{r.user.displayName}</td>
-                            <td className="px-5 py-3 text-gray-700">{r.medicine.name}</td>
-                            <td className="px-5 py-3 text-gray-500 text-xs">
+                        {pending.map((r, i) => (
+                          <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
+                            <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 font-medium text-gray-900">{r.user.displayName}</td>
+                            <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-700">{r.medicine.name}</td>
+                            <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-700">{r.quantity}</td>
+                            <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
                               {new Date(r.createdAt).toLocaleDateString("en-US", {
                                 month: "short", day: "numeric", year: "numeric",
                               })}
                             </td>
-                            <td className="px-5 py-3">
+                            <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   onClick={() => handleAction(r.id, "approve")}
@@ -608,62 +718,178 @@ export default function AdminMedicinePage() {
                     </table>
                     </div>
                   </div>
+
+                  {/* Mobile cards */}
+                  <div className="block sm:hidden space-y-3">
+                    {pending.map((r) => (
+                      <div key={r.id} className="bg-white rounded-card border border-table-border p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-gray-900 text-sm">{r.user.displayName}</p>
+                          <span className="text-xs text-gray-500">
+                            {new Date(r.createdAt).toLocaleDateString("en-US", {
+                              month: "short", day: "numeric", year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                          <p className="text-gray-700 text-sm">{r.medicine.name} × {r.quantity}</p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleAction(r.id, "approve")}
+                            disabled={actioningId === r.id}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-700"
+                          >
+                            {actioningId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleAction(r.id, "reject")}
+                            disabled={actioningId === r.id}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-500"
+                          >
+                            {actioningId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-3">
+                    <Pagination page={reqPage} pages={reqPages} onPageChange={setReqPage} />
+                  </div>
                 </div>
               )}
 
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                  <h2 className="text-base font-semibold text-gray-900">History</h2>
-                  <input
-                    placeholder="Filter by employee or medicine…"
-                    value={reqFilter}
-                    onChange={(e) => setReqFilter(e.target.value)}
-                    className="w-full sm:w-60 px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                  />
+                <div className="mb-3 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-base font-semibold text-gray-900">History</h2>
+                    {(dateFrom || dateTo || statusFilter || reqFilter) && (
+                      <button
+                        onClick={clearFilters}
+                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        <X className="w-3 h-3" /> Clear filters
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">From</label>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">To</label>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status</label>
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
+                      >
+                        <option value="">All</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1 min-w-[160px]">
+                      <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Search</label>
+                      <input
+                        placeholder="Employee or medicine…"
+                        value={reqFilter}
+                        onChange={(e) => setReqFilter(e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
+                      />
+                    </div>
+                  </div>
                 </div>
                 {filteredHistory.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">No history yet.</p>
                 ) : (
-                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                     <div className="overflow-x-auto scroll-hint">
-                     <table className="w-full text-sm" aria-label="Medicine request history">
-                       <thead className="bg-gray-50">
-                         <tr>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee</th>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicine</th>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Requested</th>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                           <th scope="col" className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actioned by</th>
-                         </tr>
-                       </thead>
-                      <tbody>
-                        {filteredHistory.map((r) => (
-                          <tr
-                            key={r.id}
-                            className="border-t border-gray-50 hover:bg-gray-50/60 transition-colors"
-                          >
-                            <td className="px-5 py-3 font-medium text-gray-900">{r.user.displayName}</td>
-                            <td className="px-5 py-3 text-gray-700">{r.medicine.name}</td>
-                            <td className="px-5 py-3 text-gray-500 text-sm">
+                  <>
+                    {/* Desktop table */}
+                    <div className="hidden sm:block bg-white rounded-card border border-table-border overflow-clip">
+                      <div className="overflow-auto max-h-[70vh] scroll-hint">
+                      <table className="w-full border-collapse" aria-label="Medicine request history">
+                        <thead className="sticky top-0 z-10 bg-table-head">
+                          <tr className="border-b border-table-border">
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Employee</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Medicine</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Qty</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Requested</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Status</th>
+                            <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Actioned by</th>
+                          </tr>
+                        </thead>
+                       <tbody>
+                         {filteredHistory.map((r, i) => (
+                           <tr
+                             key={r.id}
+                             className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}
+                           >
+                              <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 font-medium text-gray-900">{r.user.displayName}</td>
+                              <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-700">{r.medicine.name}</td>
+                              <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-700">{r.quantity}</td>
+                              <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
+                               {new Date(r.createdAt).toLocaleDateString("en-US", {
+                                 month: "short", day: "numeric", year: "numeric",
+                               })}
+                             </td>
+                             <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
+                               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusChip[r.status]}`}>
+                                 {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
+                               </span>
+                             </td>
+                             <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
+                               {r.approvedBy?.displayName ?? "—"}
+                             </td>
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                     </div>
+                    </div>
+
+                    {/* Mobile cards */}
+                    <div className="block sm:hidden space-y-3">
+                      {filteredHistory.map((r) => (
+                        <div key={r.id} className="bg-white rounded-card border border-table-border p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold text-gray-900 text-sm">{r.user.displayName}</p>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusChip[r.status]}`}>
+                              {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
+                            </span>
+                          </div>
+                        <p className="text-gray-700 text-sm">{r.medicine.name} × {r.quantity}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>
                               {new Date(r.createdAt).toLocaleDateString("en-US", {
                                 month: "short", day: "numeric", year: "numeric",
                               })}
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusChip[r.status]}`}>
-                                {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-gray-500 text-sm">
-                              {r.approvedBy?.displayName ?? "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </span>
+                            <span>by {r.approvedBy?.displayName ?? "—"}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  </>
                 )}
+                <div className="pt-3">
+                  <Pagination page={reqPage} pages={reqPages} onPageChange={setReqPage} />
+                </div>
               </div>
             </>
           )}
@@ -671,13 +897,13 @@ export default function AdminMedicinePage() {
       )}
 
       {editingMed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="fixed inset-0 z-50 flex sm:items-center items-end justify-center bg-black/40 px-4">
           <div
             ref={editMedModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-medicine-title"
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
           >
             <div className="flex items-center justify-between">
               <h2 id="edit-medicine-title" className="text-lg font-bold text-gray-900">Edit Medicine</h2>
@@ -712,6 +938,7 @@ export default function AdminMedicinePage() {
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Stock Quantity</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={editForm.stockQuantity}
                   onChange={(e) => setEditForm((f) => ({ ...f, stockQuantity: e.target.value }))}

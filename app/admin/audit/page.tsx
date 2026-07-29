@@ -165,7 +165,7 @@ export default function AuditLogPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-hidden">
         {loading ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-12 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading audit log…</div>
         ) : entries.length === 0 ? (

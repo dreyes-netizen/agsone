@@ -66,7 +66,7 @@ function KpiCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+    <div className="bg-white rounded-card border border-table-border p-4">
       <div className="flex items-start justify-between">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconColor}`}>
           <Icon aria-hidden="true" className="w-4 h-4 text-white" />
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
           {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </p>
       </div>
-      <div role="alert" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center space-y-3">
+      <div role="alert" className="bg-white rounded-card border border-table-border p-8 text-center space-y-3">
         <p className="text-gray-500">Failed to load analytics.</p>
         <button
           onClick={() => window.location.reload()}
@@ -234,7 +234,7 @@ export default function AdminDashboardPage() {
 
       {/* Chart + Top Earners */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="lg:col-span-2 bg-white rounded-card border border-table-border p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="font-semibold text-gray-900 text-sm">Points Flow — Last 30 Days</p>
             <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -277,7 +277,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white rounded-card border border-table-border p-4">
           <p className="font-semibold text-gray-900 text-sm mb-3">Top Earners</p>
           <div className="space-y-1.5">
             {(() => {
@@ -309,7 +309,7 @@ export default function AdminDashboardPage() {
       {/* Engagement + Department Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Engagement card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
+        <div className="bg-white rounded-card border border-table-border p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <Activity aria-hidden="true" className="w-4 h-4 text-gray-500" />
             <p className="font-semibold text-gray-900 text-sm">Engagement</p>
@@ -337,21 +337,21 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Department breakdown */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-card border border-table-border overflow-clip">
           <div className="px-4 py-3 border-b border-gray-50">
             <p className="font-semibold text-gray-900 text-sm">Department Activity — This Month</p>
           </div>
           {data.departmentBreakdown.length === 0 ? (
             <div className="py-8 text-center text-sm text-gray-500">No department data</div>
           ) : (
-            <div className="overflow-x-auto scroll-hint">
-              <table className="w-full text-sm" aria-label="Department activity this month">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="text-left px-4 py-2 text-xs font-semibold text-gray-700">Department</th>
-                    <th scope="col" className="px-4 py-2 text-xs font-semibold text-gray-700 w-40">Engagement</th>
-                    <th scope="col" className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-16">Active</th>
-                    <th scope="col" className="text-right px-4 py-2 text-xs font-semibold text-gray-700 w-24">Points</th>
+            <div className="overflow-auto max-h-[70vh] scroll-hint">
+              <table className="w-full border-collapse" aria-label="Department activity this month">
+                <thead className="sticky top-0 z-10 bg-table-head">
+                  <tr className="border-b border-table-border">
+                    <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Department</th>
+                    <th scope="col" className="px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5 w-40">Engagement</th>
+                    <th scope="col" className="text-right px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5 w-16">Active</th>
+                    <th scope="col" className="text-right px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5 w-24">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,9 +360,9 @@ export default function AdminDashboardPage() {
                     const barColor = pct >= 70 ? "bg-emerald-400" : pct >= 40 ? "bg-amber-400" : "bg-red-400";
                     const textColor = pct >= 70 ? "text-emerald-600" : pct >= 40 ? "text-amber-600" : "text-red-500";
                     return (
-                      <tr key={d.id} className={`border-t border-gray-50 hover:bg-gray-50/60 transition-colors ${i === 0 ? "border-t-0" : ""}`}>
-                        <td className="px-4 py-2 font-medium text-gray-900">{d.name}</td>
-                        <td className="px-4 py-2">
+                      <tr key={d.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
+                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 font-medium text-gray-900">{d.name}</td>
+                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
                               <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
@@ -370,10 +370,10 @@ export default function AdminDashboardPage() {
                             <span className={`text-xs tabular-nums w-8 text-right font-medium ${textColor}`}>{pct}%</span>
                           </div>
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums text-gray-500 text-xs">
+                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-right tabular-nums text-gray-500">
                           {d.activeEmployees}/{d.totalEmployees}
                         </td>
-                        <td className="px-4 py-2 text-right font-bold text-navy-600 tabular-nums">
+                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-right font-bold text-navy-600 tabular-nums">
                           {d.pointsThisMonth.toLocaleString()}
                         </td>
                       </tr>
@@ -388,7 +388,7 @@ export default function AdminDashboardPage() {
 
       {/* Disengaged Employees */}
       {data.disengaged.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
             <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-500" />
             <p className="font-semibold text-gray-900 text-sm">No Activity in 30+ Days</p>
@@ -427,7 +427,7 @@ export default function AdminDashboardPage() {
 
       {/* Upcoming Birthdays — only shown when there are birthdays in the next 14 days */}
       {birthdays.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
             <Cake aria-hidden="true" className="w-4 h-4 text-gray-400" />
             <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>

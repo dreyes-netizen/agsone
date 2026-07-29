@@ -194,7 +194,7 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Rankings list */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-card border border-table-border overflow-hidden">
             {loading ? (
               <div role="status" aria-label="Loading leaderboard" className="flex items-center justify-center gap-2 py-12 text-gray-400">
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
@@ -238,7 +238,7 @@ export default function LeaderboardPage() {
         <div className="space-y-4 sticky top-6 self-start">
 
           {/* Card 1: Your Stats */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="bg-white rounded-card border border-table-border p-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Your Stats</p>
             {profileLoading ? (
               <div className="space-y-3 motion-safe:animate-pulse">
@@ -275,7 +275,7 @@ export default function LeaderboardPage() {
 
           {/* Card 2: Period Summary */}
           {!loading && entries.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-white rounded-card border border-table-border p-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Period Summary</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -296,7 +296,7 @@ export default function LeaderboardPage() {
 
           {/* Card 3: Top Departments */}
           {!loading && topDepts.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-white rounded-card border border-table-border p-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Top Departments</p>
               <div className="space-y-3">
                 {topDepts.map(({ name, points, pct }) => (
@@ -323,7 +323,7 @@ export default function LeaderboardPage() {
           )}
 
           {/* Card 4: Recent Achievers */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-card border border-table-border overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-50">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Achievers</p>
             </div>

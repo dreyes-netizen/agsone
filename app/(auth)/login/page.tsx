@@ -169,7 +169,7 @@ export default function LoginPage() {
           </div>
 
           {/* Login card */}
-          <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xl shadow-zinc-200/60 p-8">
+          <div className="bg-white rounded-card border border-table-border shadow-xl shadow-zinc-200/60 p-8">
 
             {/* Desktop logo inside card */}
             <div className="hidden lg:flex flex-col items-center mb-7">

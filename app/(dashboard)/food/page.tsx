@@ -431,7 +431,7 @@ export default function FoodPage() {
 
       {/* Create / edit form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div className="bg-white rounded-card border border-table-border p-5 space-y-4">
           <h2 className="font-semibold text-gray-900">{editingId ? "Edit Listing" : "New Listing"}</h2>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -606,7 +606,7 @@ export default function FoodPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-200 text-center">
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-card border border-table-border text-center">
           <UtensilsCrossed className="w-10 h-10 text-gray-500 mb-4" aria-hidden="true" />
           <p className="text-gray-600 font-medium">Nothing here</p>
           <p className="text-gray-500 text-sm mt-1">
@@ -626,7 +626,7 @@ export default function FoodPage() {
               <div
                 key={listing.id}
                 onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:shadow-sm transition-shadow cursor-pointer"
+                className="bg-white rounded-card border border-table-border overflow-hidden flex flex-col transition-shadow cursor-pointer"
               >
 
                 {/* Mobile: image left + content right | Desktop: image top + content below */}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { CheckCircle, XCircle, Package, Loader2 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 type Redemption = {
   id: string;
@@ -31,19 +32,22 @@ export default function AdminRedemptionsPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   useEffect(() => {
     if (authLoading || !user) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, page]);
 
   async function load() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<{ data: Redemption[] }>("/api/redemptions");
+      const res = await apiFetch<{ data: Redemption[]; pages: number }>(`/api/redemptions?page=${page}`);
       setRedemptions(res.data);
+      setPages(res.pages);
     } catch (err) {
       // Without this, a failed fetch left setLoading(false) unreached → the
       // table spun forever with no way to recover.
@@ -73,8 +77,8 @@ export default function AdminRedemptionsPage() {
   const pending = redemptions.filter((r) => r.status === "PENDING");
   const processed = redemptions.filter((r) => r.status !== "PENDING");
 
-  const thClass = "text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide";
-  const tdClass = "px-6 py-3";
+  const thClass = "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
+  const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -96,7 +100,7 @@ export default function AdminRedemptionsPage() {
           </span>
           Pending Approval
         </h2>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-clip">
           {/* Mobile card layout */}
           <div className="md:hidden">
             {loading ? (
@@ -154,10 +158,10 @@ export default function AdminRedemptionsPage() {
           </div>
 
           {/* Desktop table layout */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm" aria-label="Pending redemptions">
-            <thead className="bg-gray-50">
-              <tr>
+          <div className="hidden md:block overflow-auto max-h-[70vh] scroll-hint">
+            <table className="w-full border-collapse" aria-label="Pending redemptions">
+            <thead className="sticky top-0 z-10 bg-table-head">
+              <tr className="border-b border-table-border">
                 <th scope="col" className={thClass}>Employee</th>
                 <th scope="col" className={thClass}>Reward</th>
                 <th scope="col" className={thClass}>Points</th>
@@ -173,10 +177,10 @@ export default function AdminRedemptionsPage() {
                 </tr>
               ) : pending.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">No pending redemptions.</td>
+                  <td colSpan={6} className="text-center py-12 text-table-muted text-[13px]">No pending redemptions.</td>
                 </tr>
-              ) : pending.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50">
+              ) : pending.map((r, i) => (
+                <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
                   <td className={tdClass}>
                     <p className="font-medium">{r.user.displayName}</p>
                     <p className="text-xs text-gray-500">{r.user.email}</p>
@@ -229,7 +233,7 @@ export default function AdminRedemptionsPage() {
 
       <div>
         <h2 className="text-base font-semibold text-gray-700 mb-3">History</h2>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-clip">
           {/* Mobile card layout */}
           <div className="md:hidden">
             {processed.length === 0 ? (
@@ -272,10 +276,10 @@ export default function AdminRedemptionsPage() {
           </div>
 
           {/* Desktop table layout */}
-          <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm" aria-label="Processed redemptions">
-            <thead className="bg-gray-50">
-              <tr>
+          <div className="hidden md:block overflow-auto max-h-[70vh] scroll-hint">
+          <table className="w-full border-collapse" aria-label="Processed redemptions">
+            <thead className="sticky top-0 z-10 bg-table-head">
+              <tr className="border-b border-table-border">
                 <th scope="col" className={thClass}>Employee</th>
                 <th scope="col" className={thClass}>Reward</th>
                 <th scope="col" className={thClass}>Points</th>
@@ -288,10 +292,10 @@ export default function AdminRedemptionsPage() {
             <tbody>
               {processed.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-500">No processed redemptions yet.</td>
+                  <td colSpan={7} className="text-center py-12 text-table-muted text-[13px]">No processed redemptions yet.</td>
                 </tr>
-              ) : processed.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50">
+              ) : processed.map((r, i) => (
+                <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
                   <td className={tdClass}>
                     <p className="font-medium">{r.user.displayName}</p>
                     <p className="text-xs text-gray-500">{r.user.email}</p>
@@ -326,6 +330,8 @@ export default function AdminRedemptionsPage() {
           </div>
         </div>
       </div>
+
+      <Pagination page={page} pages={pages} onPageChange={setPage} />
     </div>
   );
 }

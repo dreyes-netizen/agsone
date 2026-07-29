@@ -428,7 +428,7 @@ function RPSBoard({ session, onMove }: { session: Session; onMove: (data: unknow
 
       {/* Round reveal */}
       {state.roundResult && (
-        <div className="flex items-center justify-center gap-10 bg-gray-50 border border-gray-200 rounded-2xl py-5">
+        <div className="flex items-center justify-center gap-10 bg-gray-50 border border-table-border rounded-card py-5">
           <div className="text-center">
             <p className="text-5xl">{emojiMap[isHost ? state.roundResult.hostChoice : state.roundResult.guestChoice]}</p>
             <p className="text-xs text-gray-500 mt-1.5">You</p>
@@ -969,7 +969,7 @@ function MobileBar({
   return (
     <div className="space-y-2">
       {/* Players + status in one compact row */}
-      <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
+      <div className="bg-white border border-table-border rounded-card px-3 py-2 flex items-center gap-2">
         {/* Me */}
         <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && isMyTurn ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}>
           <Avatar player={me ?? session.host} size={28} />
@@ -1004,7 +1004,7 @@ function MobileBar({
 
       {/* Wager */}
       {session.pointsWager > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5 flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-200 rounded-card px-3 py-1.5 flex items-center justify-between">
           <span className="text-xs text-amber-700 font-medium">Wager</span>
           <span className="text-sm font-bold text-amber-800">{session.pointsWager} pts</span>
         </div>
@@ -1132,7 +1132,7 @@ function RightPanel({
   return (
     <div className="space-y-3">
       {/* Players — active player glows, inactive dims */}
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <div className="bg-white border border-table-border rounded-card overflow-hidden">
         {/* Me */}
         <div className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 transition-opacity ${session.status === "ACTIVE" && !isMyTurn ? "opacity-50" : ""}`}>
           <div className={session.status === "ACTIVE" && isMyTurn ? "rounded-full ring-4 ring-indigo-100" : "rounded-full"}>
@@ -1189,7 +1189,7 @@ function RightPanel({
 
       {/* Wager */}
       {session.pointsWager > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-200 rounded-card px-4 py-2.5 flex items-center justify-between">
           <span className="text-xs text-amber-700 font-medium">Wager each</span>
           <span className="text-sm font-bold text-amber-800">{session.pointsWager} pts</span>
         </div>
@@ -1469,7 +1469,7 @@ export default function MinigameSessionPage() {
       <div className="flex flex-col lg:flex-row gap-5 lg:items-start">
 
         {/* Game board */}
-        <div className={`w-full lg:flex-1 min-w-0 bg-white border border-gray-200 rounded-2xl p-2 lg:p-6 transition-opacity ${moving ? "opacity-70 pointer-events-none" : ""}`}>
+        <div className={`w-full lg:flex-1 min-w-0 bg-white border border-table-border rounded-card p-2 lg:p-6 transition-opacity ${moving ? "opacity-70 pointer-events-none" : ""}`}>
           {session.status === "WAITING" && session.gameType !== "BATTLESHIP" ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <span className="text-5xl mb-4">⏳</span>

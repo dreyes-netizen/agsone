@@ -168,7 +168,7 @@ function CompletenessBar({ profile }: { profile: UserProfile }) {
   if (pct === 100) return null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+    <div className="bg-white rounded-card border border-table-border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-700">Profile completeness</p>
         <span className="text-sm font-bold text-navy-600">{pct}%</span>
@@ -225,7 +225,7 @@ function MinigamesStatsCard() {
   return (
     <button
       onClick={() => router.push("/minigames/stats")}
-      className="w-full text-left bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-300 transition-colors"
+      className="w-full text-left bg-white rounded-card border border-table-border px-5 py-4 hover:border-gray-300 transition-colors"
     >
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-semibold text-gray-800 flex items-center gap-2"><span aria-hidden="true">🎮</span> Minigames</p>
@@ -392,7 +392,7 @@ export default function ProfilePage() {
     <div className="space-y-5">
 
       {/* ── Profile card ── */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-hidden">
         {/* Top accent — color picker */}
         <div className={`h-20 bg-gradient-to-br ${BANNER_GRADIENTS[profile.bannerUrl ?? ""] ?? BANNER_GRADIENTS.default} relative`}>
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
@@ -518,7 +518,7 @@ export default function ProfilePage() {
               { icon: Star,  value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50", hint: null },
               { icon: Medal, value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50",  hint: null },
             ].map(({ icon: Icon, value, label, color, bg, hint }) => (
-              <div key={label} className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 flex flex-col gap-2">
+              <div key={label} className="bg-white rounded-card border border-table-border p-3 sm:p-4 flex flex-col gap-2">
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
                   <Icon className={`w-4 h-4 ${color}`} aria-hidden="true" />
                 </div>
@@ -533,7 +533,7 @@ export default function ProfilePage() {
           <MinigamesStatsCard />
 
           {/* Details: Birthday + Hire Date */}
-          <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
+          <div className="bg-white rounded-card border border-table-border px-5 py-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
                 <CalendarDays className="w-4 h-4 text-rose-500" aria-hidden="true" />
@@ -563,7 +563,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Bio */}
-          <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 space-y-3">
+          <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
                 <FileText className="w-4 h-4 text-sky-500" aria-hidden="true" />
@@ -592,7 +592,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Skills */}
-          <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 space-y-3">
+          <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
                 <Tag className="w-4 h-4 text-emerald-500" aria-hidden="true" />
@@ -648,7 +648,7 @@ export default function ProfilePage() {
 
           {/* Shoutouts Received */}
           {shoutouts !== null && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-card border border-table-border overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
                 <p className="text-sm font-semibold text-gray-800"><span aria-hidden="true">💬</span> Shoutouts</p>
                 <Link href="/feed" className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">See all →</Link>
@@ -718,7 +718,7 @@ export default function ProfilePage() {
         <div id="panel-points" role="tabpanel">
         <>
           {/* Balance card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-card border border-table-border p-5">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Current Balance</p>
@@ -742,7 +742,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Unified timeline */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-card border border-table-border overflow-hidden">
             <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
               <History className="w-4 h-4 text-gray-500" aria-hidden="true" />
               <h2 className="text-sm font-bold text-gray-800">Transaction History</h2>
@@ -835,7 +835,7 @@ export default function ProfilePage() {
       {/* ── Badges tab ── */}
       {activeTab === "badges" && (
         <div id="panel-badges" role="tabpanel">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <h2 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Medal className="w-4 h-4 text-amber-500" aria-hidden="true" />
             Badges
@@ -872,7 +872,7 @@ export default function ProfilePage() {
       {/* ── Notifications tab ── */}
       {activeTab === "notifications" && (
         <div id="panel-notifications" role="tabpanel">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
             <Bell className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <h2 className="text-sm font-bold text-gray-800 flex-1">Notification Preferences</h2>
@@ -972,7 +972,7 @@ export default function ProfilePage() {
             }
             if (items.length === 0) return null;
             return (
-              <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 space-y-2">
+              <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-2">
                 <p className="text-xs text-gray-500 font-medium">Upcoming</p>
                 {items.map((item) => (
                   <p key={item.label} className="text-sm font-semibold text-gray-800">
@@ -985,7 +985,7 @@ export default function ProfilePage() {
 
           {/* Widget 1: Department Rank */}
           <Link href="/leaderboard">
-            <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-gray-300 transition-colors">
+            <div className="bg-white rounded-card border border-table-border px-5 py-4 hover:border-gray-300 transition-colors">
               <p className="text-xs text-gray-500 font-medium mb-2">Department Rank</p>
               {profile.department && deptRank ? (
                 <>
@@ -1001,7 +1001,7 @@ export default function ProfilePage() {
           </Link>
 
           {/* Widget 2: Recent Activity */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-card border border-table-border overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-700">Recent Activity</p>
               <button onClick={() => setActiveTab("points")} className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">
@@ -1043,7 +1043,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Widget 3: Quick Actions */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-card border border-table-border overflow-hidden">
             <p className="px-4 py-3 text-xs font-semibold text-gray-700 border-b border-gray-100">Quick Actions</p>
             <div className="divide-y divide-gray-100">
               {[
@@ -1061,7 +1061,7 @@ export default function ProfilePage() {
 
           {/* Widget 4: Recent Badges */}
           {profile.userBadges.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-card border border-table-border overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <p className="text-xs font-semibold text-gray-700">Recent Badges</p>
                 <button onClick={() => setActiveTab("badges")} className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">

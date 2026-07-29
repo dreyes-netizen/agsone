@@ -213,7 +213,7 @@ export function AllyWidget() {
           {/* Mobile backdrop */}
           <div className="fixed inset-0 bg-black/20 z-40 lg:hidden" onClick={handleClose} />
 
-          <div className="fixed z-50 bg-zinc-50 shadow-2xl flex flex-col rounded-2xl border border-zinc-200 overflow-hidden inset-x-3 bottom-[88px] top-16 lg:inset-auto lg:bottom-24 lg:right-6 lg:w-[400px] lg:h-[560px]">
+          <div className="fixed z-50 bg-zinc-50 shadow-2xl flex flex-col rounded-card border border-table-border overflow-hidden inset-x-3 bottom-[88px] top-16 lg:inset-auto lg:bottom-24 lg:right-6 lg:w-[400px] lg:h-[560px]">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-command-black shrink-0">
               <div className="flex items-center gap-2.5">

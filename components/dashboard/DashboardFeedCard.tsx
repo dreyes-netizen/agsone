@@ -380,10 +380,10 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
   return (
     <div
       onClick={() => router.push("/feed")}
-      className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-shadow cursor-pointer ${
+      className={`bg-white rounded-card border p-4 hover:shadow-sm transition-shadow cursor-pointer ${
         initialPost.type === "SHOUTOUT"
-          ? "border-l-4 border-l-pink-400 border-zinc-100"
-          : "border-zinc-100"
+          ? "border-l-4 border-l-pink-400 border-table-border"
+          : "border-table-border"
       }`}
     >
       {initialPost.type === "SHOUTOUT" && initialPost.shoutoutRecipients.length > 0 ? (

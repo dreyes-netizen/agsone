@@ -256,7 +256,7 @@ export default function EmployeeProfilePage() {
       </button>
 
       {/* Header card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-card border border-table-border p-6">
         <div className="flex items-start gap-5">
           {/* Avatar — button only when photo exists */}
           {employee.avatarUrl ? (
@@ -309,17 +309,17 @@ export default function EmployeeProfilePage() {
 
       {/* Stats */}
       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+        <div className="bg-white rounded-card border border-table-border p-4 text-center">
           <Coins className="w-4 h-4 text-navy-400 mx-auto mb-1" aria-hidden="true" />
           <dd className="text-2xl font-black text-gray-900 tabular-nums">{employee.pointsBalance.toLocaleString()}</dd>
           <dt className="text-xs text-gray-500 mt-0.5">Points</dt>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+        <div className="bg-white rounded-card border border-table-border p-4 text-center">
           <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" aria-hidden="true" />
           <dd className="text-2xl font-black text-violet-600">{employee.level}</dd>
           <dt className="text-xs text-gray-500 mt-0.5">Level</dt>
         </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+        <div className="bg-white rounded-card border border-table-border p-4 text-center">
           <Trophy className="w-4 h-4 text-yellow-500 mx-auto mb-1" aria-hidden="true" />
           <dd className="text-2xl font-black text-yellow-600">#{employee.rank}</dd>
           <dt className="text-xs text-gray-500 mt-0.5">All-Time Rank</dt>
@@ -328,7 +328,7 @@ export default function EmployeeProfilePage() {
 
       {/* Bio */}
       {employee.bio && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <div className="flex items-center gap-2 mb-3">
             <FileText className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">About</p>
@@ -339,7 +339,7 @@ export default function EmployeeProfilePage() {
 
       {/* Skills */}
       {employee.skills.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <div className="flex items-center gap-2 mb-3">
             <Tag className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Skills</p>
@@ -356,7 +356,7 @@ export default function EmployeeProfilePage() {
 
       {/* Shoutouts received */}
       {employee.shoutoutsReceived.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">
@@ -397,7 +397,7 @@ export default function EmployeeProfilePage() {
 
       {/* Award Points */}
       {canAwardPoints && !isSelf && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Coins className="w-4 h-4 text-navy-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Award Points</p>
@@ -500,7 +500,7 @@ export default function EmployeeProfilePage() {
 
       {/* Send a Shoutout */}
       {!isSelf && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Send a Shoutout</p>
@@ -556,7 +556,7 @@ export default function EmployeeProfilePage() {
 
       {/* Details — managers and HR admins only */}
       {isAdminOrManager && (employee.hireDate || employee.birthday) && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+        <div className="bg-white rounded-card border border-table-border p-5 space-y-3">
           <p className="text-sm font-semibold text-gray-700">Details</p>
           {employee.hireDate && (
             <div className="flex items-center gap-3 text-sm">
@@ -579,7 +579,7 @@ export default function EmployeeProfilePage() {
 
       {/* Badges */}
       {employee.userBadges.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-card border border-table-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Award className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Badges ({employee.userBadges.length})</p>
@@ -601,7 +601,7 @@ export default function EmployeeProfilePage() {
 
       {/* Points History — managers and HR admins only */}
       {isAdminOrManager && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-card border border-table-border overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
             <History className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <p className="text-sm font-semibold text-gray-700">Points History</p>

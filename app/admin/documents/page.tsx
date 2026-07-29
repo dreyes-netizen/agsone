@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useModalA11y } from "@/lib/hooks/useModalA11y";
+import { Pagination } from "@/components/ui/pagination";
 import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, CheckCircle, AlertCircle, Bot } from "lucide-react";
 
 const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
@@ -42,6 +43,8 @@ export default function DocumentsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
   const [allyEnabled, setAllyEnabled] = useState<boolean | null>(null);
   const [togglingAlly, setTogglingAlly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const uploadModalRef = useModalA11y(modalOpen, () => setModalOpen(false));
 
   function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
@@ -55,14 +58,17 @@ export default function DocumentsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await apiFetch<{ data: PolicyDocument[] }>("/api/admin/documents");
+      const res = await apiFetch<{ data: PolicyDocument[]; total: number; page: number; pages: number }>(
+        `/api/admin/documents?page=${page}`,
+      );
       setDocuments(res.data);
+      setPages(res.pages);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   useEffect(() => {
     apiFetch<{ data: { allyEnabled: boolean } }>("/api/admin/settings")
@@ -225,7 +231,7 @@ export default function DocumentsPage() {
       </div>
 
       {/* Ally global on/off switch */}
-      <div className="mb-6 flex items-center justify-between gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4">
+      <div className="mb-6 flex items-center justify-between gap-4 bg-white rounded-card border border-table-border px-5 py-4">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-command-black flex items-center justify-center shrink-0 mt-0.5">
             <Bot className="w-5 h-5 text-white" aria-hidden="true" />
@@ -273,29 +279,29 @@ export default function DocumentsPage() {
           Loading…
         </div>
       ) : documents.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
+        <div className="text-center py-16 bg-white rounded-card border border-table-border">
           <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
           <p className="text-gray-500 font-medium">No documents uploaded yet</p>
           <p className="text-gray-500 text-sm mt-1">Upload a document to make it available to the chatbot.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto scroll-hint">
-          <table className="w-full text-sm" aria-label="Policy documents">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Name</th>
-                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">File</th>
-                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Size</th>
-                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
-                <th scope="col" className="text-left px-5 py-3 font-medium text-gray-500">Uploaded</th>
-                <th scope="col" className="px-5 py-3" />
+        <div className="bg-white rounded-card border border-table-border overflow-clip">
+          <div className="overflow-auto max-h-[70vh] scroll-hint">
+          <table className="w-full border-collapse" aria-label="Policy documents">
+            <thead className="sticky top-0 z-10 bg-table-head">
+              <tr className="border-b border-table-border">
+                <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Name</th>
+                <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">File</th>
+                <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Size</th>
+                <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Status</th>
+                <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Uploaded</th>
+                <th scope="col" className="px-3.5 py-2.5 last:pr-5" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {documents.map((doc) => (
-                <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3">
+            <tbody>
+              {documents.map((doc, i) => (
+                <tr key={doc.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
+                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                     {renamingId === doc.id ? (
                       <div className="flex items-center gap-1.5">
                         <input
@@ -328,9 +334,9 @@ export default function DocumentsPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-gray-500">{doc.fileName}</td>
-                  <td className="px-5 py-3 text-gray-500">{formatBytes(doc.fileSize)}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">{doc.fileName}</td>
+                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">{formatBytes(doc.fileSize)}</td>
+                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                     <button
                       onClick={() => handleToggle(doc.id, doc.isActive)}
                        className="flex items-center gap-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 rounded"
@@ -348,11 +354,11 @@ export default function DocumentsPage() {
                       )}
                     </button>
                   </td>
-                  <td className="px-5 py-3 text-gray-500 text-xs">
+                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
                     {new Date(doc.uploadedAt).toLocaleDateString()}
                     <span className="block text-gray-500">{doc.uploadedBy.displayName}</span>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                     {deleteConfirmId === doc.id ? (
                       <div className="flex items-center gap-2 text-xs">
                         <span className="text-gray-700 font-medium">Delete?</span>
@@ -384,6 +390,12 @@ export default function DocumentsPage() {
             </tbody>
           </table>
           </div>
+        </div>
+      )}
+
+      {!loading && documents.length > 0 && (
+        <div className="mt-4">
+          <Pagination page={page} pages={pages} onPageChange={setPage} />
         </div>
       )}
 

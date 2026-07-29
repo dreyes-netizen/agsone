@@ -5,6 +5,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, VIOLATION_TYPES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 import { Upload, Loader2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 
 type Department = { id: string; name: string };
 type Employee = {
@@ -59,7 +60,7 @@ function BudgetBar({ budget }: { budget: Budget | null }) {
   const pct = Math.min(100, (budget.used / budget.total) * 100);
   const barColor = budget.remaining === 0 ? "bg-red-500" : budget.remaining < 100 ? "bg-amber-500" : "bg-emerald-500";
   return (
-    <div className="mb-4 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+    <div className="mb-4 bg-gray-50 border border-table-border rounded-card px-4 py-3">
       <div className="flex items-center justify-between text-xs mb-1.5">
         <span className="font-medium text-gray-600">Monthly recognition budget</span>
         <span className={`font-semibold ${budget.remaining === 0 ? "text-red-600" : "text-gray-700"}`}>
@@ -133,6 +134,9 @@ export default function AwardPointsPage() {
     }
   }
 
+  const [txPage, setTxPage] = useState(1);
+  const [txPages, setTxPages] = useState(1);
+
   const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
   function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
 
@@ -145,15 +149,23 @@ export default function AwardPointsPage() {
       const eligible = isSuperAdmin ? r.data : r.data.filter((e) => e.role === "EMPLOYEE");
       setEmployees(eligible);
     });
-    loadHistory();
+    loadHistory(txPage);
     loadBudget();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
-  async function loadHistory() {
+  const initialTxLoad = useRef(true);
+  useEffect(() => {
+    if (initialTxLoad.current) { initialTxLoad.current = false; return; }
+    loadHistory(txPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txPage]);
+
+  async function loadHistory(page = 1) {
     try {
-      const res = await apiFetch<{ data: Transaction[] }>("/api/points/history");
+      const res = await apiFetch<{ data: Transaction[]; pages: number }>(`/api/points/history?page=${page}`);
       setTransactions(res.data);
+      setTxPages(res.pages);
     } catch {
       // ignore
     }
@@ -175,7 +187,7 @@ export default function AwardPointsPage() {
         { method: "POST", body: form }
       );
       setAttendanceResult(res.data);
-      loadHistory();
+      setTxPage(1);
     } catch (err) {
       setAttendanceError(err instanceof Error ? err.message : "Failed to process attendance file");
     } finally {
@@ -199,7 +211,7 @@ export default function AwardPointsPage() {
       setNote("");
       setToUserId("");
       setActivity("");
-      loadHistory();
+      setTxPage(1);
       loadBudget();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to award points");
@@ -232,7 +244,7 @@ export default function AwardPointsPage() {
       setDeductCustomAmount("");
       setDeductReason("");
       setDeductViolation(VIOLATION_TYPES[0].key);
-      loadHistory();
+      setTxPage(1);
     } catch (err) {
       setDeductError(err instanceof Error ? err.message : "Failed to deduct points");
     } finally {
@@ -262,7 +274,7 @@ export default function AwardPointsPage() {
       setBulkActivity("");
       setBulkSelected(new Set());
       setBulkDeptFilter("all");
-      loadHistory();
+      setTxPage(1);
       loadBudget();
     } catch (err) {
       setBulkError(err instanceof Error ? err.message : "Failed to award points");
@@ -319,8 +331,8 @@ export default function AwardPointsPage() {
   const inputClass =
     "w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white";
   const thClass =
-    "text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide";
-  const tdClass = "px-6 py-3";
+    "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
+  const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -347,7 +359,7 @@ export default function AwardPointsPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-hidden">
         {/* Tabs */}
         <div role="tablist" aria-label="Award type" className="flex border-b border-gray-100 overflow-x-auto">
           {(["single", "bulk", "deduct", "attendance"] as const).map((t) => (
@@ -745,14 +757,14 @@ export default function AwardPointsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-card border border-table-border overflow-clip">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">Recent Transactions</h2>
         </div>
-        <div className="overflow-x-auto scroll-hint">
-        <table className="w-full text-sm" aria-label="Recent transactions">
-          <thead className="bg-gray-50">
-            <tr>
+        <div className="overflow-auto max-h-[70vh] scroll-hint">
+        <table className="w-full border-collapse" aria-label="Recent transactions">
+          <thead className="sticky top-0 z-10 bg-table-head">
+            <tr className="border-b border-table-border">
               <th scope="col" className={thClass}>Recipient</th>
               <th scope="col" className={thClass}>Awarded By</th>
               <th scope="col" className={thClass}>Points</th>
@@ -764,15 +776,15 @@ export default function AwardPointsPage() {
           <tbody>
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-500 py-8">
+                <td colSpan={6} className="text-center text-table-muted text-[13px] py-12">
                   No transactions yet
                 </td>
               </tr>
             ) : (
-              transactions.map((t) => (
+              transactions.map((t, i) => (
                 <tr
                   key={t.id}
-                  className="hover:bg-gray-50/60 transition-colors border-b border-gray-50"
+                  className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}
                 >
                   <td className={`${tdClass} font-medium text-gray-900`}>
                     {t.toUser?.displayName ?? "—"}
@@ -803,6 +815,9 @@ export default function AwardPointsPage() {
             )}
           </tbody>
         </table>
+        </div>
+        <div className="px-6 py-4">
+          <Pagination page={txPage} pages={txPages} onPageChange={setTxPage} />
         </div>
       </div>
     </div>

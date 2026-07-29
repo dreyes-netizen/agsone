@@ -11,6 +11,15 @@ export async function POST(
 
   const { id } = await params;
 
+  let quantity = 1;
+  try {
+    const body = await req.json();
+    quantity = Number(body.quantity) || 1;
+  } catch {
+    // body may be empty — default to 1
+  }
+  if (quantity < 1) quantity = 1;
+
   const medicine = await prisma.medicineItem.findUnique({
     where: { id },
     select: { id: true, isActive: true, stockQuantity: true },
@@ -21,20 +30,16 @@ export async function POST(
   if (medicine.stockQuantity <= 0) {
     return NextResponse.json({ error: "Out of stock" }, { status: 409 });
   }
-
-  const existing = await prisma.medicineRequest.findFirst({
-    where: { medicineId: id, userId: user.id, status: "PENDING" },
-  });
-  if (existing) {
+  if (quantity > medicine.stockQuantity) {
     return NextResponse.json(
-      { error: "You already have a pending request for this medicine" },
+      { error: `Only ${medicine.stockQuantity} units available` },
       { status: 409 }
     );
   }
 
   const request = await prisma.medicineRequest.create({
-    data: { medicineId: id, userId: user.id },
-    select: { id: true, medicineId: true, status: true, createdAt: true },
+    data: { medicineId: id, userId: user.id, quantity },
+    select: { id: true, medicineId: true, quantity: true, status: true, createdAt: true },
   });
 
   return NextResponse.json({ data: request }, { status: 201 });

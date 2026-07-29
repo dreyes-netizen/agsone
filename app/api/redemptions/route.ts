@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { z } from "zod";
 
@@ -8,21 +9,28 @@ export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const { page, limit, skip } = parsePaginationParams(searchParams);
+
   // Admins see all; employees see only their own
   const where = user.role === "EMPLOYEE" ? { userId: user.id } : {};
 
-  const redemptions = await prisma.redemption.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      reward: { select: { name: true, pointCost: true, category: true } },
-      user: { select: { displayName: true, email: true } },
-      processedBy: { select: { displayName: true } },
-    },
-  });
+  const [redemptions, total] = await Promise.all([
+    prisma.redemption.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        reward: { select: { name: true, pointCost: true, category: true } },
+        user: { select: { displayName: true, email: true } },
+        processedBy: { select: { displayName: true } },
+      },
+    }),
+    prisma.redemption.count({ where }),
+  ]);
 
-  return NextResponse.json({ data: redemptions });
+  return NextResponse.json(paginatedResponse(redemptions, total, page, limit));
 }
 
 const createSchema = z.object({

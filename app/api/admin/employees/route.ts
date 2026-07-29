@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -9,25 +10,56 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const employees = await prisma.user.findMany({
-    take: 500,
-    orderBy: { displayName: "asc" },
-    select: {
-      id: true,
-      employeeId: true,
-      displayName: true,
-      email: true,
-      role: true,
-      pointsBalance: true,
-      isActive: true,
-      hireDate: true,
-      birthday: true,
-      createdAt: true,
-      department: { select: { id: true, name: true } },
-    },
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit, skip } = parsePaginationParams(searchParams);
+  const search = searchParams.get("search") ?? undefined;
+  const department = searchParams.get("department") ?? undefined;
+  const role = searchParams.get("role") ?? undefined;
+  const status = searchParams.get("status") ?? undefined;
 
-  return NextResponse.json({ data: employees });
+  const where: Record<string, unknown> = {};
+  if (search) {
+    where.OR = [
+      { displayName: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+    ];
+  }
+  if (department) {
+    where.department = { name: department };
+  }
+  if (role) {
+    where.role = role;
+  }
+  if (status === "active") {
+    where.isActive = true;
+  } else if (status === "inactive") {
+    where.isActive = false;
+  }
+
+  const [employees, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { displayName: "asc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        employeeId: true,
+        displayName: true,
+        email: true,
+        role: true,
+        pointsBalance: true,
+        isActive: true,
+        hireDate: true,
+        birthday: true,
+        createdAt: true,
+        department: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return NextResponse.json(paginatedResponse(employees, total, page, limit));
 }
 
 const COMPANY_DOMAIN = "@allianceglobalsolutions.com";

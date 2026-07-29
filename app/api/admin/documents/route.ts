@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { uploadPdf } from "@/lib/supabase/storageClient";
 import { storeDocumentChunks } from "@/lib/rag/search";
 import { randomUUID } from "crypto";
@@ -12,12 +13,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const documents = await prisma.policyDocument.findMany({
-    orderBy: { uploadedAt: "desc" },
-    include: { uploadedBy: { select: { displayName: true } } },
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit, skip } = parsePaginationParams(searchParams);
 
-  return NextResponse.json({ data: documents });
+  const [documents, total] = await Promise.all([
+    prisma.policyDocument.findMany({
+      orderBy: { uploadedAt: "desc" },
+      skip,
+      take: limit,
+      include: { uploadedBy: { select: { displayName: true } } },
+    }),
+    prisma.policyDocument.count(),
+  ]);
+
+  return NextResponse.json(paginatedResponse(documents, total, page, limit));
 }
 
 export async function POST(req: NextRequest) {

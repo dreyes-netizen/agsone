@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -14,16 +15,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const departments = await prisma.department.findMany({
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      createdAt: true,
-      _count: { select: { users: true } },
-    },
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit, skip } = parsePaginationParams(searchParams);
+
+  const [departments, total] = await Promise.all([
+    prisma.department.findMany({
+      orderBy: { name: "asc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        createdAt: true,
+        _count: { select: { users: true } },
+      },
+    }),
+    prisma.department.count(),
+  ]);
 
   const data = departments.map((d) => ({
     id: d.id,
@@ -33,7 +42,7 @@ export async function GET(req: NextRequest) {
     employeeCount: d._count.users,
   }));
 
-  return NextResponse.json({ data });
+  return NextResponse.json(paginatedResponse(data, total, page, limit));
 }
 
 export async function POST(req: NextRequest) {

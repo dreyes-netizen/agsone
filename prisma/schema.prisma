@@ -580,6 +580,7 @@ model MedicineRequest {
   id           String                @id @default(uuid())
   medicineId   String
   userId       String
+  quantity     Int                   @default(1)
   status       MedicineRequestStatus @default(PENDING)
   approvedById String?
   approvedAt   DateTime?

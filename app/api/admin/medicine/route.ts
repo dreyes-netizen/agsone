@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -16,20 +17,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const medicines = await prisma.medicineItem.findMany({
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      imageUrl: true,
-      caption: true,
-      stockQuantity: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit, skip } = parsePaginationParams(searchParams);
 
-  return NextResponse.json({ data: medicines });
+  const [medicines, total] = await Promise.all([
+    prisma.medicineItem.findMany({
+      orderBy: { name: "asc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        caption: true,
+        stockQuantity: true,
+        isActive: true,
+        createdAt: true,
+      },
+    }),
+    prisma.medicineItem.count(),
+  ]);
+
+  return NextResponse.json(paginatedResponse(medicines, total, page, limit));
 }
 
 export async function POST(req: NextRequest) {

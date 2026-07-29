@@ -25,7 +25,7 @@ export async function PATCH(
 
   const request = await prisma.medicineRequest.findUnique({
     where: { id },
-    select: { id: true, status: true, medicineId: true },
+    select: { id: true, status: true, medicineId: true, quantity: true },
   });
   if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (request.status !== "PENDING") {
@@ -40,7 +40,7 @@ export async function PATCH(
           where: { id: request.medicineId },
           select: { stockQuantity: true },
         });
-        if (!medicine || medicine.stockQuantity <= 0) {
+        if (!medicine || medicine.stockQuantity < request.quantity) {
           throw new Error("OUT_OF_STOCK");
         }
         const updated = await tx.medicineRequest.update({
@@ -50,7 +50,7 @@ export async function PATCH(
         });
         await tx.medicineItem.update({
           where: { id: request.medicineId },
-          data: { stockQuantity: { decrement: 1 } },
+          data: { stockQuantity: { decrement: request.quantity } },
         });
         return updated;
       });

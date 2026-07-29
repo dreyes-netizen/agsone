@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
 
 const MILESTONE_TYPES = [
@@ -17,11 +18,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const configs = await prisma.milestoneConfig.findMany({
-    orderBy: { type: "asc" },
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit, skip } = parsePaginationParams(searchParams);
 
-  return NextResponse.json({ data: configs });
+  const [configs, total] = await Promise.all([
+    prisma.milestoneConfig.findMany({
+      orderBy: { type: "asc" },
+      skip,
+      take: limit,
+    }),
+    prisma.milestoneConfig.count(),
+  ]);
+
+  return NextResponse.json(paginatedResponse(configs, total, page, limit));
 }
 
 const putSchema = z.object({

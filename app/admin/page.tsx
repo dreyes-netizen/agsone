@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import {
   Users, TrendingUp, ClipboardList,
-  ArrowUpRight, ArrowDownRight, Minus, Cake, Activity, AlertCircle, MessageSquareWarning, CheckCircle2,
+  ArrowUpRight, ArrowDownRight, Minus, Cake, MessageSquareWarning, CheckCircle2,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { ActionQueue, type ActionItem } from "@/components/admin/ActionQueue";
+import { StockAlerts, type StockItem } from "@/components/admin/StockAlerts";
+import { RecentActivity } from "@/components/admin/RecentActivity";
 
 type UpcomingBirthday = {
   id: string;
@@ -19,20 +22,14 @@ type UpcomingBirthday = {
   daysUntil: number;
 };
 
-type DisengagedEmployee = {
+type AuditEntry = {
   id: string;
-  displayName: string;
-  avatarUrl: string | null;
-  pointsBalance: number;
-  department: { name: string } | null;
-};
-
-type DeptRow = {
-  id: string;
-  name: string;
-  totalEmployees: number;
-  activeEmployees: number;
-  pointsThisMonth: number;
+  action: string;
+  entityType: string;
+  createdAt: string;
+  afterState: Record<string, unknown> | null;
+  beforeState: Record<string, unknown> | null;
+  actor: { id: string; displayName: string; avatarUrl: string | null; role: string };
 };
 
 type Analytics = {
@@ -47,10 +44,10 @@ type Analytics = {
   topEarners: { id: string; displayName: string; pointsBalance: number; level: number; avatarUrl: string | null }[];
   dailyPoints: { date: string; points: number }[];
   dailyRedemptions: { date: string; points: number }[];
-  engagementRate: number;
-  engagedCount: number;
-  disengaged: DisengagedEmployee[];
-  departmentBreakdown: DeptRow[];
+  actionQueue: ActionItem[];
+  stockAlerts: StockItem[];
+  recentActivity: AuditEntry[];
+  counts: { redemptions: number; medicine: number; reports: number };
 };
 
 
@@ -87,25 +84,6 @@ function KpiCard({
   );
 }
 
-function EngagementRing({ rate }: { rate: number }) {
-  const r = 28;
-  const circ = 2 * Math.PI * r;
-  const dash = (rate / 100) * circ;
-  const color = rate >= 70 ? "#10b981" : rate >= 40 ? "#f59e0b" : "#ef4444";
-  return (
-    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#f3f4f6" strokeWidth="7" />
-      <circle
-        cx="36" cy="36" r={r} fill="none"
-        stroke={color} strokeWidth="7"
-        strokeDasharray={`${dash} ${circ}`}
-        strokeLinecap="round"
-        transform="rotate(-90 36 36)"
-      />
-    </svg>
-  );
-}
-
 export default function AdminDashboardPage() {
   const { apiFetch } = useApiClient();
   const [data, setData] = useState<Analytics | null>(null);
@@ -128,9 +106,11 @@ export default function AdminDashboardPage() {
       <div role="status" aria-label="Loading dashboard" className="space-y-5 animate-pulse">
         <div className="h-8 bg-gray-100 rounded w-1/3" />
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
+          {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-2xl" />)}
         </div>
         <div className="h-56 bg-gray-100 rounded-2xl" />
+        <div className="h-56 bg-gray-100 rounded-2xl" />
+        <div className="h-40 bg-gray-100 rounded-2xl" />
       </div>
     );
   }
@@ -169,9 +149,6 @@ export default function AdminDashboardPage() {
       Awarded: awardedMap[date] ?? 0,
       Redeemed: redeemedMap[date] ?? 0,
     }));
-
-  const engagementColor =
-    data.engagementRate >= 70 ? "text-emerald-600" : data.engagementRate >= 40 ? "text-amber-600" : "text-red-500";
 
   const redemptionRate = data.pointsThisMonth === 0
     ? 0
@@ -230,6 +207,12 @@ export default function AdminDashboardPage() {
           iconColor={data.openReports > 0 ? "bg-red-500" : "bg-emerald-500"}
           valueColor={data.openReports > 0 ? "text-red-600" : "text-emerald-600"}
         />
+      </div>
+
+      {/* Action Queue + Stock Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ActionQueue items={data.actionQueue} counts={data.counts} />
+        <StockAlerts items={data.stockAlerts} />
       </div>
 
       {/* Chart + Top Earners */}
@@ -306,124 +289,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Engagement + Department Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Engagement card */}
-        <div className="bg-white rounded-card border border-table-border p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Activity aria-hidden="true" className="w-4 h-4 text-gray-500" />
-            <p className="font-semibold text-gray-900 text-sm">Engagement</p>
-            <span className="text-xs text-gray-500 ml-auto">Last 30 days</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <EngagementRing rate={data.engagementRate} />
-            <div>
-              <p className={`text-2xl font-black tabular-nums ${engagementColor}`}>
-                {data.engagementRate}%
-              </p>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {data.engagedCount} of {data.totalEmployees} active
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                posted, reacted, played, or redeemed
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {data.disengaged.length > 0
-                  ? `${data.disengaged.length} employee${data.disengaged.length !== 1 ? "s" : ""} need follow-up`
-                  : "Everyone is active!"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Department breakdown */}
-        <div className="lg:col-span-2 bg-white rounded-card border border-table-border overflow-clip">
-          <div className="px-4 py-3 border-b border-gray-50">
-            <p className="font-semibold text-gray-900 text-sm">Department Activity — This Month</p>
-          </div>
-          {data.departmentBreakdown.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-500">No department data</div>
-          ) : (
-            <div className="overflow-auto max-h-[70vh] scroll-hint">
-              <table className="w-full border-collapse" aria-label="Department activity this month">
-                <thead className="sticky top-0 z-10 bg-table-head">
-                  <tr className="border-b border-table-border">
-                    <th scope="col" className="text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5">Department</th>
-                    <th scope="col" className="px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5 w-40">Engagement</th>
-                    <th scope="col" className="text-right px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5 w-16">Active</th>
-                    <th scope="col" className="text-right px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5 w-24">Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.departmentBreakdown.map((d, i) => {
-                    const pct = d.totalEmployees === 0 ? 0 : Math.round((d.activeEmployees / d.totalEmployees) * 100);
-                    const barColor = pct >= 70 ? "bg-emerald-400" : pct >= 40 ? "bg-amber-400" : "bg-red-400";
-                    const textColor = pct >= 70 ? "text-emerald-600" : pct >= 40 ? "text-amber-600" : "text-red-500";
-                    return (
-                      <tr key={d.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
-                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 font-medium text-gray-900">{d.name}</td>
-                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className={`text-xs tabular-nums w-8 text-right font-medium ${textColor}`}>{pct}%</span>
-                          </div>
-                        </td>
-                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-right tabular-nums text-gray-500">
-                          {d.activeEmployees}/{d.totalEmployees}
-                        </td>
-                        <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-right font-bold text-navy-600 tabular-nums">
-                          {d.pointsThisMonth.toLocaleString()}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Disengaged Employees */}
-      {data.disengaged.length > 0 && (
-        <div className="bg-white rounded-card border border-table-border overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
-            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-500" />
-            <p className="font-semibold text-gray-900 text-sm">No Activity in 30+ Days</p>
-            <span className="ml-auto text-xs bg-amber-50 text-amber-600 font-semibold px-2 py-0.5 rounded-full">
-              {data.disengaged.length} employee{data.disengaged.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="p-4">
-            {(() => {
-              const maxBal = Math.max(...data.disengaged.map(e => e.pointsBalance), 1);
-              return (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                  {data.disengaged.map((e) => (
-                    <li key={e.id} className="grid grid-cols-[28px_1fr_72px] items-center gap-2.5 py-1.5 hover:bg-gray-50/60 rounded-lg px-1 transition-colors">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
-                        {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate leading-tight">{e.displayName}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
-                            <div className="h-full bg-gray-300 rounded-full" style={{ width: `${Math.round((e.pointsBalance / maxBal) * 100)}%` }} />
-                          </div>
-                          <span className="text-[10px] text-gray-400 shrink-0 truncate">{e.department?.name ?? "—"}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-500 tabular-nums text-right">{e.pointsBalance.toLocaleString()} pts</span>
-                    </li>
-                  ))}
-                </ul>
-              );
-            })()}
-          </div>
-        </div>
-      )}
+      {/* Recent Admin Activity */}
+      <RecentActivity entries={data.recentActivity} />
 
       {/* Upcoming Birthdays — only shown when there are birthdays in the next 14 days */}
       {birthdays.length > 0 && (

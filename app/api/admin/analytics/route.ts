@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 
 export async function GET(req: NextRequest) {
   const actor = await verifyAuth(req);
@@ -18,25 +19,22 @@ export async function GET(req: NextRequest) {
     pointsThisMonth,
     pointsLastMonth,
     pendingRedemptions,
-    activeGames,
     topEarners,
-    _recentTransactions, // removed from UI — kept as placeholder to preserve array indices
     dailyPointsRaw,
-    // Full employee list — used for dept breakdown, disengaged, and engagement
-    allEmployeesRaw,
-    deptPointsRaw,
     openReports,
     pendingMedicineRequests,
     redeemedThisMonth,
     avgBalanceRaw,
     dailyRedemptionsRaw,
-    // ── Activity signals: any of these = "engaged in last 30 days" ──────────
-    activeByPoints,      // received point transactions
-    activeByPosts,       // posted to the feed
-    activeByReactions,   // reacted to a post
-    activeByComments,    // commented on a post
-    activeByGames,       // hosted or joined a game
-    activeByRedemptions, // redeemed a reward
+    // ── Action Queue sources — oldest-first, capped, indexed ────────────────
+    pendingRedemptionsList,
+    pendingMedicineList,
+    openReportsList,
+    // ── Stock Alerts sources ────────────────────────────────────────────────
+    lowStockRewards,
+    lowStockMedicine,
+    // ── Recent Admin Activity ───────────────────────────────────────────────
+    recentAudit,
   ] = await Promise.all([
     prisma.user.count({ where: { role: "EMPLOYEE", isActive: true } }),
 
@@ -52,8 +50,6 @@ export async function GET(req: NextRequest) {
 
     prisma.redemption.count({ where: { status: "PENDING" } }),
 
-    prisma.game.count({ where: { isActive: true } }),
-
     prisma.user.findMany({
       where: { role: "EMPLOYEE", isActive: true },
       orderBy: { pointsBalance: "desc" },
@@ -61,36 +57,10 @@ export async function GET(req: NextRequest) {
       select: { id: true, displayName: true, pointsBalance: true, level: true, avatarUrl: true },
     }),
 
-    // recentTransactions removed — no longer shown on overview
-    Promise.resolve([]),
-
     prisma.pointTransaction.findMany({
       where: { createdAt: { gte: thirtyDaysAgo }, amount: { gt: 0 }, type: "MANUAL_AWARD" },
       select: { createdAt: true, amount: true },
       orderBy: { createdAt: "asc" },
-    }),
-
-    // All active employees — used for dept breakdown + disengaged list
-    prisma.user.findMany({
-      where: { role: "EMPLOYEE", isActive: true },
-      select: {
-        id: true,
-        displayName: true,
-        avatarUrl: true,
-        pointsBalance: true,
-        departmentId: true,
-        department: { select: { id: true, name: true } },
-      },
-    }),
-
-    // Points awarded this month grouped by recipient's department
-    prisma.pointTransaction.findMany({
-      where: {
-        createdAt: { gte: monthStart },
-        amount: { gt: 0 },
-        toUser: { role: "EMPLOYEE", departmentId: { not: null } },
-      },
-      select: { amount: true, toUser: { select: { departmentId: true } } },
     }),
 
     prisma.feedback.count({ where: { status: { in: ["OPEN", "IN_REVIEW"] } } }),
@@ -112,101 +82,77 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "asc" },
     }),
 
-    // Activity signal 1: received points
-    prisma.pointTransaction.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo }, amount: { gt: 0 } },
-      select: { toUserId: true },
-      distinct: ["toUserId"],
-    }),
-
-    // Activity signal 2: posted to the feed
-    prisma.socialPost.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo } },
-      select: { authorId: true },
-      distinct: ["authorId"],
-    }),
-
-    // Activity signal 3: reacted to a post
-    prisma.socialReaction.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo } },
-      select: { userId: true },
-      distinct: ["userId"],
-    }),
-
-    // Activity signal 4: commented on a post
-    prisma.socialComment.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo } },
-      select: { authorId: true },
-      distinct: ["authorId"],
-    }),
-
-    // Activity signal 5: played a game (as host or guest)
-    prisma.gameSession.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo } },
-      select: { hostId: true, guestId: true },
-    }),
-
-    // Activity signal 6: redeemed a reward
     prisma.redemption.findMany({
-      where: { createdAt: { gte: thirtyDaysAgo } },
-      select: { userId: true },
-      distinct: ["userId"],
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      take: 10,
+      select: {
+        id: true,
+        pointsSpent: true,
+        createdAt: true,
+        user: { select: { displayName: true, avatarUrl: true } },
+        reward: { select: { name: true } },
+      },
+    }),
+
+    prisma.medicineRequest.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      take: 10,
+      select: {
+        id: true,
+        quantity: true,
+        createdAt: true,
+        user: { select: { displayName: true, avatarUrl: true } },
+        medicine: { select: { name: true } },
+      },
+    }),
+
+    prisma.feedback.findMany({
+      where: { status: { in: ["OPEN", "IN_REVIEW"] } },
+      orderBy: { createdAt: "asc" },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        isAnonymous: true,
+        createdAt: true,
+        author: { select: { displayName: true, avatarUrl: true } },
+      },
+    }),
+
+    // gte: 0 excludes the -1 "unlimited stock" sentinel
+    prisma.reward.findMany({
+      where: { isActive: true, stockQuantity: { gte: 0, lte: LOW_STOCK_THRESHOLD } },
+      orderBy: { stockQuantity: "asc" },
+      take: 10,
+      select: { id: true, name: true, stockQuantity: true },
+    }),
+
+    // MedicineItem has no unlimited-stock sentinel — no gte guard needed
+    prisma.medicineItem.findMany({
+      where: { isActive: true, stockQuantity: { lte: LOW_STOCK_THRESHOLD } },
+      orderBy: { stockQuantity: "asc" },
+      take: 10,
+      select: { id: true, name: true, stockQuantity: true },
+    }),
+
+    prisma.auditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        beforeState: true,
+        afterState: true,
+        createdAt: true,
+        actor: { select: { id: true, displayName: true, avatarUrl: true, role: true } },
+      },
     }),
   ]);
-
-  // ── Build active employee set from all activity signals ─────────────────────
-  // Only count employees (not managers/HR awarding points, etc.)
-  const employeeIdSet = new Set(allEmployeesRaw.map((e) => e.id));
-  const activeSet = new Set<string>();
-
-  for (const t of activeByPoints)      if (employeeIdSet.has(t.toUserId))  activeSet.add(t.toUserId);
-  for (const p of activeByPosts)       if (employeeIdSet.has(p.authorId))  activeSet.add(p.authorId);
-  for (const r of activeByReactions)   if (employeeIdSet.has(r.userId))    activeSet.add(r.userId);
-  for (const c of activeByComments)    if (employeeIdSet.has(c.authorId))  activeSet.add(c.authorId);
-  for (const g of activeByGames) {
-    if (employeeIdSet.has(g.hostId))               activeSet.add(g.hostId);
-    if (g.guestId && employeeIdSet.has(g.guestId)) activeSet.add(g.guestId);
-  }
-  for (const r of activeByRedemptions) if (employeeIdSet.has(r.userId))    activeSet.add(r.userId);
-
-  const engagedCount = activeSet.size;
-  const engagementRate = totalEmployees === 0 ? 0 : Math.round((engagedCount / totalEmployees) * 1000) / 10;
-
-  // ── Disengaged = employees not in any activity signal ───────────────────────
-  const disengaged = allEmployeesRaw
-    .filter((e) => !activeSet.has(e.id))
-    .sort((a, b) => a.pointsBalance - b.pointsBalance)
-    .slice(0, 15)
-    .map((e) => ({
-      id: e.id,
-      displayName: e.displayName,
-      avatarUrl: e.avatarUrl,
-      pointsBalance: e.pointsBalance,
-      department: e.department ? { name: e.department.name } : null,
-    }));
-
-  // ── Department breakdown ────────────────────────────────────────────────────
-  type DeptRow = { name: string; totalEmployees: number; activeEmployees: number; pointsThisMonth: number };
-  const deptMap = new Map<string, DeptRow>();
-
-  for (const emp of allEmployeesRaw) {
-    if (!emp.departmentId || !emp.department) continue;
-    if (!deptMap.has(emp.departmentId)) {
-      deptMap.set(emp.departmentId, { name: emp.department.name, totalEmployees: 0, activeEmployees: 0, pointsThisMonth: 0 });
-    }
-    const row = deptMap.get(emp.departmentId)!;
-    row.totalEmployees++;
-    if (activeSet.has(emp.id)) row.activeEmployees++;
-  }
-
-  for (const tx of deptPointsRaw) {
-    const deptId = tx.toUser.departmentId;
-    if (deptId && deptMap.has(deptId)) deptMap.get(deptId)!.pointsThisMonth += tx.amount;
-  }
-
-  const departmentBreakdown = Array.from(deptMap.entries())
-    .map(([id, row]) => ({ id, ...row }))
-    .sort((a, b) => b.pointsThisMonth - a.pointsThisMonth);
 
   // ── Chart data ──────────────────────────────────────────────────────────────
   const dailyMap: Record<string, number> = {};
@@ -227,24 +173,110 @@ export async function GET(req: NextRequest) {
   const lastMonth = pointsLastMonth._sum.amount ?? 0;
   const monthGrowth = lastMonth === 0 ? null : Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
 
+  // ── Action Queue — merge redemptions, medicine requests, and reports ────────
+  // Anonymous reports are sanitized here, server-side, the same way
+  // /api/admin/feedback does it — never send the author for an anonymous
+  // report and rely on the UI to hide it.
+  type ActionItem = {
+    kind: "REDEMPTION" | "MEDICINE" | "REPORT";
+    id: string;
+    title: string;
+    actorName: string | null;
+    actorAvatar: string | null;
+    meta: string | null;
+    createdAt: string;
+  };
+
+  const actionQueue: ActionItem[] = [
+    ...pendingRedemptionsList.map((r): ActionItem => ({
+      kind: "REDEMPTION",
+      id: r.id,
+      title: r.reward.name,
+      actorName: r.user.displayName,
+      actorAvatar: r.user.avatarUrl,
+      meta: `${r.pointsSpent.toLocaleString()} pts`,
+      createdAt: r.createdAt.toISOString(),
+    })),
+    ...pendingMedicineList.map((m): ActionItem => ({
+      kind: "MEDICINE",
+      id: m.id,
+      title: `${m.medicine.name} ×${m.quantity}`,
+      actorName: m.user.displayName,
+      actorAvatar: m.user.avatarUrl,
+      meta: null,
+      createdAt: m.createdAt.toISOString(),
+    })),
+    ...openReportsList.map((f): ActionItem => ({
+      kind: "REPORT",
+      id: f.id,
+      title: f.title,
+      actorName: f.isAnonymous ? null : f.author?.displayName ?? null,
+      actorAvatar: f.isAnonymous ? null : f.author?.avatarUrl ?? null,
+      meta: f.category.replace(/_/g, " "),
+      createdAt: f.createdAt.toISOString(),
+    })),
+  ]
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .slice(0, 10);
+
+  // ── Stock Alerts — merge low/out-of-stock rewards and medicine ─────────────
+  type StockItem = { kind: "REWARD" | "MEDICINE"; id: string; name: string; stockQuantity: number };
+
+  const stockAlerts: StockItem[] = [
+    ...lowStockRewards.map((r): StockItem => ({ kind: "REWARD", id: r.id, name: r.name, stockQuantity: r.stockQuantity })),
+    ...lowStockMedicine.map((m): StockItem => ({ kind: "MEDICINE", id: m.id, name: m.name, stockQuantity: m.stockQuantity })),
+  ]
+    .sort((a, b) => a.stockQuantity - b.stockQuantity)
+    .slice(0, 10);
+
+  // ── Recent Admin Activity — resolve unnamed toUserId refs, same as /api/admin/audit ──
+  const unresolvedIds = recentAudit
+    .map((l) => (l.afterState as Record<string, unknown> | null)?.toUserId as string | undefined)
+    .filter((id, idx, arr): id is string => {
+      if (!id) return false;
+      const entry = recentAudit[idx];
+      return !(entry.afterState as Record<string, unknown> | null)?.toUserName;
+    });
+
+  const uniqueIds = [...new Set(unresolvedIds)];
+  let nameMap: Record<string, string> = {};
+  if (uniqueIds.length > 0) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, displayName: true },
+    });
+    nameMap = Object.fromEntries(users.map((u) => [u.id, u.displayName]));
+  }
+
+  const recentActivity = recentAudit.map((log) => {
+    const after = log.afterState as Record<string, unknown> | null;
+    if (after?.toUserId && !after?.toUserName && nameMap[after.toUserId as string]) {
+      return { ...log, afterState: { ...after, toUserName: nameMap[after.toUserId as string] } };
+    }
+    return log;
+  });
+
   return NextResponse.json({
     data: {
       totalEmployees,
       pointsThisMonth: thisMonth,
       monthGrowth,
       pendingRedemptions,
-      activeGames,
       topEarners,
       dailyPoints,
       dailyRedemptions,
-      engagementRate,
-      engagedCount,
-      disengaged,
-      departmentBreakdown,
       openReports,
       pendingMedicineRequests,
       pointsRedeemedThisMonth: redeemedThisMonth._sum.pointsSpent ?? 0,
       avgPointsBalance: Math.round(avgBalanceRaw._avg.pointsBalance ?? 0),
+      actionQueue,
+      stockAlerts,
+      recentActivity,
+      counts: {
+        redemptions: pendingRedemptions,
+        medicine: pendingMedicineRequests,
+        reports: openReports,
+      },
     },
   });
 }

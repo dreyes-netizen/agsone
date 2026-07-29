@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { ShieldAlert, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ACTION_LABELS, ALL_ACTIONS } from "@/lib/constants/auditActions";
+import { ActionBadge } from "@/components/admin/ActionBadge";
 
 type AuditEntry = {
   id: string;
@@ -14,28 +16,6 @@ type AuditEntry = {
   createdAt: string;
   actor: { id: string; displayName: string; avatarUrl: string | null; role: string };
 };
-
-const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  DELETE_POST:       { label: "Delete Post",       color: "bg-red-100 text-red-700" },
-  DELETE_COMMENT:    { label: "Delete Comment",     color: "bg-red-100 text-red-700" },
-  UPDATE_ROLE:       { label: "Role Change",        color: "bg-violet-100 text-violet-700" },
-  AWARD_POINTS:      { label: "Award Points",       color: "bg-emerald-100 text-emerald-700" },
-  BULK_AWARD_POINTS: { label: "Bulk Award Points",  color: "bg-emerald-100 text-emerald-700" },
-  ATTENDANCE_AWARD:  { label: "Attendance Award",   color: "bg-blue-100 text-blue-700" },
-  DEDUCT_POINTS:     { label: "Deduct Points",      color: "bg-orange-100 text-orange-700" },
-};
-
-const ALL_ACTIONS = Object.keys(ACTION_LABELS);
-
-function ActionBadge({ action }: { action: string }) {
-  const meta = ACTION_LABELS[action];
-  if (!meta) return <span className="text-xs font-mono text-gray-500">{action}</span>;
-  return (
-    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
-      {meta.label}
-    </span>
-  );
-}
 
 function AuditDetails({ action, afterState, beforeState }: {
   action: string;

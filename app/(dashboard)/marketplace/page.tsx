@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { ImageLightbox } from "@/components/ImageLightbox";
+import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 
 type Reward = {
   id: string;
@@ -45,8 +46,6 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   FULFILLED: { label: "Fulfilled", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   REJECTED:  { label: "Rejected",  className: "bg-red-50 text-red-700 border-red-200" },
 };
-
-const LOW_STOCK_THRESHOLD = 3;
 
 export default function MarketplacePage() {
   const { user, loading: authLoading } = useAuth();

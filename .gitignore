@@ -4,7 +4,11 @@
 .env*.local
 firebase-service-account.json
 .mcp.json
+opencode.json
 supabase.txt
+
+# ─── Vercel ────────────────────────────────────────────────────────────────────
+.vercel/
 
 # ─── Employee PII / internal documents — never commit ──────────────────────────
 *.xlsx

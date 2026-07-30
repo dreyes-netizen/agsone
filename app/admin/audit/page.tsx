@@ -3,8 +3,16 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { ShieldAlert, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { ACTION_LABELS, ALL_ACTIONS } from "@/lib/constants/auditActions";
 import { ActionBadge } from "@/components/admin/ActionBadge";
+import { ROLE_LABEL } from "@/lib/constants/roles";
+import { VIOLATION_TYPES } from "@/lib/constants/awardActivities";
+
+function violationLabel(violationType: string): string {
+  return VIOLATION_TYPES.find((v) => v.key === violationType)?.label
+    ?? violationType.replace(/_/g, " ");
+}
 
 type AuditEntry = {
   id: string;
@@ -50,11 +58,11 @@ function AuditDetails({ action, afterState, beforeState }: {
   } else if (action === "DEDUCT_POINTS") {
     if (after.toUserName) rows.push({ label: "Employee", value: String(after.toUserName) });
     if (after.deducted) rows.push({ label: "Points Deducted", value: `${Number(after.deducted).toLocaleString()} pts` });
-    if (after.violationType) rows.push({ label: "Violation", value: String(after.violationType).replace(/_/g, " ") });
+    if (after.violationType) rows.push({ label: "Violation", value: violationLabel(String(after.violationType)) });
     if (after.reason) rows.push({ label: "Reason", value: String(after.reason) });
     if (after.newBalance !== undefined) rows.push({ label: "New Balance", value: `${Number(after.newBalance).toLocaleString()} pts` });
   } else if (action === "UPDATE_ROLE") {
-    if (after.role) rows.push({ label: "New Role", value: String(after.role).replace(/_/g, " ") });
+    if (after.role) rows.push({ label: "New Role", value: ROLE_LABEL[String(after.role)] ?? String(after.role).replace(/_/g, " ") });
   } else if (action === "DELETE_POST" || action === "DELETE_COMMENT") {
     if (before.content) rows.push({ label: "Content", value: String(before.content) });
     if (before.authorId) rows.push({ label: "Author ID", value: String(before.authorId).slice(0, 8) + "…" });
@@ -192,7 +200,7 @@ export default function AuditLogPage() {
                           <> · {String(entry.afterState.count)} employees</>
                         )}
                         {!!entry.afterState?.role && (
-                          <> · Role → <span className="font-medium text-gray-700">{String(entry.afterState.role).replace(/_/g, " ")}</span></>
+                          <> · Role → <span className="font-medium text-gray-700">{ROLE_LABEL[String(entry.afterState.role)] ?? String(entry.afterState.role).replace(/_/g, " ")}</span></>
                         )}
                         {!!entry.beforeState?.content && (
                           <> · &quot;{String(entry.beforeState.content).slice(0, 50)}{String(entry.beforeState.content).length > 50 ? "…" : ""}&quot;</>
@@ -233,26 +241,7 @@ export default function AuditLogPage() {
         )}
       </div>
 
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-          >
-            ← Prev
-          </button>
-          <span className="text-sm text-gray-500">Page {page} of {pages}</span>
-          <button
-            onClick={() => setPage((p) => Math.min(pages, p + 1))}
-            disabled={page === pages}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      <Pagination page={page} pages={pages} onPageChange={setPage} />
     </div>
   );
 }

@@ -49,7 +49,7 @@ export function ActionQueue({
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 gap-2">
           <CheckCircle2 className="w-8 h-8 text-emerald-400" aria-hidden="true" />
-          <p className="text-sm text-gray-500">All caught up</p>
+          <p className="text-sm text-gray-500">All clear</p>
         </div>
       ) : (
         <ul className="divide-y divide-gray-50">

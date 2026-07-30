@@ -7,6 +7,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import React from "react";
 import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 
 type Reward = {
   id: string;
@@ -21,7 +22,15 @@ type Reward = {
 
 const categoryOptions = ["PHYSICAL", "VOUCHER", "PRIVILEGE", "DIGITAL"];
 const categoryIcon: Record<string, React.ElementType> = { PHYSICAL: Package, VOUCHER: Ticket, PRIVILEGE: Star, DIGITAL: Monitor };
-const categoryIconClass: Record<string, string> = { PHYSICAL: "text-orange-600", VOUCHER: "text-blue-600", PRIVILEGE: "text-violet-600", DIGITAL: "text-emerald-600" };
+// Colors match the employee marketplace's categoryConfig so a reward's category reads the same everywhere.
+const categoryIconClass: Record<string, string> = { PHYSICAL: "text-orange-600", VOUCHER: "text-blue-600", PRIVILEGE: "text-indigo-600", DIGITAL: "text-emerald-600" };
+const categoryLabel: Record<string, string> = { PHYSICAL: "Physical", VOUCHER: "Voucher", PRIVILEGE: "Privilege", DIGITAL: "Digital" };
+const categoryBadgeClass: Record<string, string> = {
+  PHYSICAL: "bg-orange-50 text-orange-700",
+  VOUCHER: "bg-blue-50 text-blue-700",
+  PRIVILEGE: "bg-indigo-50 text-indigo-700",
+  DIGITAL: "bg-emerald-50 text-emerald-700",
+};
 
 const emptyForm = { name: "", description: "", pointCost: "", stockQuantity: "-1", category: "PHYSICAL" };
 
@@ -39,6 +48,8 @@ export default function AdminRewardsPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
@@ -69,9 +80,20 @@ export default function AdminRewardsPage() {
   }, [authLoading, user, page]);
 
   async function loadRewards() {
-    const res = await apiFetch<{ data: Reward[]; pages: number }>(`/api/rewards?includeInactive=true&page=${page}`);
-    setRewards(res.data);
-    setPages(res.pages);
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await apiFetch<{ data: Reward[]; pages: number }>(`/api/rewards?includeInactive=true&page=${page}`);
+      setRewards(res.data);
+      setPages(res.pages);
+    } catch (err) {
+      // Without this, a failed fetch silently rendered "No rewards yet" —
+      // an admin could read that as an empty catalog and recreate rewards
+      // that already exist.
+      setLoadError(err instanceof Error ? err.message : "Failed to load rewards.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -197,6 +219,17 @@ export default function AdminRewardsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {loadError && (
+        <div role="alert" className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 flex items-center justify-between gap-3">
+          <span>{loadError}</span>
+          <button
+            onClick={loadRewards}
+            className="font-medium underline underline-offset-2 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-600"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {toast && (
         <div
           role="alert"
@@ -361,8 +394,13 @@ export default function AdminRewardsPage() {
       <div className="bg-white rounded-card border border-table-border overflow-clip">
         {/* Mobile card layout */}
         <div className="md:hidden">
-          {rewards.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">No rewards yet. Add your first one!</div>
+          {loading ? (
+            <div className="py-8"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></div>
+          ) : rewards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8">
+              <Package className="w-8 h-8 text-gray-300" aria-hidden="true" />
+              <p className="text-sm text-gray-500">No rewards yet. Add your first one!</p>
+            </div>
           ) : (
             <div className="divide-y divide-gray-50">
               {rewards.map((r) => (
@@ -381,11 +419,15 @@ export default function AdminRewardsPage() {
                       </div>
                       {r.description && <p className="text-xs text-gray-500 truncate">{r.description}</p>}
                       <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                        <span className="bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                          {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} aria-hidden="true" /> : null; })()} {r.category}
+                        <span className={`font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${categoryBadgeClass[r.category] ?? "bg-gray-100 text-gray-600"}`}>
+                          {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} aria-hidden="true" /> : null; })()} {categoryLabel[r.category] ?? r.category}
                         </span>
                         <span className="font-semibold text-navy-600">{r.pointCost.toLocaleString()} pts</span>
-                        <span>{r.stockQuantity === -1 ? "Unlimited" : `Stock: ${r.stockQuantity}`}</span>
+                        <span className={
+                          r.stockQuantity === -1 ? "" : r.stockQuantity === 0 ? "text-red-500 font-medium" : r.stockQuantity <= LOW_STOCK_THRESHOLD ? "text-amber-600 font-medium" : ""
+                        }>
+                          {r.stockQuantity === -1 ? "Unlimited" : r.stockQuantity === 0 ? "Out of stock" : `Stock: ${r.stockQuantity}`}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -445,9 +487,18 @@ export default function AdminRewardsPage() {
             </tr>
           </thead>
           <tbody>
-            {rewards.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={6} className="text-center text-table-muted text-[13px] py-12">No rewards yet. Add your first one!</td>
+                <td colSpan={6} className="text-center py-12"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></td>
+              </tr>
+            ) : rewards.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-12">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Package className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                    <p className="text-table-muted text-[13px]">No rewards yet. Add your first one!</p>
+                  </div>
+                </td>
               </tr>
             ) : rewards.map((r, i) => (
               <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""} ${!r.isActive ? "opacity-60" : ""}`}>
@@ -471,15 +522,19 @@ export default function AdminRewardsPage() {
                   </div>
                 </td>
                 <td className={tdClass}>
-                  <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                    {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} /> : null; })()} {r.category}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${categoryBadgeClass[r.category] ?? "bg-gray-100 text-gray-600"}`}>
+                    {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} /> : null; })()} {categoryLabel[r.category] ?? r.category}
                   </span>
                 </td>
                 <td className={tdClass}>
                   <span className="font-semibold text-navy-600">{r.pointCost.toLocaleString()} pts</span>
                 </td>
-                <td className={`${tdClass} text-gray-600`}>
-                  {r.stockQuantity === -1 ? "Unlimited" : r.stockQuantity}
+                <td className={tdClass}>
+                  <span className={
+                    r.stockQuantity === -1 ? "text-gray-600" : r.stockQuantity === 0 ? "text-red-500 font-medium" : r.stockQuantity <= LOW_STOCK_THRESHOLD ? "text-amber-600 font-medium" : "text-gray-600"
+                  }>
+                    {r.stockQuantity === -1 ? "Unlimited" : r.stockQuantity === 0 ? "Out of stock" : r.stockQuantity}
+                  </span>
                 </td>
                 <td className={tdClass}>
                   <button

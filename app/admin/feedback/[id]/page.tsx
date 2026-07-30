@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send, Loader2 } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
 
 type Reply = {
   id: string;
@@ -24,21 +25,6 @@ type FeedbackThread = {
   createdAt: string;
   author: { displayName: string; avatarUrl: string | null } | null;
   replies: Reply[];
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
-  ETHICAL_FRAUD:             "Ethical Violations & Fraud",
-  MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
-  SECURITY_POLICY:           "Security Concerns & Policy Violations",
-  // Legacy labels for existing submissions
-  COMPENSATION_BENEFITS: "Compensation & Benefits",
-  WORK_LIFE_BALANCE: "Work-Life Balance",
-  COMPANY_CULTURE: "Company Culture",
-  TEAM_DYNAMICS: "Team Dynamics",
-  PROCESSES_TOOLS: "Processes & Tools",
-  RECOGNITION: "Recognition",
-  OTHER: "Other",
 };
 
 const STATUS_OPTIONS = [
@@ -142,7 +128,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                 <span aria-hidden="true">🔒</span> Confidential
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[thread.category] ?? "bg-gray-100 text-gray-600"}`}>
                 {CATEGORY_LABELS[thread.category] ?? thread.category}
               </span>
             </div>

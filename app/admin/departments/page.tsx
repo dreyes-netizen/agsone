@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Loader2, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Trash2, Building2 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
 type Department = {
@@ -188,7 +188,10 @@ export default function DepartmentsPage() {
         {loading ? (
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div>
         ) : departments.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No departments yet.</div>
+          <div className="flex flex-col items-center justify-center gap-2 p-8">
+            <Building2 className="w-8 h-8 text-gray-300" aria-hidden="true" />
+            <p className="text-sm text-gray-500">No departments yet.</p>
+          </div>
         ) : (
           <div className="overflow-auto max-h-[70vh] scroll-hint">
           <table className="w-full border-collapse" aria-label="Departments">

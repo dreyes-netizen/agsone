@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ActionBadge } from "@/components/admin/ActionBadge";
 import { timeAgo } from "@/lib/helpers/timeAgo";
+import { ROLE_LABEL } from "@/lib/constants/roles";
 
 type AuditEntry = {
   id: string;
@@ -22,7 +23,7 @@ function summaryLine(entry: AuditEntry): string {
   if (after.toUserName) parts.push(`To ${String(after.toUserName)}`);
   if (after.amount) parts.push(`${entry.action.includes("DEDUCT") ? "−" : "+"}${Number(after.amount).toLocaleString()} pts`);
   if (after.count) parts.push(`${String(after.count)} employees`);
-  if (after.role) parts.push(`Role → ${String(after.role).replace(/_/g, " ")}`);
+  if (after.role) parts.push(`Role → ${ROLE_LABEL[String(after.role)] ?? String(after.role).replace(/_/g, " ")}`);
   if (before.content) {
     const text = String(before.content);
     parts.push(`"${text.slice(0, 50)}${text.length > 50 ? "…" : ""}"`);

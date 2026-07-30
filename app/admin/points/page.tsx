@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, VIOLATION_TYPES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
-import { Upload, Loader2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { Upload, Loader2, CheckCircle, AlertCircle, XCircle, History } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
 type Department = { id: string; name: string };
@@ -79,6 +79,8 @@ export default function AwardPointsPage() {
   const { user, dbUser, loading: authLoading } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [txLoading, setTxLoading] = useState(true);
+  const [txError, setTxError] = useState<string | null>(null);
   const [tab, setTab] = useState<"single" | "bulk" | "deduct" | "attendance">("single");
   const [budget, setBudget] = useState<Budget | null>(null);
 
@@ -162,12 +164,18 @@ export default function AwardPointsPage() {
   }, [txPage]);
 
   async function loadHistory(page = 1) {
+    setTxLoading(true);
+    setTxError(null);
     try {
       const res = await apiFetch<{ data: Transaction[]; pages: number }>(`/api/points/history?page=${page}`);
       setTransactions(res.data);
       setTxPages(res.pages);
-    } catch {
-      // ignore
+    } catch (err) {
+      // Previously swallowed — a failed fetch silently rendered "No transactions
+      // yet" for what is high-trust financial history.
+      setTxError(err instanceof Error ? err.message : "Failed to load transaction history.");
+    } finally {
+      setTxLoading(false);
     }
   }
 
@@ -761,6 +769,17 @@ export default function AwardPointsPage() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">Recent Transactions</h2>
         </div>
+        {txError && (
+          <div role="alert" className="mx-6 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 flex items-center justify-between gap-3">
+            <span>{txError}</span>
+            <button
+              onClick={() => loadHistory(txPage)}
+              className="font-medium underline underline-offset-2 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-red-600"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <div className="overflow-auto max-h-[70vh] scroll-hint">
         <table className="w-full border-collapse" aria-label="Recent transactions">
           <thead className="sticky top-0 z-10 bg-table-head">
@@ -774,10 +793,17 @@ export default function AwardPointsPage() {
             </tr>
           </thead>
           <tbody>
-            {transactions.length === 0 ? (
+            {txLoading ? (
               <tr>
-                <td colSpan={6} className="text-center text-table-muted text-[13px] py-12">
-                  No transactions yet
+                <td colSpan={6} className="text-center py-12"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></td>
+              </tr>
+            ) : transactions.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-12">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <History className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                    <p className="text-table-muted text-[13px]">No transactions yet</p>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -794,7 +820,7 @@ export default function AwardPointsPage() {
                   </td>
                   <td className={tdClass}>
                     <span className={`font-semibold ${t.amount < 0 ? "text-rose-500" : "text-navy-600"}`}>
-                      {t.amount > 0 ? "+" : ""}{t.amount}
+                      {t.amount > 0 ? "+" : ""}{t.amount.toLocaleString()}
                     </span>
                   </td>
                   <td className={tdClass}>
@@ -808,7 +834,7 @@ export default function AwardPointsPage() {
                   </td>
                   <td className={`${tdClass} text-gray-500 max-w-xs truncate`}>{t.note}</td>
                   <td className={`${tdClass} text-gray-500`}>
-                    {new Date(t.createdAt).toLocaleDateString()}
+                    {new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </td>
                 </tr>
               ))

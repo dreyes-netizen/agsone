@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { RoleBadge } from "@/components/RoleBadge";
 
 type SearchResult = {
   id: string;
@@ -12,18 +13,6 @@ type SearchResult = {
   avatarUrl: string | null;
   role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
   department: { id: string; name: string } | null;
-};
-
-const roleLabel: Record<SearchResult["role"], string> = {
-  EMPLOYEE: "Employee",
-  MANAGER: "Manager",
-  HR_ADMIN: "HR Admin",
-};
-
-const roleBadgeClass: Record<SearchResult["role"], string> = {
-  EMPLOYEE: "bg-gray-100 text-gray-600",
-  MANAGER: "bg-blue-100 text-blue-700",
-  HR_ADMIN: "bg-violet-100 text-violet-700",
 };
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
@@ -182,11 +171,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                       {r.department.name}
                     </span>
                   )}
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadgeClass[r.role]}`}
-                  >
-                    {roleLabel[r.role]}
-                  </span>
+                  <RoleBadge role={r.role} />
                 </div>
               </button>
             ))

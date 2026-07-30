@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { Pagination } from "@/components/ui/pagination";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
 
 type FeedbackItem = {
   id: string;
@@ -18,21 +19,6 @@ type FeedbackItem = {
   updatedAt: string;
   _count: { replies: number };
   author: { displayName: string; avatarUrl: string | null } | null;
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
-  ETHICAL_FRAUD:             "Ethical Violations & Fraud",
-  MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
-  SECURITY_POLICY:           "Security Concerns & Policy Violations",
-  // Legacy labels for existing submissions
-  COMPENSATION_BENEFITS: "Compensation & Benefits",
-  WORK_LIFE_BALANCE: "Work-Life Balance",
-  COMPANY_CULTURE: "Company Culture",
-  TEAM_DYNAMICS: "Team Dynamics",
-  PROCESSES_TOOLS: "Processes & Tools",
-  RECOGNITION: "Recognition",
-  OTHER: "Other",
 };
 
 const STATUS_CHIP: Record<string, string> = {
@@ -151,7 +137,11 @@ export default function AdminFeedbackPage() {
                     {f.status === "IN_REVIEW" ? "In Review" : f.status === "OPEN" ? "Open" : "Resolved"}
                   </span>
                 </td>
-                <td className={tdClass + " text-gray-600"}>{CATEGORY_LABELS[f.category] ?? f.category}</td>
+                <td className={tdClass}>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${CATEGORY_COLORS[f.category] ?? "bg-gray-100 text-gray-600"}`}>
+                    {CATEGORY_LABELS[f.category] ?? f.category}
+                  </span>
+                </td>
                 <td className={tdClass}>
                   <p className="font-medium text-gray-900 truncate max-w-xs">{f.title}</p>
                 </td>
@@ -166,7 +156,7 @@ export default function AdminFeedbackPage() {
         </table>
         </div>
       </div>
-      {pages > 1 && <Pagination page={page} pages={pages} onPageChange={setPage} />}
+      <Pagination page={page} pages={pages} onPageChange={setPage} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Plus, Send, MessageSquarePlus, Loader2, AlertCircle, CheckCircle, EyeOff, AlertTriangle, Pencil, ArrowLeft } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
+import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
 
 type FeedbackItem = {
   id: string;
@@ -41,34 +42,6 @@ type PanelState =
   | { mode: "thread"; id: string };
 
 type Toast = { type: "success" | "error"; msg: string };
-
-const CATEGORY_LABELS: Record<string, string> = {
-  HARASSMENT_DISCRIMINATION: "Harassment & Discrimination",
-  ETHICAL_FRAUD:             "Ethical Violations & Fraud",
-  MISCONDUCT_ABUSE:          "Workplace Misconduct & Abuse of Authority",
-  SECURITY_POLICY:           "Security Concerns & Policy Violations",
-  COMPENSATION_BENEFITS: "Compensation & Benefits",
-  WORK_LIFE_BALANCE: "Work-Life Balance",
-  COMPANY_CULTURE: "Company Culture",
-  TEAM_DYNAMICS: "Team Dynamics",
-  PROCESSES_TOOLS: "Processes & Tools",
-  RECOGNITION: "Recognition",
-  OTHER: "Other",
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  HARASSMENT_DISCRIMINATION: "bg-red-100 text-red-700",
-  ETHICAL_FRAUD:             "bg-orange-100 text-orange-700",
-  MISCONDUCT_ABUSE:          "bg-amber-100 text-amber-800",
-  SECURITY_POLICY:           "bg-rose-100 text-rose-700",
-  COMPENSATION_BENEFITS: "bg-emerald-100 text-emerald-700",
-  WORK_LIFE_BALANCE: "bg-sky-100 text-sky-700",
-  COMPANY_CULTURE: "bg-indigo-100 text-indigo-700",
-  TEAM_DYNAMICS: "bg-orange-100 text-orange-700",
-  PROCESSES_TOOLS: "bg-gray-100 text-gray-700",
-  RECOGNITION: "bg-amber-100 text-amber-700",
-  OTHER: "bg-gray-100 text-gray-600",
-};
 
 const STATUS_LABEL: Record<string, string> = {
   OPEN: "Open",

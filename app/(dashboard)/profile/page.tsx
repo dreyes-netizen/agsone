@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette, Loader2, AlertCircle, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
+import { RoleBadge } from "@/components/RoleBadge";
 
 type UserBadge = {
   id: string;
@@ -141,20 +142,6 @@ const BANNER_COLOR_OPTIONS = [
 const BANNER_GRADIENTS: Record<string, string> = Object.fromEntries(
   BANNER_COLOR_OPTIONS.map(({ key, gradient }) => [key, gradient])
 );
-
-const roleLabel: Record<string, string> = {
-  EMPLOYEE:    "Employee",
-  MANAGER:     "Manager",
-  HR_ADMIN:    "HR Admin",
-  SUPER_ADMIN: "Super Admin",
-};
-
-const roleBadgeStyle: Record<string, string> = {
-  EMPLOYEE:    "bg-gray-100 text-gray-700",
-  MANAGER:     "bg-blue-50 text-blue-700",
-  HR_ADMIN:    "bg-violet-50 text-violet-700",
-  SUPER_ADMIN: "bg-red-50 text-red-700",
-};
 
 function CompletenessBar({ profile }: { profile: UserProfile }) {
   const items = [
@@ -439,9 +426,7 @@ export default function ProfilePage() {
               <h1 className="text-xl font-bold text-gray-900">{profile.displayName}</h1>
               <p className="text-sm text-gray-500 mt-0.5">{profile.email}</p>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${roleBadgeStyle[profile.role] ?? "bg-gray-100 text-gray-700"}`}>
-                  {roleLabel[profile.role] ?? profile.role}
-                </span>
+                <RoleBadge role={profile.role} />
                 {profile.department && (
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
                     {profile.department.name}
@@ -672,7 +657,7 @@ export default function ProfilePage() {
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-gray-800">{s.post.author.displayName}</p>
                         <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{s.post.content}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{new Date(s.post.createdAt).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{new Date(s.post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                       </div>
                     </li>
                   ))}
@@ -790,7 +775,7 @@ export default function ProfilePage() {
                                   </span>
                                 )}
                                 {t.fromUser ? ` · from ${t.fromUser.displayName}` : ""}
-                                {" · "}{new Date(t.createdAt).toLocaleDateString()}
+                                {" · "}{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                               </p>
                             </div>
                           </li>
@@ -806,7 +791,7 @@ export default function ProfilePage() {
                               <p className="text-sm font-medium text-gray-900 truncate">{r.reward.name}</p>
                               <p className="text-xs text-gray-500">
                                 <span className="font-medium text-rose-500">Redemption</span>
-                                {" · "}{new Date(r.createdAt).toLocaleDateString()}
+                                {" · "}{new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                               </p>
                             </div>
                           </li>
@@ -1023,11 +1008,11 @@ export default function ProfilePage() {
                     return (
                       <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
                         <span className={`text-xs font-bold shrink-0 ${positive ? "text-emerald-600" : "text-rose-500"}`}>
-                          {positive ? "+" : ""}{t.amount}
+                          {positive ? "+" : ""}{t.amount.toLocaleString()}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium text-gray-800 truncate">{t.note ?? meta.label}</p>
-                          <p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</p>
+                          <p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                         </div>
                         {count > 1 && (
                           <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
@@ -1074,7 +1059,7 @@ export default function ProfilePage() {
                     <Award className="w-4 h-4 text-amber-500 shrink-0" aria-hidden="true" />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-gray-800 truncate">{ub.badge.name}</p>
-                      <p className="text-xs text-gray-500">{new Date(ub.awardedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">{new Date(ub.awardedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                     </div>
                   </li>
                 ))}

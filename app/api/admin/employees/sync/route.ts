@@ -198,11 +198,21 @@ export async function POST(req: NextRequest) {
       });
       imported = created.count;
 
+      // createMany() doesn't return the rows it created, so fetch them back
+      // by email. Needed unconditionally (not just when some failed): their
+      // ids must be added to inFileUserIds, or the "deactivate anyone not in
+      // this upload" step further down — which only knows about ids matched
+      // BEFORE this insert — sweeps up the employees just created and flips
+      // them back to inactive in this same request. (Pre-existing bug, not
+      // introduced by the createMany rewrite — the original per-row create
+      // loop had the identical gap.)
+      const landed = await prisma.user.findMany({
+        where: { email: { in: newRows.map((r) => r.email), mode: "insensitive" } },
+        select: { id: true, email: true },
+      });
+      for (const u of landed) inFileUserIds.add(u.id);
+
       if (imported < newRows.length) {
-        const landed = await prisma.user.findMany({
-          where: { email: { in: newRows.map((r) => r.email), mode: "insensitive" } },
-          select: { email: true },
-        });
         const landedEmails = new Set(landed.map((u) => u.email.toLowerCase()));
         failedEmails = newRows
           .filter((r) => !landedEmails.has(r.email.toLowerCase()))

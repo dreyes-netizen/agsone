@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2 } from "lucide-react";
@@ -10,9 +11,15 @@ import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
 import { PostImages } from "@/components/feed/PostImages";
-import { ImageLightbox } from "@/components/ImageLightbox";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+
+// Closed by default — split into its own chunk instead of shipping with the
+// page bundle (this is the largest page in the app).
+const ImageLightbox = dynamic(
+  () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
+  { ssr: false },
+);
 
 type PollOption = {
   id: string;

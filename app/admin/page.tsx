@@ -1,17 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import {
   Users, TrendingUp, ClipboardList,
   ArrowUpRight, ArrowDownRight, Minus, Cake, MessageSquareWarning, CheckCircle2,
 } from "lucide-react";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
 import { ActionQueue, type ActionItem } from "@/components/admin/ActionQueue";
 import { StockAlerts, type StockItem } from "@/components/admin/StockAlerts";
 import { RecentActivity } from "@/components/admin/RecentActivity";
+
+// recharts is the largest chunk in the build (~349 KB) for a chart that
+// renders below the fold on one admin page — load it only once this page
+// actually mounts, and only in the browser (recharts needs layout measurements
+// it can't get during SSR anyway).
+const PointsFlowChart = dynamic(
+  () => import("@/components/admin/PointsFlowChart").then((m) => m.PointsFlowChart),
+  { ssr: false, loading: () => <div className="lg:col-span-2 bg-white rounded-card border border-table-border p-4 h-[236px] animate-pulse" /> },
+);
 
 type UpcomingBirthday = {
   id: string;
@@ -217,48 +224,7 @@ export default function AdminDashboardPage() {
 
       {/* Chart + Top Earners */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-card border border-table-border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-semibold text-gray-900 text-sm">Points Flow — Last 30 Days</p>
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5">
-                 <span className="w-3 h-0.5 bg-command-black inline-block rounded" />
-                Awarded
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-0.5 bg-gray-400 inline-block rounded" />
-                Redeemed
-              </span>
-            </div>
-          </div>
-          {chartData.length === 0 ? (
-            <div className="h-40 flex items-center justify-center text-gray-500 text-sm">No data yet</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="awardedGrad" x1="0" y1="0" x2="0" y2="1">
-                     <stop offset="5%" stopColor="var(--color-command-black)" stopOpacity={0.12} />
-                     <stop offset="95%" stopColor="var(--color-command-black)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="redeemedGrad" x1="0" y1="0" x2="0" y2="1">
-                     <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.1} />
-                     <stop offset="95%" stopColor="#9ca3af" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }}
-                  formatter={(v, name) => [`${Number(v ?? 0).toLocaleString()} pts`, String(name)]}
-                />
-                 <Area type="monotone" dataKey="Awarded" stroke="var(--color-command-black)" strokeWidth={2.5} fill="url(#awardedGrad)" />
-                <Area type="monotone" dataKey="Redeemed" stroke="#9ca3af" strokeWidth={2} fill="url(#redeemedGrad)" strokeDasharray="4 2" />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+        <PointsFlowChart data={chartData} />
 
         <div className="bg-white rounded-card border border-table-border p-4">
           <p className="font-semibold text-gray-900 text-sm mb-3">Top Earners</p>

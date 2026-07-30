@@ -19,13 +19,19 @@ export async function GET(
 
   const { id } = await params;
 
+  // The client renders this whole list with no "load more" affordance, so a
+  // tight page size would silently hide real comments — these are generous
+  // ceilings against a pathological case (a post with thousands of
+  // comments), not real pagination.
   const comments = await prisma.socialComment.findMany({
     where: { postId: id, parentId: null },
     orderBy: { createdAt: "asc" },
+    take: 500,
     include: {
       author: { select: authorSelect },
       replies: {
         orderBy: { createdAt: "asc" },
+        take: 100,
         include: { author: { select: authorSelect } },
       },
     },
@@ -64,17 +70,17 @@ export async function POST(
 
   const { content, parentId } = parsed.data;
 
-  const post = await prisma.socialPost.findUnique({ where: { id }, select: { id: true } });
+  // Both lookups are independent — run them concurrently, then apply the
+  // same checks (post-not-found first, then invalid-parent) as before.
+  const [post, parent] = await Promise.all([
+    prisma.socialPost.findUnique({ where: { id }, select: { id: true } }),
+    parentId
+      ? prisma.socialComment.findUnique({ where: { id: parentId }, select: { postId: true } })
+      : Promise.resolve(null),
+  ]);
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
-
-  if (parentId) {
-    const parent = await prisma.socialComment.findUnique({
-      where: { id: parentId },
-      select: { postId: true },
-    });
-    if (!parent || parent.postId !== id) {
-      return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
-    }
+  if (parentId && (!parent || parent.postId !== id)) {
+    return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
   }
 
   const comment = await prisma.socialComment.create({

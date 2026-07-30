@@ -3,20 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useApiClient } from "@/lib/hooks/useApiClient";
-import { useAuth } from "@/lib/auth/AuthProvider";
-import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
-import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
-
-type Notification = {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  readAt: string | null;
-  createdAt: string;
-  data: Record<string, unknown> | null;
-};
+import { useNotificationsStore, type Notification } from "@/lib/stores/notifications";
 
 function getNotificationLink(n: Notification): string | null {
   switch (n.type) {
@@ -36,29 +23,18 @@ function getNotificationLink(n: Notification): string | null {
 }
 
 export function NotificationBell() {
-  const { user, loading: authLoading, dbUser } = useAuth();
-  const { apiFetch } = useApiClient();
+  // Purely a consumer of the shared store — the fetch-on-mount, 60s poll,
+  // and Realtime subscription live once in <NotificationsController> (see
+  // app/(dashboard)/layout.tsx), not here. This component is mounted 3x
+  // (desktop sidebar, mobile drawer, mobile top bar); before this change
+  // each instance ran its own copy of that side-effect trio independently.
+  const notifications = useNotificationsStore((s) => s.notifications);
+  const unread = useNotificationsStore((s) => s.unread);
+  const markAllRead = useNotificationsStore((s) => s.markAllRead);
+  const markRead = useNotificationsStore((s) => s.markRead);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unread, setUnread] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
-
-  // Slow fallback poll — Realtime delivers new notifications instantly; this
-  // only backstops a rare dropped message. Paused while the tab is hidden
-  // (this hook mounts on every dashboard page, so an idle background tab
-  // would otherwise poll /api/notifications for no one).
-  useVisibleInterval(load, 60_000, !authLoading && !!user);
-
-  // Real-time: refresh the bell the moment a notification (invite, win, etc.)
-  // is created for this user.
-  useRealtimeChannel(dbUser ? `user:${dbUser.id}` : null, load);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -68,25 +44,9 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  async function load() {
-    try {
-      const res = await apiFetch<{ data: Notification[]; unreadCount: number }>("/api/notifications");
-      setNotifications(res.data);
-      setUnread(res.unreadCount);
-    } catch {}
-  }
-
-  async function markAllRead() {
-    await apiFetch("/api/notifications", { method: "PATCH" });
-    setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })));
-    setUnread(0);
-  }
-
   async function handleNotificationClick(n: Notification) {
     if (!n.readAt) {
-      await apiFetch(`/api/notifications/${n.id}`, { method: "PATCH" });
-      setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x));
-      setUnread((c) => Math.max(0, c - 1));
+      await markRead(n.id);
     }
     const link = getNotificationLink(n);
     setOpen(false);

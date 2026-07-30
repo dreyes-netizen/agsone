@@ -47,6 +47,41 @@ async function getActiveDocs() {
   return data ?? [];
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Both the FTS and ilike search paths expand each match into its neighboring
+// chunks (prev/next) per document, for extra context. That used to be one
+// Supabase query PER DOCUMENT in a for-loop — on the Ally chat hot path, a
+// query answered by chunks from several documents meant several sequential
+// round trips just for neighbor expansion. PostgREST's `or` filter lets
+// "(doc A AND index IN (...)) OR (doc B AND index IN (...))" be expressed as
+// a single query instead.
+async function fetchNeighborChunks(
+  neighborMap: Map<string, Set<number>>,
+): Promise<{ content: string; document_id: string; chunk_index: number }[]> {
+  if (neighborMap.size === 0) return [];
+
+  const orFilter = [...neighborMap.entries()]
+    // document_id always comes from server-generated Prisma UUIDs, but this
+    // filter string is hand-built (not parameterized), so validate the shape
+    // before interpolating rather than trusting it blindly.
+    .filter(([docId]) => UUID_RE.test(docId))
+    .map(([docId, indices]) =>
+      `and(document_id.eq.${docId},chunk_index.in.(${[...indices].sort((a, b) => a - b).join(",")}))`
+    )
+    .join(",");
+
+  if (!orFilter) return [];
+
+  const { data } = await supabase
+    .from("document_chunks")
+    .select("content, document_id, chunk_index")
+    .or(orFilter)
+    .order("chunk_index");
+
+  return (data ?? []) as { content: string; document_id: string; chunk_index: number }[];
+}
+
 export async function searchRelevantChunks(query: string, matchCount = 8): Promise<string[]> {
   // 1. Full-text search (tsvector) — fast, handles stemming
   const { data: ftsData, error } = await supabase.rpc("match_document_chunks", {
@@ -81,20 +116,12 @@ export async function searchRelevantChunks(query: string, matchCount = 8): Promi
       if (!seen.has(key)) { seen.add(key); expanded.push(r); }
     }
 
-    for (const [docId, indices] of neighborMap) {
-      const { data: neighbors } = await supabase
-        .from("document_chunks")
-        .select("content, document_id, chunk_index")
-        .eq("document_id", docId)
-        .in("chunk_index", [...indices].sort((a, b) => a - b))
-        .order("chunk_index");
-
-      for (const row of neighbors ?? []) {
-        const key = (row.content as string).slice(0, 60);
-        if (!seen.has(key)) {
-          seen.add(key);
-          expanded.push(row as { content: string; document_id: string; chunk_index: number });
-        }
+    const neighbors = await fetchNeighborChunks(neighborMap);
+    for (const row of neighbors) {
+      const key = row.content.slice(0, 60);
+      if (!seen.has(key)) {
+        seen.add(key);
+        expanded.push(row);
       }
     }
 
@@ -161,20 +188,12 @@ export async function searchRelevantChunks(query: string, matchCount = 8): Promi
       const expanded: { content: string; document_id: string; chunk_index: number }[] = [];
       const expandedSeen = new Set<string>();
 
-      for (const [docId, indices] of neighborMap) {
-        const { data: neighbors } = await supabase
-          .from("document_chunks")
-          .select("content, document_id, chunk_index")
-          .eq("document_id", docId)
-          .in("chunk_index", [...indices].sort((a, b) => a - b))
-          .order("chunk_index");
-
-        for (const row of neighbors ?? []) {
-          const key = (row.content as string).slice(0, 60);
-          if (!expandedSeen.has(key)) {
-            expandedSeen.add(key);
-            expanded.push(row as { content: string; document_id: string; chunk_index: number });
-          }
+      const neighbors = await fetchNeighborChunks(neighborMap);
+      for (const row of neighbors) {
+        const key = row.content.slice(0, 60);
+        if (!expandedSeen.has(key)) {
+          expandedSeen.add(key);
+          expanded.push(row);
         }
       }
 

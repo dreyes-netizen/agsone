@@ -50,17 +50,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cannot award points to yourself" }, { status: 400 });
   }
 
-  // Manual §3: managers have a 500 pts/month budget (HR_ADMIN exempt)
-  const budget = await checkManagerBudget(actor!.id, actor!.role, amount);
+  // The budget check and recipient lookup are independent of each other —
+  // fetch both concurrently instead of one after the other.
+  const [budget, recipient] = await Promise.all([
+    // Manual §3: managers have a 500 pts/month budget (HR_ADMIN exempt)
+    checkManagerBudget(actor!.id, actor!.role, amount),
+    prisma.user.findUnique({ where: { id: toUserId } }),
+  ]);
   if (!budget.allowed) {
     return NextResponse.json(
       { error: `Budget exceeded. You have ${budget.remaining} pts remaining this month.` },
       { status: 400 },
     );
   }
-
-  // Verify recipient exists
-  const recipient = await prisma.user.findUnique({ where: { id: toUserId } });
   if (!recipient) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
@@ -84,8 +86,8 @@ export async function POST(req: NextRequest) {
   });
 
   // Fire-and-forget: notification + feed post + email
-  const actorUser = await prisma.user.findUnique({ where: { id: actor!.id }, select: { displayName: true } });
-  const actorName = actorUser?.displayName ?? "Someone";
+  // actor.displayName is already known from verifyAuth — no need to re-query it.
+  const actorName = actor!.displayName;
 
   await Promise.all([
     createNotification({

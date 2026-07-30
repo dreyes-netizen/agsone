@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth/verifyAuth";
+import { verifyAuth, verifyToken } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
-  const user = await verifyAuth(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // verifyAuth() would query the User row by firebaseUid, return a narrow
+  // AuthUser, and then this handler would query the SAME row again by id for
+  // the wider profile select below — two round trips for one row. verifyToken
+  // only verifies the Firebase ID token (no DB call), so this ends up as a
+  // single query.
+  const uid = await verifyToken(req);
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const profile = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { firebaseUid: uid },
     select: {
       id: true,
       displayName: true,
@@ -23,6 +28,7 @@ export async function GET(req: NextRequest) {
       hireDate: true,
       bio: true,
       skills: true,
+      isActive: true,
       department: { select: { id: true, name: true } },
       userBadges: {
         orderBy: { awardedAt: "desc" },
@@ -35,7 +41,14 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ data: profile });
+  // Mirrors the isActive gate in verifyAuth() — a deactivated employee's
+  // still-valid Firebase token shouldn't be able to pull their profile either.
+  if (!profile || !profile.isActive) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { isActive: _isActive, ...data } = profile;
+  return NextResponse.json({ data });
 }
 
 const patchSchema = z.object({

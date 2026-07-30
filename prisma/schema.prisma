@@ -402,6 +402,9 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   actor User @relation(fields: [actorId], references: [id])
+
+  @@index([createdAt])
+  @@index([action, createdAt])
 }
 
 model PollOption {
@@ -412,6 +415,8 @@ model PollOption {
 
   post  SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   votes PollVote[]
+
+  @@index([postId])
 }
 
 model PollVote {
@@ -445,6 +450,8 @@ model FoodListing {
 
   createdBy User        @relation("FoodListingsCreated", fields: [createdById], references: [id])
   orders    FoodOrder[]
+
+  @@index([isActive])
 }
 
 model FoodOrder {
@@ -476,6 +483,9 @@ model Feedback {
 
   author  User?           @relation(fields: [authorId], references: [id])
   replies FeedbackReply[]
+
+  @@index([authorId, updatedAt])
+  @@index([status, updatedAt])
 }
 
 model FeedbackReply {
@@ -559,6 +569,8 @@ model PolicyDocument {
   uploadedById String
 
   uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([isActive])
 }
 
 model MedicineItem {
@@ -574,6 +586,8 @@ model MedicineItem {
 
   createdBy User              @relation("MedicineItemsCreated", fields: [createdById], references: [id])
   requests  MedicineRequest[]
+
+  @@index([isActive])
 }
 
 model MedicineRequest {

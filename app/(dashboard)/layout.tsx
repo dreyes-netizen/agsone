@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -9,12 +10,26 @@ import {
   Rss, Menu, UtensilsCrossed, Search, Pill, Puzzle,
 } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
-import { AllyWidget } from "@/components/AllyWidget";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { CommandPalette } from "@/components/CommandPalette";
+import { NotificationsController } from "@/components/notifications/NotificationsController";
+
+// AllyWidget statically pulls in react-markdown + remark-gfm (~163 KB) but
+// renders nothing until the user opens it — load it lazily, client-only, so
+// every dashboard page doesn't pay for the whole markdown chain up front.
+const AllyWidget = dynamic(
+  () => import("@/components/AllyWidget").then((m) => m.AllyWidget),
+  { ssr: false },
+);
+
+// Only opened via the search buttons below (no global keyboard listener
+// outside the component) — safe to load on demand.
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette").then((m) => m.CommandPalette),
+  { ssr: false },
+);
 
 const mainNav = [
   { href: "/feed",        label: "Feed",        icon: Rss },
@@ -171,6 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      <NotificationsController />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-[216px] bg-command-black flex-col fixed h-full z-10 border-r border-white/[0.05]">

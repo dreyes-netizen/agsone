@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import React from "react";
@@ -11,9 +12,15 @@ import {
   Clock, Receipt, AlertTriangle, Loader2,
 } from "lucide-react";
 import { useConfetti } from "@/lib/hooks/useConfetti";
-import { ImageLightbox } from "@/components/ImageLightbox";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
+
+// Closed by default — split into its own chunk instead of shipping with the
+// page bundle.
+const ImageLightbox = dynamic(
+  () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
+  { ssr: false },
+);
 
 type Reward = {
   id: string;

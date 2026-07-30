@@ -1,3 +1,22 @@
+// A raw Cloudinary secure_url points at the original upload — full resolution,
+// original format. A 4 MB phone photo would be served at full size into e.g.
+// a 24px avatar or a 3-column feed thumbnail. Cloudinary can transform on
+// delivery via URL segments, so insert them once here (at upload time, baked
+// into the URL we store) instead of touching every place the URL is later
+// rendered:
+//   f_auto   — serve WebP/AVIF to browsers that support it, original format otherwise
+//   q_auto   — Cloudinary picks the smallest quality that looks visually identical
+//   w_1600,c_limit — never serve wider than 1600px, but only ever shrinks,
+//                    never upscales or crops — 1600px is comfortably above
+//                    anything this app displays, including the lightbox
+const DELIVERY_TRANSFORM = "f_auto,q_auto,w_1600,c_limit";
+
+function withDeliveryTransform(url: string): string {
+  return url.includes("/upload/")
+    ? url.replace("/upload/", `/upload/${DELIVERY_TRANSFORM}/`)
+    : url;
+}
+
 export async function uploadToCloudinary(file: File, token: string): Promise<string> {
   // Step 1: Get a short-lived signature from our server (requires auth)
   const signRes = await fetch("/api/upload/sign", {
@@ -26,5 +45,5 @@ export async function uploadToCloudinary(file: File, token: string): Promise<str
 
   if (!res.ok) throw new Error("Upload failed");
   const data = await res.json() as { secure_url: string };
-  return data.secure_url;
+  return withDeliveryTransform(data.secure_url);
 }

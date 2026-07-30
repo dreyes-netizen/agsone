@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   const today = new Date();
-  const todayMonth = today.getMonth();
+  const todayMonth = today.getMonth(); // 0-indexed (JS convention)
   const todayDay = today.getDate();
   const todayYear = today.getFullYear();
 
@@ -30,58 +30,106 @@ export async function GET(req: NextRequest) {
   if (configs.length === 0) {
     return NextResponse.json({ data: { awarded: 0, reason: "no active configs" } });
   }
-
   const configMap = Object.fromEntries(configs.map((c) => [c.type, c]));
 
-  const users = await prisma.user.findMany({
+  // Match month/day in SQL instead of pulling every user with ANY birthday
+  // or hireDate set and filtering in JS. EXTRACT(MONTH ...) is 1-indexed,
+  // unlike JS's getMonth().
+  const anniversaryUsers = await prisma.$queryRaw<
+    { id: string; displayName: string; hireDate: Date }[]
+  >`
+    SELECT id, "displayName", "hireDate"
+    FROM "User"
+    WHERE "hireDate" IS NOT NULL
+      AND EXTRACT(MONTH FROM "hireDate") = ${todayMonth + 1}
+      AND EXTRACT(DAY FROM "hireDate") = ${todayDay}
+  `;
+
+  if (anniversaryUsers.length === 0) {
+    return NextResponse.json({ data: { awarded: 0 } });
+  }
+
+  // Group today's anniversary users by which milestone type they hit (users
+  // whose year count doesn't map to a configured milestone, or whose
+  // milestone isn't active, are dropped here) — everyone in the same group
+  // shares the same cfg.pointsReward, so each group's writes can be batched
+  // together instead of one $transaction per user.
+  type AnniversaryType = (typeof ANNIVERSARY_TYPES)[keyof typeof ANNIVERSARY_TYPES];
+  type Group = { milestoneType: AnniversaryType; label: string; users: typeof anniversaryUsers };
+  const groups = new Map<AnniversaryType, Group>();
+  for (const user of anniversaryUsers) {
+    const yearsWorked = todayYear - user.hireDate.getFullYear();
+    const milestoneType = ANNIVERSARY_TYPES[yearsWorked as keyof typeof ANNIVERSARY_TYPES];
+    if (!milestoneType || !configMap[milestoneType]) continue;
+    const label = `${yearsWorked}-Year Work Anniversary`;
+    const group = groups.get(milestoneType) ?? { milestoneType, label, users: [] };
+    group.users.push(user);
+    groups.set(milestoneType, group);
+  }
+
+  if (groups.size === 0) {
+    return NextResponse.json({ data: { awarded: 0 } });
+  }
+
+  // One query for "who's already been awarded this year" across every
+  // relevant type, instead of a milestoneAward.findUnique per user.
+  const allUserIds = [...groups.values()].flatMap((g) => g.users.map((u) => u.id));
+  const existingAwards = await prisma.milestoneAward.findMany({
     where: {
-      OR: [{ birthday: { not: null } }, { hireDate: { not: null } }],
+      userId: { in: allUserIds },
+      type: { in: [...groups.keys()] },
+      year: todayYear,
     },
-    select: { id: true, displayName: true, birthday: true, hireDate: true },
+    select: { userId: true, type: true },
   });
+  const alreadyAwarded = new Set(existingAwards.map((a) => `${a.userId}:${a.type}`));
 
   let awarded = 0;
+  const notifications: { userId: string; title: string; body: string }[] = [];
 
-  for (const user of users) {
-    // Work anniversaries
-    if (user.hireDate) {
-      const hMonth = user.hireDate.getMonth();
-      const hDay = user.hireDate.getDate();
-      if (hMonth === todayMonth && hDay === todayDay) {
-        const yearsWorked = todayYear - user.hireDate.getFullYear();
-        const milestoneType = ANNIVERSARY_TYPES[yearsWorked as keyof typeof ANNIVERSARY_TYPES];
-        if (milestoneType && configMap[milestoneType]) {
-          const existing = await prisma.milestoneAward.findUnique({
-            where: { userId_type_year: { userId: user.id, type: milestoneType, year: todayYear } },
-          });
-          if (!existing) {
-            const cfg = configMap[milestoneType];
-            const label = `${yearsWorked}-Year Work Anniversary`;
-            await prisma.$transaction(async (tx) => {
-              await tx.user.update({ where: { id: user.id }, data: { pointsBalance: { increment: cfg.pointsReward } } });
-              await tx.pointTransaction.create({
-                data: {
-                  toUserId: user.id,
-                  amount: cfg.pointsReward,
-                  type: "MILESTONE",
-                  note: `Congratulations on your ${label}! You've earned ${cfg.pointsReward} pts.`,
-                  createdById: cfg.updatedById,
-                },
-              });
-              await tx.milestoneAward.create({ data: { userId: user.id, type: milestoneType, year: todayYear } });
-            });
-            await createNotification({
-              userId: user.id,
-              type: "MILESTONE",
-              title: `Happy ${label}!`,
-              body: `You've received ${cfg.pointsReward} pts for your ${label}.`,
-            });
-            awarded++;
-          }
-        }
-      }
+  for (const group of groups.values()) {
+    const toAward = group.users.filter((u) => !alreadyAwarded.has(`${u.id}:${group.milestoneType}`));
+    if (toAward.length === 0) continue;
+
+    const cfg = configMap[group.milestoneType];
+    const toAwardIds = toAward.map((u) => u.id);
+
+    await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { id: { in: toAwardIds } },
+        data: { pointsBalance: { increment: cfg.pointsReward } },
+      }),
+      prisma.pointTransaction.createMany({
+        data: toAwardIds.map((userId) => ({
+          toUserId: userId,
+          amount: cfg.pointsReward,
+          type: "MILESTONE",
+          note: `Congratulations on your ${group.label}! You've earned ${cfg.pointsReward} pts.`,
+          createdById: cfg.updatedById,
+        })),
+      }),
+      prisma.milestoneAward.createMany({
+        data: toAwardIds.map((userId) => ({ userId, type: group.milestoneType, year: todayYear })),
+      }),
+    ]);
+
+    for (const _user of toAward) {
+      notifications.push({
+        userId: _user.id,
+        title: `Happy ${group.label}!`,
+        body: `You've received ${cfg.pointsReward} pts for your ${group.label}.`,
+      });
     }
+    awarded += toAward.length;
   }
+
+  // None of these depend on each other — fire concurrently instead of one
+  // notification at a time inside the award loop.
+  await Promise.all(
+    notifications.map((n) =>
+      createNotification({ userId: n.userId, type: "MILESTONE", title: n.title, body: n.body })
+    )
+  );
 
   return NextResponse.json({ data: { awarded } });
 }

@@ -32,9 +32,19 @@ export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // getAllyEnabled() (an AppSetting DB read) and checkRateLimit() (an Upstash
+  // Redis read) are independent of each other and of body parsing below —
+  // kick both off now instead of one-at-a-time, but keep applying their
+  // results in the same priority order the original sequential code did
+  // (ally-disabled > jailbreak > rate-limited).
+  const [allyEnabled, rateLimit] = await Promise.all([
+    getAllyEnabled(),
+    checkRateLimit(user.id),
+  ]);
+
   // Respect the global on/off switch — disabling Ally must stop the AI, not
   // just hide the widget (a user could still hit this endpoint directly).
-  if (!(await getAllyEnabled())) {
+  if (!allyEnabled) {
     return NextResponse.json(
       { error: "Ally is currently unavailable." },
       { status: 403 },
@@ -57,8 +67,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { allowed } = await checkRateLimit(user.id);
-  if (!allowed) {
+  if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "You've reached the message limit (20/hour). Please try again later." },
       { status: 429 },

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Loader2 } from "lucide-react";
@@ -70,7 +71,7 @@ export default function OnboardingPage() {
           {/* Header */}
           <div className="flex items-center gap-2.5 mb-7">
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
-              <img src="/agslogo.png" alt="AGS One" className="w-full h-full object-contain p-1" />
+              <Image src="/agslogo.png" alt="AGS One" width={32} height={32} className="w-full h-full object-contain p-1" />
             </div>
             <span className="text-zinc-900 font-semibold">AGS One</span>
           </div>

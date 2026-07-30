@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, CheckCircle, AlertCircle, AlertTriangle, Truck, RefreshCw } from "lucide-react";
-import { ImageLightbox } from "@/components/ImageLightbox";
+
+// Closed by default — split into its own chunk instead of shipping with the
+// page bundle.
+const ImageLightbox = dynamic(
+  () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
+  { ssr: false },
+);
 
 type AddOn = { name: string; price: number };
 

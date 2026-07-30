@@ -17,11 +17,23 @@ export async function GET(req: NextRequest) {
   const { page, limit, skip } = parsePaginationParams(searchParams);
 
   const [documents, total] = await Promise.all([
+    // `include` with no `select` returned every column, including `content`
+    // — the full extracted PDF text, potentially megabytes per row — for a
+    // list view that only ever displays name/fileName/fileSize/isActive/
+    // uploadedAt. Select just those instead.
     prisma.policyDocument.findMany({
       orderBy: { uploadedAt: "desc" },
       skip,
       take: limit,
-      include: { uploadedBy: { select: { displayName: true } } },
+      select: {
+        id: true,
+        name: true,
+        fileName: true,
+        fileSize: true,
+        isActive: true,
+        uploadedAt: true,
+        uploadedBy: { select: { displayName: true } },
+      },
     }),
     prisma.policyDocument.count(),
   ]);

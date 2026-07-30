@@ -88,10 +88,10 @@ export async function POST(
   });
 
   const label = GAME_LABELS[old.gameType] ?? "Minigame";
-  const requesterName =
-    (isHost ? old.host.displayName : null) ??
-    (await prisma.user.findUnique({ where: { id: authUser.id }, select: { displayName: true } }))?.displayName ??
-    "Someone";
+  // If the host requested, use the name already loaded via `old.host`; otherwise
+  // it's the guest requesting, whose name verifyAuth already returned — no
+  // extra query needed either way.
+  const requesterName = isHost ? old.host.displayName : authUser.displayName;
 
   await createNotification({
     userId: opponentId,

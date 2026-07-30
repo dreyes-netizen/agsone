@@ -19,35 +19,73 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const opponentId = searchParams.get("opponentId");
 
-  // Head-to-head mode: record vs one specific opponent.
+  // Head-to-head mode: record vs one specific opponent — a grouped COUNT
+  // instead of fetching every session played against them and tallying in
+  // JS (a veteran pair of players could have hundreds of matches).
   if (opponentId) {
-    const sessions = await prisma.gameSession.findMany({
-      where: {
-        status: "FINISHED",
-        OR: [
-          { hostId: authUser.id, guestId: opponentId },
-          { hostId: opponentId, guestId: authUser.id },
-        ],
-      },
-      select: { winnerId: true },
-    });
-
-    let wins = 0, losses = 0, draws = 0;
-    for (const s of sessions) {
-      const o = outcomeFor(s, authUser.id);
-      if (o === "win") wins++;
-      else if (o === "loss") losses++;
-      else draws++;
-    }
-    return NextResponse.json({ data: { wins, losses, draws, total: sessions.length } });
+    const rows = await prisma.$queryRaw<{ wins: bigint; losses: bigint; draws: bigint }[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "winnerId" = ${authUser.id}) AS wins,
+        COUNT(*) FILTER (WHERE "winnerId" IS NULL) AS draws,
+        COUNT(*) FILTER (WHERE "winnerId" IS NOT NULL AND "winnerId" != ${authUser.id}) AS losses
+      FROM "GameSession"
+      WHERE status = 'FINISHED'
+        AND (("hostId" = ${authUser.id} AND "guestId" = ${opponentId})
+          OR ("hostId" = ${opponentId} AND "guestId" = ${authUser.id}))
+    `;
+    const wins = Number(rows[0]?.wins ?? 0);
+    const losses = Number(rows[0]?.losses ?? 0);
+    const draws = Number(rows[0]?.draws ?? 0);
+    return NextResponse.json({ data: { wins, losses, draws, total: wins + losses + draws } });
   }
 
-  // Personal stats: every finished game this user played, newest first.
-  const sessions = await prisma.gameSession.findMany({
-    where: {
-      status: "FINISHED",
-      OR: [{ hostId: authUser.id }, { guestId: authUser.id }],
-    },
+  // Personal stats — win/loss/draw totals and the per-game breakdown used to
+  // be computed by fetching EVERY finished game this user ever played (full
+  // rows, 7 columns each) and tallying in JS. One GROUP BY gets both in a
+  // single query, with only the 3 columns Postgres needs to do the counting.
+  const perGameRows = await prisma.$queryRaw<
+    { gameType: string; w: bigint; l: bigint; d: bigint }[]
+  >`
+    SELECT "gameType",
+      COUNT(*) FILTER (WHERE "winnerId" = ${authUser.id}) AS w,
+      COUNT(*) FILTER (WHERE "winnerId" IS NULL) AS d,
+      COUNT(*) FILTER (WHERE "winnerId" IS NOT NULL AND "winnerId" != ${authUser.id}) AS l
+    FROM "GameSession"
+    WHERE status = 'FINISHED' AND ("hostId" = ${authUser.id} OR "guestId" = ${authUser.id})
+    GROUP BY "gameType"
+  `;
+
+  let wins = 0, losses = 0, draws = 0;
+  const perGame: Record<string, { w: number; l: number; d: number }> = {};
+  for (const row of perGameRows) {
+    const w = Number(row.w), l = Number(row.l), d = Number(row.d);
+    perGame[row.gameType] = { w, l, d };
+    wins += w;
+    losses += l;
+    draws += d;
+  }
+
+  // Current streak: count leading wins from the most recent game. Bounded to
+  // the last 200 finished games (ordered desc, winnerId only) instead of
+  // every game ever played — far more than any realistic streak, but a
+  // fraction of the row/column weight of the original unbounded fetch.
+  const recentOutcomes = await prisma.gameSession.findMany({
+    where: { status: "FINISHED", OR: [{ hostId: authUser.id }, { guestId: authUser.id }] },
+    select: { winnerId: true },
+    orderBy: { updatedAt: "desc" },
+    take: 200,
+  });
+  let currentStreak = 0;
+  for (const s of recentOutcomes) {
+    if (s.winnerId === authUser.id) currentStreak++;
+    else break;
+  }
+
+  // Recent history (last 20) — only these rows need the opponent-facing
+  // fields (hostId/guestId/pointsWager), fetched directly with take: 20
+  // instead of slicing an already-fully-loaded array.
+  const recent = await prisma.gameSession.findMany({
+    where: { status: "FINISHED", OR: [{ hostId: authUser.id }, { guestId: authUser.id }] },
     select: {
       id: true,
       gameType: true,
@@ -58,32 +96,9 @@ export async function GET(req: NextRequest) {
       updatedAt: true,
     },
     orderBy: { updatedAt: "desc" },
+    take: 20,
   });
 
-  let wins = 0, losses = 0, draws = 0;
-  const perGame: Record<string, { w: number; l: number; d: number }> = {};
-
-  for (const s of sessions) {
-    const o = outcomeFor(s, authUser.id);
-    if (o === "win") wins++;
-    else if (o === "loss") losses++;
-    else draws++;
-
-    const g = (perGame[s.gameType] ??= { w: 0, l: 0, d: 0 });
-    if (o === "win") g.w++;
-    else if (o === "loss") g.l++;
-    else g.d++;
-  }
-
-  // Current streak: count leading wins from the most recent game.
-  let currentStreak = 0;
-  for (const s of sessions) {
-    if (outcomeFor(s, authUser.id) === "win") currentStreak++;
-    else break;
-  }
-
-  // Recent history (last 20) — resolve opponent display names.
-  const recent = sessions.slice(0, 20);
   const opponentIds = [
     ...new Set(
       recent.map(s => (s.hostId === authUser.id ? s.guestId : s.hostId)).filter(Boolean) as string[],
@@ -109,7 +124,7 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  const total = sessions.length;
+  const total = wins + losses + draws;
   const decided = wins + losses;
   const winRate = decided > 0 ? Math.round((wins / decided) * 100) : 0;
 

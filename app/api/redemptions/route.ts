@@ -55,31 +55,52 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Reward not found" }, { status: 404 });
   }
 
-  if (user.pointsBalance < reward.pointCost) {
-    return NextResponse.json({ error: "Insufficient points" }, { status: 400 });
-  }
-
-  // Atomic: deduct points + create redemption + decrement stock
-  const redemption = await prisma.$transaction(async (tx) => {
-    const created = await tx.redemption.create({
-      data: { userId: user.id, rewardId: reward.id, pointsSpent: reward.pointCost, status: "PENDING" },
+  // Atomic: deduct points + create redemption + decrement stock.
+  // The balance guard used to be a separate `if` check before this
+  // transaction, reading `user.pointsBalance` from the verifyAuth payload —
+  // that value can be stale by the time the transaction runs, so two
+  // concurrent redemptions could both pass the check and both decrement,
+  // driving the balance negative. Guarding with `updateMany({ where: {
+  // pointsBalance: { gte: cost } } })` mirrors the stock check just below:
+  // Postgres evaluates the WHERE clause against the row's current value at
+  // update time and locks it for the duration, so a second concurrent
+  // request sees the already-decremented balance and its guard fails —
+  // unlike a plain SELECT-then-UPDATE, which has no such lock and is
+  // exactly the race that made this exploitable.
+  let redemption;
+  try {
+    redemption = await prisma.$transaction(async (tx) => {
+      const balanceResult = await tx.user.updateMany({
+        where: { id: user.id, pointsBalance: { gte: reward.pointCost } },
+        data: { pointsBalance: { decrement: reward.pointCost } },
+      });
+      if (balanceResult.count === 0) {
+        throw new Error("INSUFFICIENT_POINTS");
+      }
+      const created = await tx.redemption.create({
+        data: { userId: user.id, rewardId: reward.id, pointsSpent: reward.pointCost, status: "PENDING" },
+      });
+      await tx.pointTransaction.create({
+        data: { toUserId: user.id, amount: -reward.pointCost, type: "REDEMPTION", note: `Redeemed: ${reward.name}`, createdById: user.id },
+      });
+      const stockResult = await tx.reward.updateMany({
+        where: { id: reward.id, stockQuantity: { gt: 0 } },
+        data: { stockQuantity: { decrement: 1 } },
+      });
+      if (stockResult.count === 0) {
+        throw new Error("OUT_OF_STOCK");
+      }
+      return created;
     });
-    await tx.user.update({
-      where: { id: user.id },
-      data: { pointsBalance: { decrement: reward.pointCost } },
-    });
-    await tx.pointTransaction.create({
-      data: { toUserId: user.id, amount: -reward.pointCost, type: "REDEMPTION", note: `Redeemed: ${reward.name}`, createdById: user.id },
-    });
-    const stockResult = await tx.reward.updateMany({
-      where: { id: reward.id, stockQuantity: { gt: 0 } },
-      data: { stockQuantity: { decrement: 1 } },
-    });
-    if (stockResult.count === 0) {
-      throw new Error('Out of stock');
+  } catch (err) {
+    if (err instanceof Error && err.message === "INSUFFICIENT_POINTS") {
+      return NextResponse.json({ error: "Insufficient points" }, { status: 400 });
     }
-    return created;
-  });
+    if (err instanceof Error && err.message === "OUT_OF_STOCK") {
+      return NextResponse.json({ error: "Out of stock" }, { status: 400 });
+    }
+    throw err;
+  }
 
   broadcast(`points:${user!.id}`).catch(() => {});
 

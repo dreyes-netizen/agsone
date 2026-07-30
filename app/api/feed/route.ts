@@ -42,7 +42,12 @@ export async function GET(req: NextRequest) {
       author: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
       shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
       department: { select: { name: true } },
-      reactions: { select: { emoji: true, userId: true } },
+      // reactions used to be included here as full rows (emoji + userId per
+      // reaction) just to build a per-emoji tally and this user's own emojis
+      // — a post with 300 reactions shipped 300 rows to compute a 6-key
+      // object. Both are fetched separately below: a groupBy for the counts
+      // (one row per post per emoji, not per reaction) and a targeted query
+      // for just this user's own reactions.
       _count: { select: { comments: true } },
       pollOptions: { include: { _count: { select: { votes: true } } } },
     },
@@ -51,26 +56,46 @@ export async function GET(req: NextRequest) {
   const hasMore   = posts.length > limit;
   const page      = hasMore ? posts.slice(0, limit) : posts;
   const nextCursor = hasMore ? page[page.length - 1].id : null;
+  const postIds = page.map((p) => p.id);
 
-  const myVotes = await prisma.pollVote.findMany({
-    where: { userId: user.id, postId: { in: page.map((p) => p.id) } },
-    select: { postId: true, optionId: true },
-  });
+  const [myVotes, reactionCounts, myReactions] = await Promise.all([
+    prisma.pollVote.findMany({
+      where: { userId: user.id, postId: { in: postIds } },
+      select: { postId: true, optionId: true },
+    }),
+    prisma.socialReaction.groupBy({
+      by: ["postId", "emoji"],
+      where: { postId: { in: postIds } },
+      _count: true,
+    }),
+    prisma.socialReaction.findMany({
+      where: { postId: { in: postIds }, userId: user.id },
+      select: { postId: true, emoji: true },
+    }),
+  ]);
   const myVoteMap = new Map(myVotes.map((v) => [v.postId, v.optionId]));
 
+  const reactionMapByPost = new Map<string, Record<string, number>>();
+  for (const r of reactionCounts) {
+    const m = reactionMapByPost.get(r.postId) ?? {};
+    m[r.emoji] = r._count;
+    reactionMapByPost.set(r.postId, m);
+  }
+  const myReactionsByPost = new Map<string, string[]>();
+  for (const r of myReactions) {
+    const arr = myReactionsByPost.get(r.postId) ?? [];
+    arr.push(r.emoji);
+    myReactionsByPost.set(r.postId, arr);
+  }
+
   const enriched = page.map((p) => {
-    const reactionMap: Record<string, number> = {};
-    for (const r of p.reactions) {
-      reactionMap[r.emoji] = (reactionMap[r.emoji] ?? 0) + 1;
-    }
-    const myReactions = p.reactions.filter((r) => r.userId === user.id).map((r) => r.emoji);
     // Back-compat: fold legacy imageUrl into imageUrls so old posts still show their photo
     const imageUrls = p.imageUrls.length > 0 ? p.imageUrls : p.imageUrl ? [p.imageUrl] : [];
     return {
       ...p,
       imageUrls,
-      reactions: reactionMap,
-      myReactions,
+      reactions: reactionMapByPost.get(p.id) ?? {},
+      myReactions: myReactionsByPost.get(p.id) ?? [],
       commentCount: p._count.comments,
       myVoteOptionId: myVoteMap.get(p.id) ?? null,
     };

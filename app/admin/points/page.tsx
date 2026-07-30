@@ -144,13 +144,28 @@ export default function AwardPointsPage() {
 
   const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
 
+  // /api/admin/employees is paginated (100/page max, by design — see
+  // lib/api/pagination.ts) but the bulk-award picker and single-award
+  // <select> need the FULL active roster, not just page 1. Calling it with
+  // no params silently truncated to the first 25 employees alphabetically.
+  // Page through it instead of raising the cap.
+  async function loadAllEmployees() {
+    type Page = { data: (Employee & { role: string })[]; page: number; pages: number };
+    const first = await apiFetch<Page>("/api/admin/employees?limit=100");
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, first.pages - 1) }, (_, i) =>
+        apiFetch<Page>(`/api/admin/employees?limit=100&page=${i + 2}`)
+      )
+    );
+    const all = [first, ...rest].flatMap((r) => r.data);
+    // Only Super Admin can award Managers — filter the list for other roles
+    const eligible = isSuperAdmin ? all : all.filter((e) => e.role === "EMPLOYEE");
+    setEmployees(eligible);
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: (Employee & { role: string })[] }>("/api/admin/employees").then((r) => {
-      // Only Super Admin can award Managers — filter the list for other roles
-      const eligible = isSuperAdmin ? r.data : r.data.filter((e) => e.role === "EMPLOYEE");
-      setEmployees(eligible);
-    });
+    loadAllEmployees();
     loadHistory(txPage);
     loadBudget();
   // eslint-disable-next-line react-hooks/exhaustive-deps

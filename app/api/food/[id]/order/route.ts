@@ -47,7 +47,14 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const listing = await prisma.foodListing.findUnique({ where: { id } });
+  // Neither query depends on the other's result — fetch both concurrently,
+  // then apply the same checks in the same priority order as before.
+  const [listing, existing] = await Promise.all([
+    prisma.foodListing.findUnique({ where: { id } }),
+    prisma.foodOrder.findUnique({
+      where: { listingId_userId: { listingId: id, userId: authUser.id } },
+    }),
+  ]);
   if (!listing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!listing.isActive || listing.cutoffAt <= new Date()) {
     return NextResponse.json({ error: "Orders closed" }, { status: 410 });
@@ -55,10 +62,6 @@ export async function POST(
   if (listing.createdById === authUser.id) {
     return NextResponse.json({ error: "Cannot order your own listing" }, { status: 403 });
   }
-
-  const existing = await prisma.foodOrder.findUnique({
-    where: { listingId_userId: { listingId: id, userId: authUser.id } },
-  });
   if (existing) return NextResponse.json({ error: "Already ordered" }, { status: 409 });
 
   // Don't trust client-supplied add-on prices: each selection must match one on

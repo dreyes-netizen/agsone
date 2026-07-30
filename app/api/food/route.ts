@@ -19,6 +19,12 @@ export async function GET(req: NextRequest) {
   const authUser = await verifyAuth(req);
   if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // The client fetches this once and filters into 3 tabs (Available / My
+  // Orders / My Listings) client-side rather than paginating per-tab, so
+  // this can't take a small `take` without silently dropping older listings
+  // from "My Orders"/"My Listings". 200 is a bound rather than true
+  // pagination — comfortably above realistic usage (this table has no
+  // cleanup job, so it grows indefinitely) without a client rework.
   const listings = await prisma.foodListing.findMany({
     where: {
       OR: [
@@ -36,6 +42,7 @@ export async function GET(req: NextRequest) {
       _count: { select: { orders: true } },
     },
     orderBy: { createdAt: "desc" },
+    take: 200,
   });
 
   const data = listings.map((l) => ({

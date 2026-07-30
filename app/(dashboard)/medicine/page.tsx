@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   Pill,
   Search,
@@ -13,8 +14,14 @@ import {
 } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { ImageLightbox } from "@/components/ImageLightbox";
 import { Pagination } from "@/components/ui/pagination";
+
+// Closed by default — split into its own chunk instead of shipping with the
+// page bundle.
+const ImageLightbox = dynamic(
+  () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
+  { ssr: false },
+);
 
 type Medicine = {
   id: string;

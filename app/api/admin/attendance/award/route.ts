@@ -137,11 +137,18 @@ export async function POST(req: NextRequest) {
   });
   const balanceMap = new Map(updatedUsers.map((u) => [u.id, u.pointsBalance]));
 
-  const actorUser = await prisma.user.findUnique({
-    where: { id: user!.id },
-    select: { displayName: true },
+  // user.displayName is already known from verifyAuth — no need to re-query it.
+  const actorName = user!.displayName ?? "Super Admin";
+
+  // Badge-checking needs each recipient's lifetime points earned — one
+  // groupBy across all recipients instead of one aggregate() per recipient
+  // (this used to be `toAward.length` separate aggregate queries).
+  const earnedTotals = await prisma.pointTransaction.groupBy({
+    by: ["toUserId"],
+    where: { toUserId: { in: recipientIds }, amount: { gt: 0 } },
+    _sum: { amount: true },
   });
-  const actorName = actorUser?.displayName ?? "Super Admin";
+  const earnedMap = new Map(earnedTotals.map((e) => [e.toUserId, e._sum.amount ?? 0]));
 
   // Per-user: notification + email + level-up + badges + broadcast
   for (const u of toAward) {
@@ -158,10 +165,7 @@ export async function POST(req: NextRequest) {
       ...pointsReceivedEmail(u.displayName, amount, actorName, note, newBalance),
     }).catch(() => {});
     checkLevelUp(u.id, newBalance).catch(() => {});
-    prisma.pointTransaction
-      .aggregate({ where: { toUserId: u.id, amount: { gt: 0 } }, _sum: { amount: true } })
-      .then((agg) => checkAndAwardBadges({ userId: u.id, totalEarned: agg._sum.amount ?? 0 }))
-      .catch(() => {});
+    checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch(() => {});
     broadcast(`points:${u.id}`).catch(() => {});
   }
 

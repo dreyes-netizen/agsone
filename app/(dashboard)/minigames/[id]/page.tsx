@@ -2,15 +2,25 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useConfetti } from "@/lib/hooks/useConfetti";
-import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
-import { GameResultOverlay } from "@/components/minigames/GameResultOverlay";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
 import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+
+// Both closed/hidden by default — split into their own chunks instead of
+// shipping with the page bundle.
+const HowToPlayModal = dynamic(
+  () => import("@/components/minigames/HowToPlayModal").then((m) => m.HowToPlayModal),
+  { ssr: false },
+);
+const GameResultOverlay = dynamic(
+  () => import("@/components/minigames/GameResultOverlay").then((m) => m.GameResultOverlay),
+  { ssr: false },
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

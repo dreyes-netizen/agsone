@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useConfetti } from "@/lib/hooks/useConfetti";
-import { HowToPlayModal } from "@/components/minigames/HowToPlayModal";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { BarChart2, Gamepad2, Clock, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+
+// Closed by default — split into its own chunk instead of shipping with the
+// page bundle.
+const HowToPlayModal = dynamic(
+  () => import("@/components/minigames/HowToPlayModal").then((m) => m.HowToPlayModal),
+  { ssr: false },
+);
 
 const GAME_TYPES = [
   { key: "RPS",             label: "✌️ Rock Paper Scissors", short: "✌️ RPS",    desc: "3 rounds · Simultaneous picks · Quick & fun" },

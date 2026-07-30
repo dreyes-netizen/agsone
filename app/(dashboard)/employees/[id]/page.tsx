@@ -9,6 +9,7 @@ import {
   Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle, Loader2, X,
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
+import { RoleBadge } from "@/components/RoleBadge";
 
 type ShoutoutPost = {
   id: string;
@@ -53,14 +54,6 @@ type Transaction = {
   note: string | null;
   createdAt: string;
   fromUser: { displayName: string; avatarUrl: string | null } | null;
-};
-
-const roleLabel = { EMPLOYEE: "Employee", MANAGER: "Manager", HR_ADMIN: "HR Admin", SUPER_ADMIN: "Super Admin" };
-const roleBadgeClass = {
-  EMPLOYEE:    "bg-gray-100 text-gray-600",
-  MANAGER:     "bg-blue-100 text-blue-700",
-  HR_ADMIN:    "bg-violet-100 text-violet-700",
-  SUPER_ADMIN: "bg-red-100 text-red-700",
 };
 
 const typeConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -287,9 +280,7 @@ export default function EmployeeProfilePage() {
               <p className="text-sm text-gray-500 mt-0.5">{employee.email}</p>
             )}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass[employee.role]}`}>
-                {roleLabel[employee.role]}
-              </span>
+              <RoleBadge role={employee.role} />
               {employee.department && (
                 <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
                   <Building2 className="w-3 h-3" aria-hidden="true" />

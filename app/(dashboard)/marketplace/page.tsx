@@ -13,6 +13,7 @@ import {
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
+import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
 
 type Reward = {
   id: string;
@@ -38,13 +39,6 @@ const categoryConfig: Record<string, { icon: React.ElementType; iconClass: strin
   VOUCHER:   { icon: Ticket,   iconClass: "text-blue-600",   label: "Voucher",   accent: "from-blue-500 to-cyan-400",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
   PRIVILEGE: { icon: Star,     iconClass: "text-indigo-600", label: "Privilege", accent: "from-indigo-500 to-blue-500",  badge: "bg-indigo-50 text-indigo-700 border-indigo-200" },
   DIGITAL:   { icon: Monitor,  iconClass: "text-emerald-600",label: "Digital",   accent: "from-emerald-500 to-teal-400",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-};
-
-const statusConfig: Record<string, { label: string; className: string }> = {
-  PENDING:   { label: "Pending",   className: "bg-amber-50 text-amber-700 border-amber-200" },
-  APPROVED:  { label: "Approved",  className: "bg-blue-50 text-blue-700 border-blue-200" },
-  FULFILLED: { label: "Fulfilled", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  REJECTED:  { label: "Rejected",  className: "bg-red-50 text-red-700 border-red-200" },
 };
 
 export default function MarketplacePage() {
@@ -443,7 +437,6 @@ export default function MarketplacePage() {
             <ul role="list" className="space-y-3">
               {redemptions.map((r) => {
                 const cfg = categoryConfig[r.reward.category] ?? categoryConfig.PHYSICAL;
-                const status = statusConfig[r.status];
                 return (
                   <li key={r.id} className="bg-white rounded-card border border-table-border p-4 flex items-center gap-4">
                     <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} aria-hidden="true" />
@@ -461,8 +454,8 @@ export default function MarketplacePage() {
                         <p className="text-xs text-red-600 mt-1">Note: {r.adminNote}</p>
                       )}
                     </div>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${status.className}`}>
-                      {status.label}
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${REDEMPTION_STATUS_BADGE[r.status]}`}>
+                      {REDEMPTION_STATUS_LABEL[r.status]}
                     </span>
                   </li>
                 );

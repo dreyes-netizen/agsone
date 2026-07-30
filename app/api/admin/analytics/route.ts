@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
+import { CATEGORY_LABELS } from "@/lib/constants/feedbackCategories";
 
 export async function GET(req: NextRequest) {
   const actor = await verifyAuth(req);
@@ -212,7 +213,7 @@ export async function GET(req: NextRequest) {
       title: f.title,
       actorName: f.isAnonymous ? null : f.author?.displayName ?? null,
       actorAvatar: f.isAnonymous ? null : f.author?.avatarUrl ?? null,
-      meta: f.category.replace(/_/g, " "),
+      meta: CATEGORY_LABELS[f.category] ?? f.category.replace(/_/g, " "),
       createdAt: f.createdAt.toISOString(),
     })),
   ]
@@ -232,7 +233,7 @@ export async function GET(req: NextRequest) {
   // ── Recent Admin Activity — resolve unnamed toUserId refs, same as /api/admin/audit ──
   const unresolvedIds = recentAudit
     .map((l) => (l.afterState as Record<string, unknown> | null)?.toUserId as string | undefined)
-    .filter((id, idx, arr): id is string => {
+    .filter((id, idx): id is string => {
       if (!id) return false;
       const entry = recentAudit[idx];
       return !(entry.afterState as Record<string, unknown> | null)?.toUserName;

@@ -5,7 +5,8 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { Pagination } from "@/components/ui/pagination";
-import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, X } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, Users, X } from "lucide-react";
+import { RoleBadge } from "@/components/RoleBadge";
 
 type Employee = {
   id: string;
@@ -50,20 +51,6 @@ const EMPTY_ADD_FORM: AddForm = {
   employeeId: "",
   hireDate: "",
   birthday: "",
-};
-
-const roleLabel: Record<string, string> = {
-  EMPLOYEE:    "Employee",
-  MANAGER:     "Manager",
-  HR_ADMIN:    "HR Admin",
-  SUPER_ADMIN: "Super Admin",
-};
-
-const roleBadgeClass: Record<string, string> = {
-  EMPLOYEE:    "bg-gray-100 text-gray-600",
-  MANAGER:     "bg-navy-100 text-navy-700",
-  HR_ADMIN:    "bg-navy-100 text-navy-700",
-  SUPER_ADMIN: "bg-navy-200 text-navy-800",
 };
 
 export default function EmployeesPage() {
@@ -511,8 +498,9 @@ export default function EmployeesPage() {
           {/* Mobile card layout */}
           <div className="md:hidden divide-y divide-gray-50">
             {employees.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-500 text-sm">
-                No employees match the current filters.
+              <div className="flex flex-col items-center justify-center gap-2 px-6 py-8">
+                <Users className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                <p className="text-gray-500 text-sm">No employees match the current filters.</p>
               </div>
             ) : employees.map((employee) => (
               <div key={employee.id} className={`px-4 py-4 space-y-3 ${!employee.isActive ? "opacity-50" : ""}`}>
@@ -522,9 +510,7 @@ export default function EmployeesPage() {
                     <p className="text-xs text-gray-500 truncate">{employee.email}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass[employee.role]}`}>
-                      {roleLabel[employee.role]}
-                    </span>
+                    <RoleBadge role={employee.role} />
                     {employee.isActive
                       ? <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
                       : <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
@@ -585,8 +571,11 @@ export default function EmployeesPage() {
             <tbody>
               {employees.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-12 text-table-muted text-[13px]">
-                    No employees match the current filters.
+                  <td colSpan={11} className="py-12">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Users className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                      <p className="text-table-muted text-[13px]">No employees match the current filters.</p>
+                    </div>
                   </td>
                 </tr>
               ) : employees.map((employee, i) => (
@@ -603,9 +592,7 @@ export default function EmployeesPage() {
                     </span>
                   </td>
                   <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleBadgeClass[employee.role]}`}>
-                      {roleLabel[employee.role]}
-                    </span>
+                    <RoleBadge role={employee.role} />
                   </td>
                   <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                     <select

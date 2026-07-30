@@ -7,6 +7,7 @@ import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { AlertCircle, CheckCircle, Loader2, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 
 type Medicine = {
   id: string;
@@ -435,9 +436,12 @@ export default function AdminMedicinePage() {
               <span>Loading…</span>
             </div>
           ) : medicines.length === 0 ? (
-            <div className="text-center text-gray-500 py-12">No medicines yet. Add one above.</div>
+            <div className="flex flex-col items-center justify-center gap-2 py-12">
+              <Pill className="w-8 h-8 text-gray-300" aria-hidden="true" />
+              <p className="text-sm text-gray-500">No medicines yet. Add one above.</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {medicines.map((med) => (
                 <div
                   key={med.id}
@@ -463,7 +467,7 @@ export default function AdminMedicinePage() {
                     <p className="font-semibold text-gray-900 text-sm">{med.name}</p>
                     <p className="text-gray-500 text-xs line-clamp-2">{med.caption}</p>
                     <p className={`text-xs font-medium mt-1 ${med.stockQuantity === 0 ? "text-red-500" : "text-emerald-600"}`}>
-                      {med.stockQuantity} in stock
+                      {med.stockQuantity === 0 ? "Out of stock" : `${med.stockQuantity} in stock`}
                     </p>
                     {deleteConfirmId === med.id ? (
                       <div className="mt-2 flex items-center gap-1.5 text-xs">
@@ -512,7 +516,10 @@ export default function AdminMedicinePage() {
             <span>Loading…</span>
           </div>
         ) : medicines.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">No medicines yet.</div>
+          <div className="flex flex-col items-center justify-center gap-2 py-12">
+            <Pill className="w-8 h-8 text-gray-300" aria-hidden="true" />
+            <p className="text-sm text-gray-500">No medicines yet.</p>
+          </div>
         ) : (
           <>
           {/* Desktop table */}
@@ -561,11 +568,11 @@ export default function AdminMedicinePage() {
                           <span className={`text-xs font-medium ${
                             med.stockQuantity === 0
                               ? "text-red-500"
-                              : med.stockQuantity <= 3
+                              : med.stockQuantity <= LOW_STOCK_THRESHOLD
                               ? "text-amber-500"
                               : "text-emerald-600"
                           }`}>
-                            {med.stockQuantity === 0 ? "Out of stock" : med.stockQuantity <= 3 ? "Low stock" : "in stock"}
+                            {med.stockQuantity === 0 ? "Out of stock" : med.stockQuantity <= LOW_STOCK_THRESHOLD ? "Low stock" : "in stock"}
                           </span>
                         </div>
                       </td>
@@ -629,11 +636,11 @@ export default function AdminMedicinePage() {
                     <span className={`text-xs font-medium shrink-0 ${
                       med.stockQuantity === 0
                         ? "text-red-500"
-                        : med.stockQuantity <= 3
+                        : med.stockQuantity <= LOW_STOCK_THRESHOLD
                         ? "text-amber-500"
                         : "text-emerald-600"
                     }`}>
-                      {med.stockQuantity === 0 ? "Out" : med.stockQuantity <= 3 ? "Low" : "OK"}
+                      {med.stockQuantity === 0 ? "Out" : med.stockQuantity <= LOW_STOCK_THRESHOLD ? "Low" : "OK"}
                     </span>
                     <button
                       onClick={() => handleStockSave(med)}
@@ -753,10 +760,6 @@ export default function AdminMedicinePage() {
                       </div>
                     ))}
                   </div>
-
-                  <div className="pt-3">
-                    <Pagination page={reqPage} pages={reqPages} onPageChange={setReqPage} />
-                  </div>
                 </div>
               )}
 
@@ -817,7 +820,10 @@ export default function AdminMedicinePage() {
                   </div>
                 </div>
                 {filteredHistory.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No history yet.</p>
+                  <div className="flex flex-col items-center justify-center gap-2 py-8">
+                    <Pill className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                    <p className="text-sm text-gray-500">No history yet.</p>
+                  </div>
                 ) : (
                   <>
                     {/* Desktop table */}

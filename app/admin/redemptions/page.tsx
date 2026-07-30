@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { CheckCircle, XCircle, Package, Loader2 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
 
 type Redemption = {
   id: string;
@@ -15,13 +16,6 @@ type Redemption = {
   reward: { name: string; pointCost: number; category: string };
   user: { displayName: string; email: string };
   processedBy: { displayName: string } | null;
-};
-
-const statusBadgeClass: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-700",
-  APPROVED: "bg-emerald-100 text-emerald-700",
-  REJECTED: "bg-red-100 text-red-700",
-  FULFILLED: "bg-blue-100 text-blue-700",
 };
 
 export default function AdminRedemptionsPage() {
@@ -106,7 +100,10 @@ export default function AdminRedemptionsPage() {
             {loading ? (
               <div className="py-8"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></div>
             ) : pending.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No pending redemptions.</div>
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <CheckCircle className="w-8 h-8 text-emerald-400" aria-hidden="true" />
+                <p className="text-sm text-gray-500">No pending redemptions.</p>
+              </div>
             ) : (
               <div className="divide-y divide-gray-50">
                 {pending.map((r) => (
@@ -123,7 +120,7 @@ export default function AdminRedemptionsPage() {
                       <span>·</span>
                       <span>{r.reward.category}</span>
                       <span>·</span>
-                      <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                     </div>
                     <textarea
                       placeholder="Optional note..."
@@ -177,7 +174,12 @@ export default function AdminRedemptionsPage() {
                 </tr>
               ) : pending.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-table-muted text-[13px]">No pending redemptions.</td>
+                  <td colSpan={6} className="py-12">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <CheckCircle className="w-8 h-8 text-emerald-400" aria-hidden="true" />
+                      <p className="text-table-muted text-[13px]">No pending redemptions.</p>
+                    </div>
+                  </td>
                 </tr>
               ) : pending.map((r, i) => (
                 <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
@@ -192,7 +194,7 @@ export default function AdminRedemptionsPage() {
                   <td className={tdClass}>
                     <span className="font-semibold text-navy-600">{r.pointsSpent.toLocaleString()} pts</span>
                   </td>
-                  <td className={`${tdClass} text-gray-500`}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                  <td className={`${tdClass} text-gray-500`}>{new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
                   <td className={tdClass}>
                     <textarea
                       placeholder="Optional note..."
@@ -236,8 +238,13 @@ export default function AdminRedemptionsPage() {
         <div className="bg-white rounded-card border border-table-border overflow-clip">
           {/* Mobile card layout */}
           <div className="md:hidden">
-            {processed.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No processed redemptions yet.</div>
+            {loading ? (
+              <div className="py-8"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></div>
+            ) : processed.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <Package className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                <p className="text-sm text-gray-500">No processed redemptions yet.</p>
+              </div>
             ) : (
               <div className="divide-y divide-gray-50">
                 {processed.map((r) => (
@@ -247,8 +254,8 @@ export default function AdminRedemptionsPage() {
                         <p className="font-medium text-gray-900">{r.user.displayName}</p>
                         <p className="text-xs text-gray-500">{r.reward.name}</p>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${statusBadgeClass[r.status]}`}>
-                        {r.status}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${REDEMPTION_STATUS_BADGE[r.status]}`}>
+                        {REDEMPTION_STATUS_LABEL[r.status]}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -290,9 +297,18 @@ export default function AdminRedemptionsPage() {
               </tr>
             </thead>
             <tbody>
-              {processed.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-table-muted text-[13px]">No processed redemptions yet.</td>
+                  <td colSpan={7} className="text-center py-12"><div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-gray-500 text-sm"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</div></td>
+                </tr>
+              ) : processed.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Package className="w-8 h-8 text-gray-300" aria-hidden="true" />
+                      <p className="text-table-muted text-[13px]">No processed redemptions yet.</p>
+                    </div>
+                  </td>
                 </tr>
               ) : processed.map((r, i) => (
                 <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
@@ -305,8 +321,8 @@ export default function AdminRedemptionsPage() {
                     <span className="font-semibold text-navy-600">{r.pointsSpent.toLocaleString()} pts</span>
                   </td>
                   <td className={tdClass}>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadgeClass[r.status]}`}>
-                      {r.status}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${REDEMPTION_STATUS_BADGE[r.status]}`}>
+                      {REDEMPTION_STATUS_LABEL[r.status]}
                     </span>
                   </td>
                   <td className={`${tdClass} text-gray-500`}>{r.processedBy?.displayName ?? "—"}</td>

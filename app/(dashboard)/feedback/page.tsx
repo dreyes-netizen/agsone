@@ -92,7 +92,7 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { setListLoading(false); return; }
+    if (!user) { queueMicrotask(() => setListLoading(false)); return; }
     apiFetch<{ data: FeedbackItem[] }>("/api/feedback")
       .then((r) => setItems(r.data))
       .catch(console.error)
@@ -101,9 +101,8 @@ export default function FeedbackPage() {
   }, [authLoading, user]);
 
   useEffect(() => {
-    if (panel.mode !== "thread") { setThread(null); setThreadError(null); return; }
-    setThreadLoading(true);
-    setThreadError(null);
+    if (panel.mode !== "thread") { queueMicrotask(() => { setThread(null); setThreadError(null); }); return; }
+    queueMicrotask(() => { setThreadLoading(true); setThreadError(null); });
     apiFetch<{ data: FeedbackThread }>(`/api/feedback/${panel.id}`)
       .then((r) => setThread(r.data))
       .catch((err) => setThreadError(err instanceof Error ? err.message : "Failed to load"))

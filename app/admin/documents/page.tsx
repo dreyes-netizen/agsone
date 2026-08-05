@@ -68,7 +68,7 @@ export default function DocumentsPage() {
     }
   }
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { queueMicrotask(load); }, [page]);
 
   useEffect(() => {
     apiFetch<{ data: { allyEnabled: boolean } }>("/api/admin/settings")
@@ -314,10 +314,10 @@ export default function DocumentsPage() {
                           }}
                            className="border border-gray-300 rounded px-2 py-1 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-navy-500/30 w-48"
                         />
-                        <button onClick={() => handleRename(doc.id)} className="text-emerald-500 hover:text-emerald-700">
+                        <button onClick={() => handleRename(doc.id)} aria-label="Save name" className="text-emerald-500 hover:text-emerald-700">
                           <Check className="w-4 h-4" aria-hidden="true" />
                         </button>
-                        <button onClick={() => setRenamingId(null)} className="text-gray-500 hover:text-gray-600">
+                        <button onClick={() => setRenamingId(null)} aria-label="Cancel rename" className="text-gray-500 hover:text-gray-600">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -328,6 +328,7 @@ export default function DocumentsPage() {
                           onClick={() => { setRenamingId(doc.id); setRenameValue(doc.name); }}
                            className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-navy-600 transition-opacity"
                           title="Rename"
+                          aria-label="Rename"
                         >
                           <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
@@ -380,6 +381,7 @@ export default function DocumentsPage() {
                         onClick={() => handleDelete(doc.id, doc.name)}
                         className="text-red-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
                         title="Delete"
+                        aria-label="Delete"
                       >
                         <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
@@ -436,7 +438,7 @@ export default function DocumentsPage() {
               <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-2">
                 <p className="text-xs font-semibold text-indigo-700">For best results — convert to Markdown first</p>
                 <p className="text-xs text-indigo-600 leading-relaxed">
-                  Upload a <span className="font-medium">.md file</span> instead of a PDF. Markdown preserves headings, tables, and lists that PDF extraction often mangles, which makes Ally's answers more accurate.
+                  Upload a <span className="font-medium">.md file</span> instead of a PDF. Markdown preserves headings, tables, and lists that PDF extraction often mangles, which makes Ally&apos;s answers more accurate.
                 </p>
                 <div className="space-y-1">
                   <p className="text-xs text-indigo-500">Use this prompt in <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-700">claude.ai</a> — attach your PDF and send:</p>
@@ -447,6 +449,7 @@ export default function DocumentsPage() {
                       onClick={copyPrompt}
                       className="shrink-0 text-indigo-400 hover:text-indigo-600 transition-colors mt-0.5"
                       title="Copy prompt"
+                      aria-label="Copy prompt"
                     >
                       {promptCopied ? <CheckCheck className="w-4 h-4 text-emerald-500" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                     </button>

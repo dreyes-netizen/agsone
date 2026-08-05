@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { dbUser, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
   useEffect(() => {
     if (!loading && dbUser?.role !== "HR_ADMIN" && dbUser?.role !== "SUPER_ADMIN") {
@@ -37,10 +38,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [loading, dbUser, router]);
 
-  // Close sidebar on route change on mobile
-  useEffect(() => {
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setSidebarOpen(false);
-  }, [pathname]);
+  }
 
   if (loading || (dbUser?.role !== "HR_ADMIN" && dbUser?.role !== "SUPER_ADMIN")) return null;
 

@@ -77,7 +77,7 @@ export default function MinigamesStatsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
       .then(res => setBoard(res.data))
       .catch(() => setBoard([]))

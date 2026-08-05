@@ -100,11 +100,6 @@ export default function AuditLogPage() {
   const [filterAction, setFilterAction] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filterAction]);
-
   async function load() {
     setLoading(true);
     try {
@@ -122,6 +117,11 @@ export default function AuditLogPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    queueMicrotask(load);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filterAction]);
 
   function handleFilterChange(action: string) {
     setFilterAction(action);

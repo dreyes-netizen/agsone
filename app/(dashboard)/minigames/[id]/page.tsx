@@ -235,15 +235,14 @@ function TTTBoard({ session, onMove }: { session: Session; onMove: (data: unknow
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   // Track the most recently filled cell for a "last move" highlight.
-  const prevRef = useRef<(string | null)[]>(board);
+  const [prevBoard, setPrevBoard] = useState(board);
   const [lastMove, setLastMove] = useState<number | null>(null);
-  useEffect(() => {
-    const prev = prevRef.current;
+  if (board !== prevBoard) {
     let changed: number | null = null;
-    for (let i = 0; i < board.length; i++) if (board[i] && !prev[i]) changed = i;
+    for (let i = 0; i < board.length; i++) if (board[i] && !prevBoard[i]) changed = i;
     if (changed !== null) setLastMove(changed);
-    prevRef.current = board;
-  }, [board]);
+    setPrevBoard(board);
+  }
 
   const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   let winLine: number[] | null = null;
@@ -316,17 +315,16 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
   const [hoverCol, setHoverCol] = useState<number | null>(null);
 
   // Track the most recently dropped disc for the drop animation.
-  const prevRef = useRef<(number | null)[][]>(board);
+  const [prevBoard, setPrevBoard] = useState(board);
   const [lastMove, setLastMove] = useState<string | null>(null);
-  useEffect(() => {
-    const prev = prevRef.current;
+  if (board !== prevBoard) {
     let changed: string | null = null;
     for (let c = 0; c < 7; c++) for (let r = 0; r < 6; r++) {
-      if (board[c][r] && !(prev[c] && prev[c][r])) changed = `${c}-${r}`;
+      if (board[c][r] && !(prevBoard[c] && prevBoard[c][r])) changed = `${c}-${r}`;
     }
     if (changed) setLastMove(changed);
-    prevRef.current = board;
-  }, [board]);
+    setPrevBoard(board);
+  }
 
   const winCells = findC4Win(board);
   // Landing row (lowest empty) for the hovered column, for the ghost preview.
@@ -1095,9 +1093,11 @@ function RightPanel({
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   const [rematching, setRematching] = useState(false);
-  const [muted, setMutedState] = useState(false);
+  // Safe because RightPanel only renders client-side after `session` has
+  // loaded (the page shows a loading skeleton until then), so this never
+  // runs during SSR and there's no hydration-mismatch risk.
+  const [muted, setMutedState] = useState(() => isMuted());
   const [copied, setCopied] = useState(false);
-  useEffect(() => { setMutedState(isMuted()); }, []);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href);
@@ -1324,7 +1324,7 @@ export default function MinigameSessionPage() {
     }
   }, [id]);
 
-  useEffect(() => { fetchSession(); }, [fetchSession]);
+  useEffect(() => { queueMicrotask(fetchSession); }, [fetchSession]);
 
   // Real-time: re-fetch the instant the opponent moves/joins/forfeits. Like
   // every other channel, suspended after the tab has been hidden a while and

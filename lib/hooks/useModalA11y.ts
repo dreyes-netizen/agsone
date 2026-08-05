@@ -19,7 +19,7 @@ import { useEffect, useRef } from "react";
 export function useModalA11y(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => { onCloseRef.current = onClose; });
 
   useEffect(() => {
     if (!open) return;

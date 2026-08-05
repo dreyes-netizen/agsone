@@ -243,9 +243,11 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
   // reaction/comment values, so a parent re-render can't clobber an in-flight
   // optimistic update. (Same-id content refresh would need an updatedAt field.)
   useEffect(() => {
-    setReactions(initialPost.reactions);
-    setMyReactions(initialPost.myReactions);
-    setCommentCount(initialPost.commentCount);
+    queueMicrotask(() => {
+      setReactions(initialPost.reactions);
+      setMyReactions(initialPost.myReactions);
+      setCommentCount(initialPost.commentCount);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPost.id]);
 
@@ -331,7 +333,7 @@ export function DashboardFeedCard({ post: initialPost }: { post: DashboardFeedPo
     const content = (replyDraft[parentId] ?? "").trim();
     if (!content || replySending[parentId]) return;
     setReplySending((prev) => ({ ...prev, [parentId]: true }));
-    const optimisticId = `opt-reply-${Date.now()}`;
+    const optimisticId = `opt-reply-${crypto.randomUUID()}`;
     const optimistic: ReplyItem = {
       id: optimisticId,
       content,

@@ -65,7 +65,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["firebase-admin", "xlsx"],
+  serverExternalPackages: ["firebase-admin", "exceljs"],
   devIndicators: false,
   allowedDevOrigins: ["jinx-delicious-jawline.ngrok-free.dev", "*.ngrok-free.dev"],
   images: {

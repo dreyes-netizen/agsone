@@ -72,8 +72,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, dbUser } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-
-  useEffect(() => { setSidebarOpen(false); }, [pathname]);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setSidebarOpen(false);
+  }
 
   useEffect(() => {
     if (dbUser !== null && !dbUser.onboardingComplete && pathname !== "/onboarding") {

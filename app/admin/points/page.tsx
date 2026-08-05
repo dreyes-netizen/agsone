@@ -165,9 +165,9 @@ export default function AwardPointsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    loadAllEmployees();
+    queueMicrotask(loadAllEmployees);
     loadHistory(txPage);
-    loadBudget();
+    queueMicrotask(loadBudget);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 

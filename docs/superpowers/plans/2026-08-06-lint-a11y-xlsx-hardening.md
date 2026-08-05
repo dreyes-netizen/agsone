@@ -1464,7 +1464,85 @@ git commit -m "fix: migrate attendance/award route from xlsx to exceljs"
 
 ---
 
-### Task 28: Full-repo verification
+### Task 28: Fix `components/dashboard/DashboardFeedCard.tsx` and `lib/hooks/useModalA11y.ts` — discovered during final verification
+
+**Files:**
+- Modify: `components/dashboard/DashboardFeedCard.tsx:246` (set-state-in-effect), `:334` (impure-function-during-render)
+- Modify: `lib/hooks/useModalA11y.ts:22` (refs-during-render)
+
+**Context:** This plan's original 39-error count (Tasks 1-27) was gathered while on a different, not-yet-merged branch (`fix/security-fixes-and-design-system-consolidation`) before this plan's branch (`fix/lint-a11y-xlsx-hardening`) was created fresh off `main` per this plan's Global Constraint. That other branch had already independently fixed these 2 files in commits not yet on `main`; `main` (and therefore this branch) still has them broken. Task 28 (originally the final verification step, renumbered to Task 29 below) caught this via a full `npm run lint` run showing 3 residual errors instead of 0.
+
+- [ ] **Step 1: Fix the set-state-in-effect at `DashboardFeedCard.tsx:245-250`**
+
+```tsx
+// before
+useEffect(() => {
+  setReactions(initialPost.reactions);
+  setMyReactions(initialPost.myReactions);
+  setCommentCount(initialPost.commentCount);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [initialPost.id]);
+
+// after
+useEffect(() => {
+  queueMicrotask(() => {
+    setReactions(initialPost.reactions);
+    setMyReactions(initialPost.myReactions);
+    setCommentCount(initialPost.commentCount);
+  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [initialPost.id]);
+```
+
+- [ ] **Step 2: Fix the impure-function flag at `DashboardFeedCard.tsx:334`**
+
+The compiler flags `Date.now()` inside `submitReply` (but, inconsistently, not the identical `Date.now()` one function above in `submitComment` at line 304 — a known static-analysis inconsistency in this exact eslint plugin, already documented in this plan's Task 7 research). Both call sites are inside event handlers (`onKeyDown`/`onClick`), never during render, so this is a false positive rather than a real purity bug. Fix by avoiding the flagged builtin entirely rather than fighting the analyzer — swap to `crypto.randomUUID()`, which is also a strictly better optimistic-ID generator (no collision risk between near-simultaneous replies):
+
+```tsx
+// before
+const optimisticId = `opt-reply-${Date.now()}`;
+
+// after
+const optimisticId = `opt-reply-${crypto.randomUUID()}`;
+```
+
+Leave `submitComment`'s `Date.now()`-based ID (line 304) untouched — it isn't flagged, and this plan's constraint is "don't touch lines not listed here."
+
+- [ ] **Step 3: Fix the refs-during-render at `useModalA11y.ts:20-22`**
+
+```tsx
+// before
+const ref = useRef<HTMLDivElement>(null);
+const onCloseRef = useRef(onClose);
+onCloseRef.current = onClose;
+
+// after
+const ref = useRef<HTMLDivElement>(null);
+const onCloseRef = useRef(onClose);
+useEffect(() => { onCloseRef.current = onClose; });
+```
+
+Confirm `useEffect` is already imported in this file before adding the call (it almost certainly is, since the hook already uses `useEffect` elsewhere per the plan's earlier research) — do not touch anything else in this file. This hook has 3 real call sites (`app/admin/medicine/page.tsx`, `app/admin/employees/page.tsx` x2, `app/admin/documents/page.tsx`) despite an AGShub ticket incorrectly claiming it was deleted as dead code — do not delete this file.
+
+- [ ] **Step 4: Verify**
+
+Run: `npx eslint components/dashboard/DashboardFeedCard.tsx lib/hooks/useModalA11y.ts && npx tsc --noEmit`
+Expected: 0 errors from both files; no new tsc errors.
+
+- [ ] **Step 5: Manual check**
+
+On `/feed` (or wherever `DashboardFeedCard` renders), post a comment and a reply to a comment — confirm both still work and the optimistic UI still appears/reconciles correctly. On any page using a modal built on `useModalA11y` (admin medicine edit, admin employees add/edit, admin documents upload), confirm Escape-to-close and focus trapping still work.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add components/dashboard/DashboardFeedCard.tsx lib/hooks/useModalA11y.ts
+git commit -m "fix: resolve lint errors in DashboardFeedCard and useModalA11y (main-branch drift)"
+```
+
+---
+
+### Task 29: Full-repo verification
 
 **Files:** none (verification only)
 

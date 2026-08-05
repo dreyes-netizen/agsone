@@ -41,17 +41,23 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
+  const [prevOpen, setPrevOpen] = useState(open);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  // Reset state when palette opens (render-time adjustment, not effect)
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setQuery("");
       setResults([]);
       setFocusIndex(-1);
       setError(false);
-      setTimeout(() => inputRef.current?.focus(), 0);
     }
+  }
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
 
   const search = useCallback(

@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { Pagination } from "@/components/ui/pagination";
-import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, Users, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, Users } from "lucide-react";
 import { RoleBadge } from "@/components/RoleBadge";
 
 type Employee = {
@@ -77,19 +78,11 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [showUploadGuide, setShowUploadGuide] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const addModalRef = useModalA11y(addModalOpen, () => setAddModalOpen(false));
-  const editModalRef = useModalA11y(!!editingEmployee, () => setEditingEmployee(null));
   const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-
-  function showToast(t: "success" | "error", m: string) {
-    setToast({ type: t, msg: m });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -144,7 +137,7 @@ export default function EmployeesPage() {
       );
     } catch (err) {
       console.error(err);
-      showToast("error", "Failed to update role");
+      toast.error("Failed to update role");
     } finally {
       setUpdatingId(null);
     }
@@ -155,10 +148,10 @@ export default function EmployeesPage() {
       const res = await apiFetch<{ message: string }>("/api/admin/bootstrap", {
         method: "POST",
       });
-      showToast("success", res.message);
+      toast.success(res.message);
       window.location.reload();
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed");
+      toast.error(err instanceof Error ? err.message : "Failed");
     }
   }
 
@@ -266,7 +259,7 @@ export default function EmployeesPage() {
       );
       setEditingEmployee(null);
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to save");
+      toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -293,19 +286,6 @@ export default function EmployeesPage() {
           Manage roles and view all employee accounts.
         </p>
       </div>
-
-      {toast && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border ${toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}
-        >
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
-            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
-          {toast.msg}
-        </div>
-      )}
 
       {syncResult && (
         <div className="space-y-2">
@@ -464,7 +444,7 @@ export default function EmployeesPage() {
                   a.click();
                   URL.revokeObjectURL(url);
                 } catch {
-                  showToast("error", "Failed to export employees.");
+                  toast.error("Failed to export employees.");
                 } finally {
                   setExporting(false);
                 }
@@ -644,25 +624,11 @@ export default function EmployeesPage() {
       </div>
 
       {/* Add Employee Modal */}
-      {addModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            ref={addModalRef}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-employee-title"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 id="add-employee-title" className="font-semibold text-gray-900">Add Employee</h2>
-              <button
-                onClick={() => setAddModalOpen(false)}
-                className="text-gray-500 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="mb-5">
+            <DialogTitle>Add Employee</DialogTitle>
+          </DialogHeader>
 
             <form onSubmit={handleAddEmployee} className="space-y-4">
               <div>
@@ -764,32 +730,17 @@ export default function EmployeesPage() {
                 {adding ? "Adding…" : "Add Employee"}
               </button>
             </form>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {editingEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div
-            ref={editModalRef}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-employee-title"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 id="edit-employee-title" className="text-lg font-bold text-gray-900">Edit Employee</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{editingEmployee.email}</p>
-              </div>
-              <button
-                onClick={() => setEditingEmployee(null)}
-                className="text-gray-500 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Dialog open={!!editingEmployee} onOpenChange={(open) => { if (!open) setEditingEmployee(null); }}>
+        <DialogContent className="max-w-md p-6 space-y-5">
+          {editingEmployee && (
+            <>
+            <DialogHeader>
+              <DialogTitle>Edit Employee</DialogTitle>
+              <p className="text-sm text-gray-500 mt-0.5">{editingEmployee.email}</p>
+            </DialogHeader>
 
             <div className="space-y-4">
               <div>
@@ -900,9 +851,10 @@ export default function EmployeesPage() {
                 {saving ? "Saving…" : "Save Changes"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Plus, Send, MessageSquarePlus, Loader2, AlertCircle, CheckCircle, EyeOff, AlertTriangle, Pencil, ArrowLeft } from "lucide-react";
+import { Plus, Send, MessageSquarePlus, Loader2, AlertCircle, EyeOff, AlertTriangle, Pencil, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
 
@@ -41,8 +42,6 @@ type PanelState =
   | { mode: "compose" }
   | { mode: "thread"; id: string };
 
-type Toast = { type: "success" | "error"; msg: string };
-
 const STATUS_LABEL: Record<string, string> = {
   OPEN: "Open",
   IN_REVIEW: "In Review",
@@ -66,7 +65,6 @@ export default function FeedbackPage() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [panel, setPanel] = useState<PanelState>({ mode: "welcome" });
-  const [toast, setToast] = useState<Toast | null>(null);
 
   // Compose state
   const [title, setTitle] = useState("");
@@ -84,11 +82,6 @@ export default function FeedbackPage() {
   const repliesEndRef = useRef<HTMLDivElement>(null);
 
   const [prevPanel, setPrevPanel] = useState<PanelState>({ mode: "welcome" });
-
-  function showToast(type: Toast["type"], msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -151,9 +144,9 @@ export default function FeedbackPage() {
       });
       setItems((prev) => [{ ...res.data, _count: { replies: 0 } }, ...prev]);
       setPanel({ mode: "thread", id: res.data.id });
-      showToast("success", "Report submitted. HR will follow up.");
+      toast.success("Report submitted. HR will follow up.");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to submit");
+      toast.error(err instanceof Error ? err.message : "Failed to submit");
     } finally {
       setSubmitting(false);
     }
@@ -177,7 +170,7 @@ export default function FeedbackPage() {
       );
       setReplyBody("");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to send reply");
+      toast.error(err instanceof Error ? err.message : "Failed to send reply");
     } finally {
       setSending(false);
     }
@@ -637,25 +630,6 @@ export default function FeedbackPage() {
 
         </div>
       </div>
-
-      {/* ── Toast ── */}
-      {toast && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-200 ${
-            toast.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-red-50 text-red-800 border-red-200"
-          }`}
-        >
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
-            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />
-          }
-          {toast.msg}
-        </div>
-      )}
     </div>
   );
 }

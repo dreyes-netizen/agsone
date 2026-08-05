@@ -6,7 +6,9 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, CheckCircle, AlertCircle, AlertTriangle, Truck, RefreshCw } from "lucide-react";
+import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, AlertTriangle, Truck, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -89,7 +91,6 @@ export default function FoodPage() {
   const [orderNote, setOrderNote] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<AddOn[]>([]);
   const [submittingOrder, setSubmittingOrder] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   // Expanded seller view
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -123,17 +124,12 @@ export default function FoodPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
-  function showToast(type: "success" | "error", msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  }
-
   async function load() {
     try {
       const r = await apiFetch<{ data: Listing[] }>("/api/food");
       setListings(r.data);
     } catch {
-      showToast("error", "Failed to load listings");
+      toast.error("Failed to load listings");
     } finally {
       setLoading(false);
     }
@@ -225,7 +221,7 @@ export default function FoodPage() {
       resetForm();
       await load();
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to save listing");
+      toast.error(err instanceof Error ? err.message : "Failed to save listing");
     } finally {
       setCreating(false);
     }
@@ -252,9 +248,9 @@ export default function FoodPage() {
       );
       setQty(1); setOrderNote(""); setSelectedAddOns([]);
       setModalOrderMode(null);
-      showToast("success", "Order placed!");
+      toast.success("Order placed!");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to place order");
+      toast.error(err instanceof Error ? err.message : "Failed to place order");
     } finally {
       setSubmittingOrder(false);
     }
@@ -285,9 +281,9 @@ export default function FoodPage() {
         prev?.id === listing.id ? { ...prev, myOrder: res.data } : prev
       );
       setModalOrderMode(null);
-      showToast("success", "Order updated!");
+      toast.success("Order updated!");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to update order");
+      toast.error(err instanceof Error ? err.message : "Failed to update order");
     } finally {
       setSubmittingOrder(false);
     }
@@ -307,9 +303,9 @@ export default function FoodPage() {
       setSelectedListing((prev) =>
         prev?.id === listing.id ? { ...prev, myOrder: null, _count: { orders: Math.max(0, prev._count.orders - 1) } } : prev
       );
-      showToast("success", "Order cancelled");
+      toast.success("Order cancelled");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to cancel order");
+      toast.error(err instanceof Error ? err.message : "Failed to cancel order");
     }
   }
 
@@ -327,7 +323,7 @@ export default function FoodPage() {
         ),
       }));
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to update payment status");
+      toast.error(err instanceof Error ? err.message : "Failed to update payment status");
     }
   }
 
@@ -381,7 +377,7 @@ export default function FoodPage() {
       const r = await apiFetch<{ data: OrderRow[] }>(`/api/food/${listing.id}/orders`);
       setSellerOrders((prev) => ({ ...prev, [listing.id]: r.data }));
     } catch {
-      showToast("error", "Failed to load orders");
+      toast.error("Failed to load orders");
     }
   }
 
@@ -418,23 +414,6 @@ export default function FoodPage() {
           Sell Food
         </button>
       </div>
-
-      {/* Toast — fixed overlay, bottom on mobile / top-right on desktop */}
-      {toast && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:slide-in-from-bottom-3 motion-safe:fade-in-0 motion-safe:duration-300 ${
-          toast.type === "success"
-            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-            : "bg-red-50 text-red-800 border-red-200"
-        }`}>
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
-            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* Create / edit form */}
       {showForm && (
@@ -1014,36 +993,24 @@ export default function FoodPage() {
         />
       )}
 
-      {selectedListing && (() => {
-        const closed = isClosed(selectedListing);
-        const isMine = selectedListing.createdBy.id === dbUser?.id;
-        const hasOrder = !!selectedListing.myOrder;
-        const addOnsTotal = selectedAddOns.reduce((s, a) => s + a.price, 0);
-        const orderTotal = (parseFloat(selectedListing.price) + addOnsTotal) * qty;
-        const urgency = !closed ? getUrgencyLabel(selectedListing.cutoffAt) : null;
+      <Dialog
+        open={!!selectedListing}
+        onOpenChange={(open) => { if (!open) { setSelectedListing(null); setModalOrderMode(null); } }}
+      >
+        <DialogContent
+          className="max-w-md max-h-[85vh] p-0 rounded-2xl overflow-hidden flex flex-col"
+          aria-labelledby={selectedListing ? "food-modal-title" : undefined}
+        >
+          {selectedListing && (() => {
+            const closed = isClosed(selectedListing);
+            const isMine = selectedListing.createdBy.id === dbUser?.id;
+            const hasOrder = !!selectedListing.myOrder;
+            const addOnsTotal = selectedAddOns.reduce((s, a) => s + a.price, 0);
+            const orderTotal = (parseFloat(selectedListing.price) + addOnsTotal) * qty;
+            const urgency = !closed ? getUrgencyLabel(selectedListing.cutoffAt) : null;
 
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0"
-            onClick={() => { setSelectedListing(null); setModalOrderMode(null); }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="food-modal-title"
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                autoFocus
-                aria-label="Close"
-                onClick={() => { setSelectedListing(null); setModalOrderMode(null); }}
-                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              {/* Scrollable content */}
+            return (
+              /* Scrollable content */
               <div className="overflow-y-auto scrollbar-hide flex-1 rounded-2xl">
                 {/* Image carousel */}
                 {selectedListing.imageUrls.length > 0 && (() => {
@@ -1404,10 +1371,10 @@ export default function FoodPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        );
-      })()}
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

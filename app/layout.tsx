@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -17,7 +18,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -29,6 +29,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AuthProvider>{children}</AuthProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   );

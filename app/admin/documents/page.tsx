@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { Pagination } from "@/components/ui/pagination";
-import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, CheckCircle, AlertCircle, Bot } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, Bot } from "lucide-react";
 
 const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
 
@@ -39,15 +40,11 @@ export default function DocumentsPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [promptCopied, setPromptCopied] = useState(false);
-  const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
   const [allyEnabled, setAllyEnabled] = useState<boolean | null>(null);
   const [togglingAlly, setTogglingAlly] = useState(false);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const uploadModalRef = useModalA11y(modalOpen, () => setModalOpen(false));
-
-  function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
 
   function copyPrompt() {
     navigator.clipboard.writeText(MD_CONVERSION_PROMPT);
@@ -87,9 +84,9 @@ export default function DocumentsPage() {
         body: JSON.stringify({ allyEnabled: next }),
       });
       setAllyEnabled(next);
-      showToast("success", next ? "Ally is now ON for everyone." : "Ally is now OFF for everyone.");
+      toast.success(next ? "Ally is now ON for everyone." : "Ally is now OFF for everyone.");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to update Ally.");
+      toast.error(err instanceof Error ? err.message : "Failed to update Ally.");
     } finally {
       setTogglingAlly(false);
     }
@@ -134,10 +131,10 @@ export default function DocumentsPage() {
       await apiFetch(`/api/admin/documents/${id}`, { method: "DELETE" });
       setDocuments((prev) => prev.filter((d) => d.id !== id));
       setDeleteConfirmId(null);
-      showToast("success", "Document deleted.");
+      toast.success("Document deleted.");
     } catch (err) {
       setDeleteConfirmId(null);
-      showToast("error", err instanceof Error ? err.message : "Delete failed.");
+      toast.error(err instanceof Error ? err.message : "Delete failed.");
     }
   }
 
@@ -151,11 +148,11 @@ export default function DocumentsPage() {
       );
       const summary = res.data.map((r) => `${r.name}: ${r.status}`).join("\n");
       setReindexResult(summary);
-      showToast("success", "Re-index complete.");
+      toast.success("Re-index complete.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Reindex failed";
       setReindexResult(msg);
-      showToast("error", msg);
+      toast.error(msg);
     } finally {
       setReindexing(false);
     }
@@ -184,25 +181,6 @@ export default function DocumentsPage() {
 
   return (
     <div className="max-w-4xl">
-      {/* Toast banner */}
-      {toast && (
-        <div
-          role="alert"
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
-            toast.type === "success"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-              : "bg-red-50 border border-red-200 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          )}
-          {toast.msg}
-        </div>
-      )}
-
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Policy Documents</h1>
@@ -400,25 +378,11 @@ export default function DocumentsPage() {
       )}
 
       {/* Upload modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div
-            ref={uploadModalRef}
-            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="upload-modal-title"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 id="upload-modal-title" className="font-semibold text-gray-900">Upload Document</h2>
-              <button
-                onClick={() => setModalOpen(false)}
-                 className="text-gray-500 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 rounded"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="mb-5">
+            <DialogTitle>Upload Document</DialogTitle>
+          </DialogHeader>
 
             <div className="space-y-4">
               <div>
@@ -492,9 +456,8 @@ export default function DocumentsPage() {
                 ) : "Upload"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

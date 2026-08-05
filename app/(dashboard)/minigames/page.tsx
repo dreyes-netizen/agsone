@@ -8,7 +8,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
-import { BarChart2, Gamepad2, Clock, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { BarChart2, Gamepad2, Clock, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -60,12 +61,6 @@ export default function MinigamesPage() {
   const [joining, setJoining] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-
-  function showToast(type: "success" | "error", msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   async function load() {
     try {
@@ -98,7 +93,7 @@ export default function MinigamesPage() {
       fire();
       router.push(`/minigames/${res.data.id}`);
     } catch {
-      showToast("error", "Failed to create challenge. Check your points balance.");
+      toast.error("Failed to create challenge. Check your points balance.");
       setCreating(false);
     }
   }
@@ -109,7 +104,7 @@ export default function MinigamesPage() {
       await apiFetch(`/api/minigames/sessions/${sessionId}/join`, { method: "POST" });
       router.push(`/minigames/${sessionId}`);
     } catch {
-      showToast("error", "Failed to join. Insufficient points or game already taken.");
+      toast.error("Failed to join. Insufficient points or game already taken.");
       setJoining(null);
       load();
     }
@@ -138,22 +133,6 @@ export default function MinigamesPage() {
   return (
     <div className="space-y-4">
       {showHelp && <HowToPlayModal gameType={activeTab} onClose={() => setShowHelp(false)} />}
-
-      {/* Toast */}
-      {toast && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:slide-in-from-bottom-3 motion-safe:fade-in-0 motion-safe:duration-300 ${
-            toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"
-          }`}
-        >
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
-            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-3">

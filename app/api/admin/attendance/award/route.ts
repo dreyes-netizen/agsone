@@ -8,6 +8,8 @@ import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { findActivity } from "@/lib/constants/awardActivities";
+import ExcelJS from "exceljs";
+import { sheetToRows } from "@/lib/excel/sheetToRows";
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -40,23 +42,21 @@ export async function POST(req: NextRequest) {
 
   const buffer = Buffer.from(await (file as File).arrayBuffer());
 
-  // Dynamic import avoids ESM/CJS bundling issues with xlsx
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const XLSX = require("xlsx") as typeof import("xlsx");
-
-  let workbook: import("xlsx").WorkBook;
+  const workbook = new ExcelJS.Workbook();
   try {
-    workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
+    // exceljs's .d.ts declares an ambient `Buffer extends ArrayBuffer` that
+    // conflicts with this project's esnext lib Buffer type — cast is type-only.
+    await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   } catch {
     return NextResponse.json({ error: "Could not parse Excel file — make sure it is a valid .xlsx file" }, { status: 400 });
   }
 
-  const sheet = workbook.Sheets["Summary"];
-  if (!sheet) {
+  const worksheet = workbook.getWorksheet("Summary");
+  if (!worksheet) {
     return NextResponse.json({ error: "Sheet 'Summary' not found — please upload a Sprout HR attendance report" }, { status: 400 });
   }
 
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+  const rows = sheetToRows(worksheet);
 
   // Perfect attendance: Days Present > 20, Days Absent = 0, Undertime = 0
   const perfectRows = rows.filter((r) => {

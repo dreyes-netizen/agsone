@@ -139,9 +139,6 @@ export default function AwardPointsPage() {
   const [txPage, setTxPage] = useState(1);
   const [txPages, setTxPages] = useState(1);
 
-  const [toast, setToast] = useState<{type:"success"|"error";msg:string}|null>(null);
-  function showToast(t:"success"|"error",m:string){setToast({type:t,msg:m});setTimeout(()=>setToast(null),4000);}
-
   const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
 
   // /api/admin/employees is paginated (100/page max, by design — see
@@ -165,9 +162,9 @@ export default function AwardPointsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    loadAllEmployees();
+    queueMicrotask(loadAllEmployees);
     loadHistory(txPage);
-    loadBudget();
+    queueMicrotask(loadBudget);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -359,22 +356,6 @@ export default function AwardPointsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium motion-safe:animate-in motion-safe:slide-in-from-top-2 motion-safe:fade-in-0 motion-safe:duration-300 ${
-            toast.type === "success"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-              : "bg-red-50 border border-red-200 text-red-800"
-          }`}
-        >
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
-            : <XCircle className="w-4 h-4 text-red-500 shrink-0" aria-hidden="true" />}
-          {toast.msg}
-        </div>
-      )}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Award Points</h1>
         <p className="text-gray-500 text-sm mt-1">

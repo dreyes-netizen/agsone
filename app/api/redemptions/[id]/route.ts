@@ -33,10 +33,16 @@ export async function PATCH(
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const result = await tx.redemption.update({
-      where: { id },
+    // Guard against a double-PATCH race (e.g. two concurrent REJECTED calls):
+    // only apply the transition if status still matches what we read above.
+    // A second concurrent request loses the CAS and gets count 0.
+    const { count } = await tx.redemption.updateMany({
+      where: { id, status: redemption.status },
       data: { status: parsed.data.status, adminNote: parsed.data.adminNote, processedById: user!.id },
     });
+    if (count === 0) {
+      throw new Error("REDEMPTION_STATUS_CONFLICT");
+    }
     if (parsed.data.status === "REJECTED") {
       await tx.user.update({
         where: { id: redemption.userId },
@@ -46,8 +52,18 @@ export async function PATCH(
         data: { toUserId: redemption.userId, amount: redemption.pointsSpent, type: "REFUND", note: "Refund: rejected redemption", createdById: user!.id },
       });
     }
-    return result;
+    return tx.redemption.findUniqueOrThrow({ where: { id } });
+  }).catch((err) => {
+    if (err instanceof Error && err.message === "REDEMPTION_STATUS_CONFLICT") return null;
+    throw err;
   });
+
+  if (!updated) {
+    return NextResponse.json(
+      { error: "This redemption was already processed by someone else. Refresh and try again." },
+      { status: 409 }
+    );
+  }
 
   // Notify the employee of their redemption status change
   const [reward, employee] = await Promise.all([

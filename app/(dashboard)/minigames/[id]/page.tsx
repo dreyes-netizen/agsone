@@ -10,6 +10,16 @@ import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
 import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Both closed/hidden by default — split into their own chunks instead of
 // shipping with the page bundle.
@@ -54,9 +64,10 @@ const GAME_LABELS: Record<string, string> = {
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ player, size = 40 }: { player: Player | Employee; size?: number }) {
+  const [errored, setErrored] = useState(false);
   const s = `${size}px`;
-  return player.avatarUrl ? (
-    <img src={player.avatarUrl} alt={player.displayName} style={{ width: s, height: s }} className="rounded-full object-cover shrink-0" />
+  return player.avatarUrl && !errored ? (
+    <img src={player.avatarUrl} alt={player.displayName} style={{ width: s, height: s }} className="rounded-full object-cover shrink-0" onError={() => setErrored(true)} />
   ) : (
     <div style={{ width: s, height: s }} className="rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0" >
       {player.displayName[0]}
@@ -79,48 +90,42 @@ function WaitingDots() {
 // ─── Forfeit Modal ────────────────────────────────────────────────────────────
 
 function ForfeitModal({
+  open,
   opponentName,
   confirming,
   onConfirm,
   onCancel,
 }: {
+  open: boolean;
   opponentName: string;
   confirming: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="forfeit-title"
-        className="bg-white rounded-2xl shadow-2xl p-6 max-w-xs w-full text-center animate-in fade-in-0 zoom-in-95 duration-200"
-      >
-        <p className="text-4xl mb-3" aria-hidden="true">🏳️</p>
-        <h3 id="forfeit-title" className="text-lg font-black text-gray-900 mb-2">Forfeit Game?</h3>
-        <p className="text-sm text-gray-500 mb-6">
-          {opponentName} will be declared the winner.
-        </p>
-        <div className="flex gap-3">
-          <button
+    <AlertDialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Forfeit Game?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {opponentName} will be declared the winner.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={confirming}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
             autoFocus
+            variant="destructive"
             onClick={onConfirm}
             disabled={confirming}
-            className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 disabled:opacity-60 text-red-600 border border-red-200 font-bold text-sm rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500"
           >
             {confirming ? "Forfeiting…" : "Yes, forfeit"}
-          </button>
-          <button
-            onClick={onCancel}
-            disabled={confirming}
-            className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-60 text-gray-700 border border-gray-200 text-sm rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -235,15 +240,14 @@ function TTTBoard({ session, onMove }: { session: Session; onMove: (data: unknow
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   // Track the most recently filled cell for a "last move" highlight.
-  const prevRef = useRef<(string | null)[]>(board);
+  const [prevBoard, setPrevBoard] = useState(board);
   const [lastMove, setLastMove] = useState<number | null>(null);
-  useEffect(() => {
-    const prev = prevRef.current;
+  if (board !== prevBoard) {
     let changed: number | null = null;
-    for (let i = 0; i < board.length; i++) if (board[i] && !prev[i]) changed = i;
+    for (let i = 0; i < board.length; i++) if (board[i] && !prevBoard[i]) changed = i;
     if (changed !== null) setLastMove(changed);
-    prevRef.current = board;
-  }, [board]);
+    setPrevBoard(board);
+  }
 
   const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   let winLine: number[] | null = null;
@@ -316,17 +320,16 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
   const [hoverCol, setHoverCol] = useState<number | null>(null);
 
   // Track the most recently dropped disc for the drop animation.
-  const prevRef = useRef<(number | null)[][]>(board);
+  const [prevBoard, setPrevBoard] = useState(board);
   const [lastMove, setLastMove] = useState<string | null>(null);
-  useEffect(() => {
-    const prev = prevRef.current;
+  if (board !== prevBoard) {
     let changed: string | null = null;
     for (let c = 0; c < 7; c++) for (let r = 0; r < 6; r++) {
-      if (board[c][r] && !(prev[c] && prev[c][r])) changed = `${c}-${r}`;
+      if (board[c][r] && !(prevBoard[c] && prevBoard[c][r])) changed = `${c}-${r}`;
     }
     if (changed) setLastMove(changed);
-    prevRef.current = board;
-  }, [board]);
+    setPrevBoard(board);
+  }
 
   const winCells = findC4Win(board);
   // Landing row (lowest empty) for the hovered column, for the ghost preview.
@@ -536,7 +539,6 @@ function DnBBoard({ session, onMove }: { session: Session; onMove: (data: unknow
             isMyTurn ? "bg-gray-200 hover:bg-indigo-400 active:bg-indigo-600 cursor-pointer" :
             "bg-gray-150 cursor-default"
           }`}
-          style={{ backgroundColor: drawn ? undefined : undefined }}
         />
       );
     }
@@ -1095,9 +1097,11 @@ function RightPanel({
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   const [rematching, setRematching] = useState(false);
-  const [muted, setMutedState] = useState(false);
+  // Safe because RightPanel only renders client-side after `session` has
+  // loaded (the page shows a loading skeleton until then), so this never
+  // runs during SSR and there's no hydration-mismatch risk.
+  const [muted, setMutedState] = useState(() => isMuted());
   const [copied, setCopied] = useState(false);
-  useEffect(() => { setMutedState(isMuted()); }, []);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href);
@@ -1324,7 +1328,7 @@ export default function MinigameSessionPage() {
     }
   }, [id]);
 
-  useEffect(() => { fetchSession(); }, [fetchSession]);
+  useEffect(() => { queueMicrotask(fetchSession); }, [fetchSession]);
 
   // Real-time: re-fetch the instant the opponent moves/joins/forfeits. Like
   // every other channel, suspended after the tab has been hidden a while and
@@ -1412,16 +1416,15 @@ export default function MinigameSessionPage() {
     <div className="space-y-4">
       {showHelp && <HowToPlayModal gameType={session.gameType} onClose={() => setShowHelp(false)} />}
 
-      {showForfeitModal && session && (
-        <ForfeitModal
-          opponentName={
-            (session.myRole === "host" ? session.guest?.displayName : session.host.displayName) ?? "Your opponent"
-          }
-          confirming={forfeiting}
-          onConfirm={executeForfeit}
-          onCancel={() => setShowForfeitModal(false)}
-        />
-      )}
+      <ForfeitModal
+        open={showForfeitModal}
+        opponentName={
+          (session.myRole === "host" ? session.guest?.displayName : session.host.displayName) ?? "Your opponent"
+        }
+        confirming={forfeiting}
+        onConfirm={executeForfeit}
+        onCancel={() => setShowForfeitModal(false)}
+      />
 
       {session.status === "FINISHED" && session.myRole !== "spectator" && (
         <GameResultOverlay

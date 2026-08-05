@@ -3,6 +3,7 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { broadcast } from "@/lib/realtime/broadcast";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -40,6 +41,11 @@ const createSchema = z.object({
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rateLimit = await checkRateLimit(user.id, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const body = await req.json();
   const parsed = createSchema.safeParse(body);

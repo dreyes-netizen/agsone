@@ -44,8 +44,9 @@ type LeaderEntry = {
 const rankColors: Record<number, string> = { 1: "text-yellow-500", 2: "text-gray-500", 3: "text-orange-500" };
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" }) {
+  const [errored, setErrored] = useState(false);
   const cls = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
-  if (url) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} />;
+  if (url && !errored) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
   return (
     <div className={`${cls} rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0`}>
       {name.charAt(0).toUpperCase()}
@@ -77,7 +78,7 @@ export default function MinigamesStatsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
       .then(res => setBoard(res.data))
       .catch(() => setBoard([]))

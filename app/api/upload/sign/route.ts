@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { createHash } from "crypto";
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rateLimit = await checkRateLimit(user.id, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   const apiKey = process.env.CLOUDINARY_API_KEY;

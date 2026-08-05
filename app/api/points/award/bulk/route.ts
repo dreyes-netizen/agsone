@@ -9,6 +9,7 @@ import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
 import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
 
 const schema = z.object({
@@ -25,14 +26,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const rateLimit = await checkRateLimit(actor!.id, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { userIds, note } = parsed.data;
-  let { amount, category, activity } = parsed.data;
+  const { userIds, note, activity } = parsed.data;
+  let { amount, category } = parsed.data;
 
   // Activity presets carry the manual's standard point value — server-resolved
   // so clients can't tamper with preset amounts.

@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Pin, ChevronDown } from "lucide-react";
+import { Pin, ChevronDown, LayoutGrid, Building2, Megaphone, Sparkles, Trophy, PartyPopper, BarChart3 } from "lucide-react";
 
 type PinnedItem = { id: string; title: string | null; authorName: string };
 
 const FILTERS = [
-  { label: "All",           value: "ALL",          emoji: "🗂️" },
-  { label: "My Department", value: "DEPT_ONLY",     emoji: "🏢" },
-  { label: "Announcements", value: "ANNOUNCEMENT",  emoji: "📢" },
-  { label: "Shoutouts",     value: "SHOUTOUT",      emoji: "✨" },
-  { label: "Achievements",  value: "ACHIEVEMENT",   emoji: "🏆" },
-  { label: "Celebrations",  value: "CELEBRATION",   emoji: "🎉" },
-  { label: "Polls",         value: "POLL",          emoji: "📊" },
+  { label: "All",           value: "ALL",          icon: LayoutGrid },
+  { label: "My Department", value: "DEPT_ONLY",     icon: Building2 },
+  { label: "Announcements", value: "ANNOUNCEMENT",  icon: Megaphone },
+  { label: "Shoutouts",     value: "SHOUTOUT",      icon: Sparkles },
+  { label: "Achievements",  value: "ACHIEVEMENT",   icon: Trophy },
+  { label: "Celebrations",  value: "CELEBRATION",   icon: PartyPopper },
+  { label: "Polls",         value: "POLL",          icon: BarChart3 },
 ] as const;
 
 export function FeedSidebar({
@@ -40,7 +40,7 @@ export function FeedSidebar({
           className="lg:hidden w-full flex items-center justify-between px-2 py-1.5"
         >
           <span className="flex items-center gap-2 text-sm font-semibold text-zinc-700">
-            <span className="text-base leading-none">{activeFilterObj.emoji}</span>
+            <activeFilterObj.icon className="w-4 h-4" aria-hidden="true" />
             {activeFilterObj.label}
           </span>
           <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-200 ${mobileFiltersOpen ? "rotate-180" : ""}`} />
@@ -59,7 +59,7 @@ export function FeedSidebar({
                   : "text-zinc-600 hover:bg-zinc-100"
               }`}
             >
-              <span className="text-base leading-none">{f.emoji}</span>
+              <f.icon className="w-4 h-4" aria-hidden="true" />
               {f.label}
             </button>
           ))}

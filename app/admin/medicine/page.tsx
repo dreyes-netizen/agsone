@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useModalA11y } from "@/lib/hooks/useModalA11y";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { AlertCircle, CheckCircle, Loader2, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
+import { Loader2, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Pagination } from "@/components/ui/pagination";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
+import { MEDICINE_REQUEST_STATUS_BADGE } from "@/lib/constants/medicineRequestStatus";
 
 type Medicine = {
   id: string;
@@ -48,11 +50,7 @@ type EditForm = {
   isActive: boolean;
 };
 
-const statusChip: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-700",
-  APPROVED: "bg-emerald-100 text-emerald-700",
-  REJECTED: "bg-red-100 text-red-600",
-};
+const statusChip = MEDICINE_REQUEST_STATUS_BADGE;
 
 const inputClass =
   "w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white";
@@ -63,6 +61,7 @@ export default function AdminMedicinePage() {
   const [activeTab, setActiveTab] = useState<"catalog" | "inventory" | "requests">("catalog");
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [loadingMeds, setLoadingMeds] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>({
@@ -70,7 +69,6 @@ export default function AdminMedicinePage() {
   });
   const [addingMed, setAddingMed] = useState(false);
   const [editingMed, setEditingMed] = useState<Medicine | null>(null);
-  const editMedModalRef = useModalA11y(!!editingMed, () => setEditingMed(null));
   const [editForm, setEditForm] = useState<EditForm>({
     name: "", caption: "", stockQuantity: "", imageUrl: "", imageFile: null, imagePreview: "", isActive: true,
   });
@@ -89,17 +87,12 @@ export default function AdminMedicinePage() {
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [invPage, setInvPage] = useState(1);
   const [invPages, setInvPages] = useState(1);
   const [reqPage, setReqPage] = useState(1);
   const [reqPages, setReqPages] = useState(1);
-
-  function showToast(t: "success" | "error", m: string) {
-    setToast({ type: t, msg: m });
-    setTimeout(() => setToast(null), 4000);
-  }
+  const [prevReqFilters, setPrevReqFilters] = useState({ dateFrom, dateTo, statusFilter });
 
   function handleTabChange(tab: "catalog" | "inventory" | "requests") {
     setActiveTab(tab);
@@ -109,7 +102,7 @@ export default function AdminMedicinePage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoadingMeds(true);
+    queueMicrotask(() => setLoadingMeds(true));
     apiFetch<{ data: Medicine[]; pages: number }>(`/api/admin/medicine?page=${invPage}`)
       .then((r) => { setMedicines(r.data); setInvPages(r.pages); })
       .catch(console.error)
@@ -119,7 +112,7 @@ export default function AdminMedicinePage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoadingReqs(true);
+    queueMicrotask(() => setLoadingReqs(true));
     const params = new URLSearchParams({ page: String(reqPage) });
     if (dateFrom) params.set("from", dateFrom);
     if (dateTo) params.set("to", dateTo);
@@ -131,10 +124,14 @@ export default function AdminMedicinePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, reqPage, dateFrom, dateTo, statusFilter]);
 
-  useEffect(() => {
+  if (
+    dateFrom !== prevReqFilters.dateFrom ||
+    dateTo !== prevReqFilters.dateTo ||
+    statusFilter !== prevReqFilters.statusFilter
+  ) {
+    setPrevReqFilters({ dateFrom, dateTo, statusFilter });
     setReqPage(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateFrom, dateTo, statusFilter]);
+  }
 
   function clearFilters() {
     setDateFrom("");
@@ -145,7 +142,7 @@ export default function AdminMedicinePage() {
 
   async function handleAdd() {
     if (!addForm.name.trim() || !addForm.caption.trim() || !addForm.stockQuantity) {
-      showToast("error", "Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
     setAddingMed(true);
@@ -163,9 +160,9 @@ export default function AdminMedicinePage() {
       setMedicines((prev) => [...prev, res.data].sort((a, b) => a.name.localeCompare(b.name)));
       setAddForm({ name: "", caption: "", stockQuantity: "", imageFile: null, imagePreview: "" });
       setShowAddForm(false);
-      showToast("success", "Medicine added successfully.");
+      toast.success("Medicine added successfully.");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to add medicine");
+      toast.error(err instanceof Error ? err.message : "Failed to add medicine");
     } finally {
       setAddingMed(false);
     }
@@ -204,9 +201,9 @@ export default function AdminMedicinePage() {
       });
       setMedicines((prev) => prev.map((m) => (m.id === editingMed.id ? res.data : m)));
       setEditingMed(null);
-      showToast("success", "Medicine updated successfully.");
+      toast.success("Medicine updated successfully.");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to save");
+      toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSavingEdit(false);
     }
@@ -216,7 +213,7 @@ export default function AdminMedicinePage() {
     const raw = inventoryEdits[med.id];
     if (raw === undefined) return;
     const qty = parseInt(raw, 10);
-    if (isNaN(qty) || qty < 0) { showToast("error", "Enter a valid stock number."); return; }
+    if (isNaN(qty) || qty < 0) { toast.error("Enter a valid stock number."); return; }
     setSavingStock(med.id);
     try {
       const res = await apiFetch<{ data: Medicine }>(`/api/admin/medicine/${med.id}`, {
@@ -225,9 +222,9 @@ export default function AdminMedicinePage() {
       });
       setMedicines((prev) => prev.map((m) => (m.id === med.id ? res.data : m)));
       setInventoryEdits((prev) => { const next = { ...prev }; delete next[med.id]; return next; });
-      showToast("success", "Stock updated.");
+      toast.success("Stock updated.");
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to update stock");
+      toast.error(err instanceof Error ? err.message : "Failed to update stock");
     } finally {
       setSavingStock(null);
     }
@@ -238,9 +235,9 @@ export default function AdminMedicinePage() {
     try {
       await apiFetch(`/api/admin/medicine/${med.id}`, { method: "DELETE" });
       setMedicines((prev) => prev.filter((m) => m.id !== med.id));
-      showToast("success", `"${med.name}" deleted.`);
+      toast.success(`"${med.name}" deleted.`);
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to delete");
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     }
   }
 
@@ -270,7 +267,7 @@ export default function AdminMedicinePage() {
         }
       }
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed");
+      toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
       setActioningId(null);
     }
@@ -288,25 +285,6 @@ export default function AdminMedicinePage() {
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
-            toast.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-              : "bg-red-50 text-red-800 border border-red-200"
-          }`}
-          role="alert"
-          aria-live="polite"
-        >
-          {toast.type === "success" ? (
-            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" aria-hidden="true" />
-          )}
-          {toast.msg}
-        </div>
-      )}
-
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Medicine</h1>
         <p className="text-gray-500 text-sm mt-1">Manage the medicine cabinet and dispense requests.</p>
@@ -448,8 +426,13 @@ export default function AdminMedicinePage() {
                   className={`bg-white rounded-card border border-table-border overflow-hidden flex flex-col ${!med.isActive ? "opacity-50" : ""}`}
                 >
                   <div className="aspect-square bg-gray-50 overflow-hidden relative">
-                    {med.imageUrl ? (
-                      <img src={med.imageUrl} alt={med.name} className="w-full h-full object-cover" />
+                    {med.imageUrl && !failedImages.has(med.id) ? (
+                      <img
+                        src={med.imageUrl}
+                        alt={med.name}
+                        className="w-full h-full object-cover"
+                        onError={() => setFailedImages((prev) => new Set(prev).add(med.id))}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100">
                          <Pill className="w-10 h-10 text-gray-300" aria-hidden="true" />
@@ -543,8 +526,13 @@ export default function AdminMedicinePage() {
                     <tr key={med.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
                       <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                         <div className="flex items-center gap-3">
-                          {med.imageUrl ? (
-                            <img src={med.imageUrl} alt={med.name} className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0" />
+                          {med.imageUrl && !failedImages.has(med.id) ? (
+                            <img
+                              src={med.imageUrl}
+                              alt={med.name}
+                              className="w-9 h-9 rounded-lg object-cover border border-gray-100 shrink-0"
+                              onError={() => setFailedImages((prev) => new Set(prev).add(med.id))}
+                            />
                           ) : (
                             <div className="w-9 h-9 rounded-lg border border-gray-100 bg-gray-100 flex items-center justify-center shrink-0">
                                <Pill className="w-4 h-4 text-gray-300" aria-hidden="true" />
@@ -607,8 +595,13 @@ export default function AdminMedicinePage() {
               return (
                 <div key={med.id} className="bg-white rounded-card border border-table-border p-4 space-y-3">
                   <div className="flex items-center gap-3">
-                    {med.imageUrl ? (
-                      <img src={med.imageUrl} alt={med.name} className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
+                    {med.imageUrl && !failedImages.has(med.id) ? (
+                      <img
+                        src={med.imageUrl}
+                        alt={med.name}
+                        className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0"
+                        onError={() => setFailedImages((prev) => new Set(prev).add(med.id))}
+                      />
                     ) : (
                       <div className="w-10 h-10 rounded-lg border border-gray-100 bg-gray-100 flex items-center justify-center shrink-0">
                         <Pill className="w-5 h-5 text-gray-300" aria-hidden="true" />
@@ -902,119 +895,104 @@ export default function AdminMedicinePage() {
         </div>
       )}
 
-      {editingMed && (
-        <div className="fixed inset-0 z-50 flex sm:items-center items-end justify-center bg-black/40 px-4">
-          <div
-            ref={editMedModalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-medicine-title"
-            className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h2 id="edit-medicine-title" className="text-lg font-bold text-gray-900">Edit Medicine</h2>
-              <button
-                onClick={() => setEditingMed(null)}
-                aria-label="Close"
-                className="text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 rounded"
-              >
-                 <X className="w-5 h-5" aria-hidden="true" />
-              </button>
+      <Dialog open={!!editingMed} onOpenChange={(open) => { if (!open) setEditingMed(null); }}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>Edit Medicine</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Generic Name</label>
+              <input
+                autoFocus
+                value={editForm.name}
+                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                className={inputClass}
+              />
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Generic Name</label>
-                <input
-                  autoFocus
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption</label>
-                <textarea
-                  value={editForm.caption}
-                  onChange={(e) => setEditForm((f) => ({ ...f, caption: e.target.value }))}
-                  className={inputClass + " resize-none"}
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Stock Quantity</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  value={editForm.stockQuantity}
-                  onChange={(e) => setEditForm((f) => ({ ...f, stockQuantity: e.target.value }))}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-500">(optional)</span></label>
-                <input
-                  ref={editImageRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setEditForm((f) => ({ ...f, imageFile: file, imagePreview: URL.createObjectURL(file) }));
-                  }}
-                />
-                <div className="flex items-center gap-3">
-                  {(editForm.imagePreview || editForm.imageUrl) ? (
-                    <img
-                      src={editForm.imagePreview || editForm.imageUrl}
-                      alt=""
-                      className="w-16 h-16 rounded-lg object-cover border border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
-                       <Pill className="w-6 h-6 text-gray-300" aria-hidden="true" />
-                    </div>
-                  )}
-                  <button
-                    onClick={() => editImageRef.current?.click()}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Change photo
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Caption</label>
+              <textarea
+                value={editForm.caption}
+                onChange={(e) => setEditForm((f) => ({ ...f, caption: e.target.value }))}
+                className={inputClass + " resize-none"}
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Stock Quantity</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={editForm.stockQuantity}
+                onChange={(e) => setEditForm((f) => ({ ...f, stockQuantity: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-500">(optional)</span></label>
+              <input
+                ref={editImageRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setEditForm((f) => ({ ...f, imageFile: file, imagePreview: URL.createObjectURL(file) }));
+                }}
+              />
+              <div className="flex items-center gap-3">
+                {(editForm.imagePreview || editForm.imageUrl) ? (
+                  <img
+                    src={editForm.imagePreview || editForm.imageUrl}
+                    alt=""
+                    className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                     <Pill className="w-6 h-6 text-gray-300" aria-hidden="true" />
+                  </div>
+                )}
                 <button
-                  type="button"
-                  role="switch"
-                  aria-checked={editForm.isActive}
-                  aria-label="Active status"
-                  onClick={() => setEditForm((f) => ({ ...f, isActive: !f.isActive }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${editForm.isActive ? "bg-emerald-500" : "bg-gray-200"}`}
+                  onClick={() => editImageRef.current?.click()}
+                  className="text-sm text-blue-600 hover:underline"
                 >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.isActive ? "translate-x-6" : "translate-x-1"}`} />
+                  Change photo
                 </button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active</label>
               <button
-                onClick={() => setEditingMed(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+                type="button"
+                role="switch"
+                aria-checked={editForm.isActive}
+                aria-label="Active status"
+                onClick={() => setEditForm((f) => ({ ...f, isActive: !f.isActive }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900 ${editForm.isActive ? "bg-emerald-500" : "bg-gray-200"}`}
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={savingEdit}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-command-black rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
-              >
-                 {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Saving…</> : "Save Changes"}
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.isActive ? "translate-x-6" : "translate-x-1"}`} />
               </button>
             </div>
           </div>
-        </div>
-      )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setEditingMed(null)}
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={savingEdit}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-command-black rounded-xl hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-gray-900"
+            >
+               {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Saving…</> : "Save Changes"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

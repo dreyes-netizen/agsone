@@ -36,27 +36,36 @@ export async function PATCH(
     let updatedRequest: { id: string; status: string; approvedAt: Date | null; approvedById: string | null };
     try {
       updatedRequest = await prisma.$transaction(async (tx) => {
-        const medicine = await tx.medicineItem.findUnique({
-          where: { id: request.medicineId },
-          select: { stockQuantity: true },
-        });
-        if (!medicine || medicine.stockQuantity < request.quantity) {
-          throw new Error("OUT_OF_STOCK");
-        }
-        const updated = await tx.medicineRequest.update({
-          where: { id },
+        // Guard against a double-approve race: only claim this request if it's
+        // still PENDING. A second concurrent approve/reject loses the CAS.
+        const { count: requestCount } = await tx.medicineRequest.updateMany({
+          where: { id, status: "PENDING" },
           data: { status: "APPROVED", approvedById: user!.id, approvedAt: new Date() },
-          select: { id: true, status: true, approvedAt: true, approvedById: true },
         });
-        await tx.medicineItem.update({
-          where: { id: request.medicineId },
+        if (requestCount === 0) {
+          throw new Error("ALREADY_PROCESSED");
+        }
+        // Guard the stock decrement the same way — only decrement if enough
+        // stock is still available, so two concurrent approvals can't jointly
+        // over-draw a shared medicine item.
+        const { count: stockCount } = await tx.medicineItem.updateMany({
+          where: { id: request.medicineId, stockQuantity: { gte: request.quantity } },
           data: { stockQuantity: { decrement: request.quantity } },
         });
-        return updated;
+        if (stockCount === 0) {
+          throw new Error("OUT_OF_STOCK");
+        }
+        return tx.medicineRequest.findUniqueOrThrow({
+          where: { id },
+          select: { id: true, status: true, approvedAt: true, approvedById: true },
+        });
       });
     } catch (err) {
       if (err instanceof Error && err.message === "OUT_OF_STOCK") {
         return NextResponse.json({ error: "Out of stock" }, { status: 409 });
+      }
+      if (err instanceof Error && err.message === "ALREADY_PROCESSED") {
+        return NextResponse.json({ error: "Request is no longer pending" }, { status: 409 });
       }
       throw err;
     }
@@ -64,9 +73,16 @@ export async function PATCH(
     return NextResponse.json({ data: updatedRequest });
   }
 
-  const updatedRequest = await prisma.medicineRequest.update({
-    where: { id },
+  const { count } = await prisma.medicineRequest.updateMany({
+    where: { id, status: "PENDING" },
     data: { status: "REJECTED", approvedById: user!.id, approvedAt: new Date() },
+  });
+  if (count === 0) {
+    return NextResponse.json({ error: "Request is no longer pending" }, { status: 409 });
+  }
+
+  const updatedRequest = await prisma.medicineRequest.findUniqueOrThrow({
+    where: { id },
     select: { id: true, status: true, approvedAt: true, approvedById: true },
   });
 

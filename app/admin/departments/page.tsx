@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Loader2, CheckCircle, AlertCircle, Trash2, Building2 } from "lucide-react";
+import { Loader2, Trash2, Building2 } from "lucide-react";
+import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 
 type Department = {
@@ -28,14 +29,9 @@ export default function DepartmentsPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  function showToast(type: "success" | "error", msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -110,21 +106,15 @@ export default function DepartmentsPage() {
       await apiFetch(`/api/admin/departments/${dept.id}`, { method: "DELETE" });
       setDepartments((prev) => prev.filter((d) => d.id !== dept.id));
       setDeleteConfirmId(null);
-      showToast("success", `"${dept.name}" deleted.`);
+      toast.success(`"${dept.name}" deleted.`);
     } catch (err) {
       setDeleteConfirmId(null);
-      showToast("error", err instanceof Error ? err.message : "Failed to delete");
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     }
   }
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <div role="alert" aria-live="assertive" className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200 ${toast.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
-          {toast.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" /> : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
-          {toast.msg}
-        </div>
-      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Departments</h1>

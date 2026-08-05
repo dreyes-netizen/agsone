@@ -24,5 +24,8 @@ export const config = {
   // Exclude /api/* so API routes return their own 401 JSON (via verifyAuth)
   // instead of being redirected to the /login HTML page. The proxy is a
   // page-level UX redirect; per-route verifyAuth is the real authorization.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)"],
+  // robots.txt must stay reachable unauthenticated — otherwise crawlers get
+  // a 307 to /login instead of the actual (disallow-all) robots response,
+  // which Lighthouse flags as an invalid robots.txt.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|.*\\.png$).*)"],
 };

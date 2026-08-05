@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // subscription participates in the tab-hidden idle-disconnect + resync
   // behavior like every other channel — see lib/hooks/useRealtimeChannel.ts.
   const refreshRef = useRef(refreshProfile);
-  refreshRef.current = refreshProfile;
+  useEffect(() => { refreshRef.current = refreshProfile; });
   useRealtimeChannel(dbUser?.id ? `points:${dbUser.id}` : null, () => refreshRef.current());
 
   return (

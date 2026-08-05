@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { MEDICINE_REQUEST_STATUS_BADGE } from "@/lib/constants/medicineRequestStatus";
 import {
   Pill,
   Search,
-  X,
   Loader2,
-  CheckCircle,
-  AlertCircle,
   Minus,
   Plus,
 } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Pagination } from "@/components/ui/pagination";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -40,11 +40,7 @@ type MyRequest = {
   medicine: { name: string };
 };
 
-const statusChip: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-700",
-  APPROVED: "bg-emerald-100 text-emerald-700",
-  REJECTED: "bg-red-100 text-red-600",
-};
+const statusChip = MEDICINE_REQUEST_STATUS_BADGE;
 
 export default function MedicinePage() {
   const { apiFetch } = useApiClient();
@@ -60,15 +56,9 @@ export default function MedicinePage() {
   const [confirmMed, setConfirmMed] = useState<Medicine | null>(null);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [reqPage, setReqPage] = useState(1);
   const [reqPages, setReqPages] = useState(1);
-
-  function showToast(type: "success" | "error", msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -97,9 +87,9 @@ export default function MedicinePage() {
         { ...res.data, medicine: { name: medicineName } },
         ...prev,
       ]);
-      showToast("success", `${qty}× "${medicineName}" requested. Pending HR approval.`);
+      toast.success(`${qty}× "${medicineName}" requested. Pending HR approval.`);
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to submit request");
+      toast.error(err instanceof Error ? err.message : "Failed to submit request");
     } finally {
       setRequesting(null);
     }
@@ -123,24 +113,6 @@ export default function MedicinePage() {
           <p className="text-gray-500 text-sm mt-1">Request a medicine from the company cabinet.</p>
         </div>
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`fixed bottom-20 left-4 right-4 sm:bottom-4 sm:left-auto sm:right-4 sm:w-auto sm:max-w-sm z-[60] flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border shadow-lg motion-safe:animate-in motion-safe:slide-in-from-bottom-3 motion-safe:fade-in-0 motion-safe:duration-300 ${
-            toast.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-red-50 text-red-800 border-red-200"
-          }`}
-        >
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
-            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" aria-hidden="true" />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* Tabs */}
       <div role="tablist" aria-label="Medicine views" className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
@@ -308,132 +280,110 @@ export default function MedicinePage() {
       )}
 
       {/* Detail modal */}
-      {selectedMed && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={() => setSelectedMed(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="medicine-modal-title"
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto scrollbar-hide animate-in fade-in-0 zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative">
-              {selectedMed.imageUrl && !failedImages.has(selectedMed.id) ? (
-                <img
-                  src={selectedMed.imageUrl}
-                  alt={selectedMed.name}
-                  className="w-full aspect-square object-cover rounded-t-2xl cursor-zoom-in"
-                  onClick={() => setLightbox({ images: [selectedMed.imageUrl], index: 0 })}
-                  onError={() => setFailedImages((prev) => new Set(prev).add(selectedMed.id))}
-                />
-              ) : (
-                <div className="w-full aspect-square flex items-center justify-center bg-gray-100 rounded-t-2xl">
-                  <Pill className="w-16 h-16 text-gray-300" aria-hidden="true" />
-                </div>
-              )}
-              <button
-                autoFocus
-                aria-label="Close"
-                onClick={() => setSelectedMed(null)}
-                className="absolute top-3 right-3 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <h2 id="medicine-modal-title" className="text-xl font-bold text-gray-900">{selectedMed.name}</h2>
-                <p className={`text-xs font-medium mt-1 ${selectedMed.stockQuantity <= 0 ? "text-gray-500" : "text-emerald-600"}`}>
-                  {selectedMed.stockQuantity <= 0 ? "Out of stock" : `${selectedMed.stockQuantity} in stock`}
-                </p>
+      <Dialog open={!!selectedMed} onOpenChange={(open) => { if (!open) setSelectedMed(null); }}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto scrollbar-hide p-0 gap-0 rounded-2xl">
+          {selectedMed && (
+            <>
+              <div className="relative">
+                {selectedMed.imageUrl && !failedImages.has(selectedMed.id) ? (
+                  <img
+                    src={selectedMed.imageUrl}
+                    alt={selectedMed.name}
+                    className="w-full aspect-square object-cover rounded-t-2xl cursor-zoom-in"
+                    onClick={() => setLightbox({ images: [selectedMed.imageUrl], index: 0 })}
+                    onError={() => setFailedImages((prev) => new Set(prev).add(selectedMed.id))}
+                  />
+                ) : (
+                  <div className="w-full aspect-square flex items-center justify-center bg-gray-100 rounded-t-2xl">
+                    <Pill className="w-16 h-16 text-gray-300" aria-hidden="true" />
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedMed.caption}</p>
-              <button
-                onClick={() => { setSelectedMed(null); openConfirm(selectedMed); }}
-                disabled={selectedMed.stockQuantity <= 0 || requesting === selectedMed.id}
-                className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-2 ${
-                  selectedMed.stockQuantity <= 0
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-command-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {requesting === selectedMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
-                {selectedMed.stockQuantity <= 0 ? "Out of stock" : requesting === selectedMed.id ? "Submitting…" : "Request"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="p-5 space-y-4">
+                <div>
+                  <DialogTitle className="text-xl font-bold text-gray-900">{selectedMed.name}</DialogTitle>
+                  <p className={`text-xs font-medium mt-1 ${selectedMed.stockQuantity <= 0 ? "text-gray-500" : "text-emerald-600"}`}>
+                    {selectedMed.stockQuantity <= 0 ? "Out of stock" : `${selectedMed.stockQuantity} in stock`}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedMed.caption}</p>
+                <button
+                  onClick={() => { setSelectedMed(null); openConfirm(selectedMed); }}
+                  disabled={selectedMed.stockQuantity <= 0 || requesting === selectedMed.id}
+                  className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-2 ${
+                    selectedMed.stockQuantity <= 0
+                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                      : "bg-command-black text-white hover:bg-gray-800"
+                  }`}
+                >
+                  {requesting === selectedMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+                  {selectedMed.stockQuantity <= 0 ? "Out of stock" : requesting === selectedMed.id ? "Submitting…" : "Request"}
+                </button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation modal with quantity stepper */}
-      {confirmOpen && confirmMed && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4"
-          onClick={() => setConfirmOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-modal-title"
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in fade-in-0 zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="confirm-modal-title" className="text-lg font-bold text-gray-900 mb-1">Confirm Request</h3>
-            <p className="text-sm text-gray-600 mb-5">
-              How many <span className="font-semibold text-gray-900">{confirmMed.name}</span> do you need?
-            </p>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm p-6">
+          {confirmMed && (
+            <>
+              <DialogTitle className="text-lg font-bold text-gray-900 mb-1">Confirm Request</DialogTitle>
+              <p className="text-sm text-gray-600 mb-5">
+                How many <span className="font-semibold text-gray-900">{confirmMed.name}</span> do you need?
+              </p>
 
-            {/* Quantity stepper */}
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                disabled={quantity <= 1}
-                aria-label="Decrease quantity"
-                className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
-              >
-                <Minus className="w-5 h-5" />
-              </button>
-              <span className="w-12 text-center text-2xl font-bold text-gray-900 tabular-nums" aria-live="polite" aria-label={`Quantity ${quantity}`}>
-                {quantity}
-              </span>
-              <button
-                onClick={() => setQuantity((q) => Math.min(confirmMed.stockQuantity, q + 1))}
-                disabled={quantity >= confirmMed.stockQuantity}
-                aria-label="Increase quantity"
-                className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
+              {/* Quantity stepper */}
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                  aria-label="Decrease quantity"
+                  className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+                <span className="w-12 text-center text-2xl font-bold text-gray-900 tabular-nums" aria-live="polite" aria-label={`Quantity ${quantity}`}>
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity((q) => Math.min(confirmMed.stockQuantity, q + 1))}
+                  disabled={quantity >= confirmMed.stockQuantity}
+                  aria-label="Increase quantity"
+                  className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
 
-            <p className="text-center text-xs text-gray-500 mb-5">{confirmMed.stockQuantity} available</p>
+              <p className="text-center text-xs text-gray-500 mb-5">{confirmMed.stockQuantity} available</p>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setConfirmOpen(false);
-                  handleRequest(confirmMed.id, quantity);
-                  setConfirmMed(null);
-                }}
-                disabled={requesting === confirmMed.id}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-command-black text-white hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-              >
-                {requesting === confirmMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
-                {requesting === confirmMed.id ? "Submitting…" : `Request ${quantity}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmOpen(false);
+                    handleRequest(confirmMed.id, quantity);
+                    setConfirmMed(null);
+                  }}
+                  disabled={requesting === confirmMed.id}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold bg-command-black text-white hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+                >
+                  {requesting === confirmMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+                  {requesting === confirmMed.id ? "Submitting…" : `Request ${quantity}`}
+                </button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {lightbox && (
         <ImageLightbox

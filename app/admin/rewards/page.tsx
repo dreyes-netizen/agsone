@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import React from "react";
-import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 
@@ -38,12 +39,12 @@ export default function AdminRewardsPage() {
   const { user, token, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -59,11 +60,6 @@ export default function AdminRewardsPage() {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
   }, [form.description]);
-
-  function showToast(t: "success" | "error", m: string) {
-    setToast({ type: t, msg: m });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   // Multi-image state
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
@@ -159,7 +155,7 @@ export default function AdminRewardsPage() {
       setUploading(false);
       const msg = err instanceof Error ? err.message : "Failed to save";
       setError(msg);
-      showToast("error", msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -185,11 +181,11 @@ export default function AdminRewardsPage() {
     try {
       await apiFetch(`/api/rewards/${id}`, { method: "DELETE" });
       setDeleteConfirmId(null);
-      showToast("success", "Reward deleted.");
+      toast.success("Reward deleted.");
       await loadRewards();
     } catch (err) {
       setDeleteConfirmId(null);
-      showToast("error", err instanceof Error ? err.message : "Failed to delete reward.");
+      toast.error(err instanceof Error ? err.message : "Failed to delete reward.");
     }
   }
 
@@ -200,10 +196,10 @@ export default function AdminRewardsPage() {
         method: "PATCH",
         body: JSON.stringify({ isActive: !r.isActive }),
       });
-      showToast("success", r.isActive ? "Reward hidden." : "Reward is now visible.");
+      toast.success(r.isActive ? "Reward hidden." : "Reward is now visible.");
       await loadRewards();
     } catch (err) {
-      showToast("error", err instanceof Error ? err.message : "Failed to update.");
+      toast.error(err instanceof Error ? err.message : "Failed to update.");
     } finally {
       setTogglingId(null);
     }
@@ -228,23 +224,6 @@ export default function AdminRewardsPage() {
           >
             Retry
           </button>
-        </div>
-      )}
-      {toast && (
-        <div
-          role="alert"
-          className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-sm border ${
-            toast.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-red-50 border-red-200 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          )}
-          {toast.msg}
         </div>
       )}
       <div className="flex items-center justify-between">
@@ -304,6 +283,7 @@ export default function AdminRewardsPage() {
                       <button
                         type="button"
                         onClick={() => removeExistingImage(i)}
+                        aria-label="Remove image"
                         className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       >
                         <X className="w-3 h-3" />
@@ -317,6 +297,7 @@ export default function AdminRewardsPage() {
                       <button
                         type="button"
                         onClick={() => removeNewImage(i)}
+                        aria-label="Remove image"
                         className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       >
                         <X className="w-3 h-3" />
@@ -406,9 +387,14 @@ export default function AdminRewardsPage() {
               {rewards.map((r) => (
                 <div key={r.id} className={`px-4 py-4 space-y-3 ${!r.isActive ? "opacity-60" : ""}`}>
                   <div className="flex items-start gap-3">
-                    {r.imageUrls?.[0] && (
+                    {r.imageUrls?.[0] && !failedImages.has(r.id) && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.imageUrls[0]} alt={`${r.name} reward image`} className="w-14 h-14 rounded-lg object-cover border border-gray-100 shrink-0" />
+                      <img
+                        src={r.imageUrls[0]}
+                        alt={`${r.name} reward image`}
+                        className="w-14 h-14 rounded-lg object-cover border border-gray-100 shrink-0"
+                        onError={() => setFailedImages((prev) => new Set(prev).add(r.id))}
+                      />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -504,9 +490,14 @@ export default function AdminRewardsPage() {
               <tr key={r.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""} ${!r.isActive ? "opacity-60" : ""}`}>
                 <td className={tdClass}>
                   <div className="flex items-center gap-3">
-                    {(r.imageUrls?.[0]) && (
+                    {(r.imageUrls?.[0]) && !failedImages.has(r.id) && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.imageUrls[0]} alt={`${r.name} reward image`} className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
+                      <img
+                        src={r.imageUrls[0]}
+                        alt={`${r.name} reward image`}
+                        className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0"
+                        onError={() => setFailedImages((prev) => new Set(prev).add(r.id))}
+                      />
                     )}
                     <div>
                       <p className="font-medium text-gray-900 flex items-center gap-2">

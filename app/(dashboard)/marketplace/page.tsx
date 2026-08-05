@@ -6,11 +6,13 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import React from "react";
 import {
-  ShoppingBag, CheckCircle, AlertCircle, Coins,
+  ShoppingBag, Coins,
   Package, Ticket, Star, Monitor,
-  X, ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight,
   Clock, Receipt, AlertTriangle, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
@@ -56,7 +58,6 @@ export default function MarketplacePage() {
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const { fire: fireConfetti } = useConfetti();
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
@@ -96,7 +97,7 @@ export default function MarketplacePage() {
   }, [authLoading, user]);
 
   useEffect(() => {
-    if (view === "requests" && !authLoading && user) loadRedemptions();
+    if (view === "requests" && !authLoading && user) queueMicrotask(loadRedemptions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, authLoading, user]);
 
@@ -113,20 +114,18 @@ export default function MarketplacePage() {
 
   async function handleRedeem(reward: Reward) {
     setRedeeming(reward.id);
-    setToast(null);
     try {
       await apiFetch("/api/redemptions", { method: "POST", body: JSON.stringify({ rewardId: reward.id }) });
       setBalance((b) => b - reward.pointCost);
       closeModal();
-      setToast({ type: "success", msg: `"${reward.name}" redeemed! Pending HR approval.` });
+      toast.success(`"${reward.name}" redeemed! Pending HR approval.`);
       fireConfetti();
       loadRedemptions();
     } catch (err) {
-      setToast({ type: "error", msg: err instanceof Error ? err.message : "Failed to redeem" });
+      toast.error(err instanceof Error ? err.message : "Failed to redeem");
       setConfirming(false);
     } finally {
       setRedeeming(null);
-      setTimeout(() => setToast(null), 4000);
     }
   }
 
@@ -157,23 +156,6 @@ export default function MarketplacePage() {
           <span className="text-navy-300 text-xs">pts</span>
         </div>
       </div>
-
-      {/* ── Toast ── */}
-      {toast && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200 ${
-          toast.type === "success"
-            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-            : "bg-red-50 text-red-800 border-red-200"
-        }`}>
-          {toast.type === "success"
-            ? <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
-            : <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* ── View tabs ── */}
       <div role="tablist" aria-label="Marketplace views" className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
@@ -494,27 +476,11 @@ export default function MarketplacePage() {
         const busy = redeeming === selectedReward.id;
 
         return (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0"
-            onClick={closeModal}
-          >
-            {/* Shell: flex-col keeps close button anchored outside the scroll area */}
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="reward-modal-title"
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col relative animate-in fade-in-0 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
-              onClick={(e) => e.stopPropagation()}
+          <Dialog open={!!selectedReward} onOpenChange={(open) => { if (!open) closeModal(); }}>
+            <DialogContent
+              aria-label={selectedReward.name}
+              className="max-w-md w-full p-0 gap-0 max-h-[85vh] flex flex-col overflow-hidden rounded-2xl"
             >
-              <button
-                onClick={closeModal}
-                aria-label="Close"
-                autoFocus
-                className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-colors z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
               {/* Scrollable content */}
               <div className="overflow-y-auto scrollbar-hide flex-1 rounded-2xl">
                 {total > 0 && (
@@ -650,8 +616,8 @@ export default function MarketplacePage() {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         );
       })()}
     </div>

@@ -23,6 +23,7 @@ export async function* generateChatReplyStream(
   message: string,
   history: HistoryItem[],
   context: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<string> {
   const messages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_INSTRUCTION },
@@ -36,11 +37,14 @@ export async function* generateChatReplyStream(
     },
   ];
 
-  const stream = await groq.chat.completions.create({
-    messages,
-    model: "llama-3.1-8b-instant",
-    stream: true,
-  });
+  const stream = await groq.chat.completions.create(
+    {
+      messages,
+      model: "llama-3.1-8b-instant",
+      stream: true,
+    },
+    { signal },
+  );
 
   for await (const chunk of stream) {
     const text = chunk.choices[0]?.delta?.content ?? "";

@@ -31,6 +31,13 @@ export async function PATCH(
 
   const { displayName, email, departmentId, role, isActive, hireDate, birthday } = parsed.data;
 
+  // Mirror the elevated-role guard in /api/admin/users/[id]/role — only
+  // SUPER_ADMIN may grant HR_ADMIN. Without this, any HR_ADMIN could mint
+  // more HR_ADMINs through this generic edit route.
+  if (role === "HR_ADMIN" && user!.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
+  }
+
   const updated = await prisma.user.update({
     where: { id },
     data: {

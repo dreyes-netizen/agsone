@@ -6,6 +6,7 @@ import { sendMail } from "@/lib/email/mailer";
 import { pointsDeductedEmail } from "@/lib/email/templates";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { VIOLATION_TYPES } from "@/lib/constants/awardActivities";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
 
 const violationKeys = VIOLATION_TYPES.map((v) => v.key) as [string, ...string[]];
@@ -28,6 +29,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const rateLimit = await checkRateLimit(actor!.id, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -41,20 +47,30 @@ export async function POST(req: NextRequest) {
       ? customAmount!
       : VIOLATION_TYPES.find((v) => v.key === violationType)!.points;
 
-  // Balance is re-read inside the transaction so a concurrent redemption
-  // can't push the balance below zero between check and write.
+  // The floor-at-zero clamp (deducted = min(requested, balance)) must be
+  // computed from the same locked read the UPDATE writes from, not a
+  // findUnique() taken before the transaction's write — otherwise two
+  // concurrent deductions can each clamp against the same stale balance,
+  // and the second UPDATE still applies its full (stale-computed) amount
+  // on top of the first, pushing the balance negative. FOR UPDATE + a
+  // single statement makes the read-clamp-write atomic.
   let result: { deducted: number; newBalance: number; toUserName: string | null };
   try {
     result = await prisma.$transaction(async (tx) => {
-      const recipient = await tx.user.findUnique({
-        where: { id: toUserId },
-        select: { pointsBalance: true, displayName: true },
-      });
-      if (!recipient) throw new Error("NOT_FOUND");
-      if (recipient.pointsBalance <= 0) throw new Error("ZERO_BALANCE");
-
-      // Floor at zero — never push an employee's balance negative
-      const deducted = Math.min(requested, recipient.pointsBalance);
+      const rows = await tx.$queryRaw<{ newBalance: number; oldBalance: number; toUserName: string | null }[]>`
+        WITH old AS (
+          SELECT "pointsBalance" AS balance, "displayName" FROM "User" WHERE id = ${toUserId} FOR UPDATE
+        )
+        UPDATE "User" AS u
+        SET "pointsBalance" = GREATEST(old.balance - ${requested}::int, 0)
+        FROM old
+        WHERE u.id = ${toUserId}
+        RETURNING u."pointsBalance" AS "newBalance", old.balance AS "oldBalance", old."displayName" AS "toUserName"
+      `;
+      if (rows.length === 0) throw new Error("NOT_FOUND");
+      const { newBalance, oldBalance, toUserName } = rows[0];
+      if (oldBalance <= 0) throw new Error("ZERO_BALANCE");
+      const deducted = oldBalance - newBalance;
 
       await tx.pointTransaction.create({
         data: {
@@ -66,12 +82,7 @@ export async function POST(req: NextRequest) {
           createdById: actor!.id,
         },
       });
-      const updated = await tx.user.update({
-        where: { id: toUserId },
-        data: { pointsBalance: { decrement: deducted } },
-        select: { pointsBalance: true },
-      });
-      return { deducted, newBalance: updated.pointsBalance, toUserName: recipient.displayName };
+      return { deducted, newBalance, toUserName };
     });
   } catch (err) {
     if (err instanceof Error && err.message === "NOT_FOUND") {

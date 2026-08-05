@@ -16,12 +16,20 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// A hung Realtime endpoint must not stall a caller that awaits broadcast()
+// directly — bound the request instead of relying on every call site
+// remembering to fire-and-forget it.
+const BROADCAST_TIMEOUT_MS = 3000;
+
 export async function broadcast(
   topic: string,
   event: string = "update",
   payload: Record<string, unknown> = {},
 ): Promise<void> {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), BROADCAST_TIMEOUT_MS);
 
   try {
     await fetch(`${SUPABASE_URL}/realtime/v1/api/broadcast`, {
@@ -34,9 +42,12 @@ export async function broadcast(
       body: JSON.stringify({
         messages: [{ topic, event, payload }],
       }),
+      signal: controller.signal,
     });
   } catch (err) {
     // Swallow — broadcast is best-effort; the fallback poll covers misses.
     console.error(`[realtime] broadcast to "${topic}" failed:`, err);
+  } finally {
+    clearTimeout(timeout);
   }
 }

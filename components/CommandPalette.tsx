@@ -86,6 +86,11 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     setFocusIndex(-1);
   }
 
+  function selectResult(r: SearchResult) {
+    onClose();
+    router.push(`/employees/${r.id}`);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
       onClose();
@@ -98,6 +103,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     if (e.key === "ArrowUp") {
       e.preventDefault();
       setFocusIndex((i) => Math.max(i - 1, -1));
+    }
+    if (e.key === "Enter" && focusIndex >= 0 && results[focusIndex]) {
+      e.preventDefault();
+      selectResult(results[focusIndex]);
     }
   }
 
@@ -124,6 +133,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             placeholder="Search employees…"
             value={query}
             onChange={handleQueryChange}
+            role="combobox"
+            aria-expanded={results.length > 0}
+            aria-controls="cmdk-results"
+            aria-activedescendant={
+              focusIndex >= 0 && results[focusIndex] ? `cmdk-option-${results[focusIndex].id}` : undefined
+            }
             className="flex-1 text-sm bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
           />
           {loading && (
@@ -138,7 +153,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         </div>
 
         {/* Results */}
-        <div className="max-h-80 overflow-y-auto">
+        <div id="cmdk-results" role="listbox" className="max-h-80 overflow-y-auto">
           {error ? (
             <p className="text-sm text-gray-400 text-center py-8">Search unavailable</p>
           ) : query.length < 2 ? (
@@ -153,7 +168,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             results.map((r, i) => (
               <button
                 key={r.id}
-                onClick={() => { onClose(); router.push(`/employees/${r.id}`); }}
+                id={`cmdk-option-${r.id}`}
+                role="option"
+                aria-selected={focusIndex === i}
+                onClick={() => selectResult(r)}
                 className={`w-full flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 transition-colors text-left ${
                   focusIndex === i ? "bg-gray-50" : "hover:bg-gray-50/60"
                 }`}

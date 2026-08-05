@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { timingSafeCompare } from "@/lib/auth/timingSafeCompare";
 
 // One-time route: promotes the calling user to HR_ADMIN
 // Disabled automatically once any HR_ADMIN exists
 export async function POST(req: NextRequest) {
-  if (!process.env.BOOTSTRAP_SECRET || req.headers.get('x-bootstrap-secret') !== process.env.BOOTSTRAP_SECRET) {
+  const provided = req.headers.get('x-bootstrap-secret');
+  if (!process.env.BOOTSTRAP_SECRET || !provided || !timingSafeCompare(provided, process.env.BOOTSTRAP_SECRET)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

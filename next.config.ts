@@ -1,3 +1,4 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const securityHeaders = [
@@ -12,8 +13,9 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=()",
   },
-  // Force HTTPS for 1 year (enable once you're on a real domain with HTTPS)
-  // { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  // Force HTTPS for 1 year. Browsers only honor this over an actual HTTPS
+  // connection, so it's a no-op on local http://localhost dev.
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   // Content Security Policy
   {
     key: "Content-Security-Policy",
@@ -65,6 +67,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.join(__dirname),
+  },
   serverExternalPackages: ["firebase-admin", "xlsx"],
   devIndicators: false,
   allowedDevOrigins: ["jinx-delicious-jawline.ngrok-free.dev", "*.ngrok-free.dev"],

@@ -1,53 +1,78 @@
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
 
+// ─── Scopes ─────────────────────────────────────────────────────────────────
+// Each scope gets its own independent bucket (own Redis prefix / own in-memory
+// map) so, e.g., a user's AI assistant usage never counts against their
+// points-award limit or vice versa. Add a new scope here rather than reusing
+// "assistant" for an unrelated route.
+const SCOPE_CONFIG = {
+  assistant: { limit: 20, window: "1 h" as const, windowMs: 60 * 60 * 1000 },
+  // Sensitive write endpoints (points award/deduct, redemptions, bulk
+  // uploads): loose enough for legitimate rapid admin work, tight enough to
+  // blunt scripted abuse from a valid-but-malicious account.
+  write: { limit: 30, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
+} satisfies Record<string, { limit: number; window: `${number} ${"s" | "m" | "h" | "d"}`; windowMs: number }>;
+
+export type RateLimitScope = keyof typeof SCOPE_CONFIG;
+
 // ─── Upstash Redis (production) ───────────────────────────────────────────────
 // Uses atomic sliding-window counters that survive serverless cold starts.
 // Falls back to in-memory when UPSTASH_REDIS_REST_URL is not configured (dev/local).
 
-let ratelimit: Ratelimit | null = null;
+const limiters = {} as Record<RateLimitScope, Ratelimit>;
 
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
   });
-  ratelimit = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(20, "1 h"),
-    prefix: "ags_ratelimit",
-  });
+  for (const scope of Object.keys(SCOPE_CONFIG) as RateLimitScope[]) {
+    const cfg = SCOPE_CONFIG[scope];
+    limiters[scope] = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(cfg.limit, cfg.window),
+      prefix: `ags_ratelimit_${scope}`,
+    });
+  }
 }
 
 // ─── In-memory fallback (development / missing env vars) ──────────────────────
 // Resets on cold start — only used locally. Do not rely on in production.
 
 type Window = { count: number; windowStart: number };
-const store = new Map<string, Window>();
-const WINDOW_MS = 60 * 60 * 1000;
-const MAX_REQUESTS = 20;
+const stores = {
+  assistant: new Map<string, Window>(),
+  write: new Map<string, Window>(),
+} satisfies Record<RateLimitScope, Map<string, Window>>;
 
-function inMemoryCheck(userId: string): { allowed: boolean; remaining: number } {
+function inMemoryCheck(scope: RateLimitScope, userId: string): { allowed: boolean; remaining: number } {
+  const cfg = SCOPE_CONFIG[scope];
+  const store = stores[scope];
   const now = Date.now();
   const entry = store.get(userId);
 
-  if (!entry || now - entry.windowStart > WINDOW_MS) {
+  if (!entry || now - entry.windowStart > cfg.windowMs) {
     store.set(userId, { count: 1, windowStart: now });
-    return { allowed: true, remaining: MAX_REQUESTS - 1 };
+    return { allowed: true, remaining: cfg.limit - 1 };
   }
-  if (entry.count >= MAX_REQUESTS) {
+  if (entry.count >= cfg.limit) {
     return { allowed: false, remaining: 0 };
   }
   entry.count += 1;
-  return { allowed: true, remaining: MAX_REQUESTS - entry.count };
+  return { allowed: true, remaining: cfg.limit - entry.count };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function checkRateLimit(userId: string): Promise<{ allowed: boolean; remaining: number }> {
-  if (ratelimit) {
-    const result = await ratelimit.limit(userId);
+export async function checkRateLimit(
+  userId: string,
+  scope: RateLimitScope = "assistant"
+): Promise<{ allowed: boolean; remaining: number }> {
+  const limiter = limiters[scope];
+  if (limiter) {
+    const result = await limiter.limit(userId);
     return { allowed: result.success, remaining: result.remaining };
   }
-  return inMemoryCheck(userId);
+  return inMemoryCheck(scope, userId);
 }

@@ -9,6 +9,7 @@ import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
 import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
 
 const schema = z.object({
@@ -23,6 +24,11 @@ export async function POST(req: NextRequest) {
   const actor = await verifyAuth(req);
   if (!requireRole(actor, ["MANAGER", "HR_ADMIN", "SUPER_ADMIN"])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit(actor!.id, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
 
   const body = await req.json();

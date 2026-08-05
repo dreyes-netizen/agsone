@@ -32,25 +32,57 @@ export async function POST(
     }
   }
 
-  const joinResult = await prisma.gameSession.updateMany({
-    where: { id, status: 'WAITING', guestId: null },
-    data: { guestId: authUser.id, status: 'ACTIVE', currentTurn: session.hostId },
+  // Seat-claim and wager debit happen in one atomic transaction: if either
+  // debit fails (e.g. the host's balance was drained by a concurrent join on
+  // a DIFFERENT session they're hosting — a single host can open several
+  // WAITING sessions, so the up-front balance check above isn't sufficient
+  // on its own), the whole thing rolls back, including the seat claim, so
+  // the game stays WAITING instead of being stuck ACTIVE with no debit.
+  let joinError: "SEAT_TAKEN" | "HOST_INSUFFICIENT" | "GUEST_INSUFFICIENT" | null = null;
+  await prisma.$transaction(async (tx) => {
+    const joinResult = await tx.gameSession.updateMany({
+      where: { id, status: 'WAITING', guestId: null },
+      data: { guestId: authUser.id, status: 'ACTIVE', currentTurn: session.hostId },
+    });
+    if (joinResult.count === 0) {
+      joinError = "SEAT_TAKEN";
+      return;
+    }
+
+    if (session.pointsWager > 0) {
+      const hostDebit = await tx.user.updateMany({
+        where: { id: session.hostId, pointsBalance: { gte: session.pointsWager } },
+        data: { pointsBalance: { decrement: session.pointsWager } },
+      });
+      if (hostDebit.count === 0) {
+        joinError = "HOST_INSUFFICIENT";
+        return;
+      }
+      const guestDebit = await tx.user.updateMany({
+        where: { id: authUser.id, pointsBalance: { gte: session.pointsWager } },
+        data: { pointsBalance: { decrement: session.pointsWager } },
+      });
+      if (guestDebit.count === 0) {
+        joinError = "GUEST_INSUFFICIENT";
+        return;
+      }
+      await tx.pointTransaction.create({ data: { toUserId: session.hostId, fromUserId: session.hostId, amount: -session.pointsWager, type: "GAME_SPEND", createdById: session.hostId } });
+      await tx.pointTransaction.create({ data: { toUserId: authUser.id, fromUserId: authUser.id, amount: -session.pointsWager, type: "GAME_SPEND", createdById: authUser.id } });
+    }
+  }, { isolationLevel: "Serializable" }).catch(() => {
+    // joinError already set inside the callback for the expected cases; any
+    // other error (e.g. a serialization conflict) should still surface.
+    if (!joinError) throw new Error("JOIN_TRANSACTION_FAILED");
   });
-  if (joinResult.count === 0) {
+
+  if (joinError === "SEAT_TAKEN") {
     return NextResponse.json({ error: 'Game no longer available' }, { status: 409 });
   }
-
-  // Debit the wagers only AFTER we've atomically secured the seat. Doing it
-  // before the guarded join meant a player who lost a race for the same game
-  // (count === 0 above) would still have had their points — and the host's —
-  // decremented for a game they never actually joined.
-  if (session.pointsWager > 0) {
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: session.hostId }, data: { pointsBalance: { decrement: session.pointsWager } } }),
-      prisma.user.update({ where: { id: authUser.id }, data: { pointsBalance: { decrement: session.pointsWager } } }),
-      prisma.pointTransaction.create({ data: { toUserId: session.hostId, fromUserId: session.hostId, amount: -session.pointsWager, type: "GAME_SPEND", createdById: session.hostId } }),
-      prisma.pointTransaction.create({ data: { toUserId: authUser.id, fromUserId: authUser.id, amount: -session.pointsWager, type: "GAME_SPEND", createdById: authUser.id } }),
-    ]);
+  if (joinError === "HOST_INSUFFICIENT") {
+    return NextResponse.json({ error: "Host no longer has enough points" }, { status: 400 });
+  }
+  if (joinError === "GUEST_INSUFFICIENT") {
+    return NextResponse.json({ error: "Insufficient points for wager" }, { status: 400 });
   }
 
   const updated = await prisma.gameSession.findUnique({

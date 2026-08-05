@@ -301,8 +301,9 @@ function PollBlock({
 }
 
 function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; size?: "sm" | "md" }) {
+  const [errored, setErrored] = useState(false);
   const dim = size === "md" ? "w-12 h-12 text-lg" : "w-10 h-10 text-base";
-  if (url) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} />;
+  if (url && !errored) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
   return (
     <div className={`${dim} rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white font-bold shrink-0`}>
       {name.charAt(0).toUpperCase()}
@@ -363,6 +364,7 @@ export default function FeedPage() {
   const editMentionMapRef = useRef<Record<string, string>>({});
   const mentionDropdownRef = useRef<HTMLDivElement>(null);
   const recipientSearchRef = useRef<HTMLDivElement>(null);
+  const loadAbortRef = useRef<AbortController | null>(null);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -417,18 +419,27 @@ export default function FeedPage() {
   }, [composeExpanded]);
 
   async function load(filter = "ALL") {
+    // Cancel whatever filter switch is still in flight so an out-of-order
+    // response (e.g. a slow "All" request resolving after a faster
+    // "Shoutouts" one) can't overwrite state for a filter that's no longer
+    // selected.
+    loadAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
+
     setLoading(true);
     setLoadError(null);
     setNextCursor(null);
     try {
       const url = filter === "ALL" ? "/api/feed" : filter === "DEPT_ONLY" ? "/api/feed?dept=mine" : `/api/feed?type=${filter}`;
-      const res = await apiFetch<{ data: FeedPost[]; nextCursor: string | null }>(url);
+      const res = await apiFetch<{ data: FeedPost[]; nextCursor: string | null }>(url, { signal: controller.signal });
       setPosts(res.data);
       setNextCursor(res.nextCursor);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setLoadError(err instanceof Error ? err.message : "Failed to load feed");
     } finally {
-      setLoading(false);
+      if (loadAbortRef.current === controller) setLoading(false);
     }
   }
 
@@ -476,6 +487,20 @@ export default function FeedPage() {
 
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();
+
+    // Validate every branch's requirements BEFORE uploading anything —
+    // an early return after the Cloudinary upload orphaned the just-uploaded
+    // images (nothing ever referenced them) and, since imageFiles was never
+    // cleared on that path, silently re-uploaded the same files again on retry.
+    if (shoutoutMode) {
+      if (recipients.length === 0 || !newPost.trim()) return;
+    } else if (pollMode) {
+      if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
+      if (pollOptions.map((o) => o.trim()).filter(Boolean).length < 2) return;
+    } else {
+      if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
+    }
+
     setPosting(true);
     try {
       let imageUrls: string[] = [];
@@ -486,7 +511,6 @@ export default function FeedPage() {
       }
 
       if (shoutoutMode) {
-        if (recipients.length === 0 || !newPost.trim()) return;
         await apiFetch("/api/feed", {
           method: "POST",
           body: JSON.stringify({
@@ -502,12 +526,10 @@ export default function FeedPage() {
         setRecipients([]); setRecipientSearch(""); setRecipientSearchOpen(false);
         setShoutoutTitle(""); setShoutoutDeptOnly(false);
       } else {
-        if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
         const content = buildContent(newPost.trim());
         const title = postTitle.trim();
         if (pollMode) {
           const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
-          if (opts.length < 2) return;
           await apiFetch("/api/feed", {
             method: "POST",
             body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls, deptOnly }),

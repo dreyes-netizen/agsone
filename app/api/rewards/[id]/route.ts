@@ -29,6 +29,11 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const existing = await prisma.reward.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const reward = await prisma.reward.update({
     where: { id },
     data: parsed.data,
@@ -47,6 +52,12 @@ export async function DELETE(
   }
 
   const { id } = await params;
+
+  const existing = await prisma.reward.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   // Soft-delete: rewards are never hard-deleted so redemption history stays intact.
   // Admins can restore a hidden reward by toggling isActive back to true.
   await prisma.reward.update({ where: { id }, data: { isActive: false } });

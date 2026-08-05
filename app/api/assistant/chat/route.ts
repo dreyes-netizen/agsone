@@ -85,23 +85,49 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      // `closed` is the single source of truth for whether this controller
+      // may still be touched. The timeout and the normal completion path
+      // race against the same controller with no other synchronization —
+      // once either side ends the stream, every other enqueue/close call
+      // (loop, catch, finally) must become a no-op instead of throwing on
+      // an already-closed controller.
+      let closed = false;
+      const abortController = new AbortController();
+
       const timeoutId = setTimeout(() => {
+        if (closed) return;
+        closed = true;
+        abortController.abort();
         controller.enqueue(sseChunk({ error: "Response timed out. Please try again." }));
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       }, STREAM_TIMEOUT_MS);
 
       try {
-        for await (const chunk of generateChatReplyStream(message, history as Parameters<typeof generateChatReplyStream>[1], context)) {
+        for await (const chunk of generateChatReplyStream(
+          message,
+          history as Parameters<typeof generateChatReplyStream>[1],
+          context,
+          abortController.signal,
+        )) {
+          if (closed) break;
           controller.enqueue(sseChunk({ chunk }));
         }
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Failed to generate response";
-        controller.enqueue(sseChunk({ error: msg }));
+        // An abort triggered by the timeout above surfaces here as a thrown
+        // error too — the timeout path already sent the user-facing message
+        // and closed the stream, so don't send a second, contradictory one.
+        if (!closed) {
+          const msg = e instanceof Error ? e.message : "Failed to generate response";
+          controller.enqueue(sseChunk({ error: msg }));
+        }
       } finally {
         clearTimeout(timeoutId);
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
+        if (!closed) {
+          closed = true;
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        }
       }
     },
   });

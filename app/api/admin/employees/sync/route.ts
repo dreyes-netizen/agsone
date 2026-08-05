@@ -120,173 +120,192 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create departments from the file that don't exist yet. The original
-    // upsert() per name did `update: {}` (a no-op for existing rows), so a
-    // batched createMany with skipDuplicates is behavior-identical — one
-    // round trip instead of one per unique department name.
-    const uniqueDeptNames = [...new Set(
-      activeRows.map((r) => r.departmentName).filter((n): n is string => !!n)
-    )];
-    if (uniqueDeptNames.length > 0) {
-      await prisma.department.createMany({
-        data: uniqueDeptNames.map((name) => ({ name })),
-        skipDuplicates: true,
-      });
-    }
-
-    // Load all departments for name matching
-    const departments = await prisma.department.findMany({ select: { id: true, name: true } });
-    const deptByName = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
-
-    // --- Match existing employees: Employee ID first, email fallback ---
-
-    // Step 1: match by employeeId
-    const fileEmployeeIds = activeRows.map((r) => r.employeeId).filter((id): id is string => !!id);
-    const usersById = fileEmployeeIds.length > 0
-      ? await prisma.user.findMany({
-          where: { employeeId: { in: fileEmployeeIds } },
-          select: { id: true, employeeId: true },
-        })
-      : [];
-    const matchedByIdMap = new Map(usersById.map((u) => [u.employeeId!, u.id]));
-
-    // Step 2: for rows not matched by employeeId, fall back to email
-    const unmatchedRows = activeRows.filter((r) => !r.employeeId || !matchedByIdMap.has(r.employeeId));
-    const usersByEmail = unmatchedRows.length > 0
-      ? await prisma.user.findMany({
-          where: { email: { in: unmatchedRows.map((r) => r.email), mode: "insensitive" } },
-          select: { id: true, email: true },
-        })
-      : [];
-    const matchedByEmailMap = new Map(usersByEmail.map((u) => [u.email.toLowerCase().trim(), u.id]));
-
-    function getUserId(row: ActiveRow): string | undefined {
-      if (row.employeeId && matchedByIdMap.has(row.employeeId)) return matchedByIdMap.get(row.employeeId);
-      return matchedByEmailMap.get(row.email);
-    }
-
-    // All user IDs considered "in the file" (used for deactivation logic)
-    const inFileUserIds = new Set([...usersById.map((u) => u.id), ...usersByEmail.map((u) => u.id)]);
-
-    // Create accounts for employees not found by either method. A single
-    // createMany (with skipDuplicates for any row that collides on a unique
-    // constraint) replaces one prisma.user.create() per row — for a 500-row
-    // Sprout HR export that used to mean 500+ sequential round trips in one
-    // request. We lose the per-row DB error message this way, so any rows
-    // skipDuplicates silently drops are surfaced by diffing against what
-    // actually landed afterward.
-    const newRows = activeRows.filter((r) => !getUserId(r));
-    let imported = 0;
-    let failedEmails: string[] = [];
-    if (newRows.length > 0) {
-      const created = await prisma.user.createMany({
-        data: newRows.map((row) => ({
-          firebaseUid: null,
-          email: row.email,
-          displayName: row.displayName,
-          hireDate: row.hireDate,
-          birthday: row.birthday,
-          departmentId: row.departmentName
-            ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
-            : null,
-          employeeId: row.employeeId,
-          role: "EMPLOYEE",
-          onboardingComplete: false,
-          isActive: true,
-        })),
-        skipDuplicates: true,
-      });
-      imported = created.count;
-
-      // createMany() doesn't return the rows it created, so fetch them back
-      // by email. Needed unconditionally (not just when some failed): their
-      // ids must be added to inFileUserIds, or the "deactivate anyone not in
-      // this upload" step further down — which only knows about ids matched
-      // BEFORE this insert — sweeps up the employees just created and flips
-      // them back to inactive in this same request. (Pre-existing bug, not
-      // introduced by the createMany rewrite — the original per-row create
-      // loop had the identical gap.)
-      const landed = await prisma.user.findMany({
-        where: { email: { in: newRows.map((r) => r.email), mode: "insensitive" } },
-        select: { id: true, email: true },
-      });
-      for (const u of landed) inFileUserIds.add(u.id);
-
-      if (imported < newRows.length) {
-        const landedEmails = new Set(landed.map((u) => u.email.toLowerCase()));
-        failedEmails = newRows
-          .filter((r) => !landedEmails.has(r.email.toLowerCase()))
-          .map((r) => r.email);
-        console.warn(`Sync: ${failedEmails.length} row(s) failed to create (likely duplicate email/employeeId):`, failedEmails);
+    // Every write below (department creation, user creation, the raw batch
+    // UPDATE, and the three deactivate/reactivate passes) must land as one
+    // unit — a partial run (e.g. a dropped DB connection between the create
+    // and deactivate steps) would otherwise leave terminated employees
+    // active or newly-imported employees immediately flipped back to
+    // inactive by the "not in file" sweep. Default interactive-transaction
+    // timeout (5s) isn't enough for a several-hundred-row Sprout export
+    // doing ~10 round trips, so it's raised explicitly.
+    const {
+      imported,
+      failedEmails,
+      birthdaysUpdated,
+      deactivateResult,
+      reactivateResult,
+      removedResult,
+    } = await prisma.$transaction(async (tx) => {
+      // Create departments from the file that don't exist yet. The original
+      // upsert() per name did `update: {}` (a no-op for existing rows), so a
+      // batched createMany with skipDuplicates is behavior-identical — one
+      // round trip instead of one per unique department name.
+      const uniqueDeptNames = [...new Set(
+        activeRows.map((r) => r.departmentName).filter((n): n is string => !!n)
+      )];
+      if (uniqueDeptNames.length > 0) {
+        await tx.department.createMany({
+          data: uniqueDeptNames.map((name) => ({ name })),
+          skipDuplicates: true,
+        });
       }
-    }
 
-    // Update existing employees. Each row can set a different departmentId/
-    // birthday/hireDate/employeeId, so this can't collapse into one
-    // updateMany() the way the deactivate/reactivate calls below do — but it
-    // doesn't need one prisma.user.update() per row either. A single
-    // UPDATE ... FROM (VALUES ...) batches every row into one round trip;
-    // COALESCE(new, existing) reproduces the original "only overwrite
-    // birthday/hireDate/employeeId if the row actually has a value"
-    // behavior (departmentId is unconditional, same as before).
-    let birthdaysUpdated = 0;
-    const updateRows = activeRows
-      .map((row) => ({ userId: getUserId(row), row }))
-      .filter((r): r is { userId: string; row: ActiveRow } => !!r.userId);
+      // Load all departments for name matching
+      const departments = await tx.department.findMany({ select: { id: true, name: true } });
+      const deptByName = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
 
-    if (updateRows.length > 0) {
-      const valueRows = updateRows.map(({ userId, row }) => {
-        const departmentId = row.departmentName
-          ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
-          : null;
-        if (row.birthday) birthdaysUpdated++;
-        return Prisma.sql`(${userId}::uuid, ${departmentId}::uuid, ${row.birthday}::timestamp, ${row.hireDate}::timestamp, ${row.employeeId}::text)`;
+      // --- Match existing employees: Employee ID first, email fallback ---
+
+      // Step 1: match by employeeId
+      const fileEmployeeIds = activeRows.map((r) => r.employeeId).filter((id): id is string => !!id);
+      const usersById = fileEmployeeIds.length > 0
+        ? await tx.user.findMany({
+            where: { employeeId: { in: fileEmployeeIds } },
+            select: { id: true, employeeId: true },
+          })
+        : [];
+      const matchedByIdMap = new Map(usersById.map((u) => [u.employeeId!, u.id]));
+
+      // Step 2: for rows not matched by employeeId, fall back to email
+      const unmatchedRows = activeRows.filter((r) => !r.employeeId || !matchedByIdMap.has(r.employeeId));
+      const usersByEmail = unmatchedRows.length > 0
+        ? await tx.user.findMany({
+            where: { email: { in: unmatchedRows.map((r) => r.email), mode: "insensitive" } },
+            select: { id: true, email: true },
+          })
+        : [];
+      const matchedByEmailMap = new Map(usersByEmail.map((u) => [u.email.toLowerCase().trim(), u.id]));
+
+      function getUserId(row: ActiveRow): string | undefined {
+        if (row.employeeId && matchedByIdMap.has(row.employeeId)) return matchedByIdMap.get(row.employeeId);
+        return matchedByEmailMap.get(row.email);
+      }
+
+      // All user IDs considered "in the file" (used for deactivation logic)
+      const inFileUserIds = new Set([...usersById.map((u) => u.id), ...usersByEmail.map((u) => u.id)]);
+
+      // Create accounts for employees not found by either method. A single
+      // createMany (with skipDuplicates for any row that collides on a unique
+      // constraint) replaces one prisma.user.create() per row — for a 500-row
+      // Sprout HR export that used to mean 500+ sequential round trips in one
+      // request. We lose the per-row DB error message this way, so any rows
+      // skipDuplicates silently drops are surfaced by diffing against what
+      // actually landed afterward.
+      const newRows = activeRows.filter((r) => !getUserId(r));
+      let imported = 0;
+      let failedEmails: string[] = [];
+      if (newRows.length > 0) {
+        const created = await tx.user.createMany({
+          data: newRows.map((row) => ({
+            firebaseUid: null,
+            email: row.email,
+            displayName: row.displayName,
+            hireDate: row.hireDate,
+            birthday: row.birthday,
+            departmentId: row.departmentName
+              ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
+              : null,
+            employeeId: row.employeeId,
+            role: "EMPLOYEE",
+            onboardingComplete: false,
+            isActive: true,
+          })),
+          skipDuplicates: true,
+        });
+        imported = created.count;
+
+        // createMany() doesn't return the rows it created, so fetch them back
+        // by email. Needed unconditionally (not just when some failed): their
+        // ids must be added to inFileUserIds, or the "deactivate anyone not in
+        // this upload" step further down — which only knows about ids matched
+        // BEFORE this insert — sweeps up the employees just created and flips
+        // them back to inactive in this same request. (Pre-existing bug, not
+        // introduced by the createMany rewrite — the original per-row create
+        // loop had the identical gap.)
+        const landed = await tx.user.findMany({
+          where: { email: { in: newRows.map((r) => r.email), mode: "insensitive" } },
+          select: { id: true, email: true },
+        });
+        for (const u of landed) inFileUserIds.add(u.id);
+
+        if (imported < newRows.length) {
+          const landedEmails = new Set(landed.map((u) => u.email.toLowerCase()));
+          failedEmails = newRows
+            .filter((r) => !landedEmails.has(r.email.toLowerCase()))
+            .map((r) => r.email);
+          console.warn(`Sync: ${failedEmails.length} row(s) failed to create (likely duplicate email/employeeId):`, failedEmails);
+        }
+      }
+
+      // Update existing employees. Each row can set a different departmentId/
+      // birthday/hireDate/employeeId, so this can't collapse into one
+      // updateMany() the way the deactivate/reactivate calls below do — but it
+      // doesn't need one prisma.user.update() per row either. A single
+      // UPDATE ... FROM (VALUES ...) batches every row into one round trip;
+      // COALESCE(new, existing) reproduces the original "only overwrite
+      // birthday/hireDate/employeeId if the row actually has a value"
+      // behavior (departmentId is unconditional, same as before).
+      let birthdaysUpdated = 0;
+      const updateRows = activeRows
+        .map((row) => ({ userId: getUserId(row), row }))
+        .filter((r): r is { userId: string; row: ActiveRow } => !!r.userId);
+
+      if (updateRows.length > 0) {
+        const valueRows = updateRows.map(({ userId, row }) => {
+          const departmentId = row.departmentName
+            ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
+            : null;
+          if (row.birthday) birthdaysUpdated++;
+          return Prisma.sql`(${userId}::text, ${departmentId}::text, ${row.birthday}::timestamp, ${row.hireDate}::timestamp, ${row.employeeId}::text)`;
+        });
+
+        await tx.$executeRaw`
+          UPDATE "User" AS u
+          SET
+            "departmentId" = v."departmentId",
+            "birthday"     = COALESCE(v."birthday", u."birthday"),
+            "hireDate"     = COALESCE(v."hireDate", u."hireDate"),
+            "employeeId"   = COALESCE(v."employeeId", u."employeeId")
+          FROM (VALUES ${Prisma.join(valueRows)}) AS v(id, "departmentId", "birthday", "hireDate", "employeeId")
+          WHERE u.id = v.id
+        `;
+      }
+
+      // Deactivate resigned employees found in the DB
+      const deactivateResult = await tx.user.updateMany({
+        where: {
+          email: { in: resignedEmails, mode: "insensitive" },
+          isActive: true,
+        },
+        data: { isActive: false },
       });
 
-      await prisma.$executeRaw`
-        UPDATE "User" AS u
-        SET
-          "departmentId" = v."departmentId",
-          "birthday"     = COALESCE(v."birthday", u."birthday"),
-          "hireDate"     = COALESCE(v."hireDate", u."hireDate"),
-          "employeeId"   = COALESCE(v."employeeId", u."employeeId")
-        FROM (VALUES ${Prisma.join(valueRows)}) AS v(id, "departmentId", "birthday", "hireDate", "employeeId")
-        WHERE u.id = v.id
-      `;
-    }
+      // Re-activate employees the file says are still active but were previously deactivated
+      const reactivateResult = await tx.user.updateMany({
+        where: {
+          id: { in: [...inFileUserIds] },
+          isActive: false,
+          role: 'EMPLOYEE',
+        },
+        data: { isActive: true },
+      });
 
-    // Deactivate resigned employees found in the DB
-    const deactivateResult = await prisma.user.updateMany({
-      where: {
-        email: { in: resignedEmails, mode: "insensitive" },
-        isActive: true,
-      },
-      data: { isActive: false },
-    });
+      // Deactivate employees not present in the active list at all
+      const notInFile = await tx.user.findMany({
+        where: {
+          isActive: true,
+          role: "EMPLOYEE",
+          NOT: { id: { in: [...inFileUserIds] } },
+        },
+        select: { id: true },
+      });
+      const removedResult = await tx.user.updateMany({
+        where: { id: { in: notInFile.map((u) => u.id) } },
+        data: { isActive: false },
+      });
 
-    // Re-activate employees the file says are still active but were previously deactivated
-    const reactivateResult = await prisma.user.updateMany({
-      where: {
-        id: { in: [...inFileUserIds] },
-        isActive: false,
-        role: 'EMPLOYEE',
-      },
-      data: { isActive: true },
-    });
-
-    // Deactivate employees not present in the active list at all
-    const notInFile = await prisma.user.findMany({
-      where: {
-        isActive: true,
-        role: "EMPLOYEE",
-        NOT: { id: { in: [...inFileUserIds] } },
-      },
-      select: { id: true },
-    });
-    const removedResult = await prisma.user.updateMany({
-      where: { id: { in: notInFile.map((u) => u.id) } },
-      data: { isActive: false },
-    });
+      return { imported, failedEmails, birthdaysUpdated, deactivateResult, reactivateResult, removedResult };
+    }, { timeout: 30_000, maxWait: 10_000 });
 
     return NextResponse.json({
       data: {

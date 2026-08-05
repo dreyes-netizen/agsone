@@ -64,7 +64,7 @@ export async function PATCH(
       type: "FEEDBACK_RESOLVED",
       title: "Your feedback has been resolved",
       body: `HR has marked your feedback "${feedback.title}" as resolved.`,
-    });
+    }).catch(() => {});
   }
 
   return NextResponse.json({ data: { status: updated.status } });

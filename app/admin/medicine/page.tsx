@@ -95,6 +95,7 @@ export default function AdminMedicinePage() {
   const [invPages, setInvPages] = useState(1);
   const [reqPage, setReqPage] = useState(1);
   const [reqPages, setReqPages] = useState(1);
+  const [prevReqFilters, setPrevReqFilters] = useState({ dateFrom, dateTo, statusFilter });
 
   function showToast(t: "success" | "error", m: string) {
     setToast({ type: t, msg: m });
@@ -109,7 +110,7 @@ export default function AdminMedicinePage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoadingMeds(true);
+    queueMicrotask(() => setLoadingMeds(true));
     apiFetch<{ data: Medicine[]; pages: number }>(`/api/admin/medicine?page=${invPage}`)
       .then((r) => { setMedicines(r.data); setInvPages(r.pages); })
       .catch(console.error)
@@ -119,7 +120,7 @@ export default function AdminMedicinePage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoadingReqs(true);
+    queueMicrotask(() => setLoadingReqs(true));
     const params = new URLSearchParams({ page: String(reqPage) });
     if (dateFrom) params.set("from", dateFrom);
     if (dateTo) params.set("to", dateTo);
@@ -131,10 +132,14 @@ export default function AdminMedicinePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, reqPage, dateFrom, dateTo, statusFilter]);
 
-  useEffect(() => {
+  if (
+    dateFrom !== prevReqFilters.dateFrom ||
+    dateTo !== prevReqFilters.dateTo ||
+    statusFilter !== prevReqFilters.statusFilter
+  ) {
+    setPrevReqFilters({ dateFrom, dateTo, statusFilter });
     setReqPage(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateFrom, dateTo, statusFilter]);
+  }
 
   function clearFilters() {
     setDateFrom("");

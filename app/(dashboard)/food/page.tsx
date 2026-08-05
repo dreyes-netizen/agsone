@@ -508,7 +508,7 @@ export default function FoodPage() {
                   {newAddOns.map((a, i) => (
                     <span key={i} className="flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">
                       {a.name}{a.price > 0 ? ` — ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " — Free"}
-                      <button type="button" onClick={() => removeAddOn(i)} className="text-gray-500 hover:text-gray-700">
+                      <button type="button" onClick={() => removeAddOn(i)} aria-label="Remove add-on" className="text-gray-500 hover:text-gray-700">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -949,7 +949,7 @@ export default function FoodPage() {
                                         {(o.selectedAddOns ?? []).map((a) => `+ ${a.name} (₱${a.price.toFixed(2)})`).join(", ")}
                                       </p>
                                     )}
-                                    {o.note && <p className="text-[11px] text-gray-500 italic mt-0.5">"{o.note}"</p>}
+                                    {o.note && <p className="text-[11px] text-gray-500 italic mt-0.5">&ldquo;{o.note}&rdquo;</p>}
                                     <p className="text-[10px] text-gray-500 mt-0.5">
                                       {new Date(o.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                                     </p>

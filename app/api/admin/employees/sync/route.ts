@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import ExcelJS from "exceljs";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { sheetToRows } from "@/lib/excel/sheetToRows";
 
 /*
  * EMPLOYEE SYNC — EXCEL FILE REQUIREMENTS
@@ -77,20 +79,23 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Dynamic import avoids ESM/CJS bundling issues with xlsx
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const XLSX = require("xlsx") as typeof import("xlsx");
-
-    let workbook: import("xlsx").WorkBook;
+    const workbook = new ExcelJS.Workbook();
     try {
-      workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
+      // exceljs's bundled types declare a global `Buffer extends ArrayBuffer`,
+      // which (under this project's esnext lib) picks up the resizable-
+      // ArrayBuffer members real Node Buffers don't have — the cast bridges
+      // that type-only mismatch, not a real runtime shape difference.
+      await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
     } catch (e) {
       console.error("XLSX parse error:", e);
       return NextResponse.json({ error: "Could not parse Excel file — make sure it is a valid .xlsx file" }, { status: 400 });
     }
 
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return NextResponse.json({ error: "Uploaded file has no worksheets" }, { status: 400 });
+    }
+    const rows = sheetToRows(worksheet);
 
     const resignedEmails: string[] = [];
     const activeRows: ActiveRow[] = [];

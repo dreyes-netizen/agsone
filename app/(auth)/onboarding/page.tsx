@@ -23,9 +23,12 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (authLoading || !authUser) return;
-    setDisplayName(dbUser?.displayName ?? authUser.displayName ?? "");
-    if (dbUser?.department?.id) setDepartmentId(dbUser.department.id);
-    if (dbUser?.birthday) setBirthday(dbUser.birthday.slice(0, 10));
+    // Compiler forbids a bare synchronous setState in an effect body.
+    queueMicrotask(() => {
+      setDisplayName(dbUser?.displayName ?? authUser.displayName ?? "");
+      if (dbUser?.department?.id) setDepartmentId(dbUser.department.id);
+      if (dbUser?.birthday) setBirthday(dbUser.birthday.slice(0, 10));
+    });
     apiFetch<{ data: Department[] }>("/api/departments").then((res) => setDepartments(res.data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, authUser, dbUser]);

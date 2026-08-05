@@ -70,7 +70,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
-  serverExternalPackages: ["firebase-admin", "xlsx"],
+  serverExternalPackages: ["firebase-admin", "exceljs"],
   devIndicators: false,
   allowedDevOrigins: ["jinx-delicious-jawline.ngrok-free.dev", "*.ngrok-free.dev"],
   images: {

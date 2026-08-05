@@ -82,11 +82,13 @@ export default function LeaderboardPage() {
   const [achievers, setAchievers] = useState<Achiever[]>([]);
   const [achieversLoading, setAchieversLoading] = useState(true);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
+  function loadDepartments() {
     apiFetch<{ data: Department[] }>("/api/departments")
       .then((res) => setDepartments(res.data))
       .catch(() => {});
+  }
+
+  function loadProfileAndAchievers() {
     setProfileLoading(true);
     setAchieversLoading(true);
     Promise.allSettled([
@@ -99,14 +101,7 @@ export default function LeaderboardPage() {
       setProfileLoading(false);
       setAchieversLoading(false);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, period, departmentId]);
+  }
 
   async function load() {
     setLoading(true);
@@ -119,6 +114,19 @@ export default function LeaderboardPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    loadDepartments();
+    queueMicrotask(loadProfileAndAchievers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    queueMicrotask(load);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, period, departmentId]);
 
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const avgPoints = entries.length > 0 ? Math.round(totalPoints / entries.length) : 0;

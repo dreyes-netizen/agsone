@@ -13,11 +13,11 @@ type Props = {
 
 export function ImageLightbox({ images, initialIndex = 0, open, onClose }: Props) {
   const [index, setIndex] = useState(initialIndex);
-
-  // Sync index when caller changes initialIndex or reopens
-  useEffect(() => {
+  const [prevKey, setPrevKey] = useState({ initialIndex, open });
+  if (initialIndex !== prevKey.initialIndex || open !== prevKey.open) {
+    setPrevKey({ initialIndex, open });
     setIndex(initialIndex);
-  }, [initialIndex, open]);
+  }
 
   // Keyboard: ESC closes, arrows navigate
   useEffect(() => {

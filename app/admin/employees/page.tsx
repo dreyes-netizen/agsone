@@ -84,6 +84,17 @@ export default function EmployeesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  const [prevFilters, setPrevFilters] = useState({ search, filterDept, filterRole, filterStatus });
+  if (
+    search !== prevFilters.search ||
+    filterDept !== prevFilters.filterDept ||
+    filterRole !== prevFilters.filterRole ||
+    filterStatus !== prevFilters.filterStatus
+  ) {
+    setPrevFilters({ search, filterDept, filterRole, filterStatus });
+    setPage(1);
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
     loadEmployees();
@@ -92,10 +103,6 @@ export default function EmployeesPage() {
       .catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, filterDept, filterRole, filterStatus]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -395,7 +402,7 @@ export default function EmployeesPage() {
                 <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Department</code> — auto-created if new</li>
                 <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Immediate Supervisor</code></li>
                 <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Hire Date</code> — used for anniversary rewards</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Separation Date</code> — date = inactive, text like "N/A" = active</li>
+                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Separation Date</code> — date = inactive, text like &quot;N/A&quot; = active</li>
                 <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Email</code> — employee login account</li>
               </ul>
             </div>

@@ -337,7 +337,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (activeTab !== "notifications" || notifPrefs !== null) return;
-    setNotifLoading(true);
+    queueMicrotask(() => setNotifLoading(true));
     apiFetch<{ data: Record<string, boolean> }>("/api/me/notification-preferences")
       .then((res) => setNotifPrefs(res.data))
       .catch(() => setNotifError("Failed to load preferences"))

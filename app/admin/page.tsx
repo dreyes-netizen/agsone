@@ -96,6 +96,7 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     apiFetch<{ data: Analytics }>("/api/admin/analytics")
@@ -182,7 +183,7 @@ export default function AdminDashboardPage() {
       {/* KPI Cards — 2 cols mobile, 4 cols xl */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
-          label="Total Employees"
+          label="Active Employees"
           value={data.totalEmployees.toLocaleString()}
           sub={`Avg ${data.avgPointsBalance.toLocaleString()} pts/person`}
           icon={Users}
@@ -235,7 +236,7 @@ export default function AdminDashboardPage() {
                 <div key={e.id} className="grid grid-cols-[16px_28px_1fr_64px] items-center gap-2.5">
                   <span className={`text-xs font-bold tabular-nums text-center ${i === 0 ? "text-gray-700" : i === 1 ? "text-gray-400" : i === 2 ? "text-gray-500" : "text-gray-400"}`}>{i + 1}</span>
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
-                    {e.avatarUrl ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" /> : e.displayName.charAt(0).toUpperCase()}
+                    {e.avatarUrl && !failedAvatars.has(e.id) ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" onError={() => setFailedAvatars((prev) => new Set(prev).add(e.id))} /> : e.displayName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate leading-tight">{e.displayName}</p>
@@ -277,7 +278,7 @@ export default function AdminDashboardPage() {
                 return (
                   <li key={b.id} className="grid grid-cols-[28px_1fr_auto] items-center gap-2.5 py-1.5 px-1 hover:bg-gray-50/60 rounded-lg transition-colors">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
-                      {b.avatarUrl ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" /> : b.displayName.charAt(0).toUpperCase()}
+                      {b.avatarUrl && !failedAvatars.has(b.id) ? <img src={b.avatarUrl} alt={b.displayName} className="w-full h-full object-cover" onError={() => setFailedAvatars((prev) => new Set(prev).add(b.id))} /> : b.displayName.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate leading-tight">{b.displayName}</p>

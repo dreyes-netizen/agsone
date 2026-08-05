@@ -35,8 +35,9 @@ type Achiever = {
 };
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" | "lg" }) {
+  const [errored, setErrored] = useState(false);
   const cls = size === "lg" ? "w-16 h-16 text-2xl" : size === "sm" ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
-  if (url) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} />;
+  if (url && !errored) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
   return (
     <div className={`${cls} rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white font-bold shrink-0`}>
       {name.charAt(0).toUpperCase()}

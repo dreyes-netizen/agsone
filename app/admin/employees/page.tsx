@@ -8,51 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, Users } from "lucide-react";
 import { RoleBadge } from "@/components/RoleBadge";
-
-type Employee = {
-  id: string;
-  employeeId: string | null;
-  displayName: string;
-  email: string;
-  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN" | "SUPER_ADMIN";
-  pointsBalance: number;
-  isActive: boolean;
-  hireDate: string | null;
-  birthday: string | null;
-  department: { id: string; name: string } | null;
-};
-
-type Department = { id: string; name: string };
-
-type EditForm = {
-  displayName: string;
-  email: string;
-  departmentId: string | null;
-  role: Employee["role"];
-  isActive: boolean;
-  birthday: string | null;
-  hireDate: string | null;
-};
-
-type AddForm = {
-  displayName: string;
-  email: string;
-  departmentId: string;
-  role: Employee["role"];
-  employeeId: string;
-  hireDate: string;
-  birthday: string;
-};
-
-const EMPTY_ADD_FORM: AddForm = {
-  displayName: "",
-  email: "",
-  departmentId: "",
-  role: "EMPLOYEE",
-  employeeId: "",
-  hireDate: "",
-  birthday: "",
-};
+import type { Employee, Department, EditForm, AddForm, SyncResult } from "./types";
+import { EMPTY_ADD_FORM, getDeptOptions, selectClass, formatDate } from "./utils";
 
 export default function EmployeesPage() {
   const { apiFetch, streamFetch } = useApiClient();
@@ -69,7 +26,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } | null>(null);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [syncError, setSyncError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -273,17 +230,9 @@ export default function EmployeesPage() {
   }
 
   // Use departments state for filter dropdown (not derived from paginated employees)
-  const deptOptions = departments.map((d) => d.name).sort();
+  const deptOptions = getDeptOptions(departments);
 
   const hasActiveFilters = filterDept || filterRole || filterStatus;
-
-  const selectClass =
-    "text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white disabled:opacity-50";
-
-  const formatDate = (value: string | null) =>
-    value
-      ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-      : null;
 
   return (
     <div className="space-y-6">

@@ -1,14 +1,12 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Award, ShoppingBag, Gamepad2, Megaphone, Loader2, Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
-import type { UserProfile, PointsData, ShoutoutEntry, PointTx } from "./types";
-import { getDaysUntil, getAnniversaryYear, ordinal, txTypeLabel } from "./utils";
+import type { UserProfile, PointsData, ShoutoutEntry } from "./types";
 import { BioSection } from "./components/BioSection";
 import { SkillsSection } from "./components/SkillsSection";
 import { BirthdayHireCard } from "./components/BirthdayHireCard";
@@ -22,6 +20,11 @@ import { NotificationsTab } from "./components/NotificationsTab";
 import { ProfileHeaderCard } from "./components/ProfileHeaderCard";
 import { ProfileTabBar } from "./components/ProfileTabBar";
 import { ShoutoutsCard } from "./components/ShoutoutsCard";
+import { UpcomingMilestoneWidget } from "./components/UpcomingMilestoneWidget";
+import { DepartmentRankWidget } from "./components/DepartmentRankWidget";
+import { RecentActivityWidget } from "./components/RecentActivityWidget";
+import { QuickActionsWidget } from "./components/QuickActionsWidget";
+import { RecentBadgesWidget } from "./components/RecentBadgesWidget";
 
 export default function ProfilePage() {
   const { user: authUser, loading: authLoading } = useAuth();
@@ -218,131 +221,19 @@ export default function ProfilePage() {
         <div className="space-y-4 sticky top-6 self-start">
 
           {/* Widget 0: Upcoming Milestone */}
-          {(() => {
-            const items: { emoji: string; label: string; daysUntil: number }[] = [];
-            const dayLabel = (d: number) => d === 0 ? "Today!" : `in ${d} day${d === 1 ? "" : "s"}`;
-            if (profile.birthday) {
-              const d = getDaysUntil(profile.birthday);
-              if (d <= 30) items.push({ emoji: "🎂", label: `Birthday ${dayLabel(d)}`, daysUntil: d });
-            }
-            if (profile.hireDate) {
-              const d = getDaysUntil(profile.hireDate);
-              if (d <= 30) {
-                const yr = getAnniversaryYear(profile.hireDate);
-                if (yr > 0) items.push({ emoji: "🎉", label: `${ordinal(yr)} anniversary ${dayLabel(d)}`, daysUntil: d });
-              }
-            }
-            if (items.length === 0) return null;
-            return (
-              <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-2">
-                <p className="text-xs text-gray-500 font-medium">Upcoming</p>
-                {items.map((item) => (
-                  <p key={item.label} className="text-sm font-semibold text-gray-800">
-                    <span aria-hidden="true">{item.emoji}</span> {item.label}
-                  </p>
-                ))}
-              </div>
-            );
-          })()}
+          <UpcomingMilestoneWidget profile={profile} />
 
           {/* Widget 1: Department Rank */}
-          <Link href="/leaderboard">
-            <div className="bg-white rounded-card border border-table-border px-5 py-4 hover:border-gray-300 transition-colors">
-              <p className="text-xs text-gray-500 font-medium mb-2">Department Rank</p>
-              {profile.department && deptRank ? (
-                <>
-                  <p className="text-2xl font-black text-navy-600">#{deptRank.rank}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    in {profile.department.name} · of {deptRank.total}
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-gray-400">No department assigned</p>
-              )}
-            </div>
-          </Link>
+          <DepartmentRankWidget department={profile.department} deptRank={deptRank} />
 
           {/* Widget 2: Recent Activity */}
-          <div className="bg-white rounded-card border border-table-border overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-700">Recent Activity</p>
-              <button onClick={() => setActiveTab("points")} className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">
-                View all →
-              </button>
-            </div>
-            {pointsData && pointsData.transactions.length > 0 ? (
-              <ul className="divide-y divide-gray-100">
-                {(() => {
-                  const deduped: { t: PointTx; count: number }[] = [];
-                  for (const t of pointsData.transactions.slice(0, 6)) {
-                    const last = deduped[deduped.length - 1];
-                    if (last && last.t.note === t.note && last.t.type === t.type) { last.count++; }
-                    else { deduped.push({ t, count: 1 }); }
-                  }
-                  return deduped.slice(0, 3).map(({ t, count }) => {
-                    const positive = t.amount >= 0;
-                    const meta = txTypeLabel[t.type] ?? { label: t.type, color: "text-gray-600" };
-                    return (
-                      <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
-                        <span className={`text-xs font-bold shrink-0 ${positive ? "text-emerald-600" : "text-rose-500"}`}>
-                          {positive ? "+" : ""}{t.amount.toLocaleString()}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-gray-800 truncate">{t.note ?? meta.label}</p>
-                          <p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
-                        </div>
-                        {count > 1 && (
-                          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
-                        )}
-                      </li>
-                    );
-                  });
-                })()}
-              </ul>
-            ) : (
-              <p className="text-xs text-gray-400 text-center py-4">No activity yet</p>
-            )}
-          </div>
+          <RecentActivityWidget pointsData={pointsData} onViewAll={() => setActiveTab("points")} />
 
           {/* Widget 3: Quick Actions */}
-          <div className="bg-white rounded-card border border-table-border overflow-hidden">
-            <p className="px-4 py-3 text-xs font-semibold text-gray-700 border-b border-gray-100">Quick Actions</p>
-            <div className="divide-y divide-gray-100">
-              {[
-                { href: "/marketplace", icon: ShoppingBag, label: "Redeem Points",   color: "text-violet-500" },
-                { href: "/minigames",   icon: Gamepad2,    label: "Play a Minigame", color: "text-indigo-500" },
-                { href: "/feed",        icon: Megaphone,   label: "Send a Shoutout", color: "text-emerald-500" },
-              ].map(({ href, icon: Icon, label, color }) => (
-                <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-                  <Icon className={`w-4 h-4 shrink-0 ${color}`} aria-hidden="true" />
-                  <span className="text-sm font-medium text-gray-700">{label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <QuickActionsWidget />
 
           {/* Widget 4: Recent Badges */}
-          {profile.userBadges.length > 0 && (
-            <div className="bg-white rounded-card border border-table-border overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <p className="text-xs font-semibold text-gray-700">Recent Badges</p>
-                <button onClick={() => setActiveTab("badges")} className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">
-                  See all →
-                </button>
-              </div>
-              <ul className="divide-y divide-gray-100">
-                {profile.userBadges.slice(0, 2).map((ub) => (
-                  <li key={ub.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <Award className="w-4 h-4 text-amber-500 shrink-0" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-800 truncate">{ub.badge.name}</p>
-                      <p className="text-xs text-gray-500">{new Date(ub.awardedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <RecentBadgesWidget userBadges={profile.userBadges} onSeeAll={() => setActiveTab("badges")} />
 
         </div>{/* end right sidebar */}
       </div>{/* end grid */}

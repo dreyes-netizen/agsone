@@ -197,7 +197,7 @@ export default function ProfilePage() {
             skillInput={skillInput}
             onSkillInputChange={setSkillInput}
             onSkillKeyDown={handleSkillKeyDown}
-            onRemoveSkill={(index) => setSkillsEdit((prev) => prev.filter((_, i) => i !== index))}
+            onRemoveSkill={(skill) => setSkillsEdit((prev) => prev.filter((s) => s !== skill))}
           />
 
           {/* Shoutouts Received */}

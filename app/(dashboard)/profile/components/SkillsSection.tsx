@@ -7,7 +7,7 @@ interface SkillsSectionProps {
   skillInput: string;
   onSkillInputChange: (value: string) => void;
   onSkillKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onRemoveSkill: (index: number) => void;
+  onRemoveSkill: (skill: string) => void;
 }
 
 export function SkillsSection(props: SkillsSectionProps) {
@@ -25,12 +25,12 @@ export function SkillsSection(props: SkillsSectionProps) {
         <>
           {skillsEdit.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {skillsEdit.map((skill, i) => (
+              {skillsEdit.map((skill) => (
                 <span key={skill} className="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
                   {skill}
                   <button
                     aria-label={`Remove ${skill}`}
-                    onClick={() => onRemoveSkill(i)}
+                    onClick={() => onRemoveSkill(skill)}
                     className="hover:text-blue-900 transition-colors ml-1 p-0.5 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                   ><X className="w-3 h-3" aria-hidden="true" /></button>
                 </span>

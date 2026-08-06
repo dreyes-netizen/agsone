@@ -691,7 +691,7 @@ interface SkillsSectionProps {
   skillInput: string;
   onSkillInputChange: (value: string) => void;
   onSkillKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onRemoveSkill: (index: number) => void;
+  onRemoveSkill: (skill: string) => void;
 }
 
 export function SkillsSection(props: SkillsSectionProps) {
@@ -702,7 +702,7 @@ export function SkillsSection(props: SkillsSectionProps) {
       {/* paste page.tsx:529-582 verbatim here, replacing: */}
       {/* profile.skills -> skills (prop, view-mode list) */}
       {/* skillsEdit -> skillsEdit (prop, unchanged reference, edit-mode chip list) */}
-      {/* the remove-chip button's onClick (removes skillsEdit[i], originally something like setSkillsEdit((prev) => prev.filter((_, idx) => idx !== i))) -> onClick={() => onRemoveSkill(i)} */}
+      {/* the remove-chip button's onClick (originally onClick={() => setSkillsEdit(skillsEdit.filter((s) => s !== skill))} — value-based, removes every chip matching that text, not by position) -> onClick={() => onRemoveSkill(skill)} */}
       {/* skillInput -> skillInput (prop), onChange={(e) => setSkillInput(e.target.value)} -> onChange={(e) => onSkillInputChange(e.target.value)} */}
       {/* onKeyDown={handleSkillKeyDown} -> onKeyDown={onSkillKeyDown} */}
       {/* isEditing -> isEditing (prop, unchanged reference) */}
@@ -725,7 +725,7 @@ Replace lines 529–582 with:
   skillInput={skillInput}
   onSkillInputChange={setSkillInput}
   onSkillKeyDown={handleSkillKeyDown}
-  onRemoveSkill={(index) => setSkillsEdit((prev) => prev.filter((_, i) => i !== index))}
+  onRemoveSkill={(skill) => setSkillsEdit((prev) => prev.filter((s) => s !== skill))}
 />
 ```
 

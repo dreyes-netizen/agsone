@@ -10,45 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Pagination } from "@/components/ui/pagination";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { MEDICINE_REQUEST_STATUS_BADGE } from "@/lib/constants/medicineRequestStatus";
-
-type Medicine = {
-  id: string;
-  name: string;
-  imageUrl: string;
-  caption: string;
-  stockQuantity: number;
-  isActive: boolean;
-};
-
-type MedicineRequest = {
-  id: string;
-  quantity: number;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  notes: string;
-  createdAt: string;
-  approvedAt?: string | null;
-  user: { id: string; displayName: string; avatarUrl?: string | null };
-  medicine: { id: string; name: string; imageUrl?: string | null };
-  approvedBy?: { id: string; displayName: string } | null;
-};
-
-type AddForm = {
-  name: string;
-  caption: string;
-  stockQuantity: string;
-  imageFile: File | null;
-  imagePreview: string;
-};
-
-type EditForm = {
-  name: string;
-  caption: string;
-  stockQuantity: string;
-  imageUrl: string;
-  imageFile: File | null;
-  imagePreview: string;
-  isActive: boolean;
-};
+import type { Medicine, MedicineRequest, AddForm, EditForm } from "./types";
 
 const statusChip = MEDICINE_REQUEST_STATUS_BADGE;
 

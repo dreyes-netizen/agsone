@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette, Loader2, AlertCircle, Lock } from "lucide-react";
+import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 import { RoleBadge } from "@/components/RoleBadge";
 
@@ -35,7 +35,6 @@ type UserProfile = {
   displayName: string;
   email: string;
   avatarUrl: string | null;
-  bannerUrl: string | null;
   role: string;
   pointsBalance: number;
   level: number;
@@ -126,22 +125,6 @@ const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
   INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
   LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
 };
-
-
-const BANNER_COLOR_OPTIONS = [
-  { key: "default",  gradient: "from-navy-500 to-violet-600" },
-  { key: "ocean",    gradient: "from-blue-500 to-cyan-500" },
-  { key: "forest",   gradient: "from-emerald-500 to-teal-600" },
-  { key: "sunset",   gradient: "from-orange-500 to-rose-500" },
-  { key: "midnight", gradient: "from-slate-800 to-gray-700" },
-  { key: "lavender", gradient: "from-violet-500 to-purple-600" },
-  { key: "gold",     gradient: "from-amber-400 to-orange-500" },
-  { key: "rose",     gradient: "from-rose-400 to-pink-500" },
-] as const;
-
-const BANNER_GRADIENTS: Record<string, string> = Object.fromEntries(
-  BANNER_COLOR_OPTIONS.map(({ key, gradient }) => [key, gradient])
-);
 
 function CompletenessBar({ profile }: { profile: UserProfile }) {
   const items = [
@@ -263,7 +246,6 @@ export default function ProfilePage() {
   const [profileError, setProfileError] = useState("");
   const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
   const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
-  const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading || !authUser) return;
@@ -381,40 +363,7 @@ export default function ProfilePage() {
 
       {/* ── Profile card ── */}
       <div className="bg-white rounded-card border border-table-border overflow-hidden">
-        {/* Top accent — color picker */}
-        <div className={`h-20 bg-gradient-to-br ${BANNER_GRADIENTS[profile.bannerUrl ?? ""] ?? BANNER_GRADIENTS.default} relative`}>
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-          <div className="absolute top-2 right-2">
-            <button
-              aria-label="Change banner color"
-              aria-expanded={bannerPickerOpen}
-              aria-haspopup="true"
-              onClick={() => setBannerPickerOpen((o) => !o)}
-              className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            >
-              <Palette className="w-3.5 h-3.5" aria-hidden="true" />
-            </button>
-            {bannerPickerOpen && (
-              <div className="absolute top-9 right-0 z-10 bg-white rounded-xl border border-gray-200 shadow-lg p-3 w-48">
-                <p className="text-xs text-gray-500 font-medium mb-2">Banner color</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {BANNER_COLOR_OPTIONS.map(({ key, gradient }) => (
-                    <button
-                      key={key}
-                      onClick={async () => {
-                        setBannerPickerOpen(false);
-                        await apiFetch("/api/me", { method: "PATCH", body: JSON.stringify({ bannerUrl: key }) });
-                        setProfile((p) => p ? { ...p, bannerUrl: key } : p);
-                      }}
-                      aria-label={`${key} banner color${(profile.bannerUrl === key || (!profile.bannerUrl && key === "default")) ? " (selected)" : ""}`}
-                      className={`w-9 h-9 rounded-lg bg-gradient-to-br ${gradient} ring-2 transition-all focus-visible:outline-none focus-visible:ring-gray-800 ${profile.bannerUrl === key || (!profile.bannerUrl && key === "default") ? "ring-gray-800" : "ring-transparent hover:ring-gray-400"}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="h-20 bg-gray-50" />
 
         <div className="px-6 pb-6 relative">
           {/* Avatar */}

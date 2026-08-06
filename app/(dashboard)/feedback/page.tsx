@@ -329,7 +329,7 @@ export default function FeedbackPage() {
               </div>
               <button
                 onClick={startCompose}
-                className="bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
+                className="bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-5 py-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {items.length === 0 ? "File your first report →" : "+ New Report"}
               </button>
@@ -440,7 +440,7 @@ export default function FeedbackPage() {
                   onClick={handleSubmit}
                   disabled={!title || !category || !body || submitting}
                   aria-busy={submitting}
-                  className="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2.5 sm:py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-700"
+                  className="flex items-center gap-2 bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-5 py-2.5 sm:py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
                 >
                   {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
                   {submitting ? "Submitting…" : "Submit Report"}

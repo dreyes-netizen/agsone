@@ -9,10 +9,11 @@ import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
 import type { UserProfile, PointsData, ShoutoutEntry, TimelineEntry, PointTx } from "./types";
 import { getDaysUntil, getAnniversaryYear, ordinal, txTypeLabel, CATEGORY_BADGE } from "./utils";
+import { BirthdayHireCard } from "./components/BirthdayHireCard";
 import { CompletenessBar } from "./components/CompletenessBar";
 import { MinigamesStatsCard } from "./components/MinigamesStatsCard";
+import { OverviewStatsGrid } from "./components/OverviewStatsGrid";
 import { ProfileHeaderCard } from "./components/ProfileHeaderCard";
-import { ProfileOverviewCards } from "./components/ProfileOverviewCards";
 import { ProfileTabBar } from "./components/ProfileTabBar";
 import { ShoutoutsCard } from "./components/ShoutoutsCard";
 
@@ -175,10 +176,13 @@ export default function ProfilePage() {
         <div id="panel-overview" role="tabpanel">
         <>
           <CompletenessBar profile={profile} />
-          <ProfileOverviewCards profile={profile} />
+          <OverviewStatsGrid profile={profile} />
 
           {/* Minigames stats */}
           <MinigamesStatsCard />
+
+          {/* Details: Birthday + Hire Date */}
+          <BirthdayHireCard profile={profile} />
 
           {/* Bio */}
           <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">

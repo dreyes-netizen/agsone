@@ -486,41 +486,64 @@ git commit -m "refactor: extract ProfileTabBar from profile page"
 
 ---
 
-### Task 5: Extract `ProfileOverviewCards` and `ShoutoutsCard`
+### Task 5: Extract `OverviewStatsGrid`, `BirthdayHireCard`, and `ShoutoutsCard`
 
 **Files:**
-- Create: `app/(dashboard)/profile/components/ProfileOverviewCards.tsx`
+- Create: `app/(dashboard)/profile/components/OverviewStatsGrid.tsx`
+- Create: `app/(dashboard)/profile/components/BirthdayHireCard.tsx`
 - Create: `app/(dashboard)/profile/components/ShoutoutsCard.tsx`
-- Modify: `app/(dashboard)/profile/page.tsx:449-498` and `:584-617` (replace with component usage)
+- Modify: `app/(dashboard)/profile/page.tsx:449-465` and `:470-498` and `:584-617` (replace with component usage)
 
 **Interfaces:**
-- `ProfileOverviewCards({ profile }: { profile: UserProfile })` — bundles the stats grid (points/level/badges) and the birthday/hire-date card; both are pure `profile`-only displays with no edit-mode coupling, low enough coupling to combine into one file.
+- `OverviewStatsGrid({ profile }: { profile: UserProfile })` — the 3-card stats grid (points/level/badges), pure `profile`-only display.
+- `BirthdayHireCard({ profile }: { profile: UserProfile })` — the birthday/hire-date two-column card, pure `profile`-only display.
 - `ShoutoutsCard({ shoutouts }: { shoutouts: ShoutoutEntry[] | null })`.
 
-- [ ] **Step 1: Create `ProfileOverviewCards.tsx`**
+**Correction (do not fuse the two overview cards into one component):** an earlier version of this task bundled the stats grid and the birthday/hire-date card into a single `ProfileOverviewCards` component. That's wrong — `<MinigamesStatsCard />` (already extracted, Task 2) sits BETWEEN these two cards in the actual page (stats grid → `<MinigamesStatsCard />` → birthday/hire card). Fusing them into one component and rendering it as a single block would silently reorder `<MinigamesStatsCard />` to after both cards instead of between them — a real visual/behavior change, which this refactor forbids. Keep them as two separate components so `page.tsx` can render `<OverviewStatsGrid profile={profile} />`, then `<MinigamesStatsCard />` (unchanged, already in place from Task 2), then `<BirthdayHireCard profile={profile} />`, preserving the exact original visual order.
+
+- [ ] **Step 1: Create `OverviewStatsGrid.tsx`**
 
 ```tsx
-import { Star, Medal, Coins, CalendarDays, Trophy } from "lucide-react";
+import { Star, Medal, Coins } from "lucide-react";
 import type { UserProfile } from "../types";
-import { getDaysUntil, getAnniversaryYear, ordinal } from "../utils";
 
-interface ProfileOverviewCardsProps {
+interface OverviewStatsGridProps {
   profile: UserProfile;
 }
 
-export function ProfileOverviewCards({ profile }: ProfileOverviewCardsProps) {
+export function OverviewStatsGrid({ profile }: OverviewStatsGridProps) {
   return (
     <>
       {/* paste page.tsx:449-465 verbatim here (the 3-card stats grid) — pure reads of profile.pointsBalance, profile.level, profile.userBadges.length, no substitutions needed */}
-      {/* paste page.tsx:470-498 verbatim here (the birthday/hire-date two-column card) — pure reads of profile.birthday, profile.hireDate via getDaysUntil/getAnniversaryYear/ordinal, no substitutions needed */}
     </>
   );
 }
 ```
 
-Do the paste-and-replace: copy both blocks verbatim (no variable renames needed — everything reads `profile.*` already), wrap in the fragment shown, delete the comments.
+Do the paste-and-replace: copy the stats-grid block verbatim (no variable renames needed — everything reads `profile.*` already), delete the comment.
 
-- [ ] **Step 2: Create `ShoutoutsCard.tsx`**
+- [ ] **Step 2: Create `BirthdayHireCard.tsx`**
+
+```tsx
+import { CalendarDays, Trophy } from "lucide-react";
+import type { UserProfile } from "../types";
+
+interface BirthdayHireCardProps {
+  profile: UserProfile;
+}
+
+export function BirthdayHireCard({ profile }: BirthdayHireCardProps) {
+  return (
+    <>
+      {/* paste page.tsx:470-498 verbatim here (the birthday/hire-date two-column card) — pure reads of profile.birthday, profile.hireDate, no substitutions needed */}
+    </>
+  );
+}
+```
+
+Do the paste-and-replace now.
+
+- [ ] **Step 3: Create `ShoutoutsCard.tsx`**
 
 ```tsx
 import { Megaphone } from "lucide-react";
@@ -542,13 +565,23 @@ export function ShoutoutsCard({ shoutouts }: ShoutoutsCardProps) {
 
 Do the paste-and-replace now.
 
-- [ ] **Step 3: Update `page.tsx`**
+- [ ] **Step 4: Update `page.tsx`**
 
-Replace lines 449–498 with:
+Replace lines 449–465 (the stats grid) with:
 
 ```tsx
-<ProfileOverviewCards profile={profile} />
+<OverviewStatsGrid profile={profile} />
 ```
+
+Leave the `<MinigamesStatsCard />` usage between the two blocks exactly where it already is (untouched, already in place from Task 2) — do not move it.
+
+Replace lines 470–498 (the birthday/hire-date card) with:
+
+```tsx
+<BirthdayHireCard profile={profile} />
+```
+
+The result should read, in order: `<OverviewStatsGrid profile={profile} />`, `<MinigamesStatsCard />`, `<BirthdayHireCard profile={profile} />` — identical visual order to the original file.
 
 Replace lines 584–617 with:
 
@@ -559,19 +592,20 @@ Replace lines 584–617 with:
 Add imports:
 
 ```ts
-import { ProfileOverviewCards } from "./components/ProfileOverviewCards";
+import { OverviewStatsGrid } from "./components/OverviewStatsGrid";
+import { BirthdayHireCard } from "./components/BirthdayHireCard";
 import { ShoutoutsCard } from "./components/ShoutoutsCard";
 ```
 
-- [ ] **Step 4: Verify**
+- [ ] **Step 5: Verify**
 
-`npx tsc --noEmit`, `npm run lint` — clean. Manual check: Overview tab shows the 3 stat cards with correct numbers, the birthday/hire-date card with correct countdowns, and either a list of received shoutouts or the "no shoutouts yet" empty state.
+`npx tsc --noEmit`, `npm run lint` — clean. Manual check: Overview tab shows the 3 stat cards with correct numbers, then the minigames stats card (if applicable), then the birthday/hire-date card with correct countdowns — in that exact order — and either a list of received shoutouts or the "no shoutouts yet" empty state.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add "app/(dashboard)/profile/components/ProfileOverviewCards.tsx" "app/(dashboard)/profile/components/ShoutoutsCard.tsx" "app/(dashboard)/profile/page.tsx"
-git commit -m "refactor: extract ProfileOverviewCards and ShoutoutsCard from profile page"
+git add "app/(dashboard)/profile/components/OverviewStatsGrid.tsx" "app/(dashboard)/profile/components/BirthdayHireCard.tsx" "app/(dashboard)/profile/components/ShoutoutsCard.tsx" "app/(dashboard)/profile/page.tsx"
+git commit -m "refactor: extract OverviewStatsGrid, BirthdayHireCard, ShoutoutsCard from profile page"
 ```
 
 ---

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
+import { History, Medal, Trophy, Award, Bell, FileText, Tag, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
 import type { UserProfile, PointsData, ShoutoutEntry, TimelineEntry, PointTx } from "./types";
@@ -12,7 +12,9 @@ import { getDaysUntil, getAnniversaryYear, ordinal, txTypeLabel, CATEGORY_BADGE 
 import { CompletenessBar } from "./components/CompletenessBar";
 import { MinigamesStatsCard } from "./components/MinigamesStatsCard";
 import { ProfileHeaderCard } from "./components/ProfileHeaderCard";
+import { ProfileOverviewCards } from "./components/ProfileOverviewCards";
 import { ProfileTabBar } from "./components/ProfileTabBar";
+import { ShoutoutsCard } from "./components/ShoutoutsCard";
 
 export default function ProfilePage() {
   const { user: authUser, loading: authLoading } = useAuth();
@@ -173,56 +175,10 @@ export default function ProfilePage() {
         <div id="panel-overview" role="tabpanel">
         <>
           <CompletenessBar profile={profile} />
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { icon: Coins, value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600",   bg: "bg-navy-50",   hint: null },
-              { icon: Star,  value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50", hint: null },
-              { icon: Medal, value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50",  hint: null },
-            ].map(({ icon: Icon, value, label, color, bg, hint }) => (
-              <div key={label} className="bg-white rounded-card border border-table-border p-3 sm:p-4 flex flex-col gap-2">
-                <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
-                  <Icon className={`w-4 h-4 ${color}`} aria-hidden="true" />
-                </div>
-                <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
-                <p className="text-xs text-gray-500 font-medium">{label}</p>
-                {hint && <p className="text-xs text-gray-500 italic leading-tight">{hint}</p>}
-              </div>
-            ))}
-          </div>
+          <ProfileOverviewCards profile={profile} />
 
           {/* Minigames stats */}
           <MinigamesStatsCard />
-
-          {/* Details: Birthday + Hire Date */}
-          <div className="bg-white rounded-card border border-table-border px-5 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-                <CalendarDays className="w-4 h-4 text-rose-500" aria-hidden="true" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-500 font-medium">Birthday</p>
-                <p className="text-sm font-semibold text-gray-800">
-                  {profile.birthday
-                    ? new Date(profile.birthday).toLocaleDateString(undefined, { month: "long", day: "numeric" })
-                    : "Not set"}
-                </p>
-              </div>
-              {profile.hireDate && (
-                <div className="flex items-center gap-3 pl-4 border-l border-gray-100">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Trophy className="w-4 h-4 text-blue-500" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-medium">Hire Date</p>
-                    <p className="text-sm font-semibold text-gray-800">
-                      {new Date(profile.hireDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Bio */}
           <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">
@@ -309,39 +265,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Shoutouts Received */}
-          {shoutouts !== null && (
-            <div className="bg-white rounded-card border border-table-border overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-800"><span aria-hidden="true">💬</span> Shoutouts</p>
-                <Link href="/feed" className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">See all →</Link>
-              </div>
-              {shoutouts.length === 0 ? (
-                <div className="flex flex-col items-center gap-1 py-3 px-4 text-center">
-                  <Megaphone className="w-4 h-4 text-gray-300" aria-hidden="true" />
-                  <p className="text-xs font-medium text-gray-600">No shoutouts yet</p>
-                  <p className="text-[10px] text-gray-400">Your colleagues will recognize you here</p>
-                </div>
-              ) : (
-                <ul className="divide-y divide-gray-100">
-                  {shoutouts.map((s) => (
-                    <li key={s.id} className="flex gap-3 px-5 py-3">
-                      <div className="w-8 h-8 rounded-full bg-navy-500 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
-                        {s.post.author.avatarUrl
-                          ? <img src={s.post.author.avatarUrl} alt={s.post.author.displayName} className="w-full h-full object-cover" />
-                          : s.post.author.displayName.charAt(0).toUpperCase()
-                        }
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-gray-800">{s.post.author.displayName}</p>
-                        <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{s.post.content}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{new Date(s.post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+          <ShoutoutsCard shoutouts={shoutouts} />
 
           {/* Save / Cancel — only in edit mode */}
           {isEditing && (

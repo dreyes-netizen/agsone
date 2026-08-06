@@ -6,11 +6,12 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, AlertTriangle, Truck, RefreshCw } from "lucide-react";
+import { UtensilsCrossed, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, Pencil, AlertTriangle, Truck, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { AddOn, MyOrder, OrderRow, Listing, Tab } from "./types";
 import { formatPrice, formatCutoff, isClosed, getUrgencyLabel } from "./utils";
+import { ListingFormPanel } from "./components/ListingFormPanel";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -359,142 +360,35 @@ export default function FoodPage() {
 
       {/* Create / edit form */}
       {showForm && (
-        <div className="bg-white rounded-card border border-table-border p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">{editingId ? "Edit Listing" : "New Listing"}</h2>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
-                <input
-                  required value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Homemade Lumpia"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <div className="flex justify-between items-baseline mb-1">
-                  <label className="block text-xs font-medium text-gray-600">Description <span className="text-gray-500 font-normal">(optional)</span></label>
-                  <span className={`text-xs ${newDesc.length > 1800 ? "text-red-500" : "text-gray-500"}`}>{newDesc.length}/2000</span>
-                </div>
-                <textarea
-                  value={newDesc} onChange={(e) => setNewDesc(e.target.value)} rows={3}
-                  maxLength={2000}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Price (₱)</label>
-                <input
-                  required type="number" min="1" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)}
-                  placeholder="120.00"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Order cutoff</label>
-                <input
-                  required type="datetime-local" value={newCutoff} onChange={(e) => setNewCutoff(e.target.value)}
-                  min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Delivery date & time <span className="text-gray-500 font-normal">(optional)</span></label>
-                <input
-                  type="datetime-local" value={newDeliveryDate} onChange={(e) => setNewDeliveryDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
-                />
-              </div>
-            </div>
-
-            {/* Image picker */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Photos <span className="text-gray-500 font-normal">(up to 3, optional)</span></label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {existingImageUrls.map((src, i) => (
-                  <div key={src} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button type="button" aria-label="Remove image" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 text-white transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                {imagePreviews.map((src, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button type="button" aria-label="Remove image" onClick={() => removeNewImage(i)} className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 text-white transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                {totalImages < 3 && (
-                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-navy-400 transition-colors">
-                    <ImagePlus className="w-5 h-5 text-gray-500" />
-                    <span className="text-[10px] text-gray-500 mt-0.5">Add</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImagePick} multiple />
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Add-ons */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Add-ons / Options <span className="text-gray-500 font-normal">(optional — e.g. Extra Rice ₱15, Spicy ₱0)</span>
-              </label>
-              {newAddOns.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {newAddOns.map((a, i) => (
-                    <span key={i} className="flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">
-                      {a.name}{a.price > 0 ? ` — ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " — Free"}
-                      <button type="button" onClick={() => removeAddOn(i)} aria-label="Remove add-on" className="text-gray-500 hover:text-gray-700">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {newAddOns.length < 10 && (
-                <div className="flex gap-2">
-                  <input
-                    value={addOnName} onChange={(e) => setAddOnName(e.target.value)}
-                    placeholder="Name (e.g. Extra Rice)"
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAddOn())}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
-                  />
-                  <input
-                    value={addOnPrice} onChange={(e) => setAddOnPrice(e.target.value)}
-                    type="number" min="0" step="0.01" placeholder="₱ (0 = free)"
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAddOn())}
-                    className="w-20 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
-                  />
-                  <button
-                    type="button" onClick={addAddOn}
-                    className="flex items-center gap-1 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />Add
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit" disabled={creating}
-                 className="flex items-center gap-2 bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {creating ? (editingId ? "Saving…" : "Creating…") : editingId ? "Save Changes" : "Post Listing"}
-              </button>
-              <button type="button" onClick={resetForm} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+        <ListingFormPanel
+          editingId={editingId}
+          newTitle={newTitle}
+          onTitleChange={setNewTitle}
+          newDesc={newDesc}
+          onDescChange={setNewDesc}
+          newPrice={newPrice}
+          onPriceChange={setNewPrice}
+          newCutoff={newCutoff}
+          onCutoffChange={setNewCutoff}
+          newDeliveryDate={newDeliveryDate}
+          onDeliveryDateChange={setNewDeliveryDate}
+          existingImageUrls={existingImageUrls}
+          imagePreviews={imagePreviews}
+          totalImages={totalImages}
+          onImagePick={handleImagePick}
+          onRemoveExistingImage={removeExistingImage}
+          onRemoveNewImage={removeNewImage}
+          newAddOns={newAddOns}
+          addOnName={addOnName}
+          onAddOnNameChange={setAddOnName}
+          addOnPrice={addOnPrice}
+          onAddOnPriceChange={setAddOnPrice}
+          onAddAddOn={addAddOn}
+          onRemoveAddOn={removeAddOn}
+          creating={creating}
+          onSubmit={handleSubmit}
+          onCancel={resetForm}
+        />
       )}
 
       {/* Tabs — horizontal scroll on mobile */}

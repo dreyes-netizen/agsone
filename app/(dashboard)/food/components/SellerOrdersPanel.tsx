@@ -78,7 +78,7 @@ export function SellerOrdersPanel({ listingPrice, orders, onTogglePaid, onViewUs
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => onViewUser(o.user.id)}
+                          onClick={(e) => { e.stopPropagation(); onViewUser(o.user.id); }}
                           className="text-xs font-semibold text-gray-800 hover:underline hover:text-navy-600 transition-colors"
                         >
                           {o.user.displayName}
@@ -105,7 +105,7 @@ export function SellerOrdersPanel({ listingPrice, orders, onTogglePaid, onViewUs
                       <p className={`text-sm font-bold ${isPaid ? "text-emerald-600" : "text-gray-700"}`}>₱{rowTotal.toFixed(2)}</p>
                       <button
                         type="button"
-                        onClick={() => onTogglePaid(o.id, !isPaid)}
+                        onClick={(e) => { e.stopPropagation(); onTogglePaid(o.id, !isPaid); }}
                         className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
                           isPaid
                             ? "border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200"

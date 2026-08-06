@@ -9,6 +9,8 @@ import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, AlertTriangle, Truck, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import type { AddOn, MyOrder, OrderRow, Listing, Tab } from "./types";
+import { formatPrice, formatCutoff, isClosed, getUrgencyLabel } from "./utils";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -16,66 +18,6 @@ const ImageLightbox = dynamic(
   () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
   { ssr: false },
 );
-
-type AddOn = { name: string; price: number };
-
-type MyOrder = {
-  id: string;
-  quantity: number;
-  note: string | null;
-  selectedAddOns: AddOn[];
-  createdAt: string;
-};
-
-type OrderRow = {
-  id: string;
-  quantity: number;
-  note: string | null;
-  selectedAddOns: AddOn[];
-  paidAt: string | null;
-  createdAt: string;
-  user: { id: string; displayName: string; department: { name: string } | null };
-};
-
-type Listing = {
-  id: string;
-  title: string;
-  description: string | null;
-  price: string;
-  imageUrls: string[];
-  cutoffAt: string;
-  deliveryDate: string | null;
-  addOns: AddOn[];
-  isActive: boolean;
-  createdBy: { id: string; displayName: string; avatarUrl: string | null };
-  myOrder: MyOrder | null;
-  _count: { orders: number };
-};
-
-type Tab = "AVAILABLE" | "MY_ORDERS" | "MY_LISTINGS";
-
-function formatPrice(price: string) {
-  return `₱${parseFloat(price).toFixed(2)}`;
-}
-
-function formatCutoff(cutoffAt: string) {
-  return new Date(cutoffAt).toLocaleString("en-US", {
-    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-  });
-}
-
-function isClosed(listing: Listing) {
-  return !listing.isActive || new Date(listing.cutoffAt) <= new Date();
-}
-
-function getUrgencyLabel(cutoffAt: string): string | null {
-  const diff = new Date(cutoffAt).getTime() - Date.now();
-  if (diff <= 0 || diff > 60 * 60_000) return null;
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "Closes in less than a minute";
-  if (minutes === 1) return "Closes in 1 min";
-  return `Closes in ${minutes} min`;
-}
 
 export default function FoodPage() {
   const { user, dbUser, token, loading: authLoading } = useAuth();

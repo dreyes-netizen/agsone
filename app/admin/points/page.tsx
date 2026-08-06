@@ -6,32 +6,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, VIOLATION_TYPES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 import { Upload, Loader2, CheckCircle, AlertCircle, XCircle, History } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
-
-type Department = { id: string; name: string };
-type Employee = {
-  id: string;
-  displayName: string;
-  email: string;
-  pointsBalance: number;
-  department?: { id: string; name: string } | null;
-};
-type Transaction = {
-  id: string;
-  amount: number;
-  note: string | null;
-  category: string | null;
-  createdAt: string;
-  toUser?: { displayName: string };
-  fromUser: { displayName: string } | null;
-};
-type Budget = { isExempt: boolean; used: number; remaining: number; total: number };
-
-const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
-  PERFORMANCE: { label: "Performance", style: "bg-violet-50 text-violet-700" },
-  TEAMWORK:    { label: "Teamwork",    style: "bg-blue-50 text-blue-700" },
-  INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
-  LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
-};
+import type { Department, Employee, Transaction, Budget, AttendanceResult, EmployeesPage } from "./types";
+import { CATEGORY_BADGE, getDepartmentsFromEmployees, filterEmployeesForBulk, inputClass, thClass, tdClass } from "./utils";
 
 // Activity dropdown grouped by category, shared by Single and Bulk forms
 function ActivitySelect({ value, onChange }: { value: string; onChange: (key: string) => void }) {
@@ -110,11 +86,7 @@ export default function AwardPointsPage() {
     return prev.toISOString().slice(0, 7);
   });
   const [attendanceUploading, setAttendanceUploading] = useState(false);
-  const [attendanceResult, setAttendanceResult] = useState<{
-    awarded: number;
-    awardedNames?: string[];
-    skipped: { notFound: string[]; alreadyAwarded: string[] };
-  } | null>(null);
+  const [attendanceResult, setAttendanceResult] = useState<AttendanceResult | null>(null);
   const [attendanceError, setAttendanceError] = useState("");
   const attendanceFileRef = useRef<HTMLInputElement>(null);
 
@@ -147,11 +119,10 @@ export default function AwardPointsPage() {
   // no params silently truncated to the first 25 employees alphabetically.
   // Page through it instead of raising the cap.
   async function loadAllEmployees() {
-    type Page = { data: (Employee & { role: string })[]; page: number; pages: number };
-    const first = await apiFetch<Page>("/api/admin/employees?limit=100");
+    const first = await apiFetch<EmployeesPage>("/api/admin/employees?limit=100");
     const rest = await Promise.all(
       Array.from({ length: Math.max(0, first.pages - 1) }, (_, i) =>
-        apiFetch<Page>(`/api/admin/employees?limit=100&page=${i + 2}`)
+        apiFetch<EmployeesPage>(`/api/admin/employees?limit=100&page=${i + 2}`)
       )
     );
     const all = [first, ...rest].flatMap((r) => r.data);
@@ -304,24 +275,8 @@ export default function AwardPointsPage() {
   }
 
   // Extract unique departments from loaded employees
-  const departments: Department[] = Array.from(
-    new Map(
-      employees
-        .filter((e) => e.department)
-        .map((e) => [e.department!.id, e.department!])
-    ).values()
-  ).sort((a, b) => a.name.localeCompare(b.name));
-
-  // Selectable employees (exclude self)
-  const selectableEmployees = employees.filter((e) => e.id !== dbUser?.id);
-  const filteredForBulk =
-    bulkDeptFilter === "all"
-      ? selectableEmployees
-      : selectableEmployees.filter((e) => e.department?.id === bulkDeptFilter);
-
-  const allFilteredSelected =
-    filteredForBulk.length > 0 &&
-    filteredForBulk.every((e) => bulkSelected.has(e.id));
+  const departments: Department[] = getDepartmentsFromEmployees(employees);
+  const { filteredForBulk, allFilteredSelected } = filterEmployeesForBulk(employees, dbUser?.id, bulkDeptFilter, bulkSelected);
 
   function toggleEmployee(id: string) {
     setBulkSelected((prev) => {
@@ -347,12 +302,6 @@ export default function AwardPointsPage() {
       });
     }
   }
-
-  const inputClass =
-    "w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white";
-  const thClass =
-    "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
-  const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";
 
   return (
     <div className="space-y-6 max-w-4xl">

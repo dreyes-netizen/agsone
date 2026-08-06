@@ -11,6 +11,7 @@ import { RoleBadge } from "@/components/RoleBadge";
 import type { Employee, Department, EditForm, AddForm, SyncResult } from "./types";
 import { EMPTY_ADD_FORM, getDeptOptions, selectClass, formatDate } from "./utils";
 import { SyncBanners } from "./components/SyncBanners";
+import { EmployeeFilterBar } from "./components/EmployeeFilterBar";
 
 export default function EmployeesPage() {
   const { apiFetch, streamFetch } = useApiClient();
@@ -233,8 +234,6 @@ export default function EmployeesPage() {
   // Use departments state for filter dropdown (not derived from paginated employees)
   const deptOptions = getDeptOptions(departments);
 
-  const hasActiveFilters = filterDept || filterRole || filterStatus;
-
   return (
     <div className="space-y-6">
       <div>
@@ -251,52 +250,19 @@ export default function EmployeesPage() {
         onDismissError={() => setSyncError("")}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3 bg-gray-50 rounded-xl border border-gray-100">
-        <input
-          placeholder="Search by name or email…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-0 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-navy-500/30 focus:border-navy-400 bg-white"
-        />
-        <select
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
-          className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-        >
-          <option value="">All Departments</option>
-          {deptOptions.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-        >
-          <option value="">All Roles</option>
-          <option value="EMPLOYEE">Employee</option>
-          <option value="MANAGER">Manager</option>
-          <option value="HR_ADMIN">HR Admin</option>
-          {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-        >
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        {hasActiveFilters && (
-          <button
-            onClick={() => { setFilterDept(""); setFilterRole(""); setFilterStatus(""); setSearch(""); }}
-            className="text-xs text-navy-600 hover:text-navy-800 font-medium underline underline-offset-2 whitespace-nowrap"
-          >
-            Clear filters
-          </button>
-        )}
-      </div>
+      <EmployeeFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        filterDept={filterDept}
+        onDeptChange={setFilterDept}
+        filterRole={filterRole}
+        onRoleChange={setFilterRole}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        deptOptions={deptOptions}
+        isSuperAdmin={isSuperAdmin}
+        onClearFilters={() => { setSearch(""); setFilterDept(""); setFilterRole(""); setFilterStatus(""); }}
+      />
 
       <input
         ref={fileInputRef}

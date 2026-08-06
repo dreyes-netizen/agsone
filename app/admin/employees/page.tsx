@@ -6,12 +6,13 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { Pagination } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, Users } from "lucide-react";
+import { Loader2, Pencil, Users } from "lucide-react";
 import { RoleBadge } from "@/components/RoleBadge";
 import type { Employee, Department, EditForm, AddForm, SyncResult } from "./types";
 import { EMPTY_ADD_FORM, getDeptOptions, selectClass, formatDate } from "./utils";
 import { SyncBanners } from "./components/SyncBanners";
 import { EmployeeFilterBar } from "./components/EmployeeFilterBar";
+import { EmployeeToolbar } from "./components/EmployeeToolbar";
 
 export default function EmployeesPage() {
   const { apiFetch, streamFetch } = useApiClient();
@@ -35,7 +36,6 @@ export default function EmployeesPage() {
   const [editForm, setEditForm] = useState<EditForm>({ displayName: "", email: "", departmentId: null, role: "EMPLOYEE", isActive: true, birthday: null, hireDate: null });
   const [departments, setDepartments] = useState<Department[]>([]);
   const [saving, setSaving] = useState(false);
-  const [showUploadGuide, setShowUploadGuide] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
   const [adding, setAdding] = useState(false);
@@ -231,6 +231,30 @@ export default function EmployeesPage() {
     }
   }
 
+  async function handleExport() {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (filterDept) params.set("department", filterDept);
+    if (filterRole) params.set("role", filterRole);
+    if (filterStatus) params.set("status", filterStatus);
+    const qs = params.toString();
+    setExporting(true);
+    try {
+      const res = await streamFetch(`/api/admin/employees/export${qs ? `?${qs}` : ""}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "employees.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export employees.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   // Use departments state for filter dropdown (not derived from paginated employees)
   const deptOptions = getDeptOptions(departments);
 
@@ -264,99 +288,18 @@ export default function EmployeesPage() {
         onClearFilters={() => { setSearch(""); setFilterDept(""); setFilterRole(""); setFilterStatus(""); }}
       />
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls"
-        className="hidden"
-        onChange={handleSyncFile}
-      />
-
       <div className="bg-white rounded-card border border-table-border overflow-clip">
-        <button
-          onClick={() => setShowUploadGuide((v) => !v)}
-          className="w-full flex items-center justify-between px-6 py-3 border-b border-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          <span>Upload Instructions</span>
-          {showUploadGuide ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-        </button>
-
-        {showUploadGuide && (
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 text-sm space-y-3">
-            <p className="text-gray-600">Upload an <strong>.xlsx</strong> file exported from Sprout HR. Column names must match exactly.</p>
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Required Columns</p>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-700">
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Employee ID</code> — matches existing employees</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Last Name</code> — display name</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Middle Name</code> — display name</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">First Name</code> — display name</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Birthday</code> — used for birthday rewards</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Department</code> — auto-created if new</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Immediate Supervisor</code></li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Hire Date</code> — used for anniversary rewards</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Separation Date</code> — date = inactive, text like &quot;N/A&quot; = active</li>
-                <li><code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono">Email</code> — employee login account</li>
-              </ul>
-            </div>
-            <p className="text-xs text-gray-500">Points, level, role, and profile info are never changed by an upload.</p>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3 flex-1">
-            <span className="text-sm font-semibold text-gray-700">
-              {employees.length} of {totalEmployees} employees
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => { setAddModalOpen(true); setAddForm(EMPTY_ADD_FORM); setAddError(""); }}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-            >
-              <UserPlus className="w-4 h-4" aria-hidden="true" />
-              Add Employee
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={syncing}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-command-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-            >
-              <Upload className="w-4 h-4" aria-hidden="true" />
-              {syncing ? "Syncing…" : "Upload Employee List"}
-            </button>
-            <button
-              onClick={async () => {
-                const params = new URLSearchParams();
-                if (search) params.set("search", search);
-                if (filterDept) params.set("department", filterDept);
-                if (filterRole) params.set("role", filterRole);
-                if (filterStatus) params.set("status", filterStatus);
-                const qs = params.toString();
-                setExporting(true);
-                try {
-                  const res = await streamFetch(`/api/admin/employees/export${qs ? `?${qs}` : ""}`);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "employees.csv";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                } catch {
-                  toast.error("Failed to export employees.");
-                } finally {
-                  setExporting(false);
-                }
-              }}
-              disabled={exporting}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-            >
-              <Download className="w-4 h-4" aria-hidden="true" />
-              {exporting ? "Exporting…" : "Export CSV"}
-            </button>
-          </div>
-        </div>
+        <EmployeeToolbar
+          employeeCount={employees.length}
+          totalEmployees={totalEmployees}
+          syncing={syncing}
+          exporting={exporting}
+          fileInputRef={fileInputRef}
+          onAddClick={() => { setAddModalOpen(true); setAddForm(EMPTY_ADD_FORM); setAddError(""); }}
+          onUploadClick={() => fileInputRef.current?.click()}
+          onFileSelected={handleSyncFile}
+          onExportClick={handleExport}
+        />
 
         {loading ? (
           <div className="p-8 flex items-center justify-center gap-2 text-gray-500">

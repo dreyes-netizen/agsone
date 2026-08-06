@@ -9,7 +9,7 @@ import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileTex
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 import { RoleBadge } from "@/components/RoleBadge";
 
-import type { UserBadge, ShoutoutEntry, UserProfile, PointTx, RedemptionTx, PointsData, TimelineEntry } from "./types";
+import type { UserProfile, PointsData, ShoutoutEntry, TimelineEntry, PointTx } from "./types";
 import { getDaysUntil, getAnniversaryYear, ordinal, getTenure, txTypeLabel, CATEGORY_BADGE } from "./utils";
 
 function CompletenessBar({ profile }: { profile: UserProfile }) {

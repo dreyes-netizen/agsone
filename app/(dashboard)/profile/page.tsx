@@ -4,15 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
+import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
-import { RoleBadge } from "@/components/RoleBadge";
 
 import type { UserProfile, PointsData, ShoutoutEntry, TimelineEntry, PointTx } from "./types";
-import { getDaysUntil, getAnniversaryYear, ordinal, getTenure, txTypeLabel, CATEGORY_BADGE } from "./utils";
+import { getDaysUntil, getAnniversaryYear, ordinal, txTypeLabel, CATEGORY_BADGE } from "./utils";
 import { CompletenessBar } from "./components/CompletenessBar";
 import { MinigamesStatsCard } from "./components/MinigamesStatsCard";
-import { PlayerAvatar } from "./components/PlayerAvatar";
+import { ProfileHeaderCard } from "./components/ProfileHeaderCard";
 
 export default function ProfilePage() {
   const { user: authUser, loading: authLoading } = useAuth();
@@ -150,58 +149,15 @@ export default function ProfilePage() {
     <div className="space-y-5">
 
       {/* ── Profile card ── */}
-      <div className="bg-white rounded-card border border-table-border overflow-hidden">
-        <div className="h-20 bg-gray-50" />
-
-        <div className="px-6 pb-6 relative">
-          {/* Avatar */}
-          <div className="-mt-10 mb-3">
-            <PlayerAvatar name={profile.displayName} url={profile.avatarUrl} />
-          </div>
-
-          <div className="flex items-start justify-between flex-wrap gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{profile.displayName}</h1>
-              <p className="text-sm text-gray-500 mt-0.5">{profile.email}</p>
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <RoleBadge role={profile.role} />
-                {profile.department && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                    {profile.department.name}
-                  </span>
-                )}
-                {profile.hireDate && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700">
-                    {getTenure(profile.hireDate)}
-                  </span>
-                )}
-              </div>
-            </div>
-            {activeTab === "overview" && !isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-              >
-                <Pencil className="w-3 h-3" aria-hidden="true" /> Edit Profile
-              </button>
-            )}
-          </div>
-
-          {/* Level progress */}
-          <div className="mt-5 space-y-1.5">
-            <div className="flex justify-between text-xs text-gray-500 gap-2">
-              <span className="font-medium shrink-0">Level {profile.level}</span>
-              <span className="text-right shrink-0">{pointsIntoLevel.toLocaleString()} / {pointsNeededForLevel.toLocaleString()} pts to next</span>
-            </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-navy-500 rounded-full transition-all motion-safe:duration-700 motion-safe:[transition-timing-function:cubic-bezier(0.16,1,0.3,1)]"
-                style={{ width: `${levelPct}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <ProfileHeaderCard
+        profile={profile}
+        activeTab={activeTab}
+        isEditing={isEditing}
+        onEditClick={() => setIsEditing(true)}
+        levelPct={levelPct}
+        pointsIntoLevel={pointsIntoLevel}
+        pointsNeededForLevel={pointsNeededForLevel}
+      />
 
       {/* ── Tab bar ── */}
       <div role="tablist" aria-label="Profile sections" className="flex gap-1 bg-gray-100 p-1 rounded-xl">

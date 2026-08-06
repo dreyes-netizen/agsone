@@ -9,6 +9,7 @@ import { Pagination } from "@/components/ui/pagination";
 import type { Department, Employee, Transaction, Budget, AttendanceResult, EmployeesPage } from "./types";
 import { CATEGORY_BADGE, getDepartmentsFromEmployees, filterEmployeesForBulk, inputClass, thClass, tdClass } from "./utils";
 import { ActivitySelect } from "./components/ActivitySelect";
+import { SingleAwardForm } from "./components/SingleAwardForm";
 import { BudgetBar } from "./components/BudgetBar";
 import { AttendanceAwardPanel } from "./components/AttendanceAwardPanel";
 import { DeductPointsForm } from "./components/DeductPointsForm";
@@ -328,84 +329,27 @@ export default function AwardPointsPage() {
               inputClass={inputClass}
             />
           ) : tab === "single" ? (
-            <form onSubmit={handleSingleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Employee</label>
-                <select
-                  value={toUserId}
-                  onChange={(e) => e.target.value && setToUserId(e.target.value)}
-                  required
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
-                >
-                  <option value="">Select an employee...</option>
-                  {employees
-                    .filter((e) => e.id !== dbUser?.id)
-                    .map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.displayName} — {e.pointsBalance} pts
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Activity</label>
-                <ActivitySelect
-                  value={activity}
-                  onChange={(key) => {
-                    setActivity(key);
-                    const preset = findActivity(key);
-                    if (preset) setAmount(String(preset.points));
-                  }}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Points to Award</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={10000}
-                  placeholder="e.g. 100"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  readOnly={!!activity}
-                  className={inputClass + (activity ? " bg-gray-50 text-gray-500 cursor-not-allowed" : "")}
-                />
-                {activity && (
-                  <p className="text-xs text-gray-500">Standard amount from the program manual — select &quot;Custom amount…&quot; to enter a different value.</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Reason / Note</label>
-                <textarea
-                  placeholder="e.g. Perfect attendance this month"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  required
-                  rows={3}
-                  className={inputClass + " resize-none"}
-                />
-              </div>
-
-              {success && <p className="text-emerald-600 text-sm">{success}</p>}
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-
-              <button
-                type="submit"
-                disabled={submitting || !toUserId}
-                className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-              >
-                {submitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                    Awarding…
-                  </span>
-                ) : "Award Points"}
-              </button>
-            </form>
+            <SingleAwardForm
+              employees={employees}
+              currentUserId={dbUser?.id}
+              toUserId={toUserId}
+              onToUserChange={setToUserId}
+              amount={amount}
+              onAmountChange={setAmount}
+              note={note}
+              onNoteChange={setNote}
+              activity={activity}
+              onActivityChange={(key) => {
+                setActivity(key);
+                const preset = findActivity(key);
+                if (preset) setAmount(String(preset.points));
+              }}
+              submitting={submitting}
+              success={success}
+              error={error}
+              onSubmit={handleSingleSubmit}
+              inputClass={inputClass}
+            />
           ) : (
             <form onSubmit={handleBulkSubmit} className="space-y-5">
               {/* Department filter */}

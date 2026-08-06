@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Medal, Trophy, Award, Bell, FileText, Tag, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
+import { History, Medal, Trophy, Award, Bell, Tag, X, ShoppingBag, Gamepad2, Megaphone, Loader2, AlertCircle, Lock } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
 import type { UserProfile, PointsData, ShoutoutEntry, TimelineEntry, PointTx } from "./types";
 import { getDaysUntil, getAnniversaryYear, ordinal, txTypeLabel, CATEGORY_BADGE } from "./utils";
+import { BioSection } from "./components/BioSection";
 import { BirthdayHireCard } from "./components/BirthdayHireCard";
 import { CompletenessBar } from "./components/CompletenessBar";
 import { MinigamesStatsCard } from "./components/MinigamesStatsCard";
@@ -185,33 +186,7 @@ export default function ProfilePage() {
           <BirthdayHireCard profile={profile} />
 
           {/* Bio */}
-          <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-sky-500" aria-hidden="true" />
-              </div>
-              <p className="text-sm font-semibold text-gray-800">About / Bio</p>
-            </div>
-            {isEditing ? (
-              <>
-                <label htmlFor="bio-edit" className="sr-only">Bio / About yourself</label>
-                <textarea
-                  id="bio-edit"
-                  value={bioEdit}
-                  onChange={(e) => setBioEdit(e.target.value)}
-                  maxLength={500}
-                  rows={3}
-                  placeholder="Tell your colleagues a bit about yourself…"
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition resize-none"
-                />
-                <p className="text-xs text-gray-500">{bioEdit.length}/500</p>
-              </>
-            ) : (
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {profile.bio || <span className="text-gray-500 italic">No bio yet. Click Edit Profile to add one.</span>}
-              </p>
-            )}
-          </div>
+          <BioSection bio={profile.bio} isEditing={isEditing} bioEdit={bioEdit} onBioChange={setBioEdit} />
 
           {/* Skills */}
           <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">

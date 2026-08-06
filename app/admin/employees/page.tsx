@@ -39,7 +39,6 @@ export default function EmployeesPage() {
   const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const [prevFilters, setPrevFilters] = useState({ search, filterDept, filterRole, filterStatus });

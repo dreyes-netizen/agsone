@@ -13,6 +13,7 @@ import type { AddOn, MyOrder, OrderRow, Listing, Tab } from "./types";
 import { formatPrice, formatCutoff, isClosed, getUrgencyLabel } from "./utils";
 import { ListingFormPanel } from "./components/ListingFormPanel";
 import { FoodListingCard } from "./components/FoodListingCard";
+import { OrderFormFields } from "./components/OrderFormFields";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -642,42 +643,16 @@ export default function FoodPage() {
                     {/* Inline order form */}
                     {!closed && !isMine && !hasOrder && modalOrderMode === "order" && (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs text-gray-500 w-16 shrink-0">Quantity</label>
-                          <div className="flex items-center gap-1">
-                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
-                            <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
-                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
-                          </div>
-                        </div>
-                        {(selectedListing.addOns?.length ?? 0) > 0 && (
-                          <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
-                            {(selectedListing.addOns ?? []).map((a, i) => {
-                              const checked = selectedAddOns.some((s) => s.name === a.name);
-                              return (
-                                <label key={i} className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox" checked={checked}
-                                    onChange={(e) => setSelectedAddOns((prev) => e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name))}
-                                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                  />
-                                  <span className="text-xs text-gray-700 flex-1">{a.name}</span>
-                                  <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                        <input
-                          value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
-                          placeholder="e.g. no onions (optional)"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        <OrderFormFields
+                          addOns={selectedListing.addOns ?? []}
+                          qty={qty}
+                          onQtyChange={setQty}
+                          selectedAddOns={selectedAddOns}
+                          onSelectedAddOnsChange={setSelectedAddOns}
+                          note={orderNote}
+                          onNoteChange={setOrderNote}
+                          total={orderTotal}
                         />
-                        <div className="flex items-center justify-between text-xs px-0.5">
-                          <span className="text-gray-500">Total</span>
-                          <span className="font-bold text-emerald-700 text-sm">₱{orderTotal.toFixed(2)}</span>
-                        </div>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setModalOrderMode("confirm")}
@@ -809,42 +784,16 @@ export default function FoodPage() {
                     {/* Edit order form */}
                     {!closed && !isMine && hasOrder && modalOrderMode === "edit" && (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs text-gray-500 w-16 shrink-0">Quantity</label>
-                          <div className="flex items-center gap-1">
-                            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
-                            <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
-                            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(99, q + 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
-                          </div>
-                        </div>
-                        {(selectedListing.addOns?.length ?? 0) > 0 && (
-                          <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
-                            {(selectedListing.addOns ?? []).map((a, i) => {
-                              const checked = selectedAddOns.some((s) => s.name === a.name);
-                              return (
-                                <label key={i} className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox" checked={checked}
-                                    onChange={(e) => setSelectedAddOns((prev) => e.target.checked ? [...prev, a] : prev.filter((s) => s.name !== a.name))}
-                                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                  />
-                                  <span className="text-xs text-gray-700 flex-1">{a.name}</span>
-                                  <span className="text-xs font-semibold text-amber-700">{a.price > 0 ? `+₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : "Free"}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                        <input
-                          value={orderNote} onChange={(e) => setOrderNote(e.target.value)}
-                          placeholder="e.g. no onions (optional)"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        <OrderFormFields
+                          addOns={selectedListing.addOns ?? []}
+                          qty={qty}
+                          onQtyChange={setQty}
+                          selectedAddOns={selectedAddOns}
+                          onSelectedAddOnsChange={setSelectedAddOns}
+                          note={orderNote}
+                          onNoteChange={setOrderNote}
+                          total={(parseFloat(selectedListing.price) + selectedAddOns.reduce((s, a) => s + a.price, 0)) * qty}
                         />
-                        <div className="flex items-center justify-between text-xs px-0.5">
-                          <span className="text-gray-500">Total</span>
-                          <span className="font-bold text-emerald-700 text-sm">₱{((parseFloat(selectedListing.price) + selectedAddOns.reduce((s, a) => s + a.price, 0)) * qty).toFixed(2)}</span>
-                        </div>
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleUpdateOrder(selectedListing)}

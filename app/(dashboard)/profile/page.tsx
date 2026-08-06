@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
 import type { UserProfile, PointsData, ShoutoutEntry } from "./types";

@@ -2,8 +2,6 @@ import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "./createNotification";
 import { getLevelFromBalance } from "./levelUtils";
 
-export { getLevelFromBalance, getLevelProgress } from "./levelUtils";
-
 export async function checkLevelUp(userId: string, newBalance: number) {
   const newLevel = getLevelFromBalance(newBalance);
 

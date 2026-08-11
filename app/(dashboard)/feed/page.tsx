@@ -6,7 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2 } from "lucide-react";
+import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2, Cake, Building2 } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
@@ -1065,7 +1065,7 @@ export default function FeedPage() {
           {/* Upcoming Birthdays */}
           {!widgetsLoading && birthdays.length > 0 && (
             <div className="bg-gradient-to-br from-pink-50 to-violet-50 border border-pink-100 rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-2.5">🎂 Birthdays</p>
+              <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" aria-hidden="true" /> Birthdays</p>
               <div className="space-y-2">
                 {birthdays.map((b) => (
                   <Link key={b.id} href={`/employees/${b.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -1073,7 +1073,7 @@ export default function FeedPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-gray-900 truncate hover:underline">{b.displayName}</p>
                       <p className="text-[10px] text-gray-500">
-                        {b.daysUntil === 0 ? "Today 🎉" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
+                        {b.daysUntil === 0 ? "Today" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
                       </p>
                     </div>
                   </Link>
@@ -1335,7 +1335,7 @@ export default function FeedPage() {
                     deptOnly ? "bg-white text-navy-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <span>🏢</span>
+                  <Building2 className="w-3 h-3" aria-hidden="true" />
                   {dbUser.department.name} only
                 </button>
               </div>
@@ -1361,7 +1361,7 @@ export default function FeedPage() {
                     shoutoutDeptOnly ? "bg-white text-amber-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <span>🏢</span>
+                  <Building2 className="w-3 h-3" aria-hidden="true" />
                   {dbUser.department.name} only
                 </button>
               </div>
@@ -1585,7 +1585,7 @@ export default function FeedPage() {
                       )}
                       {post.department && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                          🏢 {post.department.name} only
+                          <Building2 className="w-2.5 h-2.5" aria-hidden="true" /> {post.department.name} only
                         </span>
                       )}
                     </div>
@@ -1833,7 +1833,7 @@ export default function FeedPage() {
                   )}
                   {post.department && (
                     <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-100 text-navy-700 border border-navy-200">
-                      🏢 {post.department.name} only
+                      <Building2 className="w-3 h-3" aria-hidden="true" /> {post.department.name} only
                     </span>
                   )}
                 </div>

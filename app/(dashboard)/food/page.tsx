@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, AlertTriangle, Truck, RefreshCw } from "lucide-react";
+import { UtensilsCrossed, Clock, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Loader2, ImagePlus, Pencil, Plus, AlertTriangle, Truck, RefreshCw, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -1319,7 +1319,7 @@ export default function FoodPage() {
                             </div>
                           </div>
                           {selectedListing.myOrder!.note && (
-                            <p className="text-xs text-gray-500 italic border-t border-emerald-100 pt-2"><span aria-hidden="true">📝 </span>&ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
+                            <p className="text-xs text-gray-500 italic border-t border-emerald-100 pt-2 flex items-start gap-1"><StickyNote className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" /> &ldquo;{selectedListing.myOrder!.note}&rdquo;</p>
                           )}
                           {!closed && (
                             <div className="flex items-center gap-3 pt-1">

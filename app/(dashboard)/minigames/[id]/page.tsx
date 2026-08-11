@@ -9,7 +9,7 @@ import { useConfetti } from "@/lib/hooks/useConfetti";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { sounds, isMuted, setMuted } from "@/lib/minigames/sounds";
-import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import { Volume2, VolumeX, Copy, Check, RefreshCw, Loader2, CheckCircle, AlertCircle, ArrowLeft, UserPlus, Shuffle, Anchor, Repeat } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -185,7 +185,7 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
         onClick={openDropdown}
         className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-600 hover:text-indigo-800 text-sm font-semibold rounded-xl transition-all"
       >
-        <span>👋</span> Invite coworker
+        <UserPlus className="w-4 h-4" aria-hidden="true" /> Invite coworker
       </button>
 
       {open && (
@@ -757,17 +757,17 @@ function BSBoard({ session, onMove }: { session: Session; onMove: (data: unknown
         <div className="flex gap-2 justify-center">
           <button
             onClick={() => setPending(generateRandomPlacement())}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5"
           >
-            🔀 Shuffle
+            <Shuffle className="w-4 h-4" aria-hidden="true" /> Shuffle
           </button>
           <button
             onClick={async () => { setConfirming(true); await onMove({ action: "place", ships: pending }); }}
             disabled={confirming}
             aria-label="Deploy fleet"
-            className="px-6 py-2.5 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
+            className="px-6 py-2.5 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5"
           >
-            {confirming ? "Deploying…" : "Deploy Fleet ⚓"}
+            {confirming ? "Deploying…" : <><Anchor className="w-4 h-4" aria-hidden="true" /> Deploy Fleet</>}
           </button>
         </div>
       </div>
@@ -1253,9 +1253,9 @@ function RightPanel({
               <button
                 onClick={startRematch}
                 disabled={rematching}
-                className="w-full py-3 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
+                className="w-full py-3 bg-command-black hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5"
               >
-                {rematching ? "Sending…" : `🔁 Rematch ${opponent.displayName}`}
+                {rematching ? "Sending…" : <><Repeat className="w-4 h-4" aria-hidden="true" /> Rematch {opponent.displayName}</>}
               </button>
             )
           )}

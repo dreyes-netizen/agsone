@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette, Loader2, AlertCircle, Lock } from "lucide-react";
+import { History, Star, Medal, Coins, CalendarDays, Trophy, Award, Bell, FileText, Tag, Pencil, X, ShoppingBag, Gamepad2, Megaphone, Palette, Loader2, AlertCircle, Lock, Flame, MessageCircle, Cake, PartyPopper, type LucideIcon } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 import { RoleBadge } from "@/components/RoleBadge";
 
@@ -215,7 +215,7 @@ function MinigamesStatsCard() {
       className="w-full text-left bg-white rounded-card border border-table-border px-5 py-4 hover:border-gray-300 transition-colors"
     >
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-gray-800 flex items-center gap-2"><span aria-hidden="true">🎮</span> Minigames</p>
+        <p className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Gamepad2 className="w-4 h-4" aria-hidden="true" /> Minigames</p>
         <span className="text-xs text-indigo-600 font-medium">View stats →</span>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -224,7 +224,7 @@ function MinigamesStatsCard() {
         <span className="text-sm"><span className="font-bold text-gray-500">{s.draws}</span> <span className="text-gray-500">D</span></span>
         <span className="text-sm"><span className="font-bold text-indigo-600">{s.winRate}%</span> <span className="text-gray-500">win rate</span></span>
         {s.currentStreak > 0 && (
-          <span className="text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2 py-0.5"><span aria-hidden="true">🔥</span> {s.currentStreak}-win streak</span>
+          <span className="text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2 py-0.5 inline-flex items-center gap-1"><Flame className="w-3 h-3" aria-hidden="true" /> {s.currentStreak}-win streak</span>
         )}
       </div>
     </button>
@@ -652,7 +652,7 @@ export default function ProfilePage() {
           {shoutouts !== null && (
             <div className="bg-white rounded-card border border-table-border overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-800"><span aria-hidden="true">💬</span> Shoutouts</p>
+                <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" aria-hidden="true" /> Shoutouts</p>
                 <Link href="/feed" className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">See all →</Link>
               </div>
               {shoutouts.length === 0 ? (
@@ -959,17 +959,17 @@ export default function ProfilePage() {
 
           {/* Widget 0: Upcoming Milestone */}
           {(() => {
-            const items: { emoji: string; label: string; daysUntil: number }[] = [];
+            const items: { icon: LucideIcon; label: string; daysUntil: number }[] = [];
             const dayLabel = (d: number) => d === 0 ? "Today!" : `in ${d} day${d === 1 ? "" : "s"}`;
             if (profile.birthday) {
               const d = getDaysUntil(profile.birthday);
-              if (d <= 30) items.push({ emoji: "🎂", label: `Birthday ${dayLabel(d)}`, daysUntil: d });
+              if (d <= 30) items.push({ icon: Cake, label: `Birthday ${dayLabel(d)}`, daysUntil: d });
             }
             if (profile.hireDate) {
               const d = getDaysUntil(profile.hireDate);
               if (d <= 30) {
                 const yr = getAnniversaryYear(profile.hireDate);
-                if (yr > 0) items.push({ emoji: "🎉", label: `${ordinal(yr)} anniversary ${dayLabel(d)}`, daysUntil: d });
+                if (yr > 0) items.push({ icon: PartyPopper, label: `${ordinal(yr)} anniversary ${dayLabel(d)}`, daysUntil: d });
               }
             }
             if (items.length === 0) return null;
@@ -977,8 +977,8 @@ export default function ProfilePage() {
               <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-2">
                 <p className="text-xs text-gray-500 font-medium">Upcoming</p>
                 {items.map((item) => (
-                  <p key={item.label} className="text-sm font-semibold text-gray-800">
-                    <span aria-hidden="true">{item.emoji}</span> {item.label}
+                  <p key={item.label} className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                    <item.icon className="w-3.5 h-3.5" aria-hidden="true" /> {item.label}
                   </p>
                 ))}
               </div>

@@ -285,7 +285,7 @@ export default function AdminDashboardPage() {
                       <p className="text-xs text-gray-500 truncate">{b.department ?? "No dept"} · {displayDate}</p>
                     </div>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${labelColor}`}>
-                      {labelText}{b.daysUntil === 0 && <> <span aria-hidden="true">🎂</span></>}
+                      {labelText}{b.daysUntil === 0 && <> <Cake className="w-3 h-3 inline" aria-hidden="true" /></>}
                     </span>
                   </li>
                 );

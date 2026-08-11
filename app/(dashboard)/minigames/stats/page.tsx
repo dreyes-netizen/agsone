@@ -6,16 +6,12 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Trophy, Flame, Medal, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/helpers/timeAgo";
+import { GAME_ICON, DEFAULT_GAME_ICON } from "@/lib/minigames/gameIcons";
 
 const GAME_LABEL: Record<string, string> = {
   TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",
   RPS: "Rock Paper Scissors", DOTS_AND_BOXES: "Dots & Boxes",
   BATTLESHIP: "Battleship", MEMORY: "Memory",
-};
-
-const GAME_EMOJI: Record<string, string> = {
-  TIC_TAC_TOE: "⭕", CONNECT_FOUR: "🔴", RPS: "✌️",
-  DOTS_AND_BOXES: "🟦", BATTLESHIP: "🚢", MEMORY: "🧠",
 };
 
 type HistoryItem = {
@@ -128,13 +124,16 @@ export default function MinigamesStatsPage() {
         <div className="bg-white border border-table-border rounded-card p-5">
           <p className="text-sm font-bold text-gray-800 mb-3">By game</p>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(stats.perGame).map(([g, r]) => (
-              <div key={g} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-xs">
-                <span>{GAME_EMOJI[g] ?? "🎮"}</span>
-                <span className="font-medium text-gray-700">{GAME_LABEL[g] ?? g}</span>
-                <span className="text-gray-500">{r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}</span>
-              </div>
-            ))}
+            {Object.entries(stats.perGame).map(([g, r]) => {
+              const Icon = GAME_ICON[g] ?? DEFAULT_GAME_ICON;
+              return (
+                <div key={g} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-xs">
+                  <Icon className="w-3.5 h-3.5 text-navy-600" aria-hidden="true" />
+                  <span className="font-medium text-gray-700">{GAME_LABEL[g] ?? g}</span>
+                  <span className="text-gray-500">{r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -184,9 +183,10 @@ export default function MinigamesStatsPage() {
           <ul className="divide-y divide-gray-100">
             {stats.history.map(h => {
               const o = outcomeStyle[h.outcome];
+              const Icon = GAME_ICON[h.gameType] ?? DEFAULT_GAME_ICON;
               return (
                 <li key={h.id} aria-label={`${GAME_LABEL[h.gameType] ?? h.gameType} vs ${h.opponentName}, ${o.label}${h.wager > 0 ? `, ${h.wager} pts wager` : ""}, ${timeAgo(h.finishedAt)}`} className="flex items-center gap-3 px-5 py-3">
-                  <span className="text-lg shrink-0">{GAME_EMOJI[h.gameType] ?? "🎮"}</span>
+                  <Icon className="w-5 h-5 shrink-0 text-navy-600" aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{GAME_LABEL[h.gameType] ?? h.gameType}</p>
                     <p className="text-xs text-gray-500 truncate">vs {h.opponentName} · {timeAgo(h.finishedAt)}</p>

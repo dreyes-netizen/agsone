@@ -11,19 +11,49 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useEffect, useState } from "react";
 
-const navItems = [
-  { href: "/admin",             label: "Overview",     icon: LayoutDashboard },
-  { href: "/admin/employees",   label: "Employees",    icon: Users },
-  { href: "/admin/departments", label: "Departments",  icon: Building2 },
-  { href: "/admin/milestones",  label: "Milestones",   icon: Gift },
-  { href: "/admin/points",      label: "Award Points", icon: Award },
-  { href: "/admin/rewards",     label: "Rewards",      icon: ShoppingBag },
-  { href: "/admin/redemptions", label: "Redemptions",  icon: ClipboardList },
-  { href: "/admin/feedback",    label: "Whistleblower", icon: WhistleIcon },
-  { href: "/admin/documents",   label: "Documents",    icon: FileText },
-  { href: "/admin/medicine",    label: "Medicine",     icon: Pill },
-  { href: "/admin/audit",       label: "Audit Log",    icon: ShieldAlert },
+const overviewItem = { href: "/admin", label: "Overview", icon: LayoutDashboard };
+
+const navGroups = [
+  {
+    label: "People",
+    items: [
+      { href: "/admin/employees",   label: "Employees",    icon: Users },
+      { href: "/admin/departments", label: "Departments",  icon: Building2 },
+    ],
+  },
+  {
+    label: "Points & Rewards",
+    items: [
+      { href: "/admin/milestones",  label: "Milestones",   icon: Gift },
+      { href: "/admin/points",      label: "Award Points", icon: Award },
+      { href: "/admin/rewards",     label: "Rewards",      icon: ShoppingBag },
+      { href: "/admin/redemptions", label: "Redemptions",  icon: ClipboardList },
+    ],
+  },
+  {
+    label: "System & Trust",
+    items: [
+      { href: "/admin/feedback",    label: "Whistleblower", icon: WhistleIcon },
+      { href: "/admin/documents",   label: "Documents",    icon: FileText },
+      { href: "/admin/medicine",    label: "Medicine",     icon: Pill },
+      { href: "/admin/audit",       label: "Audit Log",    icon: ShieldAlert },
+    ],
+  },
 ];
+
+function AdminNavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 ${
+        active ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+      }`}
+    >
+      <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${active ? "text-gray-900" : "text-gray-400"}`} />
+      {label}
+    </Link>
+  );
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -77,22 +107,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav aria-label="Admin navigation" className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          <p className="px-3 pb-2 pt-1 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Management</p>
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 ${
-                  active ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-              >
-                <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${active ? "text-gray-900" : "text-gray-400"}`} />
-                {label}
-              </Link>
-            );
-          })}
+          <AdminNavLink
+            href={overviewItem.href}
+            label={overviewItem.label}
+            icon={overviewItem.icon}
+            active={pathname === overviewItem.href}
+          />
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 pb-2 pt-4 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{group.label}</p>
+              {group.items.map(({ href, label, icon }) => (
+                <AdminNavLink key={href} href={href} label={label} icon={icon} active={pathname.startsWith(href)} />
+              ))}
+            </div>
+          ))}
         </nav>
 
         <div className="p-3 border-t border-gray-100 space-y-0.5">

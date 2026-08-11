@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import type { Role } from "@/lib/generated/prisma/client";
 import { z } from "zod";
+
+const ELEVATED_ROLES: Role[] = ["HR_ADMIN", "SUPER_ADMIN"];
 
 const schema = z.object({
   displayName: z.string().min(1).max(200).optional(),
@@ -36,6 +39,17 @@ export async function PATCH(
   // more HR_ADMINs through this generic edit route.
   if (role === "HR_ADMIN" && user!.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
+  }
+
+  // The check above only guards PROMOTION into HR_ADMIN. It never inspects
+  // the target's CURRENT role, so an HR_ADMIN could still demote, deactivate,
+  // or change the email of an existing HR_ADMIN/SUPER_ADMIN. Only a
+  // SUPER_ADMIN may modify an already-elevated account through this route.
+  if (user!.role !== "SUPER_ADMIN") {
+    const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+    if (target && ELEVATED_ROLES.includes(target.role)) {
+      return NextResponse.json({ error: "Only Super Admin can modify an elevated account" }, { status: 403 });
+    }
   }
 
   const updated = await prisma.user.update({

@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { toUserId, note } = parsed.data;
-  let { amount, category, activity } = parsed.data;
+  const { toUserId, note, activity } = parsed.data;
+  let { amount, category } = parsed.data;
 
   // Activity presets carry the manual's standard point value — the server
   // resolves it so clients can't tamper with preset amounts.

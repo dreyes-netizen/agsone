@@ -400,7 +400,7 @@ export default function DocumentsPage() {
               <div className="bg-navy-50 border border-navy-100 rounded-lg p-3 space-y-2">
                 <p className="text-xs font-semibold text-navy-700">For best results — convert to Markdown first</p>
                 <p className="text-xs text-navy-600 leading-relaxed">
-                  Upload a <span className="font-medium">.md file</span> instead of a PDF. Markdown preserves headings, tables, and lists that PDF extraction often mangles, which makes Ally's answers more accurate.
+                  Upload a <span className="font-medium">.md file</span> instead of a PDF. Markdown preserves headings, tables, and lists that PDF extraction often mangles, which makes Ally&apos;s answers more accurate.
                 </p>
                 <div className="space-y-1">
                   <p className="text-xs text-navy-500">Use this prompt in <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" className="underline hover:text-navy-700">claude.ai</a> — attach your PDF and send:</p>

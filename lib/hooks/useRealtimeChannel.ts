@@ -36,7 +36,9 @@ export function useRealtimeChannel(
   options: Options = {},
 ) {
   const cb = useRef(onMessage);
-  cb.current = onMessage;
+  useEffect(() => {
+    cb.current = onMessage;
+  });
   const keepAliveWhenHidden = options.keepAliveWhenHidden ?? false;
 
   useEffect(() => {

@@ -102,12 +102,6 @@ export default function LeaderboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, period, departmentId]);
-
   async function load() {
     setLoading(true);
     try {
@@ -119,6 +113,12 @@ export default function LeaderboardPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, period, departmentId]);
 
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const avgPoints = entries.length > 0 ? Math.round(totalPoints / entries.length) : 0;

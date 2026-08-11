@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import type { Prisma } from "@/lib/generated/prisma/client";
 
 const TOGGLEABLE_TYPES = [
   "SHOUTOUT_RECEIVED",
@@ -69,11 +70,11 @@ export async function PUT(req: NextRequest) {
     select: { notificationPrefs: true },
   });
   const existing = (dbUser?.notificationPrefs ?? {}) as Record<string, boolean>;
-  const updated = { ...existing, ...body };
+  const updated: Record<string, boolean> = { ...existing, ...(body as Record<string, boolean>) };
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { notificationPrefs: updated as any },
+    data: { notificationPrefs: updated as Prisma.InputJsonValue },
   });
 
   const merged: Record<PrefKey, boolean> = { ...DEFAULTS };

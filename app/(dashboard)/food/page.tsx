@@ -982,7 +982,7 @@ export default function FoodPage() {
                                         {(o.selectedAddOns ?? []).map((a) => `+ ${a.name} (₱${a.price.toFixed(2)})`).join(", ")}
                                       </p>
                                     )}
-                                    {o.note && <p className="text-[11px] text-gray-500 italic mt-0.5">"{o.note}"</p>}
+                                    {o.note && <p className="text-[11px] text-gray-500 italic mt-0.5">&ldquo;{o.note}&rdquo;</p>}
                                     <p className="text-[10px] text-gray-500 mt-0.5">
                                       {new Date(o.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                                     </p>

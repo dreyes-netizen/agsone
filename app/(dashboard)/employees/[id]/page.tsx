@@ -122,6 +122,7 @@ export default function EmployeeProfilePage() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const closeLightboxRef = useRef<HTMLButtonElement>(null);
 
   const isAdminOrManager = dbUser?.role === "HR_ADMIN" || dbUser?.role === "MANAGER" || dbUser?.role === "SUPER_ADMIN";
@@ -669,8 +670,8 @@ export default function EmployeeProfilePage() {
             draggable={false}
             style={{
               transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-              transition: dragStart.current ? "none" : "transform 0.1s ease",
-              cursor: zoom > 1 ? (dragStart.current ? "grabbing" : "grab") : "zoom-in",
+              transition: isDragging ? "none" : "transform 0.1s ease",
+              cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
               maxWidth: "90vw",
               maxHeight: "90vh",
               borderRadius: "1rem",
@@ -687,14 +688,15 @@ export default function EmployeeProfilePage() {
               if (zoom <= 1) return;
               e.stopPropagation();
               dragStart.current = { mx: e.clientX, my: e.clientY, px: pan.x, py: pan.y };
+              setIsDragging(true);
             }}
             onMouseMove={(e) => {
               if (!dragStart.current) return;
               e.stopPropagation();
               setPan({ x: dragStart.current.px + e.clientX - dragStart.current.mx, y: dragStart.current.py + e.clientY - dragStart.current.my });
             }}
-            onMouseUp={() => { dragStart.current = null; }}
-            onMouseLeave={() => { dragStart.current = null; }}
+            onMouseUp={() => { dragStart.current = null; setIsDragging(false); }}
+            onMouseLeave={() => { dragStart.current = null; setIsDragging(false); }}
           />
           <p className="absolute bottom-4 text-white/50 text-xs pointer-events-none" aria-hidden="true">
             {zoom > 1 ? "Double-click or click to reset · Drag to pan" : "Click to zoom · Scroll to zoom · Esc to close"}

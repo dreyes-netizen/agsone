@@ -17,7 +17,9 @@ import { useTabVisible } from "@/lib/hooks/useTabState";
  */
 export function useVisibleInterval(fn: () => void, ms: number, enabled = true) {
   const cb = useRef(fn);
-  cb.current = fn;
+  useEffect(() => {
+    cb.current = fn;
+  });
   const visible = useTabVisible();
   const wasVisible = useRef(visible);
 

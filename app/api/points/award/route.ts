@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rateLimit = await checkRateLimit(actor!.id, "write");
+  const rateLimit = await checkRateLimit(actor.id, "write");
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Prevent self-award
-  if (toUserId === actor!.id) {
+  if (toUserId === actor.id) {
     return NextResponse.json({ error: "Cannot award points to yourself" }, { status: 400 });
   }
 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   // fetch both concurrently instead of one after the other.
   const [budget, recipient] = await Promise.all([
     // Manual §3: managers have a 500 pts/month budget (HR_ADMIN exempt)
-    checkManagerBudget(actor!.id, actor!.role, amount),
+    checkManagerBudget(actor.id, actor.role, amount),
     prisma.user.findUnique({ where: { id: toUserId } }),
   ]);
   if (!budget.allowed) {
@@ -74,14 +74,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Only Super Admin can award points to Managers and other elevated roles
-  if (recipient.role !== "EMPLOYEE" && actor!.role !== "SUPER_ADMIN") {
+  if (recipient.role !== "EMPLOYEE" && actor.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Only Super Admin can award points to Managers" }, { status: 403 });
   }
 
   // Atomic: update balance + create transaction
   const { transaction, newBalance } = await prisma.$transaction(async (tx) => {
     const created = await tx.pointTransaction.create({
-      data: { fromUserId: actor!.id, toUserId, amount, type: "MANUAL_AWARD", note, category: category ?? null, activity: activity ?? null, createdById: actor!.id },
+      data: { fromUserId: actor.id, toUserId, amount, type: "MANUAL_AWARD", note, category: category ?? null, activity: activity ?? null, createdById: actor.id },
     });
     const updatedUser = await tx.user.update({
       where: { id: toUserId },
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
 
   // Fire-and-forget: notification + feed post + email
   // actor.displayName is already known from verifyAuth — no need to re-query it.
-  const actorName = actor!.displayName;
+  const actorName = actor.displayName;
 
   await Promise.all([
     createNotification({
@@ -101,11 +101,11 @@ export async function POST(req: NextRequest) {
       type: "POINTS_RECEIVED",
       title: `You received ${amount.toLocaleString()} points!`,
       body: note,
-      data: { amount, fromUserId: actor!.id },
+      data: { amount, fromUserId: actor.id },
     }),
     prisma.socialPost.create({
       data: {
-        authorId: actor!.id,
+        authorId: actor.id,
         type: "CELEBRATION",
         content: `🎉 ${recipient.displayName} received ${amount.toLocaleString()} points from ${actorName}! "${note}"`,
         referenceId: transaction.id,
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.auditLog.create({
     data: {
-      actorId: actor!.id,
+      actorId: actor.id,
       action: "AWARD_POINTS",
       entityType: "PointTransaction",
       entityId: transaction.id,

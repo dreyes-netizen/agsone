@@ -31,7 +31,7 @@ export async function POST(
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const reply = await prisma.feedbackReply.create({
-    data: { feedbackId: id, authorId: user!.id, body: parsed.data.body },
+    data: { feedbackId: id, authorId: user.id, body: parsed.data.body },
     include: {
       author: { select: { id: true, displayName: true, avatarUrl: true, role: true } },
     },

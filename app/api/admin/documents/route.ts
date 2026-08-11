@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       content: text,
-      uploadedById: user!.id,
+      uploadedById: user.id,
     },
     include: { uploadedBy: { select: { displayName: true } } },
   });

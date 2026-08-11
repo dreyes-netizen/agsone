@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rateLimit = await checkRateLimit(actor!.id, "write");
+  const rateLimit = await checkRateLimit(actor.id, "write");
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Remove self
-  const targetIds = userIds.filter((id) => id !== actor!.id);
+  const targetIds = userIds.filter((id) => id !== actor.id);
   if (targetIds.length === 0) {
     return NextResponse.json({ error: "No valid recipients" }, { status: 400 });
   }
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Only Super Admin can award non-employees — silently exclude them for other roles
-  const recipients = actor!.role === "SUPER_ADMIN"
+  const recipients = actor.role === "SUPER_ADMIN"
     ? allRecipients
     : allRecipients.filter((r) => r.role === "EMPLOYEE");
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   // Manual §3: managers have a 500 pts/month budget; bulk cost is amount × recipients
   const totalCost = amount * recipients.length;
-  const budget = await checkManagerBudget(actor!.id, actor!.role, totalCost);
+  const budget = await checkManagerBudget(actor.id, actor.role, totalCost);
   if (!budget.allowed) {
     return NextResponse.json(
       { error: `Budget exceeded. Awarding ${amount} pts to ${recipients.length} recipients costs ${totalCost} pts, but you only have ${budget.remaining} pts remaining this month.` },
@@ -86,14 +86,14 @@ export async function POST(req: NextRequest) {
   await prisma.$transaction([
     prisma.pointTransaction.createMany({
       data: recipientIds.map((id) => ({
-        fromUserId: actor!.id,
+        fromUserId: actor.id,
         toUserId: id,
         amount,
         type: "MANUAL_AWARD",
         note,
         category: category ?? null,
         activity: activity ?? null,
-        createdById: actor!.id,
+        createdById: actor.id,
       })),
     }),
     prisma.user.updateMany({
@@ -110,12 +110,12 @@ export async function POST(req: NextRequest) {
   const balanceMap = new Map(updatedRecipients.map((u) => [u.id, u.pointsBalance]));
 
   // actor.displayName is already known from verifyAuth — no need to re-query it.
-  const actorName = actor!.displayName;
+  const actorName = actor.displayName;
 
   // One feed post for the bulk award
   prisma.socialPost.create({
     data: {
-      authorId: actor!.id,
+      authorId: actor.id,
       type: "CELEBRATION",
       content: `🎉 ${actorName} awarded ${amount.toLocaleString()} points to ${recipients.length} employee${recipients.length !== 1 ? "s" : ""}! "${note}"`,
     },
@@ -124,10 +124,10 @@ export async function POST(req: NextRequest) {
   // Single audit log
   prisma.auditLog.create({
     data: {
-      actorId: actor!.id,
+      actorId: actor.id,
       action: "BULK_AWARD_POINTS",
       entityType: "PointTransaction",
-      entityId: actor!.id,
+      entityId: actor.id,
       afterState: { count: recipients.length, amount, note, recipientNames: recipients.map((r) => r.displayName) },
     },
   }).catch((err) => console.error("bulk award audit log write failed", err));
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
       type: "POINTS_RECEIVED",
       title: `You received ${amount.toLocaleString()} points!`,
       body: note,
-      data: { amount, fromUserId: actor!.id },
+      data: { amount, fromUserId: actor.id },
     }).catch((err) => console.error("points-received notification failed", err));
     sendMail({
       to: r.email,

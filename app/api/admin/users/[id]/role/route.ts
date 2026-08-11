@@ -35,7 +35,7 @@ export async function PATCH(
   const elevatedRoles = ["HR_ADMIN", "SUPER_ADMIN"];
   if (
     (elevatedRoles.includes(parsed.data.role) || elevatedRoles.includes(target.role)) &&
-    user!.role !== "SUPER_ADMIN"
+    user.role !== "SUPER_ADMIN"
   ) {
     return NextResponse.json({ error: "Only Super Admin can modify elevated roles" }, { status: 403 });
   }
@@ -48,7 +48,7 @@ export async function PATCH(
 
   await prisma.auditLog.create({
     data: {
-      actorId: user!.id,
+      actorId: user.id,
       action: "UPDATE_ROLE",
       entityType: "User",
       entityId: id,

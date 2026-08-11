@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
   // Mirror the elevated-role guard in /api/admin/users/[id]/role — only
   // SUPER_ADMIN may create a new HR_ADMIN. Without this, any HR_ADMIN could
   // mint more HR_ADMINs through this generic create route.
-  if (role === "HR_ADMIN" && actor!.role !== "SUPER_ADMIN") {
+  if (role === "HR_ADMIN" && actor.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
   }
 

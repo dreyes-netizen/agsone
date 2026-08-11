@@ -37,7 +37,7 @@ export async function PATCH(
   // Mirror the elevated-role guard in /api/admin/users/[id]/role — only
   // SUPER_ADMIN may grant HR_ADMIN. Without this, any HR_ADMIN could mint
   // more HR_ADMINs through this generic edit route.
-  if (role === "HR_ADMIN" && user!.role !== "SUPER_ADMIN") {
+  if (role === "HR_ADMIN" && user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
   }
 
@@ -45,7 +45,7 @@ export async function PATCH(
   // the target's CURRENT role, so an HR_ADMIN could still demote, deactivate,
   // or change the email of an existing HR_ADMIN/SUPER_ADMIN. Only a
   // SUPER_ADMIN may modify an already-elevated account through this route.
-  if (user!.role !== "SUPER_ADMIN") {
+  if (user.role !== "SUPER_ADMIN") {
     const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
     if (target && ELEVATED_ROLES.includes(target.role)) {
       return NextResponse.json({ error: "Only Super Admin can modify an elevated account" }, { status: 403 });

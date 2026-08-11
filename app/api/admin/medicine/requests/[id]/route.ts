@@ -40,7 +40,7 @@ export async function PATCH(
         // still PENDING. A second concurrent approve/reject loses the CAS.
         const { count: requestCount } = await tx.medicineRequest.updateMany({
           where: { id, status: "PENDING" },
-          data: { status: "APPROVED", approvedById: user!.id, approvedAt: new Date() },
+          data: { status: "APPROVED", approvedById: user.id, approvedAt: new Date() },
         });
         if (requestCount === 0) {
           throw new Error("ALREADY_PROCESSED");
@@ -75,7 +75,7 @@ export async function PATCH(
 
   const { count } = await prisma.medicineRequest.updateMany({
     where: { id, status: "PENDING" },
-    data: { status: "REJECTED", approvedById: user!.id, approvedAt: new Date() },
+    data: { status: "REJECTED", approvedById: user.id, approvedAt: new Date() },
   });
   if (count === 0) {
     return NextResponse.json({ error: "Request is no longer pending" }, { status: 409 });

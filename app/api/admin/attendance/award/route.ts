@@ -160,14 +160,14 @@ export async function POST(req: NextRequest) {
   await prisma.$transaction([
     prisma.pointTransaction.createMany({
       data: recipientIds.map((id) => ({
-        fromUserId: user!.id,
+        fromUserId: user.id,
         toUserId: id,
         amount,
         type: "MANUAL_AWARD",
         note,
         category,
         activity: "PERFECT_ATTENDANCE",
-        createdById: user!.id,
+        createdById: user.id,
       })),
     }),
     prisma.user.updateMany({
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
   const balanceMap = new Map(updatedUsers.map((u) => [u.id, u.pointsBalance]));
 
   // user.displayName is already known from verifyAuth — no need to re-query it.
-  const actorName = user!.displayName ?? "Super Admin";
+  const actorName = user.displayName ?? "Super Admin";
 
   // Badge-checking needs each recipient's lifetime points earned — one
   // groupBy across all recipients instead of one aggregate() per recipient
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
       type: "POINTS_RECEIVED",
       title: `You received ${amount} points!`,
       body: note,
-      data: { amount, fromUserId: user!.id },
+      data: { amount, fromUserId: user.id },
     }).catch((err) => console.error("points-received notification failed", err));
     sendMail({
       to: u.email,
@@ -217,10 +217,10 @@ export async function POST(req: NextRequest) {
 
   prisma.auditLog.create({
     data: {
-      actorId: user!.id,
+      actorId: user.id,
       action: "ATTENDANCE_AWARD",
       entityType: "PointTransaction",
-      entityId: user!.id,
+      entityId: user.id,
       afterState: { attendanceMonth, recipientIds, amount, count: recipientIds.length, notFound },
     },
   }).catch((err) => console.error("attendance award audit log write failed", err));

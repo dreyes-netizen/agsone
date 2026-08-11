@@ -82,7 +82,7 @@ export async function verifyToken(req: NextRequest): Promise<string | null> {
   }
 }
 
-export function requireRole(user: AuthUser | null, roles: Role[]): boolean {
+export function requireRole(user: AuthUser | null, roles: Role[]): user is AuthUser {
   if (!user) return false;
   return roles.includes(user.role);
 }

@@ -63,12 +63,12 @@ export async function PUT(req: NextRequest) {
           type: cfg.type,
           pointsReward: cfg.pointsReward,
           isActive: cfg.isActive,
-          updatedById: user!.id,
+          updatedById: user.id,
         },
         update: {
           pointsReward: cfg.pointsReward,
           isActive: cfg.isActive,
-          updatedById: user!.id,
+          updatedById: user.id,
         },
       })
     )

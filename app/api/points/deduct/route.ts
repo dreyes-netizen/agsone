@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rateLimit = await checkRateLimit(actor!.id, "write");
+  const rateLimit = await checkRateLimit(actor.id, "write");
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
@@ -74,12 +74,12 @@ export async function POST(req: NextRequest) {
 
       await tx.pointTransaction.create({
         data: {
-          fromUserId: actor!.id,
+          fromUserId: actor.id,
           toUserId,
           amount: -deducted,
           type: "DEDUCTION",
           note: reason,
-          createdById: actor!.id,
+          createdById: actor.id,
         },
       });
       return { deducted, newBalance, toUserName };
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.auditLog.create({
     data: {
-      actorId: actor!.id,
+      actorId: actor.id,
       action: "DEDUCT_POINTS",
       entityType: "PointTransaction",
       entityId: toUserId,

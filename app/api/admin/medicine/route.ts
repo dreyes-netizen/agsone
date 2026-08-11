@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   const medicine = await prisma.medicineItem.create({
-    data: { ...parsed.data, createdById: user!.id },
+    data: { ...parsed.data, createdById: user.id },
     select: {
       id: true,
       name: true,

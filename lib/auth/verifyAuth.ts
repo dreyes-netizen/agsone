@@ -1,16 +1,13 @@
 import { NextRequest } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma/client";
-import type { Role } from "@/lib/generated/prisma/client";
+import { requireRole, type AuthUser } from "./requireRole";
 
-export type AuthUser = {
-  id: string;
-  firebaseUid: string;
-  email: string;
-  displayName: string;
-  role: Role;
-  departmentId: string | null;
-};
+// Re-exported for backward compatibility -- every existing call site does
+// `import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth"`. The
+// actual implementation lives in requireRole.ts, which has no Firebase
+// Admin dependency and is safe to import in tests.
+export { requireRole, type AuthUser };
 
 /**
  * Verify the caller's Firebase ID token and return their DB row.
@@ -82,7 +79,3 @@ export async function verifyToken(req: NextRequest): Promise<string | null> {
   }
 }
 
-export function requireRole(user: AuthUser | null, roles: Role[]): user is AuthUser {
-  if (!user) return false;
-  return roles.includes(user.role);
-}

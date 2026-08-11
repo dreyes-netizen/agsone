@@ -8,6 +8,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "setup:hooks": "cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Git hooks installed.'"
   },
   "prisma": {
@@ -63,6 +65,7 @@
     "eslint-config-next": "16.2.6",
     "playwright": "^1.62.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

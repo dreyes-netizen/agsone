@@ -75,7 +75,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <span className="font-semibold text-sm text-gray-900">Notifications</span>
             {unread > 0 && (
-              <button onClick={markAllRead} className="text-xs text-indigo-600 hover:underline">
+              <button onClick={markAllRead} className="text-xs text-navy-600 hover:underline">
                 Mark all read
               </button>
             )}
@@ -91,15 +91,15 @@ export function NotificationBell() {
                   <button
                     type="button"
                     onClick={() => handleNotificationClick(n)}
-                    className={`w-full text-left px-4 py-3 transition-colors ${link ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"} ${!n.readAt ? "bg-indigo-50/60" : ""}`}
+                    className={`w-full text-left px-4 py-3 transition-colors ${link ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"} ${!n.readAt ? "bg-navy-50/60" : ""}`}
                   >
                     <div className="flex items-start gap-2">
-                      {!n.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
+                      {!n.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-navy-500 shrink-0" />}
                       <div className={!n.readAt ? "" : "ml-4"}>
                         <p className="text-sm font-medium text-gray-900">{n.title}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
                         <p className="text-[10px] text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
-                        {link && <p className="text-[10px] text-indigo-500 mt-0.5">Tap to view →</p>}
+                        {link && <p className="text-[10px] text-navy-500 mt-0.5">Tap to view →</p>}
                       </div>
                     </div>
                   </button>

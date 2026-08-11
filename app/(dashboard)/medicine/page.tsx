@@ -47,6 +47,7 @@ export default function MedicinePage() {
   const { user, loading: authLoading } = useAuth();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
+  const [pendingMedicineIds, setPendingMedicineIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"catalog" | "requests">("catalog");
@@ -62,12 +63,16 @@ export default function MedicinePage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: { medicines: Medicine[]; myRequests: MyRequest[] }; total: number; page: number; pages: number }>(
-      `/api/medicine?page=${reqPage}`
-    )
+    apiFetch<{
+      data: { medicines: Medicine[]; pendingMedicineIds: string[]; myRequests: MyRequest[] };
+      total: number;
+      page: number;
+      pages: number;
+    }>(`/api/medicine?page=${reqPage}`)
       .then((res) => {
         setMedicines(res.data.medicines);
         setMyRequests(res.data.myRequests);
+        setPendingMedicineIds(new Set(res.data.pendingMedicineIds));
         setReqPages(res.pages);
       })
       .catch(console.error)
@@ -87,6 +92,7 @@ export default function MedicinePage() {
         { ...res.data, medicine: { name: medicineName } },
         ...prev,
       ]);
+      setPendingMedicineIds((prev) => new Set(prev).add(medicineId));
       toast.success(`${qty}× "${medicineName}" requested. Pending HR approval.`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit request");
@@ -177,13 +183,21 @@ export default function MedicinePage() {
             {visibleMedicines.map((med) => {
               const outOfStock = med.stockQuantity <= 0;
               const isRequesting = requesting === med.id;
-              const disabled = outOfStock || isRequesting;
+              const isPending = pendingMedicineIds.has(med.id);
+              const disabled = outOfStock || isRequesting || isPending;
               return (
                 <div
                   key={med.id}
-                  role="group"
+                  role="button"
+                  tabIndex={0}
                   aria-label={med.name}
                   onClick={() => setSelectedMed(med)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedMed(med);
+                    }
+                  }}
                   className="bg-white rounded-card border border-table-border overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
                 >
                   <div
@@ -213,15 +227,21 @@ export default function MedicinePage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); openConfirm(med); }}
                       disabled={disabled}
-                      aria-label={outOfStock ? `${med.name} — out of stock` : `Request ${med.name}`}
-                      className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors mt-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5 ${
+                      aria-label={
                         outOfStock
+                          ? `${med.name} — out of stock`
+                          : isPending
+                          ? `${med.name} — request pending`
+                          : `Request ${med.name}`
+                      }
+                      className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors mt-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-1.5 ${
+                        outOfStock || isPending
                           ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                           : "bg-command-black text-white hover:bg-gray-800"
                       }`}
                     >
                       {isRequesting && <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />}
-                      {isRequesting ? "Submitting…" : "Request"}
+                      {isRequesting ? "Submitting…" : isPending ? "Request Pending" : "Request"}
                     </button>
                   </div>
                 </div>
@@ -309,15 +329,25 @@ export default function MedicinePage() {
                 <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedMed.caption}</p>
                 <button
                   onClick={() => { setSelectedMed(null); openConfirm(selectedMed); }}
-                  disabled={selectedMed.stockQuantity <= 0 || requesting === selectedMed.id}
+                  disabled={
+                    selectedMed.stockQuantity <= 0 ||
+                    requesting === selectedMed.id ||
+                    pendingMedicineIds.has(selectedMed.id)
+                  }
                   className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 flex items-center justify-center gap-2 ${
-                    selectedMed.stockQuantity <= 0
+                    selectedMed.stockQuantity <= 0 || pendingMedicineIds.has(selectedMed.id)
                       ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                       : "bg-command-black text-white hover:bg-gray-800"
                   }`}
                 >
                   {requesting === selectedMed.id && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
-                  {selectedMed.stockQuantity <= 0 ? "Out of stock" : requesting === selectedMed.id ? "Submitting…" : "Request"}
+                  {selectedMed.stockQuantity <= 0
+                    ? "Out of stock"
+                    : pendingMedicineIds.has(selectedMed.id)
+                    ? "Request Pending"
+                    : requesting === selectedMed.id
+                    ? "Submitting…"
+                    : "Request"}
                 </button>
               </div>
             </>

@@ -38,7 +38,7 @@ export async function PATCH(
     // A second concurrent request loses the CAS and gets count 0.
     const { count } = await tx.redemption.updateMany({
       where: { id, status: redemption.status },
-      data: { status: parsed.data.status, adminNote: parsed.data.adminNote, processedById: user!.id },
+      data: { status: parsed.data.status, adminNote: parsed.data.adminNote, processedById: user.id },
     });
     if (count === 0) {
       throw new Error("REDEMPTION_STATUS_CONFLICT");
@@ -49,7 +49,7 @@ export async function PATCH(
         data: { pointsBalance: { increment: redemption.pointsSpent } },
       });
       await tx.pointTransaction.create({
-        data: { toUserId: redemption.userId, amount: redemption.pointsSpent, type: "REFUND", note: "Refund: rejected redemption", createdById: user!.id },
+        data: { toUserId: redemption.userId, amount: redemption.pointsSpent, type: "REFUND", note: "Refund: rejected redemption", createdById: user.id },
       });
     }
     return tx.redemption.findUniqueOrThrow({ where: { id } });

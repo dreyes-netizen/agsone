@@ -271,7 +271,7 @@ export default function FeedbackPage() {
                     >
                       {item.title}
                     </p>
-                    <p className={`text-[10px] mt-1 flex items-center gap-1 ${isActive ? "text-white/50" : "text-gray-400"}`}>
+                    <p className={`text-[10px] mt-1 flex items-center gap-1 ${isActive ? "text-white/50" : "text-gray-500"}`}>
                       {item._count.replies} {item._count.replies === 1 ? "reply" : "replies"} ·{" "}
                       {new Date(item.updatedAt).toLocaleDateString()}
                       {item.isAnonymous && (
@@ -388,7 +388,7 @@ export default function FeedbackPage() {
               <div>
                 <label htmlFor="fb-body" className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Details <span aria-hidden="true" className="text-red-500">*</span>{" "}
-                  <span className="font-normal text-gray-400 normal-case">({body.length}/1000)</span>
+                  <span className="font-normal text-gray-500 normal-case">({body.length}/1000)</span>
                 </label>
                 <textarea
                   id="fb-body"
@@ -499,7 +499,7 @@ export default function FeedbackPage() {
                           )}
                         </div>
                         <h2 className="text-base font-bold text-gray-900">{thread.title}</h2>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                           Submitted {new Date(thread.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -524,7 +524,7 @@ export default function FeedbackPage() {
                   {/* Replies */}
                   <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4" aria-label="Thread replies">
                     {thread.replies.length === 0 && !thread.isAnonymous && (
-                      <p className="text-xs text-gray-400 text-center py-4">
+                      <p className="text-xs text-gray-500 text-center py-4">
                         No replies yet. HR will respond here.
                       </p>
                     )}
@@ -559,7 +559,7 @@ export default function FeedbackPage() {
                                 <span className="text-xs font-semibold text-gray-700">
                                   {isHrReply ? "HR Team" : "You"}
                                 </span>
-                                <span className="text-[10px] text-gray-400">
+                                <span className="text-[10px] text-gray-500">
                                   {new Date(reply.createdAt).toLocaleString()}
                                 </span>
                               </div>
@@ -618,7 +618,7 @@ export default function FeedbackPage() {
                             }
                           </button>
                         </div>
-                        <p className="text-xs text-gray-400 pl-1">Ctrl + Enter to send</p>
+                        <p className="text-xs text-gray-500 pl-1">Ctrl + Enter to send</p>
                       </div>
                     )}
                   </div>

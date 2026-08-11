@@ -35,7 +35,15 @@ export function FoodListingCard(props: FoodListingCardProps) {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={() => onOpenDetail(listing)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenDetail(listing);
+        }
+      }}
       className="bg-white rounded-card border border-table-border overflow-hidden flex flex-col transition-shadow cursor-pointer"
     >
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import ExcelJS from "exceljs";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
@@ -8,7 +9,6 @@ import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { findActivity } from "@/lib/constants/awardActivities";
-import ExcelJS from "exceljs";
 import { sheetToRows } from "@/lib/excel/sheetToRows";
 
 export async function POST(req: NextRequest) {
@@ -114,14 +114,14 @@ export async function POST(req: NextRequest) {
   await prisma.$transaction([
     prisma.pointTransaction.createMany({
       data: recipientIds.map((id) => ({
-        fromUserId: user!.id,
+        fromUserId: user.id,
         toUserId: id,
         amount,
         type: "MANUAL_AWARD",
         note,
         category,
         activity: "PERFECT_ATTENDANCE",
-        createdById: user!.id,
+        createdById: user.id,
       })),
     }),
     prisma.user.updateMany({
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
   const balanceMap = new Map(updatedUsers.map((u) => [u.id, u.pointsBalance]));
 
   // user.displayName is already known from verifyAuth — no need to re-query it.
-  const actorName = user!.displayName ?? "Super Admin";
+  const actorName = user.displayName ?? "Super Admin";
 
   // Badge-checking needs each recipient's lifetime points earned — one
   // groupBy across all recipients instead of one aggregate() per recipient
@@ -158,26 +158,26 @@ export async function POST(req: NextRequest) {
       type: "POINTS_RECEIVED",
       title: `You received ${amount} points!`,
       body: note,
-      data: { amount, fromUserId: user!.id },
-    }).catch(() => {});
+      data: { amount, fromUserId: user.id },
+    }).catch((err) => console.error("points-received notification failed", err));
     sendMail({
       to: u.email,
       ...pointsReceivedEmail(u.displayName, amount, actorName, note, newBalance),
-    }).catch(() => {});
-    checkLevelUp(u.id, newBalance).catch(() => {});
-    checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch(() => {});
-    broadcast(`points:${u.id}`).catch(() => {});
+    }).catch((err) => console.error("points-received email failed", err));
+    checkLevelUp(u.id, newBalance).catch((err) => console.error("checkLevelUp failed", err));
+    checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch((err) => console.error("checkAndAwardBadges failed", err));
+    broadcast(`points:${u.id}`).catch((err) => console.error("attendance award broadcast failed", err));
   }
 
   prisma.auditLog.create({
     data: {
-      actorId: user!.id,
+      actorId: user.id,
       action: "ATTENDANCE_AWARD",
       entityType: "PointTransaction",
-      entityId: user!.id,
+      entityId: user.id,
       afterState: { attendanceMonth, recipientIds, amount, count: recipientIds.length, notFound },
     },
-  }).catch(() => {});
+  }).catch((err) => console.error("attendance award audit log write failed", err));
 
   return NextResponse.json({
     data: {

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   }
 
   const reward = await prisma.reward.create({
-    data: { ...parsed.data, createdById: user!.id },
+    data: { ...parsed.data, createdById: user.id },
   });
 
   return NextResponse.json({ data: reward }, { status: 201 });

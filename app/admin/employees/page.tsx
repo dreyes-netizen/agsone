@@ -303,6 +303,7 @@ export default function EmployeesPage() {
           employees={employees}
           loading={loading}
           isSuperAdmin={isSuperAdmin}
+          currentUserId={dbUser?.id}
           updatingId={updatingId}
           page={page}
           pages={pages}
@@ -334,6 +335,7 @@ export default function EmployeesPage() {
         onSave={handleSave}
         onCancel={() => setEditingEmployee(null)}
         departments={departments}
+        isSuperAdmin={isSuperAdmin}
       />
     </div>
   );

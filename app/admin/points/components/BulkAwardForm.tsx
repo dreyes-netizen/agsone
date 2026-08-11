@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import type { Department, Employee } from "../types";
+import type { Department, Employee, Budget } from "../types";
 import { ActivitySelect } from "./ActivitySelect";
 
 interface BulkAwardFormProps {
@@ -22,13 +22,14 @@ interface BulkAwardFormProps {
   onToggleSelectAll: () => void;
   onSubmit: (e: React.FormEvent) => void;
   inputClass: string;
+  budget: Budget | null;
 }
 
 export function BulkAwardForm(props: BulkAwardFormProps) {
   const {
     departments, filteredForBulk, bulkSelected, allFilteredSelected, bulkDeptFilter, onDeptFilterChange,
     bulkAmount, onAmountChange, bulkNote, onNoteChange, bulkActivity, onActivityChange,
-    bulkSubmitting, bulkSuccess, bulkError, onToggleEmployee, onToggleSelectAll, onSubmit, inputClass,
+    bulkSubmitting, bulkSuccess, bulkError, onToggleEmployee, onToggleSelectAll, onSubmit, inputClass, budget,
   } = props;
 
   return (
@@ -139,7 +140,7 @@ export function BulkAwardForm(props: BulkAwardFormProps) {
 
       <button
         type="submit"
-        disabled={bulkSubmitting || bulkSelected.size === 0 || !bulkAmount || !bulkNote}
+        disabled={bulkSubmitting || bulkSelected.size === 0 || !bulkAmount || !bulkNote || (budget !== null && !budget.isExempt && budget.remaining === 0)}
         className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
       >
         {bulkSubmitting ? (

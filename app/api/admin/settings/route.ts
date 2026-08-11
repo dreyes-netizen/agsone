@@ -32,11 +32,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  await setAllyEnabled(parsed.data.allyEnabled, user!.id);
+  await setAllyEnabled(parsed.data.allyEnabled, user.id);
 
   await prisma.auditLog.create({
     data: {
-      actorId: user!.id,
+      actorId: user.id,
       action: "UPDATE_SETTING",
       entityType: "AppSetting",
       entityId: "ally_enabled",

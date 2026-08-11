@@ -205,9 +205,9 @@ export default function MinigamesPage() {
                   tabIndex={activeTab === g.key ? 0 : -1}
                   aria-label={g.label}
                   onClick={() => setActiveTab(g.key)}
-                  className={`flex-1 min-w-[52px] sm:min-w-[80px] px-1 sm:px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-600 ${
+                  className={`flex-1 min-w-[52px] sm:min-w-[80px] px-1 sm:px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-navy-600 ${
                     activeTab === g.key
-                      ? "border-b-2 border-indigo-600 text-indigo-700 bg-indigo-50/60"
+                      ? "border-b-2 border-navy-600 text-navy-700 bg-navy-50/60"
                       : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                   }`}
                 >
@@ -223,15 +223,15 @@ export default function MinigamesPage() {
                     key={g.key}
                     id={`panel-${g.key}`}
                     role="tabpanel"
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-100"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-navy-50 border border-navy-100"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-indigo-900 flex items-center gap-1.5"><g.icon className="w-4 h-4" aria-hidden="true" />{g.label}</p>
-                      <p className="text-xs text-indigo-600 mt-0.5">{g.desc}</p>
+                      <p className="text-sm font-semibold text-navy-900 flex items-center gap-1.5"><g.icon className="w-4 h-4" aria-hidden="true" />{g.label}</p>
+                      <p className="text-xs text-navy-600 mt-0.5">{g.desc}</p>
                     </div>
                     <button
                       onClick={() => setShowHelp(true)}
-                      className="shrink-0 text-xs text-indigo-500 hover:text-indigo-700 font-semibold underline underline-offset-2 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                      className="shrink-0 text-xs text-navy-500 hover:text-navy-700 font-semibold underline underline-offset-2 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 rounded"
                     >
                       How to play
                     </button>
@@ -281,7 +281,7 @@ export default function MinigamesPage() {
           <div className="bg-white border border-table-border rounded-card overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-sm font-bold text-gray-800">Open Challenges</p>
-              <span className="text-xs text-gray-400">{openChallenges.length > 0 ? `${openChallenges.length} open · all games` : "all games"}</span>
+              <span className="text-xs text-gray-500">{openChallenges.length > 0 ? `${openChallenges.length} open · all games` : "all games"}</span>
             </div>
             <div className="divide-y divide-gray-50">
               {loading ? (
@@ -300,7 +300,7 @@ export default function MinigamesPage() {
                     {s.host.avatarUrl ? (
                       <img src={s.host.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold shrink-0">
                         {s.host.displayName[0]}
                       </div>
                     )}
@@ -311,7 +311,7 @@ export default function MinigamesPage() {
                         {s.pointsWager > 0 ? (
                           <span className="text-amber-600 font-medium"> · {s.pointsWager} pts</span>
                         ) : (
-                          <span className="text-gray-400"> · Friendly</span>
+                          <span className="text-gray-500"> · Friendly</span>
                         )}
                       </p>
                     </div>

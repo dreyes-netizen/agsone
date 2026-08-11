@@ -24,10 +24,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
-  // Only SUPER_ADMIN can promote to HR_ADMIN or SUPER_ADMIN
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (!target) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Only SUPER_ADMIN can assign HR_ADMIN/SUPER_ADMIN, or change the role of
+  // a user who currently holds one of those roles (prevents an HR_ADMIN from
+  // demoting/stripping another HR_ADMIN or a SUPER_ADMIN).
   const elevatedRoles = ["HR_ADMIN", "SUPER_ADMIN"];
-  if (elevatedRoles.includes(parsed.data.role) && user!.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
+  if (
+    (elevatedRoles.includes(parsed.data.role) || elevatedRoles.includes(target.role)) &&
+    user.role !== "SUPER_ADMIN"
+  ) {
+    return NextResponse.json({ error: "Only Super Admin can modify elevated roles" }, { status: 403 });
   }
 
   const updated = await prisma.user.update({
@@ -38,7 +48,7 @@ export async function PATCH(
 
   await prisma.auditLog.create({
     data: {
-      actorId: user!.id,
+      actorId: user.id,
       action: "UPDATE_ROLE",
       entityType: "User",
       entityId: id,

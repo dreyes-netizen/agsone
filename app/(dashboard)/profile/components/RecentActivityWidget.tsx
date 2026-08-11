@@ -37,7 +37,7 @@ export function RecentActivityWidget({ pointsData, onViewAll }: RecentActivityWi
                     <p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                   </div>
                   {count > 1 && (
-                    <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
+                    <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
                   )}
                 </li>
               );
@@ -45,7 +45,7 @@ export function RecentActivityWidget({ pointsData, onViewAll }: RecentActivityWi
           })()}
         </ul>
       ) : (
-        <p className="text-xs text-gray-400 text-center py-4">No activity yet</p>
+        <p className="text-xs text-gray-500 text-center py-4">No activity yet</p>
       )}
     </div>
   );

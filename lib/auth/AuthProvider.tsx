@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fetch("/api/auth/session", {
             method: "POST",
             headers: { Authorization: `Bearer ${idToken}` },
-          }).catch(() => {});
+          }).catch((err) => console.error("session cookie set failed", err));
 
           const syncRes = await fetch("/api/auth/sync", {
             method: "POST",
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(null);
           setDbUser(null);
           // Clear the HttpOnly session cookie server-side.
-          fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
+          fetch("/api/auth/session", { method: "DELETE" }).catch((err) => console.error("session cookie clear failed", err));
         }
       } catch {
         setUser(null);
@@ -110,7 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // subscription participates in the tab-hidden idle-disconnect + resync
   // behavior like every other channel — see lib/hooks/useRealtimeChannel.ts.
   const refreshRef = useRef(refreshProfile);
-  useEffect(() => { refreshRef.current = refreshProfile; });
+  useEffect(() => {
+    refreshRef.current = refreshProfile;
+  });
   useRealtimeChannel(dbUser?.id ? `points:${dbUser.id}` : null, () => refreshRef.current());
 
   return (

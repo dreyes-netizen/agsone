@@ -43,7 +43,7 @@ export function StockAlerts({ items }: { items: StockItem[] }) {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900 truncate leading-tight">{item.name}</p>
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</span>
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</span>
                   </div>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
                     outOfStock ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"

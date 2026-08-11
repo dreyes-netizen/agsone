@@ -35,10 +35,11 @@ export async function createNotification(params: CreateNotificationParams) {
       const emailKey = `${params.type}_EMAIL`;
       if (prefs[emailKey] === true && user?.email && user?.displayName) {
         const { subject, html } = notificationEmail(user.displayName, params.title, params.body);
-        sendMail({ to: user.email, subject, html }).catch(() => {});
+        sendMail({ to: user.email, subject, html }).catch((err) => console.error("notification email send failed", err));
       }
-    } catch {
+    } catch (err) {
       // fail open — if pref check errors, still send notification
+      console.error("notification preference check failed", err);
     }
   }
   const notification = await prisma.notification.create({ data: params });

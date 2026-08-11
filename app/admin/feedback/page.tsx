@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Lock } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { Pagination } from "@/components/ui/pagination";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
@@ -77,7 +77,7 @@ export default function AdminFeedbackPage() {
       </div>
 
       <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-3">
-        <span className="text-red-600 text-sm font-bold"><span aria-hidden="true">🔒</span> Confidential Channel</span>
+        <span className="text-red-600 text-sm font-bold flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" aria-hidden="true" /> Confidential Channel</span>
         <span className="text-red-500 text-xs">
           Reports visible only to HR and authorized investigators. Retaliation is strictly prohibited.
         </span>

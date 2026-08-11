@@ -3,7 +3,7 @@
 export const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   DELETE_POST:       { label: "Delete Post",       color: "bg-red-100 text-red-700" },
   DELETE_COMMENT:    { label: "Delete Comment",     color: "bg-red-100 text-red-700" },
-  UPDATE_ROLE:       { label: "Role Change",        color: "bg-violet-100 text-violet-700" },
+  UPDATE_ROLE:       { label: "Role Change",        color: "bg-navy-100 text-navy-700" },
   AWARD_POINTS:      { label: "Award Points",       color: "bg-emerald-100 text-emerald-700" },
   BULK_AWARD_POINTS: { label: "Bulk Award Points",  color: "bg-emerald-100 text-emerald-700" },
   ATTENDANCE_AWARD:  { label: "Attendance Award",   color: "bg-blue-100 text-blue-700" },

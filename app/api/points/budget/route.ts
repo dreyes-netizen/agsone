@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const budget = await checkManagerBudget(user!.id, user!.role, 0);
+  const budget = await checkManagerBudget(user.id, user.role, 0);
   return NextResponse.json({
     data: {
       isExempt: budget.isExempt,

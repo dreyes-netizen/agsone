@@ -19,7 +19,7 @@ export function DepartmentRankWidget({ department, deptRank }: DepartmentRankWid
             </p>
           </>
         ) : (
-          <p className="text-xs text-gray-400">No department assigned</p>
+          <p className="text-xs text-gray-500">No department assigned</p>
         )}
       </div>
     </Link>

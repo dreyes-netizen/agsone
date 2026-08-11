@@ -60,7 +60,7 @@ export function GameResultOverlay({ session, myId, h2h, onNavigate }: Props) {
   const pointsLabel = session.pointsWager > 0
     ? (draw ? "±0 pts" : won ? `+${session.pointsWager} pts` : `−${session.pointsWager} pts`)
     : null;
-  const pointsColor = draw ? "text-amber-300" : won ? "text-indigo-300" : "text-rose-300";
+  const pointsColor = draw ? "text-amber-300" : won ? "text-navy-300" : "text-rose-300";
 
   const bgGradient = draw
     ? "from-[#451a03] to-[#78350f]"

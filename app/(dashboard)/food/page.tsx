@@ -8,6 +8,16 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { AddOn, MyOrder, OrderRow, Listing, Tab } from "./types";
 import { ListingFormPanel } from "./components/ListingFormPanel";
 import { FoodListingCard } from "./components/FoodListingCard";
@@ -28,6 +38,8 @@ export default function FoodPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("AVAILABLE");
+  const [deleteTarget, setDeleteTarget] = useState<Listing | null>(null);
+  const [closeTarget, setCloseTarget] = useState<Listing | null>(null);
 
   // Order form state
   const [qty, setQty] = useState(1);
@@ -299,19 +311,31 @@ export default function FoodPage() {
   }
 
   // ── Delete listing ────────────────────────────────────────────────────────────
-  async function handleDelete(listing: Listing) {
-    if (!confirm(`Delete "${listing.title}"? This cannot be undone and will remove all orders.`)) return;
+  function handleDelete(listing: Listing) {
+    setDeleteTarget(listing);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const listing = deleteTarget;
+    setDeleteTarget(null);
     try {
       await apiFetch(`/api/food/${listing.id}`, { method: "DELETE" });
       setListings((prev) => prev.filter((l) => l.id !== listing.id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete listing");
+      toast.error(err instanceof Error ? err.message : "Failed to delete listing");
     }
   }
 
   // ── Close listing ─────────────────────────────────────────────────────────────
-  async function handleClose(listing: Listing) {
-    if (!confirm(`Close "${listing.title}"? No more orders will be accepted.`)) return;
+  function handleClose(listing: Listing) {
+    setCloseTarget(listing);
+  }
+
+  async function confirmClose() {
+    if (!closeTarget) return;
+    const listing = closeTarget;
+    setCloseTarget(null);
     try {
       await apiFetch(`/api/food/${listing.id}`, {
         method: "PATCH",
@@ -319,7 +343,7 @@ export default function FoodPage() {
       });
       setListings((prev) => prev.map((l) => l.id === listing.id ? { ...l, isActive: false } : l));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to close listing");
+      toast.error(err instanceof Error ? err.message : "Failed to close listing");
     }
   }
 
@@ -515,6 +539,36 @@ export default function FoodPage() {
         onUpdateOrder={handleUpdateOrder}
         onCancelOrder={handleCancel}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &quot;{deleteTarget?.title}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>This cannot be undone and will remove all orders.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction autoFocus variant="destructive" onClick={confirmDelete}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!closeTarget} onOpenChange={(open) => { if (!open) setCloseTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close &quot;{closeTarget?.title}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>No more orders will be accepted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction autoFocus onClick={confirmClose}>
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

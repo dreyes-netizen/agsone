@@ -5,10 +5,11 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import React from "react";
-import { Pencil, Trash2, Plus, Package, Ticket, Star, Monitor, ImagePlus, X, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, ImagePlus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
+import { REWARD_CATEGORIES, REWARD_CATEGORY_CONFIG } from "@/lib/constants/rewardCategories";
 
 type Reward = {
   id: string;
@@ -21,17 +22,7 @@ type Reward = {
   isActive: boolean;
 };
 
-const categoryOptions = ["PHYSICAL", "VOUCHER", "PRIVILEGE", "DIGITAL"];
-const categoryIcon: Record<string, React.ElementType> = { PHYSICAL: Package, VOUCHER: Ticket, PRIVILEGE: Star, DIGITAL: Monitor };
-// Colors match the employee marketplace's categoryConfig so a reward's category reads the same everywhere.
-const categoryIconClass: Record<string, string> = { PHYSICAL: "text-orange-600", VOUCHER: "text-blue-600", PRIVILEGE: "text-indigo-600", DIGITAL: "text-emerald-600" };
-const categoryLabel: Record<string, string> = { PHYSICAL: "Physical", VOUCHER: "Voucher", PRIVILEGE: "Privilege", DIGITAL: "Digital" };
-const categoryBadgeClass: Record<string, string> = {
-  PHYSICAL: "bg-orange-50 text-orange-700",
-  VOUCHER: "bg-blue-50 text-blue-700",
-  PRIVILEGE: "bg-indigo-50 text-indigo-700",
-  DIGITAL: "bg-emerald-50 text-emerald-700",
-};
+const categoryOptions = REWARD_CATEGORIES;
 
 const emptyForm = { name: "", description: "", pointCost: "", stockQuantity: "-1", category: "PHYSICAL" };
 
@@ -282,8 +273,8 @@ export default function AdminRewardsPage() {
                       <img src={src} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => removeExistingImage(i)}
                         aria-label="Remove image"
+                        onClick={() => removeExistingImage(i)}
                         className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       >
                         <X className="w-3 h-3" />
@@ -296,8 +287,8 @@ export default function AdminRewardsPage() {
                       <img src={src} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => removeNewImage(i)}
                         aria-label="Remove image"
+                        onClick={() => removeNewImage(i)}
                         className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       >
                         <X className="w-3 h-3" />
@@ -405,8 +396,8 @@ export default function AdminRewardsPage() {
                       </div>
                       {r.description && <p className="text-xs text-gray-500 truncate">{r.description}</p>}
                       <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                        <span className={`font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${categoryBadgeClass[r.category] ?? "bg-gray-100 text-gray-600"}`}>
-                          {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} aria-hidden="true" /> : null; })()} {categoryLabel[r.category] ?? r.category}
+                        <span className={`font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${REWARD_CATEGORY_CONFIG[r.category as keyof typeof REWARD_CATEGORY_CONFIG]?.badge ?? "bg-gray-100 text-gray-600"}`}>
+                          {(() => { const cfg = REWARD_CATEGORY_CONFIG[r.category as keyof typeof REWARD_CATEGORY_CONFIG]; const CI = cfg?.icon; return CI ? <CI className={`w-3 h-3 ${cfg.iconClass}`} aria-hidden="true" /> : null; })()} {REWARD_CATEGORY_CONFIG[r.category as keyof typeof REWARD_CATEGORY_CONFIG]?.label ?? r.category}
                         </span>
                         <span className="font-semibold text-navy-600">{r.pointCost.toLocaleString()} pts</span>
                         <span className={
@@ -513,8 +504,8 @@ export default function AdminRewardsPage() {
                   </div>
                 </td>
                 <td className={tdClass}>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${categoryBadgeClass[r.category] ?? "bg-gray-100 text-gray-600"}`}>
-                    {(() => { const CI = categoryIcon[r.category]; return CI ? <CI className={`w-3 h-3 ${categoryIconClass[r.category] ?? ""}`} /> : null; })()} {categoryLabel[r.category] ?? r.category}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${REWARD_CATEGORY_CONFIG[r.category as keyof typeof REWARD_CATEGORY_CONFIG]?.badge ?? "bg-gray-100 text-gray-600"}`}>
+                    {(() => { const cfg = REWARD_CATEGORY_CONFIG[r.category as keyof typeof REWARD_CATEGORY_CONFIG]; const CI = cfg?.icon; return CI ? <CI className={`w-3 h-3 ${cfg.iconClass}`} /> : null; })()} {REWARD_CATEGORY_CONFIG[r.category as keyof typeof REWARD_CATEGORY_CONFIG]?.label ?? r.category}
                   </span>
                 </td>
                 <td className={tdClass}>

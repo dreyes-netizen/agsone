@@ -4,7 +4,8 @@ import { useEffect, useState, use } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
 
@@ -69,7 +70,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
       });
       setThread((prev) => prev ? { ...prev, status: status as FeedbackThread["status"] } : prev);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      toast.error(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setUpdatingStatus(false);
     }
@@ -88,7 +89,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
         : prev);
       setReplyBody("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to send reply");
+      toast.error(err instanceof Error ? err.message : "Failed to send reply");
     } finally {
       setSending(false);
     }
@@ -125,8 +126,8 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                <span aria-hidden="true">🔒</span> Confidential
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 inline-flex items-center gap-1">
+                <Lock className="w-3 h-3" aria-hidden="true" /> Confidential
               </span>
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[thread.category] ?? "bg-gray-100 text-gray-600"}`}>
                 {CATEGORY_LABELS[thread.category] ?? thread.category}

@@ -6,7 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   ArrowLeft, Coins, Star, CalendarDays, Building2,
-  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle, Loader2, X,
+  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle, Loader2, X, Cake,
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -60,11 +60,11 @@ const typeConfig: Record<string, { label: string; color: string; bg: string }> =
   MANUAL_AWARD: { label: "Points Awarded",   color: "text-emerald-600", bg: "bg-emerald-50" },
   REDEMPTION:   { label: "Redeemed",         color: "text-rose-500",    bg: "bg-rose-50" },
   REFUND:       { label: "Refund",           color: "text-emerald-600", bg: "bg-emerald-50" },
-  GAME_WIN:     { label: "Game Win",         color: "text-violet-600",  bg: "bg-violet-50" },
+  GAME_WIN:     { label: "Game Win",         color: "text-amber-500",   bg: "bg-amber-50" },
   GAME_SPEND:   { label: "Game Entry",       color: "text-orange-500",  bg: "bg-orange-50" },
   CONTEST:      { label: "Contest",          color: "text-navy-600",    bg: "bg-navy-50" },
   KPI:          { label: "KPI Bonus",        color: "text-emerald-600", bg: "bg-emerald-50" },
-  MILESTONE:    { label: "Milestone Reward", color: "text-violet-600",  bg: "bg-violet-50" },
+  MILESTONE:    { label: "Milestone Reward", color: "text-amber-700",   bg: "bg-amber-100" },
 };
 
 function getTenure(hireDate: string | null): string | null {
@@ -157,7 +157,7 @@ export default function EmployeeProfilePage() {
   function loadBudget() {
     return apiFetch<{ data: { isExempt: boolean; used: number; remaining: number; total: number } }>("/api/points/budget")
       .then((r) => setBudget(r.data))
-      .catch(() => {});
+      .catch((err) => console.error("budget fetch failed", err));
   }
 
   useEffect(() => {
@@ -171,7 +171,7 @@ export default function EmployeeProfilePage() {
     queueMicrotask(() => setHistoryLoading(true));
     apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
       .then((r) => setTransactions(r.data.slice(0, 15)))
-      .catch(() => {})
+      .catch((err) => console.error("transaction history fetch failed", err))
       .finally(() => setHistoryLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isAdminOrManager]);
@@ -194,7 +194,7 @@ export default function EmployeeProfilePage() {
       loadBudget();
       apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
         .then((r) => setTransactions(r.data.slice(0, 15)))
-        .catch(() => {});
+        .catch((err) => console.error("transaction history refresh failed", err));
     } catch (err) {
       setAwardError(err instanceof Error ? err.message : "Failed to award points");
     } finally {
@@ -307,8 +307,8 @@ export default function EmployeeProfilePage() {
           <dt className="text-xs text-gray-500 mt-0.5">Points</dt>
         </div>
         <div className="bg-white rounded-card border border-table-border p-4 text-center">
-          <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" aria-hidden="true" />
-          <dd className="text-2xl font-black text-violet-600">{employee.level}</dd>
+          <Star className="w-4 h-4 text-navy-400 mx-auto mb-1" aria-hidden="true" />
+          <dd className="text-2xl font-black text-navy-600">{employee.level}</dd>
           <dt className="text-xs text-gray-500 mt-0.5">Level</dt>
         </div>
         <div className="bg-white rounded-card border border-table-border p-4 text-center">
@@ -538,7 +538,7 @@ export default function EmployeeProfilePage() {
               >
                 {shoutoutSubmitting
                   ? <><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Sending…</>
-                  : <><span aria-hidden="true">✨</span> Send Shoutout</>
+                  : <><Sparkles className="w-3.5 h-3.5" aria-hidden="true" /> Send Shoutout</>
                 }
               </button>
             </form>
@@ -559,7 +559,7 @@ export default function EmployeeProfilePage() {
           )}
           {employee.birthday && (
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-base leading-none shrink-0" aria-hidden="true">🎂</span>
+              <Cake className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span className="text-gray-500">Birthday</span>
               <span className="ml-auto font-medium text-gray-900">
                 {new Date(employee.birthday).toLocaleDateString("en-US", { month: "long", day: "numeric" })}

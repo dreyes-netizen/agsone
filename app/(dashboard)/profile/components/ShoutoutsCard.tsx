@@ -1,4 +1,4 @@
-import { Megaphone } from "lucide-react";
+import { Megaphone, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import type { ShoutoutEntry } from "../types";
 
@@ -12,14 +12,14 @@ export function ShoutoutsCard({ shoutouts }: ShoutoutsCardProps) {
   return (
     <div className="bg-white rounded-card border border-table-border overflow-hidden">
       <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-800"><span aria-hidden="true">💬</span> Shoutouts</p>
+        <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5"><MessageCircle className="w-4 h-4" aria-hidden="true" /> Shoutouts</p>
         <Link href="/feed" className="text-xs text-navy-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 rounded">See all →</Link>
       </div>
       {shoutouts.length === 0 ? (
         <div className="flex flex-col items-center gap-1 py-3 px-4 text-center">
           <Megaphone className="w-4 h-4 text-gray-300" aria-hidden="true" />
           <p className="text-xs font-medium text-gray-600">No shoutouts yet</p>
-          <p className="text-[10px] text-gray-400">Your colleagues will recognize you here</p>
+          <p className="text-[10px] text-gray-500">Your colleagues will recognize you here</p>
         </div>
       ) : (
         <ul className="divide-y divide-gray-100">

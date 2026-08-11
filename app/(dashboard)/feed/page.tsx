@@ -1,18 +1,29 @@
 ﻿"use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Send, ImagePlus, X, MessageCircle, SmilePlus, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2 } from "lucide-react";
-import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { timeAgo, postTimestamp } from "@/lib/helpers/timeAgo";
+import { Send, ImagePlus, X, MessageCircle, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2, Cake, Building2 } from "lucide-react";
+import { postTimestamp } from "@/lib/helpers/timeAgo";
 import { FLAIRS, flairById } from "@/lib/flairs";
 import { PostImages } from "@/components/feed/PostImages";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
-import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { Avatar } from "@/components/feed/Avatar";
+import { ReactionBar } from "@/components/feed/ReactionBar";
+import { PollBlock } from "@/components/feed/PollBlock";
+import { CommentThread } from "@/components/feed/CommentThread";
+import { useFeedActions } from "@/lib/hooks/useFeedActions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle (this is the largest page in the app).
@@ -20,74 +31,6 @@ const ImageLightbox = dynamic(
   () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
   { ssr: false },
 );
-
-type PollOption = {
-  id: string;
-  text: string;
-  _count: { votes: number };
-};
-
-type FeedPost = {
-  id: string;
-  authorId: string;
-  type: string;
-  title: string | null;
-  content: string;
-  imageUrls: string[];
-  createdAt: string;
-  isPinned: boolean;
-  flair: string;
-  author: { displayName: string; avatarUrl: string | null; department: { name: string } | null };
-  shoutoutRecipients: { id: string; userId: string; user: { id: string; displayName: string; avatarUrl: string | null } }[];
-  reactions: Record<string, number>;
-  myReactions: string[];
-  commentCount: number;
-  pollOptions: PollOption[];
-  myVoteOptionId: string | null;
-  departmentId: string | null;
-  department: { name: string } | null;
-};
-
-type ReplyItem = {
-  id: string;
-  content: string;
-  createdAt: string;
-  parentId: string | null;
-  authorId: string;
-  author: { displayName: string; avatarUrl: string | null };
-};
-
-type CommentItem = {
-  id: string;
-  content: string;
-  createdAt: string;
-  authorId: string;
-  author: { displayName: string; avatarUrl: string | null };
-  replies: ReplyItem[];
-};
-
-type UserProfile = {
-  pointsBalance: number;
-  level: number;
-  displayName: string;
-  department: { id: string; name: string } | null;
-};
-
-type LeaderboardEntry = {
-  userId: string;
-  displayName: string;
-  avatarUrl: string | null;
-  points: number;
-  isCurrentUser: boolean;
-};
-
-
-type BirthdayPerson = {
-  id: string;
-  displayName: string;
-  avatarUrl: string | null;
-  daysUntil: number;
-};
 
 
 function getGreeting() {
@@ -97,799 +40,98 @@ function getGreeting() {
   return "Good evening";
 }
 
-const EMOJIS = [
-  { emoji: "👍", label: "Like" },
-  { emoji: "❤️", label: "Love" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "👏", label: "Clap" },
-  { emoji: "🎉", label: "Celebrate" },
-  { emoji: "💪", label: "Strong" },
-];
-
-const EMOJI_BG: Record<string, string> = {
-  "👍": "bg-blue-50 text-blue-700 border-blue-200",
-  "❤️": "bg-rose-50 text-rose-600 border-rose-200",
-  "🔥": "bg-orange-50 text-orange-600 border-orange-200",
-  "👏": "bg-amber-50 text-amber-700 border-amber-200",
-  "🎉": "bg-purple-50 text-purple-700 border-purple-200",
-  "💪": "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-function ReactionBar({
-  postId,
-  reactions,
-  myReactions,
-  onReact,
-}: {
-  postId: string;
-  reactions: Record<string, number>;
-  myReactions: string[];
-  onReact: (postId: string, emoji: string) => void;
-}) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const myReaction = myReactions[0] ?? null;
-  const totalReactions = Object.values(reactions).reduce((a, b) => a + b, 0);
-
-  function openPicker() {
-    hoverTimer.current = setTimeout(() => setPickerOpen(true), 350);
-  }
-  function closePicker() {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = null;
-    setPickerOpen(false);
-  }
-  function handleMainClick() {
-    if (myReaction) {
-      onReact(postId, myReaction); // toggle off
-    } else {
-      setPickerOpen((v) => !v);
-    }
-  }
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      if (myReaction) {
-        onReact(postId, myReaction);
-      } else {
-        setPickerOpen((v) => !v);
-      }
-    } else if (e.key === "Escape" && pickerOpen) {
-      e.preventDefault();
-      closePicker();
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-3 flex-wrap">
-      {/* React button */}
-      <div
-        ref={containerRef}
-        className="relative"
-        onMouseEnter={openPicker}
-        onMouseLeave={closePicker}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        role="button"
-        aria-label="Add reaction"
-      >
-        {/* Floating picker — pb-2 bridges the gap so mouse doesn't leave container */}
-        {pickerOpen && (
-          <div className="absolute bottom-full left-0 z-20 pb-2">
-            <div className="flex items-center gap-1 bg-white rounded-full shadow-xl border border-gray-100 px-3 py-2.5" role="group" aria-label="Emoji reactions">
-              {EMOJIS.map(({ emoji, label }) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  title={label}
-                  onClick={() => { onReact(postId, emoji); closePicker(); }}
-                  className={`text-xl leading-none transition-all duration-150 hover:scale-[1.4] active:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400 focus-visible:ring-offset-1 ${
-                    myReaction === emoji ? "scale-125" : ""
-                  }`}
-                  aria-label={label}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={handleMainClick}
-          aria-haspopup="true"
-          aria-expanded={pickerOpen}
-          aria-label={myReaction ? `Remove ${EMOJIS.find(e => e.emoji === myReaction)?.label ?? "reaction"}` : "Add reaction"}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-            myReaction
-              ? "bg-navy-50 border-navy-200 text-navy-700"
-              : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
-          }`}
-        >
-          {myReaction ? (
-            <span className="text-sm leading-none">{myReaction}</span>
-          ) : (
-            <SmilePlus className="w-3.5 h-3.5" />
-          )}
-          <span>{myReaction ? EMOJIS.find((e) => e.emoji === myReaction)?.label ?? "Reacted" : "Add reaction"}</span>
-        </button>
-      </div>
-
-      {/* Reaction summary bubbles */}
-      {totalReactions > 0 && (
-        <div className="flex items-center gap-1.5">
-          {Object.entries(reactions)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 4)
-            .map(([emoji, count]) => (
-              <span
-                key={emoji}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${EMOJI_BG[emoji] ?? "bg-gray-50 text-gray-600 border-gray-200"}`}
-              >
-                {emoji} {count}
-              </span>
-            ))}
-          {totalReactions > 0 && (
-            <span className="text-xs text-gray-500 font-medium ml-0.5">
-              {totalReactions} {totalReactions === 1 ? "reaction" : "reactions"}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 const postTypeMeta: Record<string, { bg: string; chip: string; label: string; icon?: React.ElementType }> = {
   CELEBRATION:  { bg: "bg-amber-50 border-amber-200",   chip: "bg-amber-100 text-amber-700",   label: "Celebration", icon: PartyPopper },
   ANNOUNCEMENT: { bg: "bg-navy-50 border-navy-200",     chip: "bg-navy-100 text-navy-700",     label: "Announcement", icon: Megaphone },
-  ACHIEVEMENT:  { bg: "bg-violet-50 border-violet-200", chip: "bg-violet-100 text-violet-700", label: "Achievement", icon: Trophy },
+  ACHIEVEMENT:  { bg: "bg-emerald-50 border-emerald-200", chip: "bg-emerald-100 text-emerald-700", label: "Achievement", icon: Trophy },
   UPDATE:       { bg: "bg-white border-table-border",        chip: "",                              label: "" },
   POLL:         { bg: "bg-white border-table-border",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
 };
 
-function PollBlock({
-  postId,
-  options,
-  myVoteOptionId,
-  voting,
-  onVote,
-}: {
-  postId: string;
-  options: PollOption[];
-  myVoteOptionId: string | null;
-  voting: boolean;
-  onVote: (postId: string, optionId: string) => void;
-}) {
-  const totalVotes = options.reduce((sum, o) => sum + o._count.votes, 0);
-  return (
-    <div className="mt-3 space-y-2">
-      {options.map((opt) => {
-        const pct = totalVotes > 0 ? Math.round((opt._count.votes / totalVotes) * 100) : 0;
-        const voted = myVoteOptionId === opt.id;
-        return (
-          <button
-            key={opt.id}
-            type="button"
-            onClick={() => onVote(postId, opt.id)}
-            disabled={voting}
-            className={`w-full text-left relative overflow-hidden rounded-full border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed ${
-              voted
-                ? "border-navy-500 text-navy-800"
-                : "border-gray-200 text-gray-700 hover:border-navy-300"
-            }`}
-          >
-            <div
-              className="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
-              style={{
-                width: `${pct}%`,
-                background: voted ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.07)",
-              }}
-            />
-            <span className="relative flex items-center justify-between gap-2">
-              <span className="flex-1 min-w-0 truncate">{opt.text}{voted && <span className="ml-1.5 text-navy-600 text-xs inline-flex items-center gap-0.5"><Check className="w-3 h-3" /> Voted</span>}</span>
-              <span className="text-xs text-gray-500 font-normal shrink-0">{pct}% · {opt._count.votes}</span>
-            </span>
-          </button>
-        );
-      })}
-      <p className="text-xs text-gray-500 pl-1">{totalVotes} {totalVotes === 1 ? "vote" : "votes"}</p>
-    </div>
-  );
-}
-
-function Avatar({ name, url, size = "sm" }: { name: string; url: string | null; size?: "sm" | "md" }) {
-  const [errored, setErrored] = useState(false);
-  const dim = size === "md" ? "w-12 h-12 text-lg" : "w-10 h-10 text-base";
-  if (url && !errored) return <img src={url} alt={name} className={`${dim} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
-  return (
-    <div className={`${dim} rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white font-bold shrink-0`}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
 export default function FeedPage() {
   const router = useRouter();
-  const { user, dbUser, token, loading: authLoading } = useAuth();
-  const { apiFetch } = useApiClient();
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasNewPosts, setHasNewPosts] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState("ALL");
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [editingComment, setEditingComment] = useState<{ id: string; content: string; postId: string; isReply: boolean; parentId?: string } | null>(null);
-  const [editingPost, setEditingPost] = useState<{ id: string; title: string; content: string } | null>(null);
-  const [savingPostEdit, setSavingPostEdit] = useState(false);
-  const [postTitle, setPostTitle] = useState("");
-  const [newPost, setNewPost] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [pollMode, setPollMode] = useState(false);
-  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
-  const [shoutoutMode, setShoutoutMode] = useState(false);
-  const [shoutoutTitle, setShoutoutTitle] = useState("");
-  const [shoutoutDeptOnly, setShoutoutDeptOnly] = useState(false);
-  const [recipients, setRecipients] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
-  const [recipientSearch, setRecipientSearch] = useState("");
-  const [recipientSearchOpen, setRecipientSearchOpen] = useState(false);
-  const [votingPost, setVotingPost] = useState<string | null>(null);
-  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
-  const [commentsCache, setCommentsCache] = useState<Record<string, CommentItem[]>>({});
-  const [commentsLoading, setCommentsLoading] = useState<Record<string, boolean>>({});
-  const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
-  const [commentSending, setCommentSending] = useState<Record<string, boolean>>({});
-  const [replyingTo, setReplyingTo] = useState<{ postId: string; commentId: string; displayName: string } | null>(null);
-  const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
-  const [replySending, setReplySending] = useState<Record<string, boolean>>({});
-  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
-  const [selectedFlair, setSelectedFlair] = useState<string | null>(null);
-  const [showAllFlairs, setShowAllFlairs] = useState(false);
-  const [composeExpanded, setComposeExpanded] = useState(false);
-  const [deptOnly, setDeptOnly] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionStart, setMentionStart] = useState(0);
-  const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
-  const [postToast, setPostToast] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const editMentionMapRef = useRef<Record<string, string>>({});
-  const mentionDropdownRef = useRef<HTMLDivElement>(null);
-  const recipientSearchRef = useRef<HTMLDivElement>(null);
-  const loadAbortRef = useRef<AbortController | null>(null);
-  const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [birthdays, setBirthdays] = useState<BirthdayPerson[]>([]);
-  const [widgetsLoading, setWidgetsLoading] = useState(true);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    load(activeFilter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, activeFilter]);
-
-  // Real-time: show banner when someone posts while you're reading
-  useRealtimeChannel("feed", () => setHasNewPosts(true));
-
-  useEffect(() => {
-    if (authLoading || !user || employees.length > 0) return;
-    apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
-      .then((res) => setEmployees(res.data))
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    Promise.allSettled([
-      apiFetch<{ data: UserProfile }>("/api/me"),
-      apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard"),
-      apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming"),
-    ]).then(([me, lb, bd]) => {
-      if (me.status === "fulfilled") setProfile(me.value.data);
-      if (lb.status === "fulfilled") setLeaderboard(lb.value.data ?? []);
-      if (bd.status === "fulfilled") setBirthdays((bd.value.data ?? []).filter((b) => b.daysUntil <= 7));
-    }).finally(() => setWidgetsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (recipientSearchRef.current && !recipientSearchRef.current.contains(e.target as Node)) {
-        setRecipientSearchOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (composeExpanded && titleInputRef.current) {
-      titleInputRef.current.focus();
-    }
-  }, [composeExpanded]);
-
-  async function load(filter = "ALL") {
-    // Cancel whatever filter switch is still in flight so an out-of-order
-    // response (e.g. a slow "All" request resolving after a faster
-    // "Shoutouts" one) can't overwrite state for a filter that's no longer
-    // selected.
-    loadAbortRef.current?.abort();
-    const controller = new AbortController();
-    loadAbortRef.current = controller;
-
-    setLoading(true);
-    setLoadError(null);
-    setNextCursor(null);
-    try {
-      const url = filter === "ALL" ? "/api/feed" : filter === "DEPT_ONLY" ? "/api/feed?dept=mine" : `/api/feed?type=${filter}`;
-      const res = await apiFetch<{ data: FeedPost[]; nextCursor: string | null }>(url, { signal: controller.signal });
-      setPosts(res.data);
-      setNextCursor(res.nextCursor);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      setLoadError(err instanceof Error ? err.message : "Failed to load feed");
-    } finally {
-      if (loadAbortRef.current === controller) setLoading(false);
-    }
-  }
-
-  async function loadMore() {
-    if (!nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const params = new URLSearchParams();
-      if (activeFilter === "DEPT_ONLY") params.set("dept", "mine");
-      else if (activeFilter !== "ALL") params.set("type", activeFilter);
-      params.set("cursor", nextCursor);
-      const res = await apiFetch<{ data: FeedPost[]; nextCursor: string | null }>(`/api/feed?${params}`);
-      setPosts((prev) => [...prev, ...res.data]);
-      setNextCursor(res.nextCursor);
-    } catch {
-      // silently fail — user can click again
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).slice(0, 4);
-    if (!files.length) return;
-    setImageFiles((prev) => {
-      const combined = [...prev, ...files].slice(0, 4);
-      setImagePreviews(combined.map((f) => URL.createObjectURL(f)));
-      return combined;
-    });
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
-  function removeImage(index: number) {
-    URL.revokeObjectURL(imagePreviews[index]);
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function clearImages() {
-    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-    setImageFiles([]);
-    setImagePreviews([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
-  async function handlePost(e: React.FormEvent) {
-    e.preventDefault();
-
-    // Validate every branch's requirements BEFORE uploading anything —
-    // an early return after the Cloudinary upload orphaned the just-uploaded
-    // images (nothing ever referenced them) and, since imageFiles was never
-    // cleared on that path, silently re-uploaded the same files again on retry.
-    if (shoutoutMode) {
-      if (recipients.length === 0 || !newPost.trim()) return;
-    } else if (pollMode) {
-      if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
-      if (pollOptions.map((o) => o.trim()).filter(Boolean).length < 2) return;
-    } else {
-      if (!postTitle.trim() || !newPost.trim() || !selectedFlair) return;
-    }
-
-    setPosting(true);
-    try {
-      let imageUrls: string[] = [];
-      if (imageFiles.length > 0) {
-        setUploading(true);
-        imageUrls = await Promise.all(imageFiles.map((f) => uploadToCloudinary(f, token!)));
-        setUploading(false);
-      }
-
-      if (shoutoutMode) {
-        await apiFetch("/api/feed", {
-          method: "POST",
-          body: JSON.stringify({
-            type: "SHOUTOUT",
-            title: shoutoutTitle.trim() || undefined,
-            content: newPost.trim(),
-            recipientIds: recipients.map((r) => r.id),
-            imageUrls,
-            deptOnly: shoutoutDeptOnly,
-          }),
-        });
-        setShoutoutMode(false);
-        setRecipients([]); setRecipientSearch(""); setRecipientSearchOpen(false);
-        setShoutoutTitle(""); setShoutoutDeptOnly(false);
-      } else {
-        const content = buildContent(newPost.trim());
-        const title = postTitle.trim();
-        if (pollMode) {
-          const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
-          await apiFetch("/api/feed", {
-            method: "POST",
-            body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls, deptOnly }),
-          });
-          setPollMode(false); setPollOptions(["", ""]);
-        } else {
-          await apiFetch("/api/feed", {
-            method: "POST",
-            body: JSON.stringify({ title, content, type: "UPDATE", flair: selectedFlair, imageUrls, deptOnly }),
-          });
-        }
-        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false);
-      }
-
-      setNewPost("");
-      if (composerRef.current) composerRef.current.style.height = "auto";
-      clearImages();
-      await load();
-    } catch {
-      setPostToast("Something went wrong. Please try again.");
-      setTimeout(() => setPostToast(null), 4000);
-    } finally {
-      setPosting(false);
-      setUploading(false);
-    }
-  }
-
-  async function handleVote(postId: string, optionId: string) {
-    if (votingPost === postId) return;
-    setVotingPost(postId);
-    const prev = posts.find((p) => p.id === postId);
-    if (!prev) return;
-    const prevVoteId = prev.myVoteOptionId;
-
-    setPosts((ps) =>
-      ps.map((p) => {
-        if (p.id !== postId) return p;
-        const updatedOptions = p.pollOptions.map((o) => {
-          let delta = 0;
-          if (o.id === optionId) delta += 1;
-          if (prevVoteId && o.id === prevVoteId) delta -= 1;
-          return { ...o, _count: { votes: o._count.votes + delta } };
-        });
-        return { ...p, pollOptions: updatedOptions, myVoteOptionId: optionId };
-      })
-    );
-
-    try {
-      const res = await apiFetch<{ data: { pollOptions: PollOption[]; myVoteOptionId: string } }>(
-        `/api/feed/${postId}/vote`,
-        { method: "POST", body: JSON.stringify({ optionId }) }
-      );
-      setPosts((ps) =>
-        ps.map((p) =>
-          p.id === postId
-            ? { ...p, pollOptions: res.data.pollOptions, myVoteOptionId: res.data.myVoteOptionId }
-            : p
-        )
-      );
-    } catch {
-      setPosts((ps) =>
-        ps.map((p) =>
-          p.id === postId && prev
-            ? { ...p, pollOptions: prev.pollOptions, myVoteOptionId: prev.myVoteOptionId }
-            : p
-        )
-      );
-    } finally {
-      setVotingPost(null);
-    }
-  }
-
-  async function toggleComments(postId: string) {
-    const next = !openComments[postId];
-    setOpenComments((prev) => ({ ...prev, [postId]: next }));
-    if (next && !commentsCache[postId]) {
-      setCommentsLoading((prev) => ({ ...prev, [postId]: true }));
-      try {
-        const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
-        setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
-      } finally {
-        setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
-      }
-    }
-  }
-
-  async function submitComment(postId: string) {
-    const content = (commentDraft[postId] ?? "").trim();
-    if (!content) return;
-    setCommentSending((prev) => ({ ...prev, [postId]: true }));
-    const optimisticId = `opt-${Date.now()}`;
-    const optimistic: CommentItem = {
-      id: optimisticId,
-      content,
-      createdAt: new Date().toISOString(),
-      authorId: user?.uid ?? "",
-      author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
-      replies: [],
-    };
-    setCommentsCache((prev) => ({ ...prev, [postId]: [...(prev[postId] ?? []), optimistic] }));
-    setCommentDraft((prev) => ({ ...prev, [postId]: "" }));
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p)));
-    try {
-      const res = await apiFetch<{ data: CommentItem }>(`/api/feed/${postId}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ content }),
-      });
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).map((c) => (c.id === optimisticId ? res.data : c)),
-      }));
-    } catch {
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).filter((c) => c.id !== optimisticId),
-      }));
-      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
-      setCommentDraft((prev) => ({ ...prev, [postId]: content }));
-    } finally {
-      setCommentSending((prev) => ({ ...prev, [postId]: false }));
-    }
-  }
-
-  async function submitReply(postId: string, parentId: string) {
-    const content = (replyDraft[parentId] ?? "").trim();
-    if (!content) return;
-    setReplySending((prev) => ({ ...prev, [parentId]: true }));
-    const optimisticId = `opt-reply-${Date.now()}`;
-    const optimistic: ReplyItem = {
-      id: optimisticId,
-      content,
-      createdAt: new Date().toISOString(),
-      parentId,
-      authorId: user?.uid ?? "",
-      author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
-    };
-    setCommentsCache((prev) => ({
-      ...prev,
-      [postId]: (prev[postId] ?? []).map((c) =>
-        c.id === parentId ? { ...c, replies: [...c.replies, optimistic] } : c
-      ),
-    }));
-    setReplyDraft((prev) => ({ ...prev, [parentId]: "" }));
-    setReplyingTo(null);
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p)));
-    try {
-      const res = await apiFetch<{ data: ReplyItem }>(`/api/feed/${postId}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ content, parentId }),
-      });
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).map((c) =>
-          c.id === parentId
-            ? { ...c, replies: c.replies.map((r) => (r.id === optimisticId ? res.data : r)) }
-            : c
-        ),
-      }));
-    } catch {
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).map((c) =>
-          c.id === parentId ? { ...c, replies: c.replies.filter((r) => r.id !== optimisticId) } : c
-        ),
-      }));
-      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
-      setReplyDraft((prev) => ({ ...prev, [parentId]: content }));
-    } finally {
-      setReplySending((prev) => ({ ...prev, [parentId]: false }));
-    }
-  }
-
-  async function deleteComment(postId: string, commentId: string, parentId?: string) {
-    if (!confirm("Delete this comment?")) return;
-    const previousCache = commentsCache;
-    const previousPosts = posts;
-    if (parentId) {
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).map((c) =>
-          c.id === parentId ? { ...c, replies: c.replies.filter((r) => r.id !== commentId) } : c
-        ),
-      }));
-    } else {
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).filter((c) => c.id !== commentId),
-      }));
-    }
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
-    try {
-      await apiFetch(`/api/feed/${postId}/comments/${commentId}`, { method: "DELETE" });
-    } catch {
-      setCommentsCache(previousCache);
-      setPosts(previousPosts);
-    }
-  }
-
-  async function saveEditComment(postId: string) {
-    if (!editingComment) return;
-    const { id, content, isReply, parentId } = editingComment;
-    const trimmed = content.trim();
-    if (!trimmed) return;
-
-    if (isReply && parentId) {
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).map((c) =>
-          c.id === parentId
-            ? { ...c, replies: c.replies.map((r) => (r.id === id ? { ...r, content: trimmed } : r)) }
-            : c
-        ),
-      }));
-    } else {
-      setCommentsCache((prev) => ({
-        ...prev,
-        [postId]: (prev[postId] ?? []).map((c) => (c.id === id ? { ...c, content: trimmed } : c)),
-      }));
-    }
-    setEditingComment(null);
-    await apiFetch(`/api/feed/${postId}/comments/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ content: trimmed }),
-    });
-  }
-
-  // Turn stored "@[Name|id]" tokens back into "@Name" for editing, keeping a name→id map
-  function decodeMentions(content: string): { text: string; map: Record<string, string> } {
-    const map: Record<string, string> = {};
-    const text = content.replace(/@\[([^|]+)\|([^\]]+)\]/g, (_m, name, id) => {
-      map[name] = id;
-      return `@${name}`;
-    });
-    return { text, map };
-  }
-
-  // Re-apply the "@Name" → "@[Name|id]" encoding after an edit
-  function encodeMentions(text: string, map: Record<string, string>): string {
-    const entries = Object.entries(map).sort((a, b) => b[0].length - a[0].length);
-    let result = text;
-    for (const [name, id] of entries) {
-      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      result = result.replace(new RegExp(`@${escaped}`, "g"), `@[${name}|${id}]`);
-    }
-    return result;
-  }
-
-  function startEditPost(post: FeedPost) {
-    const { text, map } = decodeMentions(post.content);
-    editMentionMapRef.current = map;
-    setEditingPost({ id: post.id, title: post.title ?? "", content: text });
-  }
-
-  async function saveEditPost(post: FeedPost) {
-    if (!editingPost) return;
-    const trimmedContent = editingPost.content.trim();
-    if (!trimmedContent) return;
-    const isShoutout = post.type === "SHOUTOUT";
-    const trimmedTitle = editingPost.title.trim();
-    if (!isShoutout && !trimmedTitle) return; // title is required on non-shoutout posts
-
-    setSavingPostEdit(true);
-    const encoded = encodeMentions(trimmedContent, editMentionMapRef.current);
-    const newTitle = isShoutout ? null : trimmedTitle;
-
-    // Optimistic update
-    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, title: newTitle, content: encoded } : p)));
-    setEditingPost(null);
-    try {
-      await apiFetch(`/api/feed/${post.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ title: newTitle, content: encoded }),
-      });
-    } catch {
-      await load(activeFilter);
-    } finally {
-      setSavingPostEdit(false);
-    }
-  }
-
-  async function deletePost(postId: string) {
-    if (!confirm("Delete this post?")) return;
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-    try {
-      await apiFetch(`/api/feed/${postId}`, { method: "DELETE" });
-    } catch {
-      await load();
-    }
-  }
-
-  async function togglePin(postId: string) {
-    const post = posts.find((p) => p.id === postId);
-    if (!post) return;
-    const newPinned = !post.isPinned;
-    setPosts((prev) => {
-      const updated = prev.map((p) => p.id === postId ? { ...p, isPinned: newPinned } : p);
-      return [...updated.filter((p) => p.isPinned), ...updated.filter((p) => !p.isPinned)];
-    });
-    try {
-      await apiFetch(`/api/feed/${postId}`, { method: "PATCH" });
-    } catch {
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, isPinned: !newPinned } : p));
-    }
-  }
-
-  function jumpToPost(id: string) {
-    const el = document.getElementById(`feed-post-${id}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      el.classList.add("ring-2", "ring-amber-300");
-      setTimeout(() => el.classList.remove("ring-2", "ring-amber-300"), 1600);
-    }
-  }
+  const { user, dbUser, loading: authLoading } = useAuth();
+  const {
+    posts, setPosts,
+    loading,
+    hasNewPosts, setHasNewPosts,
+    loadingMore,
+    nextCursor, setNextCursor,
+    activeFilter, setActiveFilter,
+    loadError,
+    editingPost, setEditingPost,
+    savingPostEdit,
+    postTitle, setPostTitle,
+    newPost, setNewPost,
+    posting,
+    pollMode, setPollMode,
+    pollOptions, setPollOptions,
+    shoutoutMode, setShoutoutMode,
+    shoutoutTitle, setShoutoutTitle,
+    shoutoutDeptOnly, setShoutoutDeptOnly,
+    recipients, setRecipients,
+    recipientSearch, setRecipientSearch,
+    recipientSearchOpen, setRecipientSearchOpen,
+    votingPost,
+    openComments,
+    commentsCache,
+    commentsLoading,
+    commentDraft, setCommentDraft,
+    commentSending,
+    replyingTo, setReplyingTo,
+    replyDraft, setReplyDraft,
+    replySending,
+    expandedReplies, setExpandedReplies,
+    selectedFlair, setSelectedFlair,
+    showAllFlairs, setShowAllFlairs,
+    composeExpanded, setComposeExpanded,
+    deptOnly, setDeptOnly,
+    mentionQuery,
+    mentionResults,
+    imageFiles,
+    imagePreviews,
+    uploading,
+    lightbox, setLightbox,
+    postToast,
+    commentDeleteTarget, setCommentDeleteTarget,
+    postDeleteTarget, setPostDeleteTarget,
+    employees,
+    profile,
+    leaderboard,
+    birthdays,
+    widgetsLoading,
+    fileInputRef,
+    composerRef,
+    titleInputRef,
+    mentionDropdownRef,
+    recipientSearchRef,
+    load,
+    loadMore,
+    handleImageSelect,
+    removeImage,
+    clearImages,
+    handlePost,
+    handleVote,
+    toggleComments,
+    submitComment,
+    submitReply,
+    deleteComment,
+    confirmDeleteComment,
+    startEditPost,
+    saveEditPost,
+    deletePost,
+    confirmDeletePost,
+    togglePin,
+    jumpToPost,
+    autoResize,
+    handleComposerChange,
+    insertMention,
+    toggleReaction,
+  } = useFeedActions();
 
   const pinnedItems = posts
     .filter((p) => p.isPinned)
     .map((p) => ({ id: p.id, title: p.title, authorName: p.author.displayName }));
-
-  function autoResize(el: HTMLTextAreaElement) {
-    el.style.height = "auto";
-    el.style.height = el.scrollHeight + "px";
-  }
-
-  function handleComposerChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const value = e.target.value;
-    setNewPost(value);
-    autoResize(e.target);
-    const cursor = e.target.selectionStart ?? value.length;
-    const textUpToCursor = value.slice(0, cursor);
-    // Allow spaces in names; stop only at another @ or an already-resolved mention (@[)
-    const match = textUpToCursor.match(/@(?!\[)([^@]*)$/);
-    if (match) {
-      setMentionQuery(match[1].toLowerCase().trim());
-      setMentionStart(cursor - match[0].length);
-    } else {
-      setMentionQuery(null);
-    }
-  }
-
-  function insertMention(emp: { id: string; displayName: string }) {
-    const cursor = composerRef.current?.selectionStart ?? newPost.length;
-    const before = newPost.slice(0, mentionStart);
-    const after = newPost.slice(cursor);
-    // Store human-readable @Name in textarea; track id separately
-    setNewPost(`${before}@${emp.displayName} ${after.trimStart()}`);
-    setMentionMap((prev) => ({ ...prev, [emp.displayName]: emp.id }));
-    setMentionQuery(null);
-    setTimeout(() => composerRef.current?.focus(), 0);
-  }
-
-  function buildContent(text: string): string {
-    // Replace @Name → @[Name|id] sorted longest-first to avoid partial matches
-    const entries = Object.entries(mentionMap).sort((a, b) => b[0].length - a[0].length);
-    let result = text;
-    for (const [name, id] of entries) {
-      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      result = result.replace(new RegExp(`@${escaped}`, "g"), `@[${name}|${id}]`);
-    }
-    return result;
-  }
 
   function renderContent(content: string) {
     const parts = content.split(/(@\[[^\|]+\|[^\]]+\])/g);
@@ -916,45 +158,6 @@ export default function FeedPage() {
     );
   }
 
-  const mentionResults = mentionQuery !== null
-    ? employees
-        .filter((e) => mentionQuery === "" || e.displayName.toLowerCase().includes(mentionQuery))
-        .slice(0, 6)
-    : [];
-
-  async function toggleReaction(postId: string, emoji: string) {
-    const previousPosts = posts;
-    // Optimistic update
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
-        const current = p.myReactions[0] ?? null;
-        const newReactions = { ...p.reactions };
-
-        // Remove old reaction count
-        if (current) {
-          newReactions[current] = (newReactions[current] ?? 1) - 1;
-          if (newReactions[current] <= 0) delete newReactions[current];
-        }
-
-        if (current === emoji) {
-          // Toggle off
-          return { ...p, reactions: newReactions, myReactions: [] };
-        } else {
-          // Switch to new emoji
-          newReactions[emoji] = (newReactions[emoji] ?? 0) + 1;
-          return { ...p, reactions: newReactions, myReactions: [emoji] };
-        }
-      })
-    );
-
-    try {
-      await apiFetch(`/api/feed/${postId}/react`, { method: "POST", body: JSON.stringify({ emoji }) });
-    } catch {
-      setPosts(previousPosts);
-    }
-  }
-
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
   return (
@@ -976,7 +179,7 @@ export default function FeedPage() {
       {hasNewPosts && (
         <button
           onClick={() => { setHasNewPosts(false); load(activeFilter); }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-command-black hover:bg-gray-800 text-white text-sm font-medium rounded-xl transition-colors"
         >
           <Sparkles className="w-4 h-4" />
           New posts — click to refresh
@@ -996,8 +199,8 @@ export default function FeedPage() {
             ) : (
               <>
                 <div className="flex items-center gap-1.5">
-                  <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                  <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
+                  <Star className="w-3.5 h-3.5 text-navy-500 shrink-0" />
+                  <span className="text-sm font-bold text-navy-600">Lv {profile?.level ?? 1}</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-black text-gray-900 tabular-nums">{profile?.pointsBalance?.toLocaleString() ?? "—"}</span>
@@ -1023,8 +226,8 @@ export default function FeedPage() {
                 </div>
                 <div className="flex items-center gap-4 pt-1 border-t border-gray-50">
                   <div className="flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                    <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
+                    <Star className="w-3.5 h-3.5 text-navy-500 shrink-0" />
+                    <span className="text-sm font-bold text-navy-600">Lv {profile?.level ?? 1}</span>
                   </div>
                 </div>
               </div>
@@ -1041,8 +244,8 @@ export default function FeedPage() {
 
           {/* Upcoming Birthdays */}
           {!widgetsLoading && birthdays.length > 0 && (
-            <div className="bg-gradient-to-br from-pink-50 to-violet-50 border border-pink-100 rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold text-pink-500 uppercase tracking-wider mb-2.5">🎂 Birthdays</p>
+            <div className="bg-gradient-to-br from-rose-50 to-navy-50 border border-rose-100 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" aria-hidden="true" /> Birthdays</p>
               <div className="space-y-2">
                 {birthdays.map((b) => (
                   <Link key={b.id} href={`/employees/${b.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -1050,7 +253,7 @@ export default function FeedPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-gray-900 truncate hover:underline">{b.displayName}</p>
                       <p className="text-[10px] text-gray-500">
-                        {b.daysUntil === 0 ? "Today 🎉" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
+                        {b.daysUntil === 0 ? "Today" : b.daysUntil === 1 ? "Tomorrow" : `In ${b.daysUntil} days`}
                       </p>
                     </div>
                   </Link>
@@ -1096,7 +299,7 @@ export default function FeedPage() {
           {/* Quick Actions — desktop only; bottom nav covers these on mobile */}
           <div className="hidden lg:grid grid-cols-2 gap-2">
             <Link href="/minigames" className="flex flex-col items-center gap-1.5 bg-white border border-gray-100 rounded-xl py-3 px-2 hover:border-gray-200 hover:shadow-sm transition-all text-center">
-              <Gamepad2 className="w-5 h-5 text-violet-500" />
+              <Gamepad2 className="w-5 h-5 text-navy-500" />
               <span className="text-xs font-semibold text-gray-700 leading-tight">Play a<br/>Minigame</span>
             </Link>
             <Link href="/marketplace" className="flex flex-col items-center gap-1.5 bg-white border border-gray-100 rounded-xl py-3 px-2 hover:border-gray-200 hover:shadow-sm transition-all text-center">
@@ -1149,7 +352,7 @@ export default function FeedPage() {
                         <div key={r.id} className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-full pl-1.5 pr-2 py-0.5">
                           <Avatar name={r.displayName} url={r.avatarUrl} size="sm" />
                           <span className="text-xs font-medium text-amber-800">{r.displayName}</span>
-                          <button type="button" onClick={() => setRecipients((prev) => prev.filter((x) => x.id !== r.id))} className="text-amber-400 hover:text-amber-600 transition-colors ml-0.5">
+                          <button type="button" aria-label={`Remove ${r.displayName}`} onClick={() => setRecipients((prev) => prev.filter((x) => x.id !== r.id))} className="text-amber-400 hover:text-amber-600 transition-colors ml-0.5">
                             <X className="w-3 h-3" />
                           </button>
                         </div>
@@ -1247,8 +450,8 @@ export default function FeedPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(i)}
                       aria-label="Remove image"
+                      onClick={() => removeImage(i)}
                       className="absolute top-1 right-1 w-5 h-5 bg-gray-900/70 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors z-10"
                     >
                       <X className="w-3 h-3" />
@@ -1312,7 +515,7 @@ export default function FeedPage() {
                     deptOnly ? "bg-white text-navy-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <span>🏢</span>
+                  <Building2 className="w-3 h-3" aria-hidden="true" />
                   {dbUser.department.name} only
                 </button>
               </div>
@@ -1338,7 +541,7 @@ export default function FeedPage() {
                     shoutoutDeptOnly ? "bg-white text-amber-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <span>🏢</span>
+                  <Building2 className="w-3 h-3" aria-hidden="true" />
                   {dbUser.department.name} only
                 </button>
               </div>
@@ -1562,7 +765,7 @@ export default function FeedPage() {
                       )}
                       {post.department && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                          🏢 {post.department.name} only
+                          <Building2 className="w-2.5 h-2.5" aria-hidden="true" /> {post.department.name} only
                         </span>
                       )}
                     </div>
@@ -1642,139 +845,30 @@ export default function FeedPage() {
                     </button>
                   </div>
                   {openComments[post.id] && (
-                    <div className="mt-1 pt-3 border-t border-black/5 space-y-4">
-                      {commentsLoading[post.id] && (
-                        <div className="space-y-3 animate-pulse">
-                          {[1, 2].map((i) => (
-                            <div key={i} className="flex gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
-                              <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-gray-100 rounded w-1/4" />
-                                <div className="h-3 bg-gray-100 rounded w-3/4" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {!commentsLoading[post.id] && (commentsCache[post.id] ?? []).map((c) => (
-                        <div key={c.id}>
-                          <div className="flex gap-2.5">
-                            <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
-                            <div className="flex-1 min-w-0">
-                              <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                                <span className="text-xs font-semibold text-gray-900">{c.author.displayName}</span>
-                                <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{c.content}</p>
-                              </div>
-                              <div className="flex items-center gap-3 mt-1 pl-1">
-                                <span className="text-[11px] text-gray-500">{timeAgo(c.createdAt)}</span>
-                                <button
-                                  onClick={() =>
-                                    setReplyingTo(
-                                      replyingTo?.commentId === c.id
-                                        ? null
-                                        : { postId: post.id, commentId: c.id, displayName: c.author.displayName }
-                                    )
-                                  }
-                                  className="text-[11px] font-semibold text-gray-500 hover:text-navy-600 transition-colors"
-                                >
-                                  Reply
-                                </button>
-                                {(c.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                                  <button
-                                    onClick={() => deleteComment(post.id, c.id)}
-                                    className="text-[11px] font-semibold text-gray-500 hover:text-red-500 transition-colors"
-                                  >
-                                    Delete
-                                  </button>
-                                )}
-                                {c.replies.length > 0 && (
-                                  <button
-                                    onClick={() => setExpandedReplies((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
-                                    className="text-[11px] font-semibold text-navy-500 hover:text-navy-700 transition-colors"
-                                  >
-                                    {expandedReplies[c.id]
-                                      ? "Hide replies"
-                                      : `View ${c.replies.length} ${c.replies.length === 1 ? "reply" : "replies"}`}
-                                  </button>
-                                )}
-                              </div>
-                              {replyingTo?.commentId === c.id && (
-                                <div className="flex gap-2 mt-2">
-                                  <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
-                                  <div className="flex-1 flex gap-2">
-                                    <textarea
-                                      autoFocus
-                                      rows={1}
-                                      placeholder={`Reply to ${c.author.displayName}…`}
-                                      value={replyDraft[c.id] ?? ""}
-                                      onChange={(e) => { setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value })); autoResize(e.target); }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Escape") setReplyingTo(null);
-                                      }}
-                                      className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-                                    />
-                                    <button
-                                      onClick={() => submitReply(post.id, c.id)}
-                                      disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                                      aria-label="Submit reply"
-                                      className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
-                                    >
-                                      <Send className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                              {expandedReplies[c.id] && c.replies.length > 0 && (
-                                <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
-                                  {c.replies.map((r) => (
-                                    <div key={r.id} className="flex gap-2">
-                                      <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="sm" />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                                          <span className="text-xs font-semibold text-gray-900">{r.author.displayName}</span>
-                                          <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{r.content}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-1 pl-1">
-                                          <span className="text-[11px] text-gray-500">{timeAgo(r.createdAt)}</span>
-                                          {(r.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                                            <button
-                                              onClick={() => deleteComment(post.id, r.id, c.id)}
-                                              className="text-[11px] font-semibold text-gray-500 hover:text-red-500 transition-colors"
-                                            >
-                                              Delete
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex gap-2.5 items-center pt-1">
-                        <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
-                        <div className="flex-1 flex gap-2">
-                          <textarea
-                            rows={1}
-                            placeholder="Write a comment…"
-                            value={commentDraft[post.id] ?? ""}
-                            onChange={(e) => { setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value })); autoResize(e.target); }}
-                            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-                          />
-                          <button
-                            onClick={() => submitComment(post.id)}
-                            disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
-                            aria-label="Submit comment"
-                            className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <CommentThread
+                      postId={post.id}
+                      comments={commentsCache[post.id] ?? []}
+                      loading={!!commentsLoading[post.id]}
+                      replyingTo={replyingTo}
+                      replyDraft={replyDraft}
+                      replySending={replySending}
+                      expandedReplies={expandedReplies}
+                      commentDraft={commentDraft}
+                      commentSending={commentSending}
+                      currentUserName={user?.displayName ?? "?"}
+                      currentUserAvatar={user?.photoURL ?? null}
+                      dbUserId={dbUser?.id}
+                      isModerator={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                      onSetReplyingTo={setReplyingTo}
+                      onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
+                      onSubmitReply={submitReply}
+                      onToggleExpandedReplies={(commentId) => setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }))}
+                      onDeleteComment={deleteComment}
+                      onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
+                      onSubmitComment={submitComment}
+                      autoResize={autoResize}
+                      wrapperClassName="mt-1 pt-3 border-t border-black/5 space-y-4"
+                    />
                   )}
                 </div>
               </div>
@@ -1810,7 +904,7 @@ export default function FeedPage() {
                   )}
                   {post.department && (
                     <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-100 text-navy-700 border border-navy-200">
-                      🏢 {post.department.name} only
+                      <Building2 className="w-3 h-3" aria-hidden="true" /> {post.department.name} only
                     </span>
                   )}
                 </div>
@@ -1949,148 +1043,30 @@ export default function FeedPage() {
 
                 {/* Threaded comments */}
                 {openComments[post.id] && (
-                  <div className="mt-3 pt-3 border-t border-black/5 space-y-4">
-                    {commentsLoading[post.id] && (
-                      <div className="space-y-3 animate-pulse">
-                        {[1, 2].map((i) => (
-                          <div key={i} className="flex gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                              <div className="h-3 bg-gray-100 rounded w-1/4" />
-                              <div className="h-3 bg-gray-100 rounded w-3/4" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!commentsLoading[post.id] && (commentsCache[post.id] ?? []).map((c) => (
-                      <div key={c.id}>
-                        {/* Top-level comment */}
-                        <div className="flex gap-2.5">
-                          <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
-                          <div className="flex-1 min-w-0">
-                            <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                              <span className="text-xs font-semibold text-gray-900">{c.author.displayName}</span>
-                              <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{c.content}</p>
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 pl-1">
-                              <span className="text-[11px] text-gray-500">{timeAgo(c.createdAt)}</span>
-                              <button
-                                onClick={() =>
-                                  setReplyingTo(
-                                    replyingTo?.commentId === c.id
-                                      ? null
-                                      : { postId: post.id, commentId: c.id, displayName: c.author.displayName }
-                                  )
-                                }
-                                className="text-[11px] font-semibold text-gray-500 hover:text-navy-600 transition-colors"
-                              >
-                                Reply
-                              </button>
-                              {(c.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                                <button
-                                  onClick={() => deleteComment(post.id, c.id)}
-                                  className="text-[11px] font-semibold text-gray-500 hover:text-red-500 transition-colors"
-                                >
-                                  Delete
-                                </button>
-                              )}
-                              {c.replies.length > 0 && (
-                                <button
-                                  onClick={() =>
-                                    setExpandedReplies((prev) => ({ ...prev, [c.id]: !prev[c.id] }))
-                                  }
-                                  className="text-[11px] font-semibold text-navy-500 hover:text-navy-700 transition-colors"
-                                >
-                                  {expandedReplies[c.id]
-                                    ? "Hide replies"
-                                    : `View ${c.replies.length} ${c.replies.length === 1 ? "reply" : "replies"}`}
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Reply input */}
-                            {replyingTo?.commentId === c.id && (
-                              <div className="flex gap-2 mt-2">
-                                <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
-                                <div className="flex-1 flex gap-2">
-                                  <textarea
-                                    autoFocus
-                                    rows={1}
-                                    placeholder={`Reply to ${c.author.displayName}…`}
-                                    value={replyDraft[c.id] ?? ""}
-                                    onChange={(e) => { setReplyDraft((prev) => ({ ...prev, [c.id]: e.target.value })); autoResize(e.target); }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Escape") setReplyingTo(null);
-                                    }}
-                                    className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-                                  />
-                                  <button
-                                    onClick={() => submitReply(post.id, c.id)}
-                                    disabled={replySending[c.id] || !(replyDraft[c.id] ?? "").trim()}
-                                    className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
-                                    aria-label="Submit reply"
-                                  >
-                                    <Send className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Replies */}
-                            {expandedReplies[c.id] && c.replies.length > 0 && (
-                              <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
-                                {c.replies.map((r) => (
-                                  <div key={r.id} className="flex gap-2">
-                                    <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="sm" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                                        <span className="text-xs font-semibold text-gray-900">{r.author.displayName}</span>
-                                        <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{r.content}</p>
-                                      </div>
-                                      <div className="flex items-center gap-3 mt-1 pl-1">
-                                        <span className="text-[11px] text-gray-500">{timeAgo(r.createdAt)}</span>
-                                        {(r.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                                          <button
-                                            onClick={() => deleteComment(post.id, r.id, c.id)}
-                                            className="text-[11px] font-semibold text-gray-500 hover:text-red-500 transition-colors"
-                                          >
-                                            Delete
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* New comment input */}
-                    <div className="flex gap-2.5 items-center pt-1">
-                      <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="sm" />
-                      <div className="flex-1 flex gap-2">
-                        <textarea
-                          rows={1}
-                          placeholder="Write a comment…"
-                          value={commentDraft[post.id] ?? ""}
-                          onChange={(e) => { setCommentDraft((prev) => ({ ...prev, [post.id]: e.target.value })); autoResize(e.target); }}
-                          className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-                        />
-                        <button
-                          onClick={() => submitComment(post.id)}
-                          disabled={commentSending[post.id] || !(commentDraft[post.id] ?? "").trim()}
-                          className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
-                          aria-label="Submit comment"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <CommentThread
+                    postId={post.id}
+                    comments={commentsCache[post.id] ?? []}
+                    loading={!!commentsLoading[post.id]}
+                    replyingTo={replyingTo}
+                    replyDraft={replyDraft}
+                    replySending={replySending}
+                    expandedReplies={expandedReplies}
+                    commentDraft={commentDraft}
+                    commentSending={commentSending}
+                    currentUserName={user?.displayName ?? "?"}
+                    currentUserAvatar={user?.photoURL ?? null}
+                    dbUserId={dbUser?.id}
+                    isModerator={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                    onSetReplyingTo={setReplyingTo}
+                    onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
+                    onSubmitReply={submitReply}
+                    onToggleExpandedReplies={(commentId) => setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }))}
+                    onDeleteComment={deleteComment}
+                    onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
+                    onSubmitComment={submitComment}
+                    autoResize={autoResize}
+                    wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
+                  />
                 )}
               </div>
             </div>
@@ -2132,6 +1108,34 @@ export default function FeedPage() {
           {postToast}
         </div>
       )}
+
+      <AlertDialog open={commentDeleteTarget !== null} onOpenChange={(next) => { if (!next) setCommentDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction autoFocus variant="destructive" onClick={confirmDeleteComment}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={postDeleteTarget !== null} onOpenChange={(next) => { if (!next) setPostDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction autoFocus variant="destructive" onClick={confirmDeletePost}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

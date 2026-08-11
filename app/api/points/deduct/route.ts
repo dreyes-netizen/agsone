@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rateLimit = await checkRateLimit(actor!.id, "write");
+  const rateLimit = await checkRateLimit(actor.id, "write");
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
@@ -74,12 +74,12 @@ export async function POST(req: NextRequest) {
 
       await tx.pointTransaction.create({
         data: {
-          fromUserId: actor!.id,
+          fromUserId: actor.id,
           toUserId,
           amount: -deducted,
           type: "DEDUCTION",
           note: reason,
-          createdById: actor!.id,
+          createdById: actor.id,
         },
       });
       return { deducted, newBalance, toUserName };
@@ -106,20 +106,20 @@ export async function POST(req: NextRequest) {
     title: `${result.deducted.toLocaleString()} points were deducted`,
     body: reason,
     data: { amount: result.deducted, violationType },
-  }).catch(() => {});
+  }).catch((err) => console.error("points-deducted notification failed", err));
 
-  broadcast(`points:${toUserId}`).catch(() => {});
+  broadcast(`points:${toUserId}`).catch((err) => console.error("points-deduct broadcast failed", err));
 
   if (recipient?.email && recipient.displayName) {
     sendMail({
       to: recipient.email,
       ...pointsDeductedEmail(recipient.displayName, result.deducted, reason, result.newBalance),
-    }).catch(() => {});
+    }).catch((err) => console.error("points-deducted email failed", err));
   }
 
   await prisma.auditLog.create({
     data: {
-      actorId: actor!.id,
+      actorId: actor.id,
       action: "DEDUCT_POINTS",
       entityType: "PointTransaction",
       entityId: toUserId,

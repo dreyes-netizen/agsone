@@ -31,7 +31,7 @@ export async function POST(
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const reply = await prisma.feedbackReply.create({
-    data: { feedbackId: id, authorId: user!.id, body: parsed.data.body },
+    data: { feedbackId: id, authorId: user.id, body: parsed.data.body },
     include: {
       author: { select: { id: true, displayName: true, avatarUrl: true, role: true } },
     },
@@ -51,11 +51,11 @@ export async function POST(
       type: "FEEDBACK_HR_REPLIED",
       title: "HR responded to your feedback",
       body: `HR has replied to your feedback: "${feedback.title}".`,
-    }).catch(() => {});
+    }).catch((err) => console.error("feedback reply notification failed", err));
     sendMail({
       to: feedback.author.email,
       ...hrReplyEmail(feedback.author.displayName, feedback.title, parsed.data.body, id),
-    }).catch(() => {});
+    }).catch((err) => console.error("feedback reply email failed", err));
   }
 
   return NextResponse.json({ data: reply }, { status: 201 });

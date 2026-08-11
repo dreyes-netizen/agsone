@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pointsData, setPointsData] = useState<PointsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "points" | "badges" | "notifications">("overview");
   const [visibleCount, setVisibleCount] = useState(10);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,8 +44,10 @@ export default function ProfilePage() {
   const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
   const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
 
-  useEffect(() => {
+  function loadProfile() {
     if (authLoading || !authUser) return;
+    setLoading(true);
+    setLoadError(null);
     Promise.all([
       apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: PointsData }>("/api/me/points"),
@@ -55,11 +58,15 @@ export default function ProfilePage() {
       setBioEdit(me.data.bio ?? "");
       setSkillsEdit(me.data.skills ?? []);
       setShoutouts(shouts.data);
-    }).catch(() => {
-      // intentional: stop loading spinner on fetch failure
+    }).catch((err) => {
+      setLoadError(err instanceof Error ? err.message : "Failed to load profile");
     }).finally(() => {
       setLoading(false);
     });
+  }
+
+  useEffect(() => {
+    loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, authUser]);
 
@@ -112,6 +119,15 @@ export default function ProfilePage() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.department?.id]);
+
+  if (loadError && !profile) {
+    return (
+      <div role="alert" className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
+        <p className="text-red-600 font-medium text-sm">{loadError}</p>
+        <button onClick={loadProfile} className="mt-3 text-xs text-red-500 underline hover:text-red-700">Try again</button>
+      </div>
+    );
+  }
 
   if (loading || !profile) {
     return (

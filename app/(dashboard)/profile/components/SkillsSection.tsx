@@ -62,7 +62,7 @@ export function SkillsSection(props: SkillsSectionProps) {
           <div className="flex flex-col items-center gap-1 py-3 px-4 text-center bg-gray-50 rounded-lg">
             <Tag className="w-4 h-4 text-gray-300" aria-hidden="true" />
             <p className="text-xs font-medium text-gray-600">No skills added yet</p>
-            <p className="text-[10px] text-gray-400">Click <span className="font-medium text-gray-500">Edit Profile</span> to add some</p>
+            <p className="text-[10px] text-gray-500">Click <span className="font-medium text-gray-500">Edit Profile</span> to add some</p>
           </div>
         )
       )}

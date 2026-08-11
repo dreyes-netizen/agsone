@@ -18,7 +18,7 @@ export const auth = getAuth(app);
 // Firebase defaults to local persistence, but we set it explicitly so the
 // behavior is guaranteed regardless of environment/browser defaults.
 // Fire-and-forget: signInWithPopup queues behind this internally.
-setPersistence(auth, browserLocalPersistence).catch(() => {});
+setPersistence(auth, browserLocalPersistence).catch((err) => console.error("setPersistence failed", err));
 
 export const googleProvider = new GoogleAuthProvider();
 

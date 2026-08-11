@@ -9,10 +9,11 @@ interface EditEmployeeModalProps {
   onSave: () => void;
   onCancel: () => void;
   departments: Department[];
+  isSuperAdmin: boolean;
 }
 
 export function EditEmployeeModal(props: EditEmployeeModalProps) {
-  const { employee, form, onFormChange, saving, onSave, onCancel, departments } = props;
+  const { employee, form, onFormChange, saving, onSave, onCancel, departments, isSuperAdmin } = props;
 
   return (
     <Dialog open={!!employee} onOpenChange={(open) => { if (!open) onCancel(); }}>
@@ -78,7 +79,7 @@ export function EditEmployeeModal(props: EditEmployeeModalProps) {
               <option value="EMPLOYEE">Employee</option>
               <option value="MANAGER">Manager</option>
               <option value="HR_ADMIN">HR Admin</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
+              {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
             </select>
           </div>
 

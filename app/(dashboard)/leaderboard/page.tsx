@@ -85,7 +85,7 @@ export default function LeaderboardPage() {
   function loadDepartments() {
     apiFetch<{ data: Department[] }>("/api/departments")
       .then((res) => setDepartments(res.data))
-      .catch(() => {});
+      .catch((err) => console.error("departments fetch failed", err));
   }
 
   function loadProfileAndAchievers() {
@@ -265,8 +265,8 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="flex items-center gap-4 pt-1 border-t border-gray-50">
                   <div className="flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 text-violet-500 shrink-0" aria-hidden="true" />
-                    <span className="text-sm font-bold text-violet-600">Lv {profile?.level ?? 1}</span>
+                    <Star className="w-3.5 h-3.5 text-navy-500 shrink-0" aria-hidden="true" />
+                    <span className="text-sm font-bold text-navy-600">Lv {profile?.level ?? 1}</span>
                   </div>
                   {myRank > 0 && !loading && (
                     <div className="flex items-center gap-1.5">

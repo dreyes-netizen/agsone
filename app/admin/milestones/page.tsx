@@ -62,7 +62,7 @@ export default function MilestonesPage() {
           setConfigs(merged);
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error("milestone load failed", err))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, page]);

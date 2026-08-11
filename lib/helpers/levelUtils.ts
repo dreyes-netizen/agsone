@@ -5,6 +5,9 @@ const LEVEL_6_BASE = 2750;
 const LEVEL_6_STEP = 1000;
 
 export function getLevelFromBalance(balance: number): number {
+  if (balance >= LEVEL_6_BASE) {
+    return 6 + Math.floor((balance - LEVEL_6_BASE) / LEVEL_6_STEP);
+  }
   for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
     if (balance >= LEVEL_THRESHOLDS[i]) return i + 1;
   }

@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import type { Employee } from "../types";
+import type { Employee, Budget } from "../types";
 import { ActivitySelect } from "./ActivitySelect";
 
 interface SingleAwardFormProps {
@@ -18,12 +18,13 @@ interface SingleAwardFormProps {
   error: string;
   onSubmit: (e: React.FormEvent) => void;
   inputClass: string;
+  budget: Budget | null;
 }
 
 export function SingleAwardForm(props: SingleAwardFormProps) {
   const {
     employees, currentUserId, toUserId, onToUserChange, amount, onAmountChange,
-    note, onNoteChange, activity, onActivityChange, submitting, success, error, onSubmit, inputClass,
+    note, onNoteChange, activity, onActivityChange, submitting, success, error, onSubmit, inputClass, budget,
   } = props;
 
   return (
@@ -90,7 +91,7 @@ export function SingleAwardForm(props: SingleAwardFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !toUserId}
+        disabled={submitting || !toUserId || (budget !== null && !budget.isExempt && budget.remaining === 0)}
         className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
       >
         {submitting ? (

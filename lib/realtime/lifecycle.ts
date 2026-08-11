@@ -39,7 +39,7 @@ let keepAliveCount = 0;
 let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
 
 function enqueue(task: () => Promise<void> | void) {
-  chain = chain.then(task).catch(() => {});
+  chain = chain.then(task).catch((err) => console.error("realtime lifecycle task failed", err));
 }
 
 function clearWatchdog() {

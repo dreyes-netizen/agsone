@@ -348,6 +348,7 @@ export default function AwardPointsPage() {
               error={error}
               onSubmit={handleSingleSubmit}
               inputClass={inputClass}
+              budget={budget}
             />
           ) : (
             <BulkAwardForm
@@ -374,6 +375,7 @@ export default function AwardPointsPage() {
               onToggleSelectAll={toggleSelectAll}
               onSubmit={handleBulkSubmit}
               inputClass={inputClass}
+              budget={budget}
             />
           )}
         </div>

@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
         data: { toUserId: user.id, amount: -reward.pointCost, type: "REDEMPTION", note: `Redeemed: ${reward.name}`, createdById: user.id },
       });
       const stockResult = await tx.reward.updateMany({
-        where: { id: reward.id, stockQuantity: { gt: 0 } },
-        data: { stockQuantity: { decrement: 1 } },
+        where: { id: reward.id, OR: [{ stockQuantity: -1 }, { stockQuantity: { gt: 0 } }] },
+        data: reward.stockQuantity === -1 ? {} : { stockQuantity: { decrement: 1 } },
       });
       if (stockResult.count === 0) {
         throw new Error("OUT_OF_STOCK");

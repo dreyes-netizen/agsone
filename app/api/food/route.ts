@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
       orders: {
         where: { userId: authUser.id },
-        select: { id: true, quantity: true, note: true, createdAt: true },
+        select: { id: true, quantity: true, note: true, createdAt: true, selectedAddOns: true },
       },
       _count: { select: { orders: true } },
     },

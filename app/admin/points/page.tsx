@@ -621,7 +621,7 @@ export default function AwardPointsPage() {
 
               <button
                 type="submit"
-                disabled={submitting || !toUserId}
+                disabled={submitting || !toUserId || (budget !== null && !budget.isExempt && budget.remaining === 0)}
                 className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {submitting ? (
@@ -744,7 +744,7 @@ export default function AwardPointsPage() {
 
               <button
                 type="submit"
-                disabled={bulkSubmitting || bulkSelected.size === 0 || !bulkAmount || !bulkNote}
+                disabled={bulkSubmitting || bulkSelected.size === 0 || !bulkAmount || !bulkNote || (budget !== null && !budget.isExempt && budget.remaining === 0)}
                 className="bg-command-black text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
               >
                 {bulkSubmitting ? (

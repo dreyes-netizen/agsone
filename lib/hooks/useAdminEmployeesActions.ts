@@ -1,0 +1,327 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useApiClient } from "@/lib/hooks/useApiClient";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { toast } from "sonner";
+
+export type Employee = {
+  id: string;
+  employeeId: string | null;
+  displayName: string;
+  email: string;
+  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN" | "SUPER_ADMIN";
+  pointsBalance: number;
+  isActive: boolean;
+  hireDate: string | null;
+  birthday: string | null;
+  department: { id: string; name: string } | null;
+};
+
+export type Department = { id: string; name: string };
+
+export type EditForm = {
+  displayName: string;
+  email: string;
+  departmentId: string | null;
+  role: Employee["role"];
+  isActive: boolean;
+  birthday: string | null;
+  hireDate: string | null;
+};
+
+export type AddForm = {
+  displayName: string;
+  email: string;
+  departmentId: string;
+  role: Employee["role"];
+  employeeId: string;
+  hireDate: string;
+  birthday: string;
+};
+
+export const EMPTY_ADD_FORM: AddForm = {
+  displayName: "",
+  email: "",
+  departmentId: "",
+  role: "EMPLOYEE",
+  employeeId: "",
+  hireDate: "",
+  birthday: "",
+};
+
+export function useAdminEmployeesActions() {
+  const { apiFetch, streamFetch } = useApiClient();
+  const { user, loading: authLoading } = useAuth();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } | null>(null);
+  const [syncError, setSyncError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ displayName: "", email: "", departmentId: null, role: "EMPLOYEE", isActive: true, birthday: null, hireDate: null });
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [showUploadGuide, setShowUploadGuide] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    loadEmployees();
+    apiFetch<{ data: Department[] }>("/api/admin/departments")
+      .then((res) => setDepartments(res.data))
+      .catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterDept, filterRole, filterStatus]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    loadEmployees();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search, filterDept, filterRole, filterStatus]);
+
+  async function loadEmployees() {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      if (search) params.set("search", search);
+      if (filterDept) params.set("department", filterDept);
+      if (filterRole) params.set("role", filterRole);
+      if (filterStatus) params.set("status", filterStatus);
+      const res = await apiFetch<{ data: Employee[]; total: number; pages: number }>(`/api/admin/employees?${params}`);
+      setEmployees(res.data);
+      setTotalEmployees(res.total);
+      setPages(res.pages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRoleChange(employeeId: string, role: string) {
+    setUpdatingId(employeeId);
+    try {
+      await apiFetch(`/api/admin/users/${employeeId}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      });
+      setEmployees((prev) =>
+        prev.map((e) =>
+          e.id === employeeId ? { ...e, role: role as Employee["role"] } : e
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update role");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleBootstrap() {
+    try {
+      const res = await apiFetch<{ message: string }>("/api/admin/bootstrap", {
+        method: "POST",
+      });
+      toast.success(res.message);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  }
+
+  async function handleSyncFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setSyncing(true);
+    setSyncResult(null);
+    setSyncError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await apiFetch<{ data: { deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } }>(
+        "/api/admin/employees/sync",
+        { method: "POST", body: form }
+      );
+      setSyncResult(res.data);
+      loadEmployees();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Failed to sync employee list.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleAddEmployee(e: React.FormEvent) {
+    e.preventDefault();
+    setAddError("");
+
+    if (!addForm.email.endsWith("@allianceglobalsolutions.com")) {
+      setAddError("Email must end in @allianceglobalsolutions.com");
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const res = await apiFetch<{ data: Employee }>("/api/admin/employees", {
+        method: "POST",
+        body: JSON.stringify({
+          displayName: addForm.displayName.trim(),
+          email: addForm.email.trim().toLowerCase(),
+          departmentId: addForm.departmentId || null,
+          role: addForm.role,
+          employeeId: addForm.employeeId.trim() || null,
+          hireDate: addForm.hireDate || null,
+          birthday: addForm.birthday || null,
+        }),
+      });
+      setEmployees((prev) => [res.data, ...prev]);
+      setAddModalOpen(false);
+      setAddForm(EMPTY_ADD_FORM);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to add employee.");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  function handleEdit(employee: Employee) {
+    setEditingEmployee(employee);
+    setEditForm({
+      displayName: employee.displayName,
+      email: employee.email,
+      departmentId: employee.department?.id ?? null,
+      role: employee.role,
+      isActive: employee.isActive,
+      birthday: employee.birthday ? employee.birthday.slice(0, 10) : null,
+      hireDate: employee.hireDate ? employee.hireDate.slice(0, 10) : null,
+    });
+  }
+
+  async function handleSave() {
+    if (!editingEmployee) return;
+    setSaving(true);
+    try {
+      await apiFetch(`/api/admin/employees/${editingEmployee.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          displayName: editForm.displayName,
+          email: editForm.email,
+          departmentId: editForm.departmentId,
+          role: editForm.role,
+          isActive: editForm.isActive,
+          birthday: editForm.birthday || null,
+          hireDate: editForm.hireDate || null,
+        }),
+      });
+      const found = departments.find((d) => d.id === editForm.departmentId);
+      setEmployees((prev) =>
+        prev.map((e) =>
+          e.id === editingEmployee.id
+            ? {
+                ...e,
+                displayName: editForm.displayName,
+                email: editForm.email,
+                department: found ? { id: found.id, name: found.name } : null,
+                role: editForm.role,
+                isActive: editForm.isActive,
+                birthday: editForm.birthday,
+                hireDate: editForm.hireDate,
+              }
+            : e
+        )
+      );
+      setEditingEmployee(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleExport() {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (filterDept) params.set("department", filterDept);
+    if (filterRole) params.set("role", filterRole);
+    if (filterStatus) params.set("status", filterStatus);
+    const qs = params.toString();
+    setExporting(true);
+    try {
+      const res = await streamFetch(`/api/admin/employees/export${qs ? `?${qs}` : ""}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "employees.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export employees.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return {
+    // state
+    employees, setEmployees,
+    totalEmployees,
+    page, setPage,
+    pages,
+    search, setSearch,
+    filterDept, setFilterDept,
+    filterRole, setFilterRole,
+    filterStatus, setFilterStatus,
+    loading,
+    updatingId,
+    syncing,
+    syncResult, setSyncResult,
+    syncError, setSyncError,
+    editingEmployee, setEditingEmployee,
+    editForm, setEditForm,
+    departments,
+    saving,
+    showUploadGuide, setShowUploadGuide,
+    addModalOpen, setAddModalOpen,
+    addForm, setAddForm,
+    adding,
+    addError, setAddError,
+    deleteConfirmId, setDeleteConfirmId,
+    exporting,
+
+    // refs
+    fileInputRef,
+
+    // handlers
+    loadEmployees,
+    handleRoleChange,
+    handleBootstrap,
+    handleSyncFile,
+    handleAddEmployee,
+    handleEdit,
+    handleSave,
+    handleExport,
+  };
+}

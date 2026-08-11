@@ -1,277 +1,55 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Pagination } from "@/components/ui/pagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Download, Loader2, Pencil, Upload, UserPlus, Users } from "lucide-react";
-import { RoleBadge } from "@/components/RoleBadge";
-
-type Employee = {
-  id: string;
-  employeeId: string | null;
-  displayName: string;
-  email: string;
-  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN" | "SUPER_ADMIN";
-  pointsBalance: number;
-  isActive: boolean;
-  hireDate: string | null;
-  birthday: string | null;
-  department: { id: string; name: string } | null;
-};
-
-type Department = { id: string; name: string };
-
-type EditForm = {
-  displayName: string;
-  email: string;
-  departmentId: string | null;
-  role: Employee["role"];
-  isActive: boolean;
-  birthday: string | null;
-  hireDate: string | null;
-};
-
-type AddForm = {
-  displayName: string;
-  email: string;
-  departmentId: string;
-  role: Employee["role"];
-  employeeId: string;
-  hireDate: string;
-  birthday: string;
-};
-
-const EMPTY_ADD_FORM: AddForm = {
-  displayName: "",
-  email: "",
-  departmentId: "",
-  role: "EMPLOYEE",
-  employeeId: "",
-  hireDate: "",
-  birthday: "",
-};
+import { ChevronDown, ChevronUp, Download, Loader2, Upload, UserPlus, Users } from "lucide-react";
+import { EmployeeMobileCard } from "@/components/admin/employees/EmployeeMobileCard";
+import { EmployeeTableRow } from "@/components/admin/employees/EmployeeTableRow";
+import { AddEmployeeModal } from "@/components/admin/employees/AddEmployeeModal";
+import { EditEmployeeModal } from "@/components/admin/employees/EditEmployeeModal";
+import { useAdminEmployeesActions, EMPTY_ADD_FORM } from "@/lib/hooks/useAdminEmployeesActions";
 
 export default function EmployeesPage() {
-  const { apiFetch, streamFetch } = useApiClient();
-  const { user, dbUser, loading: authLoading } = useAuth();
+  const { dbUser } = useAuth();
   const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [totalEmployees, setTotalEmployees] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
-  const [search, setSearch] = useState("");
-  const [filterDept, setFilterDept] = useState("");
-  const [filterRole, setFilterRole] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } | null>(null);
-  const [syncError, setSyncError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ displayName: "", email: "", departmentId: null, role: "EMPLOYEE", isActive: true, birthday: null, hireDate: null });
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [showUploadGuide, setShowUploadGuide] = useState(false);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState<AddForm>(EMPTY_ADD_FORM);
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    loadEmployees();
-    apiFetch<{ data: Department[] }>("/api/admin/departments")
-      .then((res) => setDepartments(res.data))
-      .catch(console.error);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, filterDept, filterRole, filterStatus]);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    loadEmployees();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, filterDept, filterRole, filterStatus]);
-
-  async function loadEmployees() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      if (search) params.set("search", search);
-      if (filterDept) params.set("department", filterDept);
-      if (filterRole) params.set("role", filterRole);
-      if (filterStatus) params.set("status", filterStatus);
-      const res = await apiFetch<{ data: Employee[]; total: number; pages: number }>(`/api/admin/employees?${params}`);
-      setEmployees(res.data);
-      setTotalEmployees(res.total);
-      setPages(res.pages);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRoleChange(employeeId: string, role: string) {
-    setUpdatingId(employeeId);
-    try {
-      await apiFetch(`/api/admin/users/${employeeId}/role`, {
-        method: "PATCH",
-        body: JSON.stringify({ role }),
-      });
-      setEmployees((prev) =>
-        prev.map((e) =>
-          e.id === employeeId ? { ...e, role: role as Employee["role"] } : e
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update role");
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
-  async function handleBootstrap() {
-    try {
-      const res = await apiFetch<{ message: string }>("/api/admin/bootstrap", {
-        method: "POST",
-      });
-      toast.success(res.message);
-      window.location.reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
-    }
-  }
-
-  async function handleSyncFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setSyncing(true);
-    setSyncResult(null);
-    setSyncError("");
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await apiFetch<{ data: { deactivated: number; reactivated: number; imported: number; birthdaysUpdated: number; activeInFile: number; resignedInFile: number; failedImports: number; failedEmails: string[] } }>(
-        "/api/admin/employees/sync",
-        { method: "POST", body: form }
-      );
-      setSyncResult(res.data);
-      loadEmployees();
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Failed to sync employee list.");
-    } finally {
-      setSyncing(false);
-    }
-  }
-
-  async function handleAddEmployee(e: React.FormEvent) {
-    e.preventDefault();
-    setAddError("");
-
-    if (!addForm.email.endsWith("@allianceglobalsolutions.com")) {
-      setAddError("Email must end in @allianceglobalsolutions.com");
-      return;
-    }
-
-    setAdding(true);
-    try {
-      const res = await apiFetch<{ data: Employee }>("/api/admin/employees", {
-        method: "POST",
-        body: JSON.stringify({
-          displayName: addForm.displayName.trim(),
-          email: addForm.email.trim().toLowerCase(),
-          departmentId: addForm.departmentId || null,
-          role: addForm.role,
-          employeeId: addForm.employeeId.trim() || null,
-          hireDate: addForm.hireDate || null,
-          birthday: addForm.birthday || null,
-        }),
-      });
-      setEmployees((prev) => [res.data, ...prev]);
-      setAddModalOpen(false);
-      setAddForm(EMPTY_ADD_FORM);
-    } catch (err) {
-      setAddError(err instanceof Error ? err.message : "Failed to add employee.");
-    } finally {
-      setAdding(false);
-    }
-  }
-
-  function handleEdit(employee: Employee) {
-    setEditingEmployee(employee);
-    setEditForm({
-      displayName: employee.displayName,
-      email: employee.email,
-      departmentId: employee.department?.id ?? null,
-      role: employee.role,
-      isActive: employee.isActive,
-      birthday: employee.birthday ? employee.birthday.slice(0, 10) : null,
-      hireDate: employee.hireDate ? employee.hireDate.slice(0, 10) : null,
-    });
-  }
-
-  async function handleSave() {
-    if (!editingEmployee) return;
-    setSaving(true);
-    try {
-      await apiFetch(`/api/admin/employees/${editingEmployee.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          displayName: editForm.displayName,
-          email: editForm.email,
-          departmentId: editForm.departmentId,
-          role: editForm.role,
-          isActive: editForm.isActive,
-          birthday: editForm.birthday || null,
-          hireDate: editForm.hireDate || null,
-        }),
-      });
-      const found = departments.find((d) => d.id === editForm.departmentId);
-      setEmployees((prev) =>
-        prev.map((e) =>
-          e.id === editingEmployee.id
-            ? {
-                ...e,
-                displayName: editForm.displayName,
-                email: editForm.email,
-                department: found ? { id: found.id, name: found.name } : null,
-                role: editForm.role,
-                isActive: editForm.isActive,
-                birthday: editForm.birthday,
-                hireDate: editForm.hireDate,
-              }
-            : e
-        )
-      );
-      setEditingEmployee(null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const {
+    employees,
+    totalEmployees,
+    page, setPage,
+    pages,
+    search, setSearch,
+    filterDept, setFilterDept,
+    filterRole, setFilterRole,
+    filterStatus, setFilterStatus,
+    loading,
+    updatingId,
+    syncing,
+    syncResult, setSyncResult,
+    syncError, setSyncError,
+    editingEmployee, setEditingEmployee,
+    editForm, setEditForm,
+    departments,
+    saving,
+    showUploadGuide, setShowUploadGuide,
+    addModalOpen, setAddModalOpen,
+    addForm, setAddForm,
+    adding,
+    addError, setAddError,
+    exporting,
+    fileInputRef,
+    handleRoleChange,
+    handleBootstrap,
+    handleSyncFile,
+    handleAddEmployee,
+    handleEdit,
+    handleSave,
+    handleExport,
+  } = useAdminEmployeesActions();
 
   // Use departments state for filter dropdown (not derived from paginated employees)
   const deptOptions = departments.map((d) => d.name).sort();
 
   const hasActiveFilters = filterDept || filterRole || filterStatus;
-
-  const selectClass =
-    "text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white disabled:opacity-50";
 
   const formatDate = (value: string | null) =>
     value
@@ -426,29 +204,7 @@ export default function EmployeesPage() {
               {syncing ? "Syncing…" : "Upload Employee List"}
             </button>
             <button
-              onClick={async () => {
-                const params = new URLSearchParams();
-                if (search) params.set("search", search);
-                if (filterDept) params.set("department", filterDept);
-                if (filterRole) params.set("role", filterRole);
-                if (filterStatus) params.set("status", filterStatus);
-                const qs = params.toString();
-                setExporting(true);
-                try {
-                  const res = await streamFetch(`/api/admin/employees/export${qs ? `?${qs}` : ""}`);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "employees.csv";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                } catch {
-                  toast.error("Failed to export employees.");
-                } finally {
-                  setExporting(false);
-                }
-              }}
+              onClick={handleExport}
               disabled={exporting}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
             >
@@ -483,54 +239,16 @@ export default function EmployeesPage() {
                 <p className="text-gray-500 text-sm">No employees match the current filters.</p>
               </div>
             ) : employees.map((employee) => (
-              <div key={employee.id} className={`px-4 py-4 space-y-3 ${!employee.isActive ? "opacity-50" : ""}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{employee.displayName}</p>
-                    <p className="text-xs text-gray-500 truncate">{employee.email}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <RoleBadge role={employee.role} />
-                    {employee.isActive
-                      ? <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
-                      : <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
-                    }
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>{employee.employeeId ?? "—"}</span>
-                  <span>{employee.department?.name ?? "No dept"}</span>
-                  <span className="font-semibold text-navy-600">{employee.pointsBalance.toLocaleString()} pts</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  {employee.birthday && <span>Birthday: {formatDate(employee.birthday)}</span>}
-                  {employee.hireDate && <span>Hire: {formatDate(employee.hireDate)}</span>}
-                </div>
-                <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-                  {employee.id === dbUser?.id ? (
-                    <span className="text-xs text-gray-500 italic flex-1">Your own role (change from another admin account)</span>
-                  ) : (
-                    <select
-                      value={employee.role}
-                      onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
-                      disabled={updatingId === employee.id}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white flex-1"
-                    >
-                      <option value="EMPLOYEE">Employee</option>
-                      <option value="MANAGER">Manager</option>
-                      <option value="HR_ADMIN">HR Admin</option>
-                      {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-                    </select>
-                  )}
-                  <button
-                    onClick={() => handleEdit(employee)}
-                    className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-                    aria-label={`Edit ${employee.displayName}`}
-                  >
-                    <Pencil className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
+              <EmployeeMobileCard
+                key={employee.id}
+                employee={employee}
+                isOwnRow={employee.id === dbUser?.id}
+                isSuperAdmin={isSuperAdmin}
+                updatingId={updatingId}
+                onRoleChange={handleRoleChange}
+                onEdit={handleEdit}
+                formatDate={formatDate}
+              />
             ))}
           </div>
 
@@ -563,60 +281,17 @@ export default function EmployeesPage() {
                   </td>
                 </tr>
               ) : employees.map((employee, i) => (
-                <tr key={employee.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""} ${!employee.isActive ? "opacity-50" : ""}`}>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500 font-mono">{employee.employeeId ?? <span className="text-gray-300">—</span>}</td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 font-medium text-gray-900">{employee.displayName}</td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">{employee.email}</td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
-                    {employee.department?.name ?? <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                    <span className="font-semibold text-navy-600">
-                      {employee.pointsBalance.toLocaleString()} pts
-                    </span>
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                    <RoleBadge role={employee.role} />
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                    {employee.id === dbUser?.id ? (
-                      <span className="text-xs text-gray-500 italic">Your account</span>
-                    ) : (
-                      <select
-                        value={employee.role}
-                        onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
-                        disabled={updatingId === employee.id}
-                        className={selectClass + " w-36"}
-                      >
-                        <option value="EMPLOYEE">Employee</option>
-                        <option value="MANAGER">Manager</option>
-                        <option value="HR_ADMIN">HR Admin</option>
-                        {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-                      </select>
-                    )}
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
-                    {employee.isActive
-                      ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
-                      : <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
-                    }
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
-                    {formatDate(employee.birthday) ?? <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
-                    {formatDate(employee.hireDate) ?? <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                    <button
-                      onClick={() => handleEdit(employee)}
-                      className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-                      aria-label={`Edit ${employee.displayName}`}
-                    >
-                      <Pencil className="w-4 h-4" aria-hidden="true" />
-                    </button>
-                  </td>
-                </tr>
+                <EmployeeTableRow
+                  key={employee.id}
+                  employee={employee}
+                  index={i}
+                  isOwnRow={employee.id === dbUser?.id}
+                  isSuperAdmin={isSuperAdmin}
+                  updatingId={updatingId}
+                  onRoleChange={handleRoleChange}
+                  onEdit={handleEdit}
+                  formatDate={formatDate}
+                />
               ))}
             </tbody>
           </table>
@@ -631,238 +306,28 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      {/* Add Employee Modal */}
-      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader className="mb-5">
-            <DialogTitle>Add Employee</DialogTitle>
-          </DialogHeader>
+      <AddEmployeeModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        departments={departments}
+        addForm={addForm}
+        setAddForm={setAddForm}
+        addError={addError}
+        adding={adding}
+        isSuperAdmin={isSuperAdmin}
+        onSubmit={handleAddEmployee}
+      />
 
-            <form onSubmit={handleAddEmployee} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
-                <input
-                  required
-                  autoFocus
-                  aria-required="true"
-                  type="text"
-                  value={addForm.displayName}
-                  onChange={(e) => setAddForm((f) => ({ ...f, displayName: e.target.value }))}
-                  placeholder="e.g. Juan Dela Cruz"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Work Email <span className="text-red-500">*</span></label>
-                <input
-                  required
-                  aria-required="true"
-                  type="email"
-                  value={addForm.email}
-                  onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
-                  placeholder="j.delacruz@allianceglobalsolutions.com"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <select
-                    value={addForm.departmentId}
-                    onChange={(e) => setAddForm((f) => ({ ...f, departmentId: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
-                  >
-                    <option value="">No department</option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role <span className="text-red-500">*</span></label>
-                  <select
-                    value={addForm.role}
-                    onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value as Employee["role"] }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
-                  >
-                    <option value="EMPLOYEE">Employee</option>
-                    <option value="MANAGER">Manager</option>
-                    <option value="HR_ADMIN">HR Admin</option>
-                    {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
-                <input
-                  type="text"
-                  value={addForm.employeeId}
-                  onChange={(e) => setAddForm((f) => ({ ...f, employeeId: e.target.value }))}
-                  placeholder="e.g. EMP-001"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hire Date</label>
-                  <input
-                    type="date"
-                    value={addForm.hireDate}
-                    onChange={(e) => setAddForm((f) => ({ ...f, hireDate: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birthday</label>
-                  <input
-                    type="date"
-                    value={addForm.birthday}
-                    onChange={(e) => setAddForm((f) => ({ ...f, birthday: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                  />
-                </div>
-              </div>
-
-              {addError && <p className="text-red-500 text-sm">{addError}</p>}
-
-              <button
-                type="submit"
-                disabled={adding || !addForm.displayName.trim() || !addForm.email.trim()}
-                className="w-full bg-navy-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-navy-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-              >
-                {adding ? "Adding…" : "Add Employee"}
-              </button>
-            </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editingEmployee} onOpenChange={(open) => { if (!open) setEditingEmployee(null); }}>
-        <DialogContent className="max-w-md p-6 space-y-5">
-          {editingEmployee && (
-            <>
-            <DialogHeader>
-              <DialogTitle>Edit Employee</DialogTitle>
-              <p className="text-sm text-gray-500 mt-0.5">{editingEmployee.email}</p>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Display Name</label>
-                <input
-                  autoFocus
-                  aria-required="true"
-                  value={editForm.displayName}
-                  onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</label>
-                <input
-                  type="email"
-                  aria-required="true"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                />
-              </div>
-
-              {editingEmployee.employeeId && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Employee ID</label>
-                  <p className="px-3 py-2 text-sm font-mono bg-gray-50 border border-gray-200 rounded-lg text-gray-700">{editingEmployee.employeeId}</p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Department</label>
-                <select
-                  value={editForm.departmentId ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, departmentId: e.target.value || null }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
-                >
-                  <option value="">No department</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Role</label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value as Employee["role"] }))}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white"
-                >
-                  <option value="EMPLOYEE">Employee</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="HR_ADMIN">HR Admin</option>
-                  {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active</label>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={editForm.isActive}
-                  aria-label="Employee active status"
-                  onClick={() => setEditForm((f) => ({ ...f, isActive: !f.isActive }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.isActive ? "bg-emerald-500" : "bg-gray-200"}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.isActive ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Birthday</label>
-                  <input
-                    type="date"
-                    value={editForm.birthday ?? ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, birthday: e.target.value || null }))}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Hire Date</label>
-                  <input
-                    type="date"
-                    value={editForm.hireDate ?? ""}
-                    onChange={(e) => setEditForm((f) => ({ ...f, hireDate: e.target.value || null }))}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500/30"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setEditingEmployee(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 text-sm font-medium text-white bg-command-black rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
-              >
-                {saving ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EditEmployeeModal
+        editingEmployee={editingEmployee}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        departments={departments}
+        saving={saving}
+        isSuperAdmin={isSuperAdmin}
+        onClose={() => setEditingEmployee(null)}
+        onSave={handleSave}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import path from "path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const securityHeaders = [
   // Prevent clickjacking
@@ -91,4 +92,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wraps the build with Sentry's webpack/Turbopack plugin (source maps, release
+// tagging). Inert with no visible effect until SENTRY_AUTH_TOKEN/SENTRY_ORG/
+// SENTRY_PROJECT are set -- safe to ship ahead of having a Sentry project.
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  disableLogger: true,
+});

@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       type: "CELEBRATION",
       content: `🎉 ${actorName} awarded ${amount.toLocaleString()} points to ${recipients.length} employee${recipients.length !== 1 ? "s" : ""}! "${note}"`,
     },
-  }).catch(() => {});
+  }).catch((err) => console.error("bulk award celebration post failed", err));
 
   // Single audit log
   prisma.auditLog.create({
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
       entityId: actor!.id,
       afterState: { count: recipients.length, amount, note, recipientNames: recipients.map((r) => r.displayName) },
     },
-  }).catch(() => {});
+  }).catch((err) => console.error("bulk award audit log write failed", err));
 
   // Badge-checking needs each recipient's lifetime points earned — one
   // groupBy across all recipients instead of one aggregate() per recipient
@@ -151,17 +151,17 @@ export async function POST(req: NextRequest) {
       title: `You received ${amount.toLocaleString()} points!`,
       body: note,
       data: { amount, fromUserId: actor!.id },
-    }).catch(() => {});
+    }).catch((err) => console.error("points-received notification failed", err));
     sendMail({
       to: r.email,
       ...pointsReceivedEmail(r.displayName, amount, actorName, note, newBalance),
-    }).catch(() => {});
-    checkLevelUp(r.id, newBalance).catch(() => {});
-    checkAndAwardBadges({ userId: r.id, totalEarned: earnedMap.get(r.id) ?? 0 }).catch(() => {});
+    }).catch((err) => console.error("points-received email failed", err));
+    checkLevelUp(r.id, newBalance).catch((err) => console.error("checkLevelUp failed", err));
+    checkAndAwardBadges({ userId: r.id, totalEarned: earnedMap.get(r.id) ?? 0 }).catch((err) => console.error("checkAndAwardBadges failed", err));
   }
 
   // Notify each recipient's browser to refresh their points balance
-  Promise.all(recipients.map((r) => broadcast(`points:${r.id}`))).catch(() => {});
+  Promise.all(recipients.map((r) => broadcast(`points:${r.id}`))).catch((err) => console.error("bulk award broadcast failed", err));
 
   return NextResponse.json({ data: { awarded: recipients.length } });
 }

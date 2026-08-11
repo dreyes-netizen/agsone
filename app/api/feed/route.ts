@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
         pollOptions: { include: { _count: { select: { votes: true } } } },
       },
     });
-    broadcast("feed").catch(() => {});
+    broadcast("feed").catch((err) => console.error("feed broadcast failed", err));
     return NextResponse.json({ data: { ...post, myVoteOptionId: null } }, { status: 201 });
   }
 
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
         })
       )
     );
-    broadcast("feed").catch(() => {});
+    broadcast("feed").catch((err) => console.error("feed broadcast failed", err));
     return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
   }
 
@@ -220,6 +220,6 @@ export async function POST(req: NextRequest) {
     include: { author: { select: { displayName: true, avatarUrl: true } } },
   });
 
-  broadcast("feed").catch(() => {});
+  broadcast("feed").catch((err) => console.error("feed broadcast failed", err));
   return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
 }

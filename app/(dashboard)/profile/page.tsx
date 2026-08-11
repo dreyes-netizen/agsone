@@ -203,7 +203,7 @@ function MinigamesStatsCard() {
   const [s, setS] = useState<{ wins: number; losses: number; draws: number; winRate: number; currentStreak: number; total: number } | null>(null);
 
   useEffect(() => {
-    apiFetch<{ data: typeof s }>("/api/minigames/stats").then((r) => setS(r.data)).catch(() => {});
+    apiFetch<{ data: typeof s }>("/api/minigames/stats").then((r) => setS(r.data)).catch((err) => console.error("minigame stats fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -338,7 +338,7 @@ export default function ProfilePage() {
     ).then((res) => {
       const me = res.data.find((e) => e.isCurrentUser);
       if (me) setDeptRank({ rank: me.rank, total: res.data.length });
-    }).catch(() => {});
+    }).catch((err) => console.error("department rank fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.department?.id]);
 

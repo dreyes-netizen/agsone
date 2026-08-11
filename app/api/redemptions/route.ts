@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
-  broadcast(`points:${user!.id}`).catch(() => {});
+  broadcast(`points:${user!.id}`).catch((err) => console.error("redemption broadcast failed", err));
 
   return NextResponse.json({ data: redemption }, { status: 201 });
 }

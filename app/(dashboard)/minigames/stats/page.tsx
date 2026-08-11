@@ -72,7 +72,7 @@ export default function MinigamesStatsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Stats }>("/api/minigames/stats").then(res => setStats(res.data)).catch(() => {});
+    apiFetch<{ data: Stats }>("/api/minigames/stats").then(res => setStats(res.data)).catch((err) => console.error("minigame stats fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 

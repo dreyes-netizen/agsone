@@ -118,13 +118,13 @@ export async function POST(req: NextRequest) {
   ]);
 
   // Notify recipient's browser to refresh points balance in real-time
-  broadcast(`points:${toUserId}`).catch(() => {});
+  broadcast(`points:${toUserId}`).catch((err) => console.error("points-award broadcast failed", err));
 
   // Check badge milestones + level-up (fire-and-forget)
   prisma.pointTransaction.aggregate({ where: { toUserId: toUserId, amount: { gt: 0 } }, _sum: { amount: true } })
     .then((agg) => checkAndAwardBadges({ userId: toUserId, totalEarned: agg._sum.amount ?? 0 }))
-    .catch(() => {});
-  checkLevelUp(toUserId, newBalance).catch(() => {});
+    .catch((err) => console.error("checkAndAwardBadges failed", err));
+  checkLevelUp(toUserId, newBalance).catch((err) => console.error("checkLevelUp failed", err));
 
   await prisma.auditLog.create({
     data: {

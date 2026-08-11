@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
         sendMail({
           to: user.email,
           ...birthdayEmail(user.displayName, awardPoints),
-        }).catch(() => {}),
+        }).catch((err) => console.error("birthday email failed", err)),
       ])
     )
   );

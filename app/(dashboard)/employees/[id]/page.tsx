@@ -156,7 +156,7 @@ export default function EmployeeProfilePage() {
   function loadBudget() {
     return apiFetch<{ data: { isExempt: boolean; used: number; remaining: number; total: number } }>("/api/points/budget")
       .then((r) => setBudget(r.data))
-      .catch(() => {});
+      .catch((err) => console.error("budget fetch failed", err));
   }
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export default function EmployeeProfilePage() {
     setHistoryLoading(true);
     apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
       .then((r) => setTransactions(r.data.slice(0, 15)))
-      .catch(() => {})
+      .catch((err) => console.error("transaction history fetch failed", err))
       .finally(() => setHistoryLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isAdminOrManager]);
@@ -193,7 +193,7 @@ export default function EmployeeProfilePage() {
       loadBudget();
       apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
         .then((r) => setTransactions(r.data.slice(0, 15)))
-        .catch(() => {});
+        .catch((err) => console.error("transaction history refresh failed", err));
     } catch (err) {
       setAwardError(err instanceof Error ? err.message : "Failed to award points");
     } finally {

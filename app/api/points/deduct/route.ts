@@ -106,15 +106,15 @@ export async function POST(req: NextRequest) {
     title: `${result.deducted.toLocaleString()} points were deducted`,
     body: reason,
     data: { amount: result.deducted, violationType },
-  }).catch(() => {});
+  }).catch((err) => console.error("points-deducted notification failed", err));
 
-  broadcast(`points:${toUserId}`).catch(() => {});
+  broadcast(`points:${toUserId}`).catch((err) => console.error("points-deduct broadcast failed", err));
 
   if (recipient?.email && recipient.displayName) {
     sendMail({
       to: recipient.email,
       ...pointsDeductedEmail(recipient.displayName, result.deducted, reason, result.newBalance),
-    }).catch(() => {});
+    }).catch((err) => console.error("points-deducted email failed", err));
   }
 
   await prisma.auditLog.create({

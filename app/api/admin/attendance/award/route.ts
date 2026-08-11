@@ -205,14 +205,14 @@ export async function POST(req: NextRequest) {
       title: `You received ${amount} points!`,
       body: note,
       data: { amount, fromUserId: user!.id },
-    }).catch(() => {});
+    }).catch((err) => console.error("points-received notification failed", err));
     sendMail({
       to: u.email,
       ...pointsReceivedEmail(u.displayName, amount, actorName, note, newBalance),
-    }).catch(() => {});
-    checkLevelUp(u.id, newBalance).catch(() => {});
-    checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch(() => {});
-    broadcast(`points:${u.id}`).catch(() => {});
+    }).catch((err) => console.error("points-received email failed", err));
+    checkLevelUp(u.id, newBalance).catch((err) => console.error("checkLevelUp failed", err));
+    checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch((err) => console.error("checkAndAwardBadges failed", err));
+    broadcast(`points:${u.id}`).catch((err) => console.error("attendance award broadcast failed", err));
   }
 
   prisma.auditLog.create({
@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
       entityId: user!.id,
       afterState: { attendanceMonth, recipientIds, amount, count: recipientIds.length, notFound },
     },
-  }).catch(() => {});
+  }).catch((err) => console.error("attendance award audit log write failed", err));
 
   return NextResponse.json({
     data: {

@@ -86,7 +86,7 @@ export default function LeaderboardPage() {
     if (authLoading || !user) return;
     apiFetch<{ data: Department[] }>("/api/departments")
       .then((res) => setDepartments(res.data))
-      .catch(() => {});
+      .catch((err) => console.error("departments fetch failed", err));
     setProfileLoading(true);
     setAchieversLoading(true);
     Promise.allSettled([

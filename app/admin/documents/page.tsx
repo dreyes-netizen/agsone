@@ -70,7 +70,7 @@ export default function DocumentsPage() {
   useEffect(() => {
     apiFetch<{ data: { allyEnabled: boolean } }>("/api/admin/settings")
       .then((res) => setAllyEnabled(res.data.allyEnabled))
-      .catch(() => {});
+      .catch((err) => console.error("Ally settings fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

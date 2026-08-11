@@ -1360,7 +1360,7 @@ export default function MinigameSessionPage() {
       `/api/minigames/stats?opponentId=${opponent.id}`
     )
       .then(r => setH2h(r.data))
-      .catch(() => {});
+      .catch((err) => console.error("head-to-head stats fetch failed", err));
   }, [session?.status, session?.guest?.id, session?.host?.id]);
 
   async function makeMove(data: unknown) {

@@ -101,11 +101,11 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     apiFetch<{ data: Analytics }>("/api/admin/analytics")
       .then((r) => setData(r.data))
-      .catch(() => {})
+      .catch((err) => console.error("admin analytics fetch failed", err))
       .finally(() => setLoading(false));
     apiFetch<{ data: UpcomingBirthday[] }>("/api/birthdays/upcoming")
       .then((r) => setBirthdays(r.data))
-      .catch(() => {});
+      .catch((err) => console.error("upcoming birthdays fetch failed", err));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

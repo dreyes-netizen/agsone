@@ -395,7 +395,7 @@ export default function FeedPage() {
     if (authLoading || !user || employees.length > 0) return;
     apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
       .then((res) => setEmployees(res.data))
-      .catch(() => {});
+      .catch((err) => console.error("employees fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   sendMail({
     to: HR_EMAILS,
     ...newWhistleblowerEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
-  }).catch(() => {});
+  }).catch((err) => console.error("whistleblower notify email failed", err));
 
   return NextResponse.json({ data: feedback }, { status: 201 });
 }

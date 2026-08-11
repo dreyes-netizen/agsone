@@ -9,9 +9,10 @@ import { RoleBadge } from "@/components/RoleBadge";
 type SearchResult = {
   id: string;
   displayName: string;
-  email: string;
+  // role/email are only returned to privileged callers — see app/api/search/route.ts
+  email?: string;
   avatarUrl: string | null;
-  role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
+  role?: "EMPLOYEE" | "MANAGER" | "HR_ADMIN";
   department: { id: string; name: string } | null;
 };
 
@@ -181,7 +182,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {r.displayName}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">{r.email}</p>
+                  {r.email && (
+                    <p className="text-xs text-gray-400 truncate">{r.email}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {r.department && (
@@ -189,7 +192,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                       {r.department.name}
                     </span>
                   )}
-                  <RoleBadge role={r.role} />
+                  {r.role && <RoleBadge role={r.role} />}
                 </div>
               </button>
             ))

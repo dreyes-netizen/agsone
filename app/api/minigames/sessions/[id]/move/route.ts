@@ -6,7 +6,7 @@ import { applyC4Move, checkC4Result } from "@/lib/minigames/connectfour";
 import { applyRPSChoice, checkRPSResult, maskRPSState } from "@/lib/minigames/rps";
 import { applyDnBMove, checkDnBResult } from "@/lib/minigames/dotsandboxes";
 import { applyBSMove, checkBSResult, maskBSState, type BSState } from "@/lib/minigames/battleship";
-import { applyMemoryMove, checkMemoryResult, type MemoryState } from "@/lib/minigames/memory";
+import { applyMemoryMove, checkMemoryResult, maskMemoryState, type MemoryState } from "@/lib/minigames/memory";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { broadcast } from "@/lib/realtime/broadcast";
 
@@ -206,6 +206,9 @@ export async function POST(
   }
   if (session.gameType === "BATTLESHIP") {
     returnState = maskBSState(newState as BSState, isHost) as Record<string, unknown>;
+  }
+  if (session.gameType === "MEMORY") {
+    returnState = maskMemoryState(newState as MemoryState, isHost) as Record<string, unknown>;
   }
 
   // Wake the opponent's board so the move shows instantly. When the game ends,

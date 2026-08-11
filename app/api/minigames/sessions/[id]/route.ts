@@ -3,6 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { maskRPSState } from "@/lib/minigames/rps";
 import { maskBSState } from "@/lib/minigames/battleship";
+import { maskMemoryState } from "@/lib/minigames/memory";
 
 const sessionSelect = {
   id: true,
@@ -39,6 +40,9 @@ export async function GET(
     }
     if (session.gameType === "BATTLESHIP") {
       state = maskBSState(state as Parameters<typeof maskBSState>[0], isHost) as Record<string, unknown>;
+    }
+    if (session.gameType === "MEMORY") {
+      state = maskMemoryState(state as Parameters<typeof maskMemoryState>[0], isHost) as Record<string, unknown>;
     }
   }
 

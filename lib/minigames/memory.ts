@@ -79,3 +79,20 @@ export function checkMemoryResult(state: MemoryState): "host" | "guest" | "draw"
   if (state.guestScore > state.hostScore) return "guest";
   return "draw";
 }
+
+// Memory's board is shared/symmetric — both players see the same matched,
+// flipped, and revealed cards — so masking doesn't depend on viewer role.
+// viewerIsHost is kept for signature parity with maskRPSState/maskBSState.
+export function maskMemoryState(state: MemoryState, viewerIsHost: boolean): MemoryState {
+  void viewerIsHost;
+  const visible = new Set<number>(state.matched);
+  if (state.flipped !== null) visible.add(state.flipped);
+  if (state.revealed) {
+    visible.add(state.revealed[0]);
+    visible.add(state.revealed[1]);
+  }
+  return {
+    ...state,
+    cards: state.cards.map((card, i) => (visible.has(i) ? card : { emoji: "", pairId: -1 })),
+  };
+}

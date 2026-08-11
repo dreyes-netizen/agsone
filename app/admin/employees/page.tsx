@@ -507,17 +507,21 @@ export default function EmployeesPage() {
                   {employee.hireDate && <span>Hire: {formatDate(employee.hireDate)}</span>}
                 </div>
                 <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-                  <select
-                    value={employee.role}
-                    onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
-                    disabled={updatingId === employee.id}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white flex-1"
-                  >
-                    <option value="EMPLOYEE">Employee</option>
-                    <option value="MANAGER">Manager</option>
-                    <option value="HR_ADMIN">HR Admin</option>
-                    {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-                  </select>
+                  {employee.id === dbUser?.id ? (
+                    <span className="text-xs text-gray-400 italic flex-1">Your own role (change from another admin account)</span>
+                  ) : (
+                    <select
+                      value={employee.role}
+                      onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
+                      disabled={updatingId === employee.id}
+                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-navy-500/30 bg-white flex-1"
+                    >
+                      <option value="EMPLOYEE">Employee</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="HR_ADMIN">HR Admin</option>
+                      {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
+                    </select>
+                  )}
                   <button
                     onClick={() => handleEdit(employee)}
                     className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
@@ -575,17 +579,21 @@ export default function EmployeesPage() {
                     <RoleBadge role={employee.role} />
                   </td>
                   <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
-                    <select
-                      value={employee.role}
-                      onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
-                      disabled={updatingId === employee.id}
-                      className={selectClass + " w-36"}
-                    >
-                      <option value="EMPLOYEE">Employee</option>
-                      <option value="MANAGER">Manager</option>
-                      <option value="HR_ADMIN">HR Admin</option>
-                      {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-                    </select>
+                    {employee.id === dbUser?.id ? (
+                      <span className="text-xs text-gray-400 italic">Your account</span>
+                    ) : (
+                      <select
+                        value={employee.role}
+                        onChange={(e) => e.target.value && handleRoleChange(employee.id, e.target.value)}
+                        disabled={updatingId === employee.id}
+                        className={selectClass + " w-36"}
+                      >
+                        <option value="EMPLOYEE">Employee</option>
+                        <option value="MANAGER">Manager</option>
+                        <option value="HR_ADMIN">HR Admin</option>
+                        {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
+                      </select>
+                    )}
                   </td>
                   <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5 text-gray-500">
                     {employee.isActive
@@ -796,7 +804,7 @@ export default function EmployeesPage() {
                   <option value="EMPLOYEE">Employee</option>
                   <option value="MANAGER">Manager</option>
                   <option value="HR_ADMIN">HR Admin</option>
-                  <option value="SUPER_ADMIN">Super Admin</option>
+                  {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                 </select>
               </div>
 

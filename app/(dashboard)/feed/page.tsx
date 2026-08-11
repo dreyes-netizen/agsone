@@ -13,6 +13,15 @@ import { FLAIRS, flairById } from "@/lib/flairs";
 import { PostImages } from "@/components/feed/PostImages";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle (this is the largest page in the app).
@@ -358,6 +367,8 @@ export default function FeedPage() {
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [postToast, setPostToast] = useState<string | null>(null);
+  const [commentDeleteTarget, setCommentDeleteTarget] = useState<{ postId: string; commentId: string; parentId?: string } | null>(null);
+  const [postDeleteTarget, setPostDeleteTarget] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -702,8 +713,14 @@ export default function FeedPage() {
     }
   }
 
-  async function deleteComment(postId: string, commentId: string, parentId?: string) {
-    if (!confirm("Delete this comment?")) return;
+  function deleteComment(postId: string, commentId: string, parentId?: string) {
+    setCommentDeleteTarget({ postId, commentId, parentId });
+  }
+
+  async function confirmDeleteComment() {
+    if (!commentDeleteTarget) return;
+    const { postId, commentId, parentId } = commentDeleteTarget;
+    setCommentDeleteTarget(null);
     const previousCache = commentsCache;
     const previousPosts = posts;
     if (parentId) {
@@ -810,8 +827,14 @@ export default function FeedPage() {
     }
   }
 
-  async function deletePost(postId: string) {
-    if (!confirm("Delete this post?")) return;
+  function deletePost(postId: string) {
+    setPostDeleteTarget(postId);
+  }
+
+  async function confirmDeletePost() {
+    if (!postDeleteTarget) return;
+    const postId = postDeleteTarget;
+    setPostDeleteTarget(null);
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     try {
       await apiFetch(`/api/feed/${postId}`, { method: "DELETE" });
@@ -2131,6 +2154,34 @@ export default function FeedPage() {
           {postToast}
         </div>
       )}
+
+      <AlertDialog open={commentDeleteTarget !== null} onOpenChange={(next) => { if (!next) setCommentDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction autoFocus variant="destructive" onClick={confirmDeleteComment}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={postDeleteTarget !== null} onOpenChange={(next) => { if (!next) setPostDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction autoFocus variant="destructive" onClick={confirmDeletePost}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

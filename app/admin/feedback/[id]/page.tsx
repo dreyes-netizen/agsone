@@ -5,6 +5,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
 
@@ -69,7 +70,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
       });
       setThread((prev) => prev ? { ...prev, status: status as FeedbackThread["status"] } : prev);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      toast.error(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setUpdatingStatus(false);
     }
@@ -88,7 +89,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
         : prev);
       setReplyBody("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to send reply");
+      toast.error(err instanceof Error ? err.message : "Failed to send reply");
     } finally {
       setSending(false);
     }

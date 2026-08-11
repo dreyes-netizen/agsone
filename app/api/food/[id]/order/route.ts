@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 
-const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().positive() });
+const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().min(0) });
 
 const orderSchema = z.object({
   quantity: z.number().int().min(1).max(99),

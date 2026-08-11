@@ -115,13 +115,13 @@ const txTypeLabel: Record<string, { label: string; color: string }> = {
   REDEMPTION:   { label: "Redemption", color: "text-rose-500" },
   GAME_WIN:     { label: "Game Win",   color: "text-emerald-500" },
   GAME_SPEND:   { label: "Game",       color: "text-orange-500" },
-  REFUND:       { label: "Refund",     color: "text-teal-600" },
+  REFUND:       { label: "Refund",     color: "text-gray-600" },
   MILESTONE:    { label: "Milestone",  color: "text-amber-600" },
   DEDUCTION:    { label: "Violation Deduction", color: "text-red-600" },
 };
 
 const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
-  PERFORMANCE: { label: "Performance", style: "bg-violet-50 text-violet-700" },
+  PERFORMANCE: { label: "Performance", style: "bg-navy-50 text-navy-700" },
   TEAMWORK:    { label: "Teamwork",    style: "bg-blue-50 text-blue-700" },
   INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
   LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
@@ -129,14 +129,14 @@ const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
 
 
 const BANNER_COLOR_OPTIONS = [
-  { key: "default",  gradient: "from-navy-500 to-violet-600" },
-  { key: "ocean",    gradient: "from-blue-500 to-cyan-500" },
-  { key: "forest",   gradient: "from-emerald-500 to-teal-600" },
+  { key: "default",  gradient: "from-navy-500 to-navy-700" },
+  { key: "ocean",    gradient: "from-blue-500 to-navy-600" },
+  { key: "forest",   gradient: "from-emerald-500 to-emerald-700" },
   { key: "sunset",   gradient: "from-orange-500 to-rose-500" },
   { key: "midnight", gradient: "from-slate-800 to-gray-700" },
-  { key: "lavender", gradient: "from-violet-500 to-purple-600" },
+  { key: "lavender", gradient: "from-gray-500 to-navy-700" },
   { key: "gold",     gradient: "from-amber-400 to-orange-500" },
-  { key: "rose",     gradient: "from-rose-400 to-pink-500" },
+  { key: "rose",     gradient: "from-rose-400 to-rose-600" },
 ] as const;
 
 const BANNER_GRADIENTS: Record<string, string> = Object.fromEntries(
@@ -216,13 +216,13 @@ function MinigamesStatsCard() {
     >
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Gamepad2 className="w-4 h-4" aria-hidden="true" /> Minigames</p>
-        <span className="text-xs text-indigo-600 font-medium">View stats →</span>
+        <span className="text-xs text-navy-600 font-medium">View stats →</span>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-sm"><span className="font-bold text-emerald-600">{s.wins}</span> <span className="text-gray-500">W</span></span>
         <span className="text-sm"><span className="font-bold text-rose-500">{s.losses}</span> <span className="text-gray-500">L</span></span>
         <span className="text-sm"><span className="font-bold text-gray-500">{s.draws}</span> <span className="text-gray-500">D</span></span>
-        <span className="text-sm"><span className="font-bold text-indigo-600">{s.winRate}%</span> <span className="text-gray-500">win rate</span></span>
+        <span className="text-sm"><span className="font-bold text-navy-600">{s.winRate}%</span> <span className="text-gray-500">win rate</span></span>
         {s.currentStreak > 0 && (
           <span className="text-xs font-semibold text-orange-600 bg-orange-50 rounded-full px-2 py-0.5 inline-flex items-center gap-1"><Flame className="w-3 h-3" aria-hidden="true" /> {s.currentStreak}-win streak</span>
         )}
@@ -450,7 +450,7 @@ export default function ProfilePage() {
                   </span>
                 )}
                 {profile.hireDate && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700">
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-50 text-navy-700">
                     {getTenure(profile.hireDate)}
                   </span>
                 )}
@@ -517,7 +517,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             {[
               { icon: Coins, value: profile.pointsBalance.toLocaleString(), label: "Points Balance", color: "text-navy-600",   bg: "bg-navy-50",   hint: null },
-              { icon: Star,  value: profile.level,                          label: "Level",          color: "text-violet-600", bg: "bg-violet-50", hint: null },
+              { icon: Star,  value: profile.level,                          label: "Level",          color: "text-navy-600",   bg: "bg-navy-50",   hint: null },
               { icon: Medal, value: profile.userBadges.length,              label: "Badges",         color: "text-amber-600",  bg: "bg-amber-50",  hint: null },
             ].map(({ icon: Icon, value, label, color, bg, hint }) => (
               <div key={label} className="bg-white rounded-card border border-table-border p-3 sm:p-4 flex flex-col gap-2">
@@ -567,8 +567,8 @@ export default function ProfilePage() {
           {/* Bio */}
           <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-sky-500" aria-hidden="true" />
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-amber-500" aria-hidden="true" />
               </div>
               <p className="text-sm font-semibold text-gray-800">About / Bio</p>
             </div>
@@ -730,7 +730,7 @@ export default function ProfilePage() {
                 </p>
               </div>
               <div className="text-right">
-                <span className="inline-block bg-violet-100 text-violet-700 text-xs font-bold px-3 py-1 rounded-full">
+                <span className="inline-block bg-navy-100 text-navy-700 text-xs font-bold px-3 py-1 rounded-full">
                   Level {pointsData.level}
                 </span>
                 <p className="text-xs text-gray-500 mt-2">
@@ -1049,8 +1049,8 @@ export default function ProfilePage() {
             <p className="px-4 py-3 text-xs font-semibold text-gray-700 border-b border-gray-100">Quick Actions</p>
             <div className="divide-y divide-gray-100">
               {[
-                { href: "/marketplace", icon: ShoppingBag, label: "Redeem Points",   color: "text-violet-500" },
-                { href: "/minigames",   icon: Gamepad2,    label: "Play a Minigame", color: "text-indigo-500" },
+                { href: "/marketplace", icon: ShoppingBag, label: "Redeem Points",   color: "text-orange-500" },
+                { href: "/minigames",   icon: Gamepad2,    label: "Play a Minigame", color: "text-navy-500" },
                 { href: "/feed",        icon: Megaphone,   label: "Send a Shoutout", color: "text-emerald-500" },
               ].map(({ href, icon: Icon, label, color }) => (
                 <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">

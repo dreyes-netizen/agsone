@@ -95,7 +95,7 @@ export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClos
         <div className="px-5 py-4 space-y-3.5">
           {info.rules.map((r, i) => (
             <div key={i} className="flex gap-3">
-              <span className="mt-0.5 w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0" aria-hidden="true">{i + 1}</span>
+              <span className="mt-0.5 w-5 h-5 rounded-full bg-navy-100 text-navy-700 text-[11px] font-bold flex items-center justify-center shrink-0" aria-hidden="true">{i + 1}</span>
               <div>
                 <p className="text-sm font-semibold text-gray-800">{r.heading}</p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{r.text}</p>

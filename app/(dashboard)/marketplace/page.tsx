@@ -4,10 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import React from "react";
 import {
   ShoppingBag, Coins,
-  Package, Ticket, Star, Monitor,
   ChevronLeft, ChevronRight,
   Clock, Receipt, AlertTriangle, Loader2,
 } from "lucide-react";
@@ -16,6 +14,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useConfetti } from "@/lib/hooks/useConfetti";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
+import { REWARD_CATEGORY_CONFIG } from "@/lib/constants/rewardCategories";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -41,13 +40,6 @@ type Redemption = {
   adminNote: string | null;
   createdAt: string;
   reward: { name: string; pointCost: number; category: string };
-};
-
-const categoryConfig: Record<string, { icon: React.ElementType; iconClass: string; label: string; accent: string; badge: string }> = {
-  PHYSICAL:  { icon: Package,  iconClass: "text-orange-600", label: "Physical",  accent: "from-orange-400 to-amber-400",  badge: "bg-orange-50 text-orange-700 border-orange-200" },
-  VOUCHER:   { icon: Ticket,   iconClass: "text-blue-600",   label: "Voucher",   accent: "from-blue-500 to-cyan-400",     badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  PRIVILEGE: { icon: Star,     iconClass: "text-indigo-600", label: "Privilege", accent: "from-indigo-500 to-blue-500",  badge: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  DIGITAL:   { icon: Monitor,  iconClass: "text-emerald-600",label: "Digital",   accent: "from-emerald-500 to-teal-400",  badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
 export default function MarketplacePage() {
@@ -191,7 +183,7 @@ export default function MarketplacePage() {
           {/* Category filters — wraps on all screen sizes, no overflow */}
           <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-2 mb-5">
             {categories.map((cat) => {
-              const config = categoryConfig[cat];
+              const config = REWARD_CATEGORY_CONFIG[cat as keyof typeof REWARD_CATEGORY_CONFIG];
               const active = filter === cat;
               const count = cat === "ALL" ? rewards.length : (categoryCounts[cat] ?? 0);
               // Keep empty categories visible but disabled so the UI stays stable
@@ -239,7 +231,7 @@ export default function MarketplacePage() {
             // Mobile: single-column horizontal list  |  sm+: grid
             <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
               {sorted.map((reward) => {
-                const cfg = categoryConfig[reward.category] ?? categoryConfig.PHYSICAL;
+                const cfg = REWARD_CATEGORY_CONFIG[reward.category as keyof typeof REWARD_CATEGORY_CONFIG] ?? REWARD_CATEGORY_CONFIG.PHYSICAL;
                 const canAfford = balance >= reward.pointCost;
                 const outOfStock = reward.stockQuantity === 0;
                 const lowStock = !outOfStock && reward.stockQuantity > 0 && reward.stockQuantity <= LOW_STOCK_THRESHOLD;
@@ -433,7 +425,7 @@ export default function MarketplacePage() {
           ) : (
             <ul role="list" className="space-y-3">
               {redemptions.map((r) => {
-                const cfg = categoryConfig[r.reward.category] ?? categoryConfig.PHYSICAL;
+                const cfg = REWARD_CATEGORY_CONFIG[r.reward.category as keyof typeof REWARD_CATEGORY_CONFIG] ?? REWARD_CATEGORY_CONFIG.PHYSICAL;
                 return (
                   <li key={r.id} className="bg-white rounded-card border border-table-border p-4 flex items-center gap-4">
                     <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} aria-hidden="true" />
@@ -474,7 +466,7 @@ export default function MarketplacePage() {
 
       {/* ── Product detail modal ── */}
       {selectedReward && (() => {
-        const cfg = categoryConfig[selectedReward.category] ?? categoryConfig.PHYSICAL;
+        const cfg = REWARD_CATEGORY_CONFIG[selectedReward.category as keyof typeof REWARD_CATEGORY_CONFIG] ?? REWARD_CATEGORY_CONFIG.PHYSICAL;
         const canAfford = balance >= selectedReward.pointCost;
         const outOfStock = selectedReward.stockQuantity === 0;
         const lowStock = !outOfStock && selectedReward.stockQuantity > 0 && selectedReward.stockQuantity <= LOW_STOCK_THRESHOLD;

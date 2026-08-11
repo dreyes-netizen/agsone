@@ -709,7 +709,7 @@ export default function FoodPage() {
                     // Mobile: thin left strip | Desktop: square gradient placeholder
                     <>
                       <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:hidden ${closed ? "bg-gray-300" : "bg-emerald-500"}`} />
-                      <div className={`hidden sm:flex sm:w-full sm:aspect-square sm:items-center sm:justify-center sm:bg-gradient-to-br ${closed ? "from-zinc-200 to-zinc-300" : "from-emerald-400 to-teal-500"}`}>
+                      <div className={`hidden sm:flex sm:w-full sm:aspect-square sm:items-center sm:justify-center sm:bg-gradient-to-br ${closed ? "from-zinc-200 to-zinc-300" : "from-emerald-400 to-emerald-600"}`}>
                         <UtensilsCrossed className="w-12 h-12 text-white/70" aria-hidden="true" />
                       </div>
                     </>
@@ -764,7 +764,7 @@ export default function FoodPage() {
 
                     {/* Delivery — desktop only */}
                     {listing.deliveryDate && (
-                      <div className="hidden sm:flex items-center gap-1 text-xs text-sky-600 font-medium">
+                      <div className="hidden sm:flex items-center gap-1 text-xs text-navy-600 font-medium">
                         <Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                         <span>Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                       </div>
@@ -1157,7 +1157,7 @@ export default function FoodPage() {
 
                   {/* Delivery date */}
                   {selectedListing.deliveryDate && (
-                    <p className="flex items-center gap-1 text-xs text-sky-600 font-medium"><Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+                    <p className="flex items-center gap-1 text-xs text-navy-600 font-medium"><Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> Delivery: {new Date(selectedListing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
                   )}
 
                   {/* Action area */}

@@ -44,7 +44,7 @@ function Avatar({ name, url, size = "md" }: { name: string; url: string | null; 
   const cls = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
   if (url && !errored) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
   return (
-    <div className={`${cls} rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0`}>
+    <div className={`${cls} rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold shrink-0`}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -108,7 +108,7 @@ export default function MinigamesStatsPage() {
             <p className="text-xs text-gray-500 mt-0.5">Draws</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-indigo-600">{stats?.winRate ?? 0}%</p>
+            <p className="text-2xl font-bold text-navy-600">{stats?.winRate ?? 0}%</p>
             <p className="text-xs text-gray-500 mt-0.5">Win rate</p>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function MinigamesStatsPage() {
         ) : (
           <ul className="divide-y divide-gray-100">
             {board.map(e => (
-              <li key={e.userId} aria-label={`Rank ${e.rank}: ${e.displayName}, ${e.wins} wins, ${e.winRate}% win rate`} className={`flex items-center gap-3 px-5 py-3 ${e.isCurrentUser ? "bg-indigo-50 border-l-2 border-indigo-500" : "border-l-2 border-transparent"}`}>
+              <li key={e.userId} aria-label={`Rank ${e.rank}: ${e.displayName}, ${e.wins} wins, ${e.winRate}% win rate`} className={`flex items-center gap-3 px-5 py-3 ${e.isCurrentUser ? "bg-navy-50 border-l-2 border-navy-500" : "border-l-2 border-transparent"}`}>
                 <span className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-gray-500"}`}>
                   {e.rank <= 3 ? <Medal className={`w-4 h-4 inline ${rankColors[e.rank]}`} /> : `#${e.rank}`}
                 </span>
@@ -165,7 +165,7 @@ export default function MinigamesStatsPage() {
                   <p className="font-medium text-sm text-gray-900 truncate">{e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}</p>
                   <p className="text-xs text-gray-500">{e.wins}W · {e.losses}L{e.draws > 0 ? ` · ${e.draws}D` : ""}</p>
                 </div>
-                <span className="font-bold text-indigo-600 text-sm tabular-nums">{e.winRate}%</span>
+                <span className="font-bold text-navy-600 text-sm tabular-nums">{e.winRate}%</span>
               </li>
             ))}
           </ul>

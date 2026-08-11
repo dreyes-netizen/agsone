@@ -27,7 +27,7 @@ type Transaction = {
 type Budget = { isExempt: boolean; used: number; remaining: number; total: number };
 
 const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
-  PERFORMANCE: { label: "Performance", style: "bg-violet-50 text-violet-700" },
+  PERFORMANCE: { label: "Performance", style: "bg-navy-50 text-navy-700" },
   TEAMWORK:    { label: "Teamwork",    style: "bg-blue-50 text-blue-700" },
   INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
   LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },

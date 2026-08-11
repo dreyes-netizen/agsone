@@ -69,7 +69,7 @@ function Avatar({ player, size = 40 }: { player: Player | Employee; size?: numbe
   return player.avatarUrl && !errored ? (
     <img src={player.avatarUrl} alt={player.displayName} style={{ width: s, height: s }} className="rounded-full object-cover shrink-0" onError={() => setErrored(true)} />
   ) : (
-    <div style={{ width: s, height: s }} className="rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0" >
+    <div style={{ width: s, height: s }} className="rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold shrink-0" >
       {player.displayName[0]}
     </div>
   );
@@ -183,7 +183,7 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
     <div ref={ref} className="relative">
       <button
         onClick={openDropdown}
-        className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-600 hover:text-indigo-800 text-sm font-semibold rounded-xl transition-all"
+        className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-navy-300 hover:border-navy-500 hover:bg-navy-50 text-navy-600 hover:text-navy-800 text-sm font-semibold rounded-xl transition-all"
       >
         <UserPlus className="w-4 h-4" aria-hidden="true" /> Invite coworker
       </button>
@@ -198,7 +198,7 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
               aria-label="Search employees to invite"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-400 transition"
+              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:border-navy-400 transition"
             />
           </div>
           <div className="max-h-52 overflow-y-auto">
@@ -214,11 +214,11 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
                     key={emp.id}
                     onClick={() => !done && sendInvite(emp)}
                     disabled={done || inviting === emp.id}
-                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${done ? "opacity-60 cursor-default" : "hover:bg-indigo-50"}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${done ? "opacity-60 cursor-default" : "hover:bg-navy-50"}`}
                   >
                     <Avatar player={emp} size={28} />
                     <span className="flex-1 text-sm text-gray-800 truncate">{emp.displayName}</span>
-                    <span className={`text-xs font-semibold shrink-0 ${done ? "text-emerald-600" : "text-indigo-600"}`}>
+                    <span className={`text-xs font-semibold shrink-0 ${done ? "text-emerald-600" : "text-navy-600"}`}>
                       {done ? "Sent ✓" : inviting === emp.id ? "…" : "Invite"}
                     </span>
                   </button>
@@ -271,15 +271,15 @@ function TTTBoard({ session, onMove }: { session: Session; onMove: (data: unknow
               disabled={!isMyTurn || !!cell}
               aria-label={`Row ${Math.floor(i / 3) + 1}, Column ${(i % 3) + 1}${cell ? ` — ${cell}` : " — empty"}`}
               aria-pressed={!!cell}
-              className={`aspect-square rounded-2xl text-5xl font-bold border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                inWin ? "border-indigo-500 bg-indigo-50 scale-105" :
-                isLast ? "border-indigo-300 bg-indigo-50/40 ring-2 ring-indigo-200" :
+              className={`aspect-square rounded-2xl text-5xl font-bold border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 ${
+                inWin ? "border-navy-500 bg-navy-50 scale-105" :
+                isLast ? "border-navy-300 bg-navy-50/40 ring-2 ring-navy-200" :
                 cell ? "border-gray-200 bg-gray-50" :
-                isMyTurn ? "border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50 active:scale-95 cursor-pointer" :
+                isMyTurn ? "border-gray-200 hover:border-navy-400 hover:bg-navy-50/50 active:scale-95 cursor-pointer" :
                 "border-gray-100 bg-gray-50/50 cursor-default"
               }`}
             >
-              {cell === "X" && <span className="text-indigo-600" aria-hidden="true">X</span>}
+              {cell === "X" && <span className="text-navy-600" aria-hidden="true">X</span>}
               {cell === "O" && <span className="text-rose-500" aria-hidden="true">O</span>}
             </button>
           );
@@ -341,7 +341,7 @@ function C4Board({ session, onMove }: { session: Session; onMove: (data: unknown
   return (
     <div className="flex flex-col items-center py-2 gap-2">
       <style>{`@keyframes c4drop{0%{transform:translateY(-230px);opacity:.5}70%{transform:translateY(0)}85%{transform:translateY(-7px)}100%{transform:translateY(0);opacity:1}}.c4-drop{animation:c4drop .35s ease-out}`}</style>
-      <div className="bg-indigo-700 p-2 sm:p-2.5 rounded-2xl shadow-md w-full">
+      <div className="bg-navy-700 p-2 sm:p-2.5 rounded-2xl shadow-md w-full">
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-1">
           {Array.from({ length: 7 }, (_, col) => (
             <button
@@ -471,7 +471,7 @@ function RPSBoard({ session, onMove }: { session: Session; onMove: (data: unknow
             <button
               key={c.key}
               onClick={() => onMove({ choice: c.key })}
-              className="flex flex-col items-center gap-2 py-6 rounded-2xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50 active:scale-95 transition-all"
+              className="flex flex-col items-center gap-2 py-6 rounded-2xl border-2 border-gray-200 hover:border-navy-400 hover:bg-navy-50/50 active:scale-95 transition-all"
             >
               <span className="text-4xl">{c.emoji}</span>
               <span className="text-xs font-semibold text-gray-600">{c.label}</span>
@@ -538,7 +538,7 @@ function DnBBoard({ session, onMove }: { session: Session; onMove: (data: unknow
           disabled={drawn || !isMyTurn}
           className={`h-3 w-full rounded-full transition-all ${
             drawn ? color :
-            isMyTurn ? "bg-gray-200 hover:bg-indigo-400 active:bg-indigo-600 cursor-pointer" :
+            isMyTurn ? "bg-gray-200 hover:bg-navy-400 active:bg-navy-600 cursor-pointer" :
             "bg-gray-150 cursor-default"
           }`}
         />
@@ -555,7 +555,7 @@ function DnBBoard({ session, onMove }: { session: Session; onMove: (data: unknow
           disabled={drawn || !isMyTurn}
           className={`w-3 h-full rounded-full transition-all ${
             drawn ? "bg-gray-400" :
-            isMyTurn ? "bg-gray-200 hover:bg-indigo-400 active:bg-indigo-600 cursor-pointer" :
+            isMyTurn ? "bg-gray-200 hover:bg-navy-400 active:bg-navy-600 cursor-pointer" :
             "bg-gray-150 cursor-default"
           }`}
         />
@@ -625,8 +625,8 @@ const BS_SHIPS_INFO = [
   { id: "destroyer",  size: 2, label: "Destroyer" },
 ];
 const SHIP_COLORS: Record<string, string> = {
-  battleship: "bg-indigo-600 border-indigo-500",
-  cruiser:    "bg-purple-600 border-purple-500",
+  battleship: "bg-navy-600 border-navy-500",
+  cruiser:    "bg-amber-600 border-amber-500",
   destroyer:  "bg-rose-500 border-rose-400",
 };
 
@@ -749,7 +749,7 @@ function BSBoard({ session, onMove }: { session: Session; onMove: (data: unknown
         </div>
         <div className="flex items-center justify-center gap-4 text-xs">
           {BS_SHIPS_INFO.map((s, idx) => (
-            <div key={s.id} className={`font-semibold ${["text-indigo-600","text-purple-600","text-rose-500"][idx]}`}>
+            <div key={s.id} className={`font-semibold ${["text-navy-600","text-amber-600","text-rose-500"][idx]}`}>
               {s.label} ({s.size})
             </div>
           ))}
@@ -864,7 +864,7 @@ function MemoryBoard({ session, onMove }: { session: Session; onMove: (data: unk
             const frontFace =
               isMatched ? "bg-emerald-100 border-emerald-300" :
               isRevealed ? "bg-red-50 border-red-200" :
-              "bg-indigo-50 border-indigo-300";
+              "bg-navy-50 border-navy-300";
 
             return (
               <button
@@ -920,7 +920,7 @@ function MemoryBoard({ session, onMove }: { session: Session; onMove: (data: unk
 
       {/* Extra-turn hint */}
       {isMyTurn && state.flipped !== null && state.revealed === null && (
-        <p className="text-xs text-center text-indigo-500 font-medium">Now pick a second card!</p>
+        <p className="text-xs text-center text-navy-500 font-medium">Now pick a second card!</p>
       )}
     </div>
   );
@@ -956,7 +956,7 @@ function MobileBar({
 
   const statusColor = session.status === "FINISHED"
     ? (session.winnerId === myId ? "text-emerald-700 bg-emerald-100" : session.winnerId ? "text-red-600 bg-red-100" : "text-yellow-700 bg-yellow-100")
-    : isMyTurn ? "text-indigo-700 bg-indigo-100" : "text-gray-600 bg-gray-100";
+    : isMyTurn ? "text-navy-700 bg-navy-100" : "text-gray-600 bg-gray-100";
   const statusLabel = session.status === "WAITING" ? "Waiting…"
     : session.status === "FINISHED"
       ? (!session.winnerId ? "Draw!" : session.winnerId === myId ? "You won! 🎉" : "You lost")
@@ -985,20 +985,20 @@ function MobileBar({
       {/* Players + status in one compact row */}
       <div className="bg-white border border-table-border rounded-card px-3 py-2 flex items-center gap-2">
         {/* Me */}
-        <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && isMyTurn ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}>
+        <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && isMyTurn ? "ring-2 ring-navy-500 ring-offset-1" : ""}`}>
           <Avatar player={me ?? session.host} size={28} />
         </div>
         <div className="flex flex-col min-w-0" style={{ maxWidth: 80 }}>
           <span className="text-sm font-semibold text-gray-900 truncate">{me?.displayName ?? "You"}</span>
           {session.status === "ACTIVE" && isMyTurn && (
-            <span className="text-[9px] text-indigo-600 font-bold leading-tight">● Your turn</span>
+            <span className="text-[9px] text-navy-600 font-bold leading-tight">● Your turn</span>
           )}
         </div>
 
         <span className="text-[10px] text-gray-500 shrink-0">vs</span>
 
         {/* Opponent */}
-        <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && !isMyTurn && opponent ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}>
+        <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && !isMyTurn && opponent ? "ring-2 ring-navy-500 ring-offset-1" : ""}`}>
           {opponent
             ? <Avatar player={opponent} size={28} />
             : <div className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300" />}
@@ -1006,7 +1006,7 @@ function MobileBar({
         <div className="flex flex-col flex-1 min-w-0" style={{ maxWidth: 80 }}>
           <span className="text-sm font-semibold text-gray-900 truncate">{opponent?.displayName ?? "Waiting…"}</span>
           {session.status === "ACTIVE" && !isMyTurn && opponent && (
-            <span className="text-[9px] text-indigo-600 font-bold leading-tight">● Their turn</span>
+            <span className="text-[9px] text-navy-600 font-bold leading-tight">● Their turn</span>
           )}
         </div>
 
@@ -1136,7 +1136,7 @@ function RightPanel({
 
   const statusColor = session.status === "FINISHED"
     ? (session.winnerId === myId ? "text-emerald-700 bg-emerald-100" : session.winnerId ? "text-red-600 bg-red-100" : "text-yellow-700 bg-yellow-100")
-    : isMyTurn ? "text-indigo-700 bg-indigo-100" : "text-gray-600 bg-gray-100";
+    : isMyTurn ? "text-navy-700 bg-navy-100" : "text-gray-600 bg-gray-100";
 
   const statusLabel = session.status === "WAITING" ? "Waiting for opponent…"
     : session.status === "FINISHED"
@@ -1149,20 +1149,20 @@ function RightPanel({
       <div className="bg-white border border-table-border rounded-card overflow-hidden">
         {/* Me */}
         <div className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 transition-opacity ${session.status === "ACTIVE" && !isMyTurn ? "opacity-50" : ""}`}>
-          <div className={session.status === "ACTIVE" && isMyTurn ? "rounded-full ring-4 ring-indigo-100" : "rounded-full"}>
+          <div className={session.status === "ACTIVE" && isMyTurn ? "rounded-full ring-4 ring-navy-100" : "rounded-full"}>
             {me ? <Avatar player={me} /> : <div className="w-10 h-10 rounded-full bg-gray-100" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 truncate">{me?.displayName ?? "You"}</p>
             {session.status === "ACTIVE" && isMyTurn ? (
-              <p className="text-xs text-indigo-600 font-semibold">▶ Your turn</p>
+              <p className="text-xs text-navy-600 font-semibold">▶ Your turn</p>
             ) : session.status === "ACTIVE" ? (
               <p className="text-xs text-gray-500">Waiting <WaitingDots /></p>
             ) : (
               <p className="text-xs text-gray-500">{session.myRole === "host" ? "Host · X / ●1" : "Guest · O / ●2"}</p>
             )}
           </div>
-          <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">You</span>
+          <span className="text-xs text-navy-600 font-semibold bg-navy-50 px-2 py-0.5 rounded-full shrink-0">You</span>
         </div>
 
         {/* Vs divider */}
@@ -1175,7 +1175,7 @@ function RightPanel({
         {/* Opponent */}
         <div className={`flex items-center gap-3 px-4 py-3 transition-opacity ${session.status === "ACTIVE" && isMyTurn ? "opacity-50" : ""}`}>
           {opponent ? (
-            <div className={session.status === "ACTIVE" && !isMyTurn ? "rounded-full ring-4 ring-indigo-100" : "rounded-full"}>
+            <div className={session.status === "ACTIVE" && !isMyTurn ? "rounded-full ring-4 ring-navy-100" : "rounded-full"}>
               <Avatar player={opponent} />
             </div>
           ) : (
@@ -1184,7 +1184,7 @@ function RightPanel({
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 truncate">{opponent?.displayName ?? "Waiting…"}</p>
             {session.status === "ACTIVE" && !isMyTurn ? (
-              <p className="text-xs text-indigo-600 font-semibold">▶ Their turn</p>
+              <p className="text-xs text-navy-600 font-semibold">▶ Their turn</p>
             ) : session.status === "ACTIVE" ? (
               <p className="text-xs text-gray-500">Waiting <WaitingDots /></p>
             ) : (
@@ -1408,7 +1408,7 @@ export default function MinigameSessionPage() {
   if (!session) return (
     <div className="max-w-3xl mx-auto text-center py-20">
       <p className="text-gray-500">Game not found.</p>
-      <button onClick={() => router.push("/minigames")} className="mt-4 text-indigo-600 text-sm">← Back to lobby</button>
+      <button onClick={() => router.push("/minigames")} className="mt-4 text-navy-600 text-sm">← Back to lobby</button>
     </div>
   );
 
@@ -1448,7 +1448,7 @@ export default function MinigameSessionPage() {
         <button
           onClick={() => setShowHelp(true)}
           aria-label="How to play"
-          className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500"
+          className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:text-navy-600 hover:border-navy-300 hover:bg-navy-50 transition-colors text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-500"
         >
           <span aria-hidden="true">?</span>
         </button>

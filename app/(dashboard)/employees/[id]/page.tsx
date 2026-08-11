@@ -60,11 +60,11 @@ const typeConfig: Record<string, { label: string; color: string; bg: string }> =
   MANUAL_AWARD: { label: "Points Awarded",   color: "text-emerald-600", bg: "bg-emerald-50" },
   REDEMPTION:   { label: "Redeemed",         color: "text-rose-500",    bg: "bg-rose-50" },
   REFUND:       { label: "Refund",           color: "text-emerald-600", bg: "bg-emerald-50" },
-  GAME_WIN:     { label: "Game Win",         color: "text-violet-600",  bg: "bg-violet-50" },
+  GAME_WIN:     { label: "Game Win",         color: "text-amber-500",   bg: "bg-amber-50" },
   GAME_SPEND:   { label: "Game Entry",       color: "text-orange-500",  bg: "bg-orange-50" },
   CONTEST:      { label: "Contest",          color: "text-navy-600",    bg: "bg-navy-50" },
   KPI:          { label: "KPI Bonus",        color: "text-emerald-600", bg: "bg-emerald-50" },
-  MILESTONE:    { label: "Milestone Reward", color: "text-violet-600",  bg: "bg-violet-50" },
+  MILESTONE:    { label: "Milestone Reward", color: "text-amber-700",   bg: "bg-amber-100" },
 };
 
 function getTenure(hireDate: string | null): string | null {
@@ -306,8 +306,8 @@ export default function EmployeeProfilePage() {
           <dt className="text-xs text-gray-500 mt-0.5">Points</dt>
         </div>
         <div className="bg-white rounded-card border border-table-border p-4 text-center">
-          <Star className="w-4 h-4 text-violet-400 mx-auto mb-1" aria-hidden="true" />
-          <dd className="text-2xl font-black text-violet-600">{employee.level}</dd>
+          <Star className="w-4 h-4 text-navy-400 mx-auto mb-1" aria-hidden="true" />
+          <dd className="text-2xl font-black text-navy-600">{employee.level}</dd>
           <dt className="text-xs text-gray-500 mt-0.5">Level</dt>
         </div>
         <div className="bg-white rounded-card border border-table-border p-4 text-center">

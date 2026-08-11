@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { applyTTTMove, checkTTTResult } from "@/lib/minigames/tictactoe";
 import { applyC4Move, checkC4Result } from "@/lib/minigames/connectfour";
 import { applyRPSChoice, checkRPSResult, maskRPSState } from "@/lib/minigames/rps";
@@ -27,7 +28,7 @@ export async function POST(
   const { id } = await params;
   const body = await req.json();
 
-  const session = await prisma.gameSession.findUnique({ where: { id } });
+  let session = await prisma.gameSession.findUnique({ where: { id } });
   if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (session.status !== "ACTIVE") return NextResponse.json({ error: "Game not active" }, { status: 409 });
 
@@ -35,13 +36,46 @@ export async function POST(
   const isGuest = session.guestId === authUser.id;
   if (!isHost && !isGuest) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const state = session.state as Record<string, unknown>;
-  let newState: Record<string, unknown>;
+  const selectFields = {
+    id: true,
+    gameType: true,
+    status: true,
+    state: true,
+    currentTurn: true,
+    winnerId: true,
+    pointsWager: true,
+    createdAt: true,
+    updatedAt: true,
+    host: { select: { id: true, displayName: true, avatarUrl: true } },
+    guest: { select: { id: true, displayName: true, avatarUrl: true } },
+  } as const;
+
+  // Simultaneous-input phases (RPS picks, Battleship placement) mean two
+  // requests can both read the same pre-move state before either write lands.
+  // The non-finishing write below is gated on the exact `updatedAt` we read,
+  // so a racing write that lands first makes ours a no-op (count === 0)
+  // instead of clobbering it — we then re-fetch the now-current state,
+  // recompute the move against it, and retry. applyRPSChoice/applyBSMove
+  // only ever touch the acting player's own field and throw if that
+  // player already acted, so replaying the computation against a fresher
+  // read is always safe.
+  const MAX_MOVE_RETRIES = 5;
+  let newState: Record<string, unknown> = {};
   let nextTurn: string | null = session.currentTurn;
   let gameResult: unknown = null;
+  let isFinished = false;
+  let winnerId: string | null = null;
+  let isDraw = false;
+  let didFinish = false;
+  let updated: Prisma.GameSessionGetPayload<{ select: typeof selectFields }> | null = null;
 
-  try {
-    switch (session.gameType) {
+  for (let attempt = 0; ; attempt++) {
+    const state = session.state as Record<string, unknown>;
+    nextTurn = session.currentTurn;
+    gameResult = null;
+
+    try {
+      switch (session.gameType) {
       case "TIC_TAC_TOE": {
         if (session.currentTurn !== authUser.id) return NextResponse.json({ error: "Not your turn" }, { status: 400 });
         const { cellIndex } = body;
@@ -106,58 +140,64 @@ export async function POST(
       }
       default:
         return NextResponse.json({ error: "Unknown game type" }, { status: 400 });
+      }
+    } catch (err: unknown) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
-  } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-  }
 
-  const isFinished = gameResult !== null;
-  const rawWinnerId = isFinished ? resolveWinnerId(gameResult, { hostId: session.hostId, guestId: session.guestId }) : null;
-  const winnerId = rawWinnerId === "draw" ? null : rawWinnerId;
-  const isDraw = rawWinnerId === "draw";
+    isFinished = gameResult !== null;
+    const rawWinnerId = isFinished ? resolveWinnerId(gameResult, { hostId: session.hostId, guestId: session.guestId }) : null;
+    winnerId = rawWinnerId === "draw" ? null : rawWinnerId;
+    isDraw = rawWinnerId === "draw";
 
-  const selectFields = {
-    id: true,
-    gameType: true,
-    status: true,
-    state: true,
-    currentTurn: true,
-    winnerId: true,
-    pointsWager: true,
-    createdAt: true,
-    updatedAt: true,
-    host: { select: { id: true, displayName: true, avatarUrl: true } },
-    guest: { select: { id: true, displayName: true, avatarUrl: true } },
-  } as const;
+    if (isFinished) {
+      // `didFinish` is true only for the request that actually performs the
+      // ACTIVE -> FINISHED transition. Guarding the wager payout on it (rather than
+      // the locally-computed isFinished) makes the finish atomic and idempotent, so
+      // two racing finishing-moves — or a move racing a forfeit — can't pay the pot
+      // out twice. updateMany returns a count; only count === 1 performed the flip.
+      const res = await prisma.gameSession.updateMany({
+        where: { id, status: "ACTIVE" },
+        data: {
+          state: JSON.parse(JSON.stringify(newState)),
+          currentTurn: null,
+          status: "FINISHED",
+          winnerId: winnerId ?? undefined,
+        },
+      });
+      didFinish = res.count === 1;
+      updated = await prisma.gameSession.findUnique({ where: { id }, select: selectFields });
+      break;
+    }
 
-  // `didFinish` is true only for the request that actually performs the
-  // ACTIVE -> FINISHED transition. Guarding the wager payout on it (rather than
-  // the locally-computed isFinished) makes the finish atomic and idempotent, so
-  // two racing finishing-moves — or a move racing a forfeit — can't pay the pot
-  // out twice. updateMany returns a count; only count === 1 performed the flip.
-  let didFinish = false;
-  let updated;
-  if (isFinished) {
+    // Gate the write on the exact row version we read (`updatedAt`, bumped
+    // by Prisma's `@updatedAt` on every write, including the racing request's
+    // write). If a concurrent simultaneous-input move (e.g. the other
+    // player's RPS pick or Battleship placement) landed first, this matches
+    // 0 rows instead of blindly overwriting it — count === 1 means our write
+    // was the one applied on top of the exact state we read.
     const res = await prisma.gameSession.updateMany({
-      where: { id, status: "ACTIVE" },
-      data: {
-        state: JSON.parse(JSON.stringify(newState)),
-        currentTurn: null,
-        status: "FINISHED",
-        winnerId: winnerId ?? undefined,
-      },
-    });
-    didFinish = res.count === 1;
-    updated = await prisma.gameSession.findUnique({ where: { id }, select: selectFields });
-  } else {
-    updated = await prisma.gameSession.update({
-      where: { id },
+      where: { id, updatedAt: session.updatedAt },
       data: {
         state: JSON.parse(JSON.stringify(newState)),
         currentTurn: nextTurn,
       },
-      select: selectFields,
     });
+    if (res.count === 1) {
+      updated = await prisma.gameSession.findUnique({ where: { id }, select: selectFields });
+      break;
+    }
+
+    // Lost the race: someone else's write landed between our read and our
+    // write. Re-fetch the now-current row and recompute the move against it
+    // on the next iteration instead of retrying with the stale `newState`.
+    if (attempt >= MAX_MOVE_RETRIES - 1) {
+      return NextResponse.json({ error: "Move conflicted with a concurrent update — please retry" }, { status: 409 });
+    }
+    const fresh = await prisma.gameSession.findUnique({ where: { id } });
+    if (!fresh) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (fresh.status !== "ACTIVE") return NextResponse.json({ error: "Game not active" }, { status: 409 });
+    session = fresh;
   }
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase/client";
-import { Trophy, Gamepad2, Gift, Target, Loader2 } from "lucide-react";
+import { Trophy, Gamepad2, Gift, Heart, Loader2 } from "lucide-react";
 
 const FEATURES = [
   {
@@ -16,11 +16,11 @@ const FEATURES = [
     desc: "Compete with colleagues and climb the weekly rankings.",
   },
   {
-    icon: Target,
-    color: "bg-emerald-500/20",
-    iconColor: "text-emerald-400",
-    label: "Missions & Streaks",
-    desc: "Complete daily challenges to earn bonus points.",
+    icon: Heart,
+    color: "bg-rose-500/20",
+    iconColor: "text-rose-400",
+    label: "Shoutouts",
+    desc: "Give peer recognition and celebrate your colleagues' achievements.",
   },
   {
     icon: Gamepad2,

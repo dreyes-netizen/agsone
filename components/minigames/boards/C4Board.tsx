@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { Session } from "../types";
 
 // Find the four winning cells in a Connect Four board (board[col][row]).
@@ -33,17 +33,16 @@ export function C4Board({ session, onMove }: { session: Session; onMove: (data: 
   const [hoverCol, setHoverCol] = useState<number | null>(null);
 
   // Track the most recently dropped disc for the drop animation.
-  const prevRef = useRef<(number | null)[][]>(board);
+  const [prevBoard, setPrevBoard] = useState(board);
   const [lastMove, setLastMove] = useState<string | null>(null);
-  useEffect(() => {
-    const prev = prevRef.current;
+  if (board !== prevBoard) {
     let changed: string | null = null;
     for (let c = 0; c < 7; c++) for (let r = 0; r < 6; r++) {
-      if (board[c][r] && !(prev[c] && prev[c][r])) changed = `${c}-${r}`;
+      if (board[c][r] && !(prevBoard[c] && prevBoard[c][r])) changed = `${c}-${r}`;
     }
     if (changed) setLastMove(changed);
-    prevRef.current = board;
-  }, [board]);
+    setPrevBoard(board);
+  }
 
   const winCells = findC4Win(board);
   // Landing row (lowest empty) for the hovered column, for the ghost preview.

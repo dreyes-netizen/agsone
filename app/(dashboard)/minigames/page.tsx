@@ -10,6 +10,7 @@ import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { BarChart2, Gamepad2, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { GAME_TYPES, GAME_TYPE_LABELS, type GameTypeKey } from "@/lib/constants/gameTypes";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -17,16 +18,6 @@ const HowToPlayModal = dynamic(
   () => import("@/components/minigames/HowToPlayModal").then((m) => m.HowToPlayModal),
   { ssr: false },
 );
-
-const GAME_TYPES = [
-  { key: "RPS",             label: "✌️ Rock Paper Scissors", short: "✌️ RPS",    desc: "3 rounds · Simultaneous picks · Quick & fun" },
-  { key: "TIC_TAC_TOE",    label: "⭕ Tic-Tac-Toe",          short: "⭕ TTT",    desc: "3×3 grid · Get 3 in a row to win" },
-  { key: "CONNECT_FOUR",   label: "🔴 Connect Four",          short: "🔴 C4",     desc: "7×6 grid · First to 4-in-a-row wins" },
-  { key: "DOTS_AND_BOXES", label: "🟦 Dots & Boxes",          short: "🟦 D&B",    desc: "4×4 grid · Claim the most boxes" },
-  { key: "BATTLESHIP",     label: "🚢 Battleship",            short: "🚢 BS",     desc: "8×8 grid · Sink all enemy ships to win" },
-  { key: "MEMORY",         label: "🧠 Memory",                short: "🧠 Mem",    desc: "4×4 grid · Match all emoji pairs to win" },
-] as const;
-type GameTypeKey = typeof GAME_TYPES[number]["key"];
 
 const WAGER_OPTIONS = [0, 10, 25, 50];
 
@@ -41,11 +32,7 @@ type Session = {
   createdAt: string;
 };
 
-const GAME_LABEL: Record<string, string> = {
-  TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",
-  RPS: "Rock Paper Scissors", DOTS_AND_BOXES: "Dots & Boxes",
-  BATTLESHIP: "Battleship", MEMORY: "Memory",
-};
+const GAME_LABEL = GAME_TYPE_LABELS;
 
 export default function MinigamesPage() {
   const router = useRouter();
@@ -216,7 +203,7 @@ export default function MinigamesPage() {
                   aria-selected={activeTab === g.key}
                   aria-controls={`panel-${g.key}`}
                   tabIndex={activeTab === g.key ? 0 : -1}
-                  aria-label={g.label.replace(/^[^\w]*/, "").trim()}
+                  aria-label={g.label}
                   onClick={() => setActiveTab(g.key)}
                   className={`flex-1 min-w-[52px] sm:min-w-[80px] px-1 sm:px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-navy-600 ${
                     activeTab === g.key
@@ -224,8 +211,8 @@ export default function MinigamesPage() {
                       : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
                   }`}
                 >
-                  <span className="hidden sm:inline">{g.label}</span>
-                  <span className="sm:hidden">{g.short}</span>
+                  <span className="hidden sm:inline-flex items-center gap-1"><g.icon className="w-3.5 h-3.5" aria-hidden="true" />{g.label}</span>
+                  <span className="sm:hidden inline-flex items-center gap-1"><g.icon className="w-3.5 h-3.5" aria-hidden="true" />{g.short}</span>
                 </button>
               ))}
             </div>
@@ -239,7 +226,7 @@ export default function MinigamesPage() {
                     className="flex items-center gap-3 px-4 py-3 rounded-lg bg-navy-50 border border-navy-100"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-navy-900">{g.label}</p>
+                      <p className="text-sm font-semibold text-navy-900 flex items-center gap-1.5"><g.icon className="w-4 h-4" aria-hidden="true" />{g.label}</p>
                       <p className="text-xs text-navy-600 mt-0.5">{g.desc}</p>
                     </div>
                     <button

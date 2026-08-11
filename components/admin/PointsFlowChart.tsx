@@ -3,8 +3,14 @@
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { Inbox } from "lucide-react";
 
 type ChartPoint = { date: string; Awarded: number; Redeemed: number };
+
+// Below this many non-zero days, a 30-day line chart reads as "broken" rather
+// than "quiet" — an empty state communicates the actual state better than a
+// near-blank grid with a couple of stray points.
+const MIN_ACTIVE_DAYS_FOR_CHART = 5;
 
 /**
  * Extracted from app/admin/page.tsx so `recharts` (the largest chunk in the
@@ -12,6 +18,9 @@ type ChartPoint = { date: string; Awarded: number; Redeemed: number };
  * to the admin overview, for a card that renders below the fold.
  */
 export function PointsFlowChart({ data }: { data: ChartPoint[] }) {
+  const activeDays = data.filter((d) => d.Awarded > 0 || d.Redeemed > 0).length;
+  const hasEnoughActivity = activeDays >= MIN_ACTIVE_DAYS_FOR_CHART;
+
   return (
     <div className="lg:col-span-2 bg-white rounded-card border border-table-border p-4">
       <div className="flex items-center justify-between mb-3">
@@ -27,8 +36,11 @@ export function PointsFlowChart({ data }: { data: ChartPoint[] }) {
           </span>
         </div>
       </div>
-      {data.length === 0 ? (
-        <div className="h-40 flex items-center justify-center text-gray-500 text-sm">No data yet</div>
+      {!hasEnoughActivity ? (
+        <div className="h-40 flex flex-col items-center justify-center gap-1.5 text-gray-400 text-sm">
+          <Inbox className="w-5 h-5" aria-hidden="true" />
+          {data.length === 0 ? "No data yet" : "Not enough activity yet this period"}
+        </div>
       ) : (
         <ResponsiveContainer width="100%" height={180}>
           <AreaChart data={data}>

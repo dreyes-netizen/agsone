@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import ExcelJS from "exceljs";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { sheetToRows } from "@/lib/excel/sheetToRows";
 
 /*
  * EMPLOYEE SYNC — EXCEL FILE REQUIREMENTS
@@ -77,19 +79,13 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Dynamic import avoids ESM/CJS bundling issues (matches the xlsx pattern
-    // this route used to use — xlsx itself has unfixable prototype-pollution
-    // and ReDoS CVEs, so parsing was migrated to exceljs).
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const ExcelJS = require("exceljs") as typeof import("exceljs");
-
     const workbook = new ExcelJS.Workbook();
     try {
-      // exceljs's own .d.ts shadows the global `Buffer` type with a local
-      // `interface Buffer extends ArrayBuffer {}`, which a real Node Buffer
-      // doesn't structurally satisfy — a known upstream typing quirk, not a
-      // real runtime constraint (load() accepts a Node Buffer fine).
-      await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+      // exceljs's bundled types declare a global `Buffer extends ArrayBuffer`,
+      // which (under this project's esnext lib) picks up the resizable-
+      // ArrayBuffer members real Node Buffers don't have — the cast bridges
+      // that type-only mismatch, not a real runtime shape difference.
+      await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
     } catch (e) {
       console.error("XLSX parse error:", e);
       return NextResponse.json({ error: "Could not parse Excel file — make sure it is a valid .xlsx file" }, { status: 400 });
@@ -97,48 +93,9 @@ export async function POST(req: NextRequest) {
 
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {
-      return NextResponse.json({ error: "Could not parse Excel file — make sure it is a valid .xlsx file" }, { status: 400 });
+      return NextResponse.json({ error: "Uploaded file has no worksheets" }, { status: 400 });
     }
-
-    // Reduce an ExcelJS cell value down to the same plain JS shapes xlsx's
-    // sheet_to_json({ raw: true }) produced: string/number/boolean/Date/null.
-    // Rich text, hyperlinks, and formulas resolve to their display text/result;
-    // errors resolve to the error code string.
-    function cellToPlainValue(value: import("exceljs").CellValue): unknown {
-      if (value === null || value === undefined) return null;
-      if (value instanceof Date) return value;
-      if (typeof value !== "object") return value;
-      if ("richText" in value) return value.richText.map((part) => part.text).join("");
-      if ("formula" in value || "sharedFormula" in value) {
-        const result = value.result;
-        if (result === null || result === undefined) return null;
-        if (result instanceof Date) return result;
-        return typeof result === "object" ? result.error : result;
-      }
-      if ("hyperlink" in value) return value.text ?? null;
-      if ("error" in value) return value.error;
-      return null;
-    }
-
-    // Column headers live in row 1 — column number -> header name.
-    const headers = new Map<number, string>();
-    worksheet.getRow(1).eachCell({ includeEmpty: false }, (cell, colNumber) => {
-      const header = cellToPlainValue(cell.value);
-      if (typeof header === "string" && header.trim()) headers.set(colNumber, header.trim());
-    });
-
-    // Same output shape as the old XLSX.utils.sheet_to_json(sheet, { defval: null }):
-    // one object per data row with every header column present (null when the
-    // cell is empty).
-    const rows: Record<string, unknown>[] = [];
-    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-      if (rowNumber === 1) return;
-      const record: Record<string, unknown> = {};
-      for (const [colNumber, header] of headers) {
-        record[header] = cellToPlainValue(row.getCell(colNumber).value);
-      }
-      rows.push(record);
-    });
+    const rows = sheetToRows(worksheet);
 
     const resignedEmails: string[] = [];
     const activeRows: ActiveRow[] = [];

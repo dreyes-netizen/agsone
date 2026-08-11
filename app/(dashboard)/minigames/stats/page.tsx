@@ -4,15 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Trophy, Flame, Medal, Loader2 } from "lucide-react";
+import { Trophy, Flame, Medal, Loader2, Gamepad2 } from "lucide-react";
 import { timeAgo } from "@/lib/helpers/timeAgo";
-import { GAME_ICON, DEFAULT_GAME_ICON } from "@/lib/minigames/gameIcons";
+import { GAME_TYPE_LABELS, GAME_TYPE_ICONS } from "@/lib/constants/gameTypes";
 
-const GAME_LABEL: Record<string, string> = {
-  TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",
-  RPS: "Rock Paper Scissors", DOTS_AND_BOXES: "Dots & Boxes",
-  BATTLESHIP: "Battleship", MEMORY: "Memory",
-};
+const GAME_LABEL = GAME_TYPE_LABELS;
 
 type HistoryItem = {
   id: string;
@@ -74,7 +70,7 @@ export default function MinigamesStatsPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
       .then(res => setBoard(res.data))
       .catch(() => setBoard([]))
@@ -125,10 +121,10 @@ export default function MinigamesStatsPage() {
           <p className="text-sm font-bold text-gray-800 mb-3">By game</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(stats.perGame).map(([g, r]) => {
-              const Icon = GAME_ICON[g] ?? DEFAULT_GAME_ICON;
+              const Icon = GAME_TYPE_ICONS[g] ?? Gamepad2;
               return (
                 <div key={g} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-xs">
-                  <Icon className="w-3.5 h-3.5 text-navy-600" aria-hidden="true" />
+                  <Icon className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" />
                   <span className="font-medium text-gray-700">{GAME_LABEL[g] ?? g}</span>
                   <span className="text-gray-500">{r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}</span>
                 </div>
@@ -183,10 +179,10 @@ export default function MinigamesStatsPage() {
           <ul className="divide-y divide-gray-100">
             {stats.history.map(h => {
               const o = outcomeStyle[h.outcome];
-              const Icon = GAME_ICON[h.gameType] ?? DEFAULT_GAME_ICON;
+              const Icon = GAME_TYPE_ICONS[h.gameType] ?? Gamepad2;
               return (
                 <li key={h.id} aria-label={`${GAME_LABEL[h.gameType] ?? h.gameType} vs ${h.opponentName}, ${o.label}${h.wager > 0 ? `, ${h.wager} pts wager` : ""}, ${timeAgo(h.finishedAt)}`} className="flex items-center gap-3 px-5 py-3">
-                  <Icon className="w-5 h-5 shrink-0 text-navy-600" aria-hidden="true" />
+                  <Icon className="w-5 h-5 shrink-0 text-gray-500" aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{GAME_LABEL[h.gameType] ?? h.gameType}</p>
                     <p className="text-xs text-gray-500 truncate">vs {h.opponentName} · {timeAgo(h.finishedAt)}</p>

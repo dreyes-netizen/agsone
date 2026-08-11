@@ -1,44 +1,124 @@
-"use client";
+﻿"use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Loader2 } from "lucide-react";
-import { useProfileActions } from "@/lib/hooks/useProfileActions";
-import { ProfileHeader } from "@/components/profile/ProfileHeader";
-import { ProfileTabs } from "@/components/profile/ProfileTabs";
-import { OverviewTab } from "@/components/profile/OverviewTab";
-import { PointsTab } from "@/components/profile/PointsTab";
-import { BadgesTab } from "@/components/profile/BadgesTab";
-import { NotificationsTab } from "@/components/profile/NotificationsTab";
-import { ProfileSidebar } from "@/components/profile/ProfileSidebar";
+import { getLevelProgress } from "@/lib/helpers/levelUtils";
+
+import type { UserProfile, PointsData, ShoutoutEntry } from "./types";
+import { BioSection } from "./components/BioSection";
+import { SkillsSection } from "./components/SkillsSection";
+import { BirthdayHireCard } from "./components/BirthdayHireCard";
+import { CompletenessBar } from "./components/CompletenessBar";
+import { MinigamesStatsCard } from "./components/MinigamesStatsCard";
+import { OverviewStatsGrid } from "./components/OverviewStatsGrid";
+import { ProfileEditActions } from "./components/ProfileEditActions";
+import { PointsTab } from "./components/PointsTab";
+import { BadgesTab } from "./components/BadgesTab";
+import { NotificationsTab } from "./components/NotificationsTab";
+import { ProfileHeaderCard } from "./components/ProfileHeaderCard";
+import { ProfileTabBar } from "./components/ProfileTabBar";
+import { ShoutoutsCard } from "./components/ShoutoutsCard";
+import { UpcomingMilestoneWidget } from "./components/UpcomingMilestoneWidget";
+import { DepartmentRankWidget } from "./components/DepartmentRankWidget";
+import { RecentActivityWidget } from "./components/RecentActivityWidget";
+import { QuickActionsWidget } from "./components/QuickActionsWidget";
+import { RecentBadgesWidget } from "./components/RecentBadgesWidget";
 
 export default function ProfilePage() {
-  const {
-    profile,
-    pointsData,
-    loading,
-    loadError,
-    activeTab, setActiveTab,
-    notifPrefs,
-    notifLoading,
-    notifSaving,
-    notifError,
-    visibleCount, setVisibleCount,
-    isEditing, setIsEditing,
-    bioEdit, setBioEdit,
-    skillsEdit, setSkillsEdit,
-    skillInput, setSkillInput,
-    profileSaving,
-    profileError,
-    deptRank,
-    shoutouts,
-    bannerPickerOpen, setBannerPickerOpen,
-    loadProfile,
-    handleProfileSave,
-    handleCancelEdit,
-    handleSkillKeyDown,
-    handleNotifToggle,
-    selectTab,
-    handleBannerSelect,
-  } = useProfileActions();
+  const { user: authUser, loading: authLoading } = useAuth();
+  const { apiFetch } = useApiClient();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [pointsData, setPointsData] = useState<PointsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "points" | "badges" | "notifications">("overview");
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [isEditing, setIsEditing] = useState(false);
+  const [bioEdit, setBioEdit] = useState("");
+  const [skillsEdit, setSkillsEdit] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
+  const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
+
+  function loadProfile() {
+    if (authLoading || !authUser) return;
+    setLoading(true);
+    setLoadError(null);
+    Promise.all([
+      apiFetch<{ data: UserProfile }>("/api/me"),
+      apiFetch<{ data: PointsData }>("/api/me/points"),
+      apiFetch<{ data: ShoutoutEntry[] }>("/api/me/shoutouts").catch(() => ({ data: [] as ShoutoutEntry[] })),
+    ]).then(([me, pts, shouts]) => {
+      setProfile(me.data);
+      setPointsData(pts.data);
+      setBioEdit(me.data.bio ?? "");
+      setSkillsEdit(me.data.skills ?? []);
+      setShoutouts(shouts.data);
+    }).catch((err) => {
+      setLoadError(err instanceof Error ? err.message : "Failed to load profile");
+    }).finally(() => {
+      setLoading(false);
+    });
+  }
+
+  useEffect(() => {
+    loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, authUser]);
+
+  async function handleProfileSave() {
+    setProfileSaving(true);
+    setProfileError("");
+    try {
+      await apiFetch("/api/me", {
+        method: "PATCH",
+        body: JSON.stringify({ bio: bioEdit, skills: skillsEdit }),
+      });
+      setProfile((p) => p ? { ...p, bio: bioEdit, skills: skillsEdit } : p);
+      setIsEditing(false);
+      setSkillInput("");
+    } catch (err: unknown) {
+      setProfileError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  function handleCancelEdit() {
+    setBioEdit(profile?.bio ?? "");
+    setSkillsEdit(profile?.skills ?? []);
+    setSkillInput("");
+    setProfileError("");
+    setIsEditing(false);
+  }
+
+  function handleSkillKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const val = skillInput.trim().replace(/,/g, "");
+      if (val && !skillsEdit.includes(val) && skillsEdit.length < 20) {
+        setSkillsEdit([...skillsEdit, val]);
+      }
+      setSkillInput("");
+    } else if (e.key === "Backspace" && !skillInput && skillsEdit.length > 0) {
+      setSkillsEdit(skillsEdit.slice(0, -1));
+    }
+  }
+
+  useEffect(() => {
+    if (!profile?.department) return;
+    apiFetch<{ data: Array<{ rank: number; isCurrentUser: boolean }> }>(
+      `/api/leaderboard?departmentId=${profile.department.id}`
+    ).then((res) => {
+      const me = res.data.find((e) => e.isCurrentUser);
+      if (me) setDeptRank({ rank: me.rank, total: res.data.length });
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.department?.id]);
 
   if (loadError && !profile) {
     return (
@@ -58,87 +138,120 @@ export default function ProfilePage() {
     );
   }
 
+  const { pointsIntoLevel, pointsNeededForLevel } = getLevelProgress(profile.pointsBalance);
+  const levelPct = Math.min(100, (pointsIntoLevel / pointsNeededForLevel) * 100);
+
   return (
     <div className="space-y-5">
 
       {/* ── Profile card ── */}
-      <ProfileHeader
+      <ProfileHeaderCard
         profile={profile}
         activeTab={activeTab}
         isEditing={isEditing}
-        onStartEdit={() => setIsEditing(true)}
-        bannerPickerOpen={bannerPickerOpen}
-        onToggleBannerPicker={() => setBannerPickerOpen((o) => !o)}
-        onBannerSelect={handleBannerSelect}
+        onEditClick={() => setIsEditing(true)}
+        levelPct={levelPct}
+        pointsIntoLevel={pointsIntoLevel}
+        pointsNeededForLevel={pointsNeededForLevel}
       />
 
       {/* ── Tab bar ── */}
-      <ProfileTabs activeTab={activeTab} onSelectTab={selectTab} />
+      <ProfileTabBar activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setVisibleCount(10); }} />
 
       {/* ── Two-column layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
         {/* ── Left column: tab content ── */}
         <div className="space-y-5 min-w-0">
 
-          {/* ── Overview tab ── */}
-          {activeTab === "overview" && (
-            <div id="panel-overview" role="tabpanel">
-              <OverviewTab
-                profile={profile}
-                isEditing={isEditing}
-                bioEdit={bioEdit}
-                setBioEdit={setBioEdit}
-                skillsEdit={skillsEdit}
-                setSkillsEdit={setSkillsEdit}
-                skillInput={skillInput}
-                setSkillInput={setSkillInput}
-                onSkillKeyDown={handleSkillKeyDown}
-                shoutouts={shoutouts}
-                profileSaving={profileSaving}
-                profileError={profileError}
-                onSave={handleProfileSave}
-                onCancel={handleCancelEdit}
-              />
-            </div>
-          )}
+      {/* ── Overview tab ── */}
+      {activeTab === "overview" && (
+        <div id="panel-overview" role="tabpanel">
+        <>
+          <CompletenessBar profile={profile} />
+          <OverviewStatsGrid profile={profile} />
 
-          {/* ── Points tab ── */}
-          {activeTab === "points" && pointsData && (
-            <div id="panel-points" role="tabpanel">
-              <PointsTab pointsData={pointsData} visibleCount={visibleCount} setVisibleCount={setVisibleCount} />
-            </div>
-          )}
+          {/* Minigames stats */}
+          <MinigamesStatsCard />
 
-          {/* ── Badges tab ── */}
-          {activeTab === "badges" && (
-            <div id="panel-badges" role="tabpanel">
-              <BadgesTab badges={profile.userBadges} />
-            </div>
-          )}
+          {/* Details: Birthday + Hire Date */}
+          <BirthdayHireCard profile={profile} />
 
-          {/* ── Notifications tab ── */}
-          {activeTab === "notifications" && (
-            <div id="panel-notifications" role="tabpanel">
-              <NotificationsTab
-                notifLoading={notifLoading}
-                notifError={notifError}
-                notifPrefs={notifPrefs}
-                notifSaving={notifSaving}
-                onToggle={handleNotifToggle}
-              />
-            </div>
+          {/* Bio */}
+          <BioSection bio={profile.bio} isEditing={isEditing} bioEdit={bioEdit} onBioChange={setBioEdit} />
+
+          {/* Skills */}
+          <SkillsSection
+            skills={profile.skills}
+            isEditing={isEditing}
+            skillsEdit={skillsEdit}
+            skillInput={skillInput}
+            onSkillInputChange={setSkillInput}
+            onSkillKeyDown={handleSkillKeyDown}
+            onRemoveSkill={(skill) => setSkillsEdit((prev) => prev.filter((s) => s !== skill))}
+          />
+
+          {/* Shoutouts Received */}
+          <ShoutoutsCard shoutouts={shoutouts} />
+
+          {/* Save / Cancel — only in edit mode */}
+          {isEditing && (
+            <ProfileEditActions
+              profileError={profileError}
+              profileSaving={profileSaving}
+              onSave={handleProfileSave}
+              onCancel={handleCancelEdit}
+            />
           )}
+        </>
+        </div>
+      )}
+
+      {/* ── Points tab ── */}
+      {activeTab === "points" && pointsData && (
+        <div id="panel-points" role="tabpanel">
+          <PointsTab
+            pointsData={pointsData}
+            visibleCount={visibleCount}
+            onLoadMore={() => setVisibleCount((c) => c + 10)}
+          />
+        </div>
+      )}
+
+      {/* ── Badges tab ── */}
+      {activeTab === "badges" && (
+        <div id="panel-badges" role="tabpanel">
+          <BadgesTab userBadges={profile.userBadges} />
+        </div>
+      )}
+
+      {/* ── Notifications tab ── */}
+      {activeTab === "notifications" && (
+        <div id="panel-notifications" role="tabpanel">
+          <NotificationsTab />
+        </div>
+      )}
 
         </div>{/* end left column */}
 
         {/* ── Right sidebar ── */}
-        <ProfileSidebar
-          profile={profile}
-          deptRank={deptRank}
-          pointsData={pointsData}
-          onViewPoints={() => setActiveTab("points")}
-          onViewBadges={() => setActiveTab("badges")}
-        />
+        <div className="space-y-4 sticky top-6 self-start">
+
+          {/* Widget 0: Upcoming Milestone */}
+          <UpcomingMilestoneWidget profile={profile} />
+
+          {/* Widget 1: Department Rank */}
+          <DepartmentRankWidget department={profile.department} deptRank={deptRank} />
+
+          {/* Widget 2: Recent Activity */}
+          <RecentActivityWidget pointsData={pointsData} onViewAll={() => setActiveTab("points")} />
+
+          {/* Widget 3: Quick Actions */}
+          <QuickActionsWidget />
+
+          {/* Widget 4: Recent Badges */}
+          <RecentBadgesWidget userBadges={profile.userBadges} onSeeAll={() => setActiveTab("badges")} />
+
+        </div>{/* end right sidebar */}
       </div>{/* end grid */}
 
     </div>

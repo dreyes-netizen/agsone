@@ -76,7 +76,7 @@ export default function MinigameSessionPage() {
     }
   }, [id]);
 
-  useEffect(() => { fetchSession(); }, [fetchSession]);
+  useEffect(() => { queueMicrotask(fetchSession); }, [fetchSession]);
 
   // Real-time: re-fetch the instant the opponent moves/joins/forfeits. Like
   // every other channel, suspended after the tab has been hidden a while and

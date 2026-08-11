@@ -40,6 +40,7 @@ export default function AdminFeedbackPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [prevFilters, setPrevFilters] = useState({ statusFilter, categoryFilter });
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -47,7 +48,7 @@ export default function AdminFeedbackPage() {
     params.set("page", String(page));
     if (statusFilter !== "ALL") params.set("status", statusFilter);
     if (categoryFilter) params.set("category", categoryFilter);
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     apiFetch<{ data: FeedbackItem[]; pages: number }>(`/api/admin/feedback?${params}`)
       .then((r) => { setFeedbacks(r.data); setPages(r.pages); })
       .catch(console.error)
@@ -55,7 +56,10 @@ export default function AdminFeedbackPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, statusFilter, categoryFilter, page]);
 
-  useEffect(() => { setPage(1); }, [statusFilter, categoryFilter]);
+  if (statusFilter !== prevFilters.statusFilter || categoryFilter !== prevFilters.categoryFilter) {
+    setPrevFilters({ statusFilter, categoryFilter });
+    setPage(1);
+  }
 
   const thClass = "text-left px-3.5 py-2.5 font-mono text-[10px] tracking-[0.09em] uppercase text-table-muted first:pl-5 last:pr-5";
   const tdClass = "px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5";

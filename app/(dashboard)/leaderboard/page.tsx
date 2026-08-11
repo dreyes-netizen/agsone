@@ -82,11 +82,13 @@ export default function LeaderboardPage() {
   const [achievers, setAchievers] = useState<Achiever[]>([]);
   const [achieversLoading, setAchieversLoading] = useState(true);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
+  function loadDepartments() {
     apiFetch<{ data: Department[] }>("/api/departments")
       .then((res) => setDepartments(res.data))
       .catch((err) => console.error("departments fetch failed", err));
+  }
+
+  function loadProfileAndAchievers() {
     setProfileLoading(true);
     setAchieversLoading(true);
     Promise.allSettled([
@@ -99,8 +101,7 @@ export default function LeaderboardPage() {
       setProfileLoading(false);
       setAchieversLoading(false);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }
 
   async function load() {
     setLoading(true);
@@ -116,7 +117,14 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (authLoading || !user) return;
-    load();
+    loadDepartments();
+    queueMicrotask(loadProfileAndAchievers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    queueMicrotask(load);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, period, departmentId]);
 

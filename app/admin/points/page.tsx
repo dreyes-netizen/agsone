@@ -1,71 +1,270 @@
 "use client";
 
-import { useAdminPointsActions } from "@/lib/hooks/useAdminPointsActions";
-import { BudgetBar } from "@/components/admin/points/BudgetBar";
-import { SingleAwardForm } from "@/components/admin/points/SingleAwardForm";
-import { BulkAwardForm } from "@/components/admin/points/BulkAwardForm";
-import { DeductForm } from "@/components/admin/points/DeductForm";
-import { AttendanceForm } from "@/components/admin/points/AttendanceForm";
-import { TransactionsTable } from "@/components/admin/points/TransactionsTable";
+import { useEffect, useRef, useState } from "react";
+import { useApiClient } from "@/lib/hooks/useApiClient";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { VIOLATION_TYPES, findActivity } from "@/lib/constants/awardActivities";
+import type { Department, Employee, Transaction, Budget, AttendanceResult, EmployeesPage } from "./types";
+import { getDepartmentsFromEmployees, filterEmployeesForBulk, inputClass } from "./utils";
+import { SingleAwardForm } from "./components/SingleAwardForm";
+import { BudgetBar } from "./components/BudgetBar";
+import { AttendanceAwardPanel } from "./components/AttendanceAwardPanel";
+import { DeductPointsForm } from "./components/DeductPointsForm";
+import { BulkAwardForm } from "./components/BulkAwardForm";
+import { TransactionHistoryTable } from "./components/TransactionHistoryTable";
 
 export default function AwardPointsPage() {
-  const {
-    employees,
-    transactions,
-    txLoading,
-    txError,
-    tab, setTab,
-    budget,
+  const { apiFetch } = useApiClient();
+  const { user, dbUser, loading: authLoading } = useAuth();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [txLoading, setTxLoading] = useState(true);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"single" | "bulk" | "deduct" | "attendance">("single");
+  const [budget, setBudget] = useState<Budget | null>(null);
 
-    toUserId, setToUserId,
-    amount, setAmount,
-    note, setNote,
-    activity,
-    submitting,
-    success,
-    error,
+  // Single award
+  const [toUserId, setToUserId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [activity, setActivity] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
 
-    bulkDeptFilter, setBulkDeptFilter,
-    bulkSelected,
-    bulkAmount, setBulkAmount,
-    bulkNote, setBulkNote,
-    bulkActivity,
-    bulkSubmitting,
-    bulkSuccess,
-    bulkError,
+  // Bulk award
+  const [bulkDeptFilter, setBulkDeptFilter] = useState("all");
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkAmount, setBulkAmount] = useState("");
+  const [bulkNote, setBulkNote] = useState("");
+  const [bulkActivity, setBulkActivity] = useState("");
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkSuccess, setBulkSuccess] = useState("");
+  const [bulkError, setBulkError] = useState("");
 
-    attendanceMonth, setAttendanceMonth,
-    attendanceUploading,
-    attendanceResult,
-    attendanceError,
-    attendanceFileRef,
+  // Attendance award
+  const [attendanceMonth, setAttendanceMonth] = useState(() => {
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return prev.toISOString().slice(0, 7);
+  });
+  const [attendanceUploading, setAttendanceUploading] = useState(false);
+  const [attendanceResult, setAttendanceResult] = useState<AttendanceResult | null>(null);
+  const [attendanceError, setAttendanceError] = useState("");
+  const attendanceFileRef = useRef<HTMLInputElement>(null);
 
-    deductUserId, setDeductUserId,
-    deductViolation, setDeductViolation,
-    deductCustomAmount, setDeductCustomAmount,
-    deductReason, setDeductReason,
-    deductSubmitting,
-    deductSuccess,
-    deductError,
+  // Deduct
+  const [deductUserId, setDeductUserId] = useState("");
+  const [deductViolation, setDeductViolation] = useState(VIOLATION_TYPES[0].key as string);
+  const [deductCustomAmount, setDeductCustomAmount] = useState("");
+  const [deductReason, setDeductReason] = useState("");
+  const [deductSubmitting, setDeductSubmitting] = useState(false);
+  const [deductSuccess, setDeductSuccess] = useState("");
+  const [deductError, setDeductError] = useState("");
 
-    txPage, setTxPage,
-    txPages,
+  async function loadBudget() {
+    try {
+      const res = await apiFetch<{ data: Budget }>("/api/points/budget");
+      setBudget(res.data);
+    } catch {
+      // ignore — budget bar simply won't render
+    }
+  }
 
-    departments,
-    selectableEmployees,
-    filteredForBulk,
-    allFilteredSelected,
+  const [txPage, setTxPage] = useState(1);
+  const [txPages, setTxPages] = useState(1);
 
-    loadHistory,
-    handleAttendanceFile,
-    handleSingleSubmit,
-    handleDeductSubmit,
-    handleBulkSubmit,
-    toggleEmployee,
-    toggleSelectAll,
-    handleActivityChange,
-    handleBulkActivityChange,
-  } = useAdminPointsActions();
+  const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
+
+  // /api/admin/employees is paginated (100/page max, by design — see
+  // lib/api/pagination.ts) but the bulk-award picker and single-award
+  // <select> need the FULL active roster, not just page 1. Calling it with
+  // no params silently truncated to the first 25 employees alphabetically.
+  // Page through it instead of raising the cap.
+  async function loadAllEmployees() {
+    const first = await apiFetch<EmployeesPage>("/api/admin/employees?limit=100");
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, first.pages - 1) }, (_, i) =>
+        apiFetch<EmployeesPage>(`/api/admin/employees?limit=100&page=${i + 2}`)
+      )
+    );
+    const all = [first, ...rest].flatMap((r) => r.data);
+    // Only Super Admin can award Managers — filter the list for other roles
+    const eligible = isSuperAdmin ? all : all.filter((e) => e.role === "EMPLOYEE");
+    setEmployees(eligible);
+  }
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    queueMicrotask(loadAllEmployees);
+    loadHistory(txPage);
+    queueMicrotask(loadBudget);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
+
+  const initialTxLoad = useRef(true);
+  useEffect(() => {
+    if (initialTxLoad.current) { initialTxLoad.current = false; return; }
+    loadHistory(txPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txPage]);
+
+  async function loadHistory(page = 1) {
+    setTxLoading(true);
+    setTxError(null);
+    try {
+      const res = await apiFetch<{ data: Transaction[]; pages: number }>(`/api/points/history?page=${page}`);
+      setTransactions(res.data);
+      setTxPages(res.pages);
+    } catch (err) {
+      // Previously swallowed — a failed fetch silently rendered "No transactions
+      // yet" for what is high-trust financial history.
+      setTxError(err instanceof Error ? err.message : "Failed to load transaction history.");
+    } finally {
+      setTxLoading(false);
+    }
+  }
+
+  async function handleAttendanceFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setAttendanceUploading(true);
+    setAttendanceResult(null);
+    setAttendanceError("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("attendanceMonth", `${attendanceMonth}-01`);
+      const res = await apiFetch<{ data: typeof attendanceResult }>(
+        "/api/admin/attendance/award",
+        { method: "POST", body: form }
+      );
+      setAttendanceResult(res.data);
+      setTxPage(1);
+    } catch (err) {
+      setAttendanceError(err instanceof Error ? err.message : "Failed to process attendance file");
+    } finally {
+      setAttendanceUploading(false);
+    }
+  }
+
+  async function handleSingleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+    try {
+      await apiFetch("/api/points/award", {
+        method: "POST",
+        body: JSON.stringify({ toUserId, amount: Number(amount), note, activity: activity || undefined }),
+      });
+      const recipient = employees.find((e) => e.id === toUserId);
+      setSuccess(`${amount} points awarded to ${recipient?.displayName}!`);
+      setAmount("");
+      setNote("");
+      setToUserId("");
+      setActivity("");
+      setTxPage(1);
+      loadBudget();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to award points");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDeductSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setDeductSubmitting(true);
+    setDeductError("");
+    setDeductSuccess("");
+    try {
+      const res = await apiFetch<{ data: { requested: number; deducted: number; newBalance: number } }>("/api/points/deduct", {
+        method: "POST",
+        body: JSON.stringify({
+          toUserId: deductUserId,
+          violationType: deductViolation,
+          customAmount: deductViolation === "CUSTOM" ? Number(deductCustomAmount) : undefined,
+          reason: deductReason,
+        }),
+      });
+      const recipient = employees.find((emp) => emp.id === deductUserId);
+      const floored = res.data.deducted < res.data.requested
+        ? ` (requested ${res.data.requested}, balance floored at 0)`
+        : "";
+      setDeductSuccess(`${res.data.deducted} points deducted from ${recipient?.displayName}${floored}. New balance: ${res.data.newBalance}.`);
+      setDeductUserId("");
+      setDeductCustomAmount("");
+      setDeductReason("");
+      setDeductViolation(VIOLATION_TYPES[0].key);
+      setTxPage(1);
+    } catch (err) {
+      setDeductError(err instanceof Error ? err.message : "Failed to deduct points");
+    } finally {
+      setDeductSubmitting(false);
+    }
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBulkSubmitting(true);
+    setBulkError("");
+    setBulkSuccess("");
+    try {
+      const res = await apiFetch<{ data: { awarded: number } }>("/api/points/award/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          userIds: Array.from(bulkSelected),
+          amount: Number(bulkAmount),
+          note: bulkNote,
+          activity: bulkActivity || undefined,
+        }),
+      });
+      const n = res.data.awarded;
+      setBulkSuccess(`${bulkAmount} points awarded to ${n} employee${n !== 1 ? "s" : ""}!`);
+      setBulkAmount("");
+      setBulkNote("");
+      setBulkActivity("");
+      setBulkSelected(new Set());
+      setBulkDeptFilter("all");
+      setTxPage(1);
+      loadBudget();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Failed to award points");
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }
+
+  // Extract unique departments from loaded employees
+  const departments: Department[] = getDepartmentsFromEmployees(employees);
+  const { filteredForBulk, allFilteredSelected } = filterEmployeesForBulk(employees, dbUser?.id, bulkDeptFilter, bulkSelected);
+
+  function toggleEmployee(id: string) {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setBulkSelected((prev) => {
+        const next = new Set(prev);
+        filteredForBulk.forEach((e) => next.delete(e.id));
+        return next;
+      });
+    } else {
+      setBulkSelected((prev) => {
+        const next = new Set(prev);
+        filteredForBulk.forEach((e) => next.add(e.id));
+        return next;
+      });
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -101,82 +300,95 @@ export default function AwardPointsPage() {
         <div className="px-6 py-5">
           {tab !== "deduct" && tab !== "attendance" && <BudgetBar budget={budget} />}
           {tab === "attendance" ? (
-            <AttendanceForm
+            <AttendanceAwardPanel
               attendanceMonth={attendanceMonth}
-              setAttendanceMonth={setAttendanceMonth}
+              onMonthChange={setAttendanceMonth}
               attendanceUploading={attendanceUploading}
               attendanceResult={attendanceResult}
               attendanceError={attendanceError}
-              attendanceFileRef={attendanceFileRef}
+              fileInputRef={attendanceFileRef}
               onFileChange={handleAttendanceFile}
+              inputClass={inputClass}
             />
           ) : tab === "deduct" ? (
-            <DeductForm
+            <DeductPointsForm
               employees={employees}
               deductUserId={deductUserId}
-              setDeductUserId={setDeductUserId}
+              onUserChange={setDeductUserId}
               deductViolation={deductViolation}
-              setDeductViolation={setDeductViolation}
+              onViolationChange={setDeductViolation}
               deductCustomAmount={deductCustomAmount}
-              setDeductCustomAmount={setDeductCustomAmount}
+              onCustomAmountChange={setDeductCustomAmount}
               deductReason={deductReason}
-              setDeductReason={setDeductReason}
+              onReasonChange={setDeductReason}
+              deductSubmitting={deductSubmitting}
               deductSuccess={deductSuccess}
               deductError={deductError}
-              deductSubmitting={deductSubmitting}
               onSubmit={handleDeductSubmit}
+              inputClass={inputClass}
             />
           ) : tab === "single" ? (
             <SingleAwardForm
-              employees={selectableEmployees}
+              employees={employees}
+              currentUserId={dbUser?.id}
               toUserId={toUserId}
-              setToUserId={setToUserId}
-              activity={activity}
-              onActivityChange={handleActivityChange}
+              onToUserChange={setToUserId}
               amount={amount}
-              setAmount={setAmount}
+              onAmountChange={setAmount}
               note={note}
-              setNote={setNote}
+              onNoteChange={setNote}
+              activity={activity}
+              onActivityChange={(key) => {
+                setActivity(key);
+                const preset = findActivity(key);
+                if (preset) setAmount(String(preset.points));
+              }}
+              submitting={submitting}
               success={success}
               error={error}
-              budget={budget}
-              submitting={submitting}
               onSubmit={handleSingleSubmit}
+              inputClass={inputClass}
+              budget={budget}
             />
           ) : (
             <BulkAwardForm
               departments={departments}
-              bulkDeptFilter={bulkDeptFilter}
-              setBulkDeptFilter={setBulkDeptFilter}
               filteredForBulk={filteredForBulk}
               bulkSelected={bulkSelected}
-              toggleEmployee={toggleEmployee}
               allFilteredSelected={allFilteredSelected}
-              toggleSelectAll={toggleSelectAll}
-              bulkActivity={bulkActivity}
-              onBulkActivityChange={handleBulkActivityChange}
+              bulkDeptFilter={bulkDeptFilter}
+              onDeptFilterChange={setBulkDeptFilter}
               bulkAmount={bulkAmount}
-              setBulkAmount={setBulkAmount}
+              onAmountChange={setBulkAmount}
               bulkNote={bulkNote}
-              setBulkNote={setBulkNote}
+              onNoteChange={setBulkNote}
+              bulkActivity={bulkActivity}
+              onActivityChange={(key) => {
+                setBulkActivity(key);
+                const preset = findActivity(key);
+                if (preset) setBulkAmount(String(preset.points));
+              }}
+              bulkSubmitting={bulkSubmitting}
               bulkSuccess={bulkSuccess}
               bulkError={bulkError}
-              bulkSubmitting={bulkSubmitting}
-              budget={budget}
+              onToggleEmployee={toggleEmployee}
+              onToggleSelectAll={toggleSelectAll}
               onSubmit={handleBulkSubmit}
+              inputClass={inputClass}
+              budget={budget}
             />
           )}
         </div>
       </div>
 
-      <TransactionsTable
+      <TransactionHistoryTable
         transactions={transactions}
-        txLoading={txLoading}
-        txError={txError}
-        txPage={txPage}
-        txPages={txPages}
-        setTxPage={setTxPage}
+        loading={txLoading}
+        error={txError}
+        page={txPage}
+        pages={txPages}
         onRetry={() => loadHistory(txPage)}
+        onPageChange={setTxPage}
       />
     </div>
   );

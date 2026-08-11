@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { Session } from "../types";
 
 export function TTTBoard({ session, onMove }: { session: Session; onMove: (data: unknown) => void }) {
@@ -9,15 +9,14 @@ export function TTTBoard({ session, onMove }: { session: Session; onMove: (data:
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   // Track the most recently filled cell for a "last move" highlight.
-  const prevRef = useRef<(string | null)[]>(board);
+  const [prevBoard, setPrevBoard] = useState(board);
   const [lastMove, setLastMove] = useState<number | null>(null);
-  useEffect(() => {
-    const prev = prevRef.current;
+  if (board !== prevBoard) {
     let changed: number | null = null;
-    for (let i = 0; i < board.length; i++) if (board[i] && !prev[i]) changed = i;
+    for (let i = 0; i < board.length; i++) if (board[i] && !prevBoard[i]) changed = i;
     if (changed !== null) setLastMove(changed);
-    prevRef.current = board;
-  }, [board]);
+    setPrevBoard(board);
+  }
 
   const WIN_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   let winLine: number[] | null = null;

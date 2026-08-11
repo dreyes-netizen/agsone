@@ -38,9 +38,11 @@ export function RightPanel({
   const isMyTurn = session.status === "ACTIVE" && session.currentTurn === myId;
 
   const [rematching, setRematching] = useState(false);
-  const [muted, setMutedState] = useState(false);
+  // Safe because RightPanel only renders client-side after `session` has
+  // loaded (the page shows a loading skeleton until then), so this never
+  // runs during SSR and there's no hydration-mismatch risk.
+  const [muted, setMutedState] = useState(() => isMuted());
   const [copied, setCopied] = useState(false);
-  useEffect(() => { setMutedState(isMuted()); }, []);
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.href);

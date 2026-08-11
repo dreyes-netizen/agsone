@@ -121,8 +121,8 @@ export default function EmployeeProfilePage() {
   const [avatarZoomed, setAvatarZoomed] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
   const closeLightboxRef = useRef<HTMLButtonElement>(null);
 
   const isAdminOrManager = dbUser?.role === "HR_ADMIN" || dbUser?.role === "MANAGER" || dbUser?.role === "SUPER_ADMIN";
@@ -168,7 +168,7 @@ export default function EmployeeProfilePage() {
 
   useEffect(() => {
     if (!isAdminOrManager) return;
-    setHistoryLoading(true);
+    queueMicrotask(() => setHistoryLoading(true));
     apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
       .then((r) => setTransactions(r.data.slice(0, 15)))
       .catch((err) => console.error("transaction history fetch failed", err))

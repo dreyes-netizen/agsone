@@ -1,6 +1,6 @@
 "use client";
 
-import { GAME_ICON } from "@/lib/minigames/gameIcons";
+import { GAME_TYPE_ICONS } from "@/lib/constants/gameTypes";
 
 export const HOW_TO_PLAY: Record<string, { title: string; rules: { heading: string; text: string }[] }> = {
   RPS: {
@@ -61,7 +61,7 @@ export const HOW_TO_PLAY: Record<string, { title: string; rules: { heading: stri
 export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClose: () => void }) {
   const info = HOW_TO_PLAY[gameType];
   if (!info) return null;
-  const Icon = GAME_ICON[gameType];
+  const Icon = GAME_TYPE_ICONS[gameType];
 
   return (
     <div

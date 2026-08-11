@@ -89,7 +89,7 @@ export default function MarketplacePage() {
   }, [authLoading, user]);
 
   useEffect(() => {
-    if (view === "requests" && !authLoading && user) loadRedemptions();
+    if (view === "requests" && !authLoading && user) queueMicrotask(loadRedemptions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, authLoading, user]);
 

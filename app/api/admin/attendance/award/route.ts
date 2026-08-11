@@ -9,51 +9,7 @@ import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { findActivity } from "@/lib/constants/awardActivities";
-
-function cellToValue(value: ExcelJS.CellValue): unknown {
-  if (value === null || value === undefined) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === "object") {
-    if ("richText" in value) {
-      return value.richText.map((part) => part.text).join("");
-    }
-    if ("text" in value && "hyperlink" in value) {
-      return value.text;
-    }
-    if ("formula" in value) {
-      const result = value.result;
-      if (result && typeof result === "object" && "error" in result) return null;
-      return result ?? null;
-    }
-    if ("error" in value) return null;
-    return null;
-  }
-  return value;
-}
-
-// Mirrors xlsx's `sheet_to_json(sheet, { defval: null })`: row 1 supplies the
-// column headers, every subsequent non-blank row becomes an object keyed by
-// those headers, and cells with no value default to null instead of being
-// omitted.
-function worksheetToJson(sheet: ExcelJS.Worksheet): Record<string, unknown>[] {
-  const headers: (string | null)[] = [];
-  sheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    const value = cellToValue(cell.value);
-    headers[colNumber] = value === null ? null : String(value).trim();
-  });
-
-  const rows: Record<string, unknown>[] = [];
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return;
-    const record: Record<string, unknown> = {};
-    headers.forEach((header, colNumber) => {
-      if (!header) return;
-      record[header] = cellToValue(row.getCell(colNumber).value);
-    });
-    rows.push(record);
-  });
-  return rows;
-}
+import { sheetToRows } from "@/lib/excel/sheetToRows";
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -88,21 +44,19 @@ export async function POST(req: NextRequest) {
 
   const workbook = new ExcelJS.Workbook();
   try {
-    // exceljs's own type defs shadow the global `Buffer` with a bare
-    // `extends ArrayBuffer {}` interface, which a real Node Buffer doesn't
-    // structurally satisfy under recent @types/node — cast to unblock;
-    // exceljs's runtime `load()` still receives our actual Buffer.
-    await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+    // exceljs's .d.ts declares an ambient `Buffer extends ArrayBuffer` that
+    // conflicts with this project's esnext lib Buffer type — cast is type-only.
+    await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   } catch {
     return NextResponse.json({ error: "Could not parse Excel file — make sure it is a valid .xlsx file" }, { status: 400 });
   }
 
-  const sheet = workbook.getWorksheet("Summary");
-  if (!sheet) {
+  const worksheet = workbook.getWorksheet("Summary");
+  if (!worksheet) {
     return NextResponse.json({ error: "Sheet 'Summary' not found — please upload a Sprout HR attendance report" }, { status: 400 });
   }
 
-  const rows = worksheetToJson(sheet);
+  const rows = sheetToRows(worksheet);
 
   // Perfect attendance: Days Present > 20, Days Absent = 0, Undertime = 0
   const perfectRows = rows.filter((r) => {

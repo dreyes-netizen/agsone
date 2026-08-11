@@ -32,6 +32,7 @@ export function Pagination({ page, pages, total, onPageChange }: PaginationProps
   return (
     <div className="flex items-center justify-center gap-1">
       <button
+        aria-label="Previous page"
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
         className="p-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
@@ -40,7 +41,7 @@ export function Pagination({ page, pages, total, onPageChange }: PaginationProps
       </button>
       {pageNumbers.map((num, i) =>
         num === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-gray-400">
+          <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-gray-500">
             ...
           </span>
         ) : (
@@ -58,6 +59,7 @@ export function Pagination({ page, pages, total, onPageChange }: PaginationProps
         )
       )}
       <button
+        aria-label="Next page"
         onClick={() => onPageChange(Math.min(pages, page + 1))}
         disabled={page === pages}
         className="p-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"

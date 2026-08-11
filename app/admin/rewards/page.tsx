@@ -282,6 +282,7 @@ export default function AdminRewardsPage() {
                       <img src={src} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
+                        aria-label="Remove image"
                         onClick={() => removeExistingImage(i)}
                         className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       >
@@ -295,6 +296,7 @@ export default function AdminRewardsPage() {
                       <img src={src} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
+                        aria-label="Remove image"
                         onClick={() => removeNewImage(i)}
                         className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-gray-800/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
                       >

@@ -57,7 +57,7 @@ export function RecentActivity({ entries }: { entries: AuditEntry[] }) {
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5 truncate">{summaryLine(entry)}</p>
               </div>
-              <span className="text-xs text-gray-400 shrink-0">{timeAgo(entry.createdAt)}</span>
+              <span className="text-xs text-gray-500 shrink-0">{timeAgo(entry.createdAt)}</span>
             </li>
           ))}
         </ul>

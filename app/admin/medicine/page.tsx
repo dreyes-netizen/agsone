@@ -370,6 +370,7 @@ export default function AdminMedicinePage() {
                   <div className="relative w-24 h-24">
                     <img src={addForm.imagePreview} className="w-24 h-24 rounded-lg object-cover border border-gray-200" alt="" />
                     <button
+                      aria-label="Remove image"
                       onClick={() => setAddForm((f) => ({ ...f, imageFile: null, imagePreview: "" }))}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-800 text-white rounded-full flex items-center justify-center"
                     >

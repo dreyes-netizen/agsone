@@ -234,7 +234,7 @@ export default function AdminDashboardPage() {
               const maxBal = Math.max(...data.topEarners.map(e => e.pointsBalance), 1);
               return data.topEarners.map((e, i) => (
                 <div key={e.id} className="grid grid-cols-[16px_28px_1fr_64px] items-center gap-2.5">
-                  <span className={`text-xs font-bold tabular-nums text-center ${i === 0 ? "text-gray-700" : i === 1 ? "text-gray-400" : i === 2 ? "text-gray-500" : "text-gray-400"}`}>{i + 1}</span>
+                  <span className={`text-xs font-bold tabular-nums text-center ${i === 0 ? "text-gray-700" : i === 1 ? "text-gray-500" : i === 2 ? "text-gray-500" : "text-gray-500"}`}>{i + 1}</span>
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                     {e.avatarUrl && !failedAvatars.has(e.id) ? <img src={e.avatarUrl} alt={e.displayName} className="w-full h-full object-cover" onError={() => setFailedAvatars((prev) => new Set(prev).add(e.id))} /> : e.displayName.charAt(0).toUpperCase()}
                   </div>
@@ -244,7 +244,7 @@ export default function AdminDashboardPage() {
                       <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
                         <div className="h-full bg-navy-400 rounded-full" style={{ width: `${Math.round((e.pointsBalance / maxBal) * 100)}%` }} />
                       </div>
-                      <span className="text-[10px] text-gray-400 shrink-0">Lv {e.level}</span>
+                      <span className="text-[10px] text-gray-500 shrink-0">Lv {e.level}</span>
                     </div>
                   </div>
                   <span className="text-sm font-bold text-navy-600 tabular-nums text-right">{e.pointsBalance.toLocaleString()}</span>
@@ -282,7 +282,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate leading-tight">{b.displayName}</p>
-                      <p className="text-xs text-gray-400 truncate">{b.department ?? "No dept"} · {displayDate}</p>
+                      <p className="text-xs text-gray-500 truncate">{b.department ?? "No dept"} · {displayDate}</p>
                     </div>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${labelColor}`}>
                       {labelText}{b.daysUntil === 0 && <> <span aria-hidden="true">🎂</span></>}

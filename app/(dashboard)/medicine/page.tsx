@@ -188,9 +188,16 @@ export default function MedicinePage() {
               return (
                 <div
                   key={med.id}
-                  role="group"
+                  role="button"
+                  tabIndex={0}
                   aria-label={med.name}
                   onClick={() => setSelectedMed(med)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedMed(med);
+                    }
+                  }}
                   className="bg-white rounded-card border border-table-border overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
                 >
                   <div

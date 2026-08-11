@@ -252,7 +252,15 @@ export default function MarketplacePage() {
                 return (
                   <div
                     key={reward.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openModal(reward)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openModal(reward);
+                      }
+                    }}
                     className={`bg-white rounded-card border overflow-hidden cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
                       flex flex-row items-center
                       sm:flex-col sm:items-stretch

@@ -532,7 +532,7 @@ export default function FoodPage() {
                   {newAddOns.map((a, i) => (
                     <span key={i} className="flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full">
                       {a.name}{a.price > 0 ? ` — ₱${a.price % 1 === 0 ? a.price : a.price.toFixed(2)}` : " — Free"}
-                      <button type="button" onClick={() => removeAddOn(i)} className="text-gray-500 hover:text-gray-700">
+                      <button type="button" aria-label={`Remove ${a.name}`} onClick={() => removeAddOn(i)} className="text-gray-500 hover:text-gray-700">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -635,7 +635,16 @@ export default function FoodPage() {
             return (
               <div
                 key={listing.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => { setSelectedListing(listing); setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedListing(listing);
+                    setSelectedListingImageIndex(cardImageIndices[listing.id] ?? 0);
+                  }
+                }}
                 className="bg-white rounded-card border border-table-border overflow-hidden flex flex-col transition-shadow cursor-pointer"
               >
 

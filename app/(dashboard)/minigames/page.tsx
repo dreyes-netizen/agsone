@@ -294,7 +294,7 @@ export default function MinigamesPage() {
           <div className="bg-white border border-table-border rounded-card overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-sm font-bold text-gray-800">Open Challenges</p>
-              <span className="text-xs text-gray-400">{openChallenges.length > 0 ? `${openChallenges.length} open · all games` : "all games"}</span>
+              <span className="text-xs text-gray-500">{openChallenges.length > 0 ? `${openChallenges.length} open · all games` : "all games"}</span>
             </div>
             <div className="divide-y divide-gray-50">
               {loading ? (
@@ -324,7 +324,7 @@ export default function MinigamesPage() {
                         {s.pointsWager > 0 ? (
                           <span className="text-amber-600 font-medium"> · {s.pointsWager} pts</span>
                         ) : (
-                          <span className="text-gray-400"> · Friendly</span>
+                          <span className="text-gray-500"> · Friendly</span>
                         )}
                       </p>
                     </div>

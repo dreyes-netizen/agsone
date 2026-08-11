@@ -642,7 +642,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col items-center gap-1 py-3 px-4 text-center bg-gray-50 rounded-lg">
                   <Tag className="w-4 h-4 text-gray-300" aria-hidden="true" />
                   <p className="text-xs font-medium text-gray-600">No skills added yet</p>
-                  <p className="text-[10px] text-gray-400">Click <span className="font-medium text-gray-500">Edit Profile</span> to add some</p>
+                  <p className="text-[10px] text-gray-500">Click <span className="font-medium text-gray-500">Edit Profile</span> to add some</p>
                 </div>
               )
             )}
@@ -659,7 +659,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col items-center gap-1 py-3 px-4 text-center">
                   <Megaphone className="w-4 h-4 text-gray-300" aria-hidden="true" />
                   <p className="text-xs font-medium text-gray-600">No shoutouts yet</p>
-                  <p className="text-[10px] text-gray-400">Your colleagues will recognize you here</p>
+                  <p className="text-[10px] text-gray-500">Your colleagues will recognize you here</p>
                 </div>
               ) : (
                 <ul className="divide-y divide-gray-100">
@@ -997,7 +997,7 @@ export default function ProfilePage() {
                   </p>
                 </>
               ) : (
-                <p className="text-xs text-gray-400">No department assigned</p>
+                <p className="text-xs text-gray-500">No department assigned</p>
               )}
             </div>
           </Link>
@@ -1032,7 +1032,7 @@ export default function ProfilePage() {
                           <p className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                         </div>
                         {count > 1 && (
-                          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
+                          <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">×{count}</span>
                         )}
                       </li>
                     );
@@ -1040,7 +1040,7 @@ export default function ProfilePage() {
                 })()}
               </ul>
             ) : (
-              <p className="text-xs text-gray-400 text-center py-4">No activity yet</p>
+              <p className="text-xs text-gray-500 text-center py-4">No activity yet</p>
             )}
           </div>
 

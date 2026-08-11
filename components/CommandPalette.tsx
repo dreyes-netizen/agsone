@@ -146,6 +146,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             <div className="w-4 h-4 border-2 border-gray-200 border-t-navy-500 rounded-full animate-spin shrink-0" />
           )}
           <button
+            aria-label="Close"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >

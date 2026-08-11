@@ -508,7 +508,7 @@ export default function EmployeesPage() {
                 </div>
                 <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
                   {employee.id === dbUser?.id ? (
-                    <span className="text-xs text-gray-400 italic flex-1">Your own role (change from another admin account)</span>
+                    <span className="text-xs text-gray-500 italic flex-1">Your own role (change from another admin account)</span>
                   ) : (
                     <select
                       value={employee.role}
@@ -580,7 +580,7 @@ export default function EmployeesPage() {
                   </td>
                   <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                     {employee.id === dbUser?.id ? (
-                      <span className="text-xs text-gray-400 italic">Your account</span>
+                      <span className="text-xs text-gray-500 italic">Your account</span>
                     ) : (
                       <select
                         value={employee.role}

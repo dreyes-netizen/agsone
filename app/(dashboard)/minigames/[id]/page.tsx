@@ -203,9 +203,9 @@ function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFetch: Ret
           </div>
           <div className="max-h-52 overflow-y-auto">
             {loadingEmps ? (
-              <p className="text-xs text-gray-400 text-center py-4">Loading…</p>
+              <p className="text-xs text-gray-500 text-center py-4">Loading…</p>
             ) : filtered.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No employees found</p>
+              <p className="text-xs text-gray-500 text-center py-4">No employees found</p>
             ) : (
               filtered.slice(0, 20).map(emp => {
                 const done = invited.has(emp.id);
@@ -432,7 +432,7 @@ function RPSBoard({ session, onMove }: { session: Session; onMove: (data: unknow
           <p className="text-xs text-gray-500 mt-0.5">You</p>
         </div>
         <div className="text-center">
-          <p className="text-sm text-gray-400 font-medium">Round {Math.min(state.round, state.maxRounds)} / {state.maxRounds}</p>
+          <p className="text-sm text-gray-500 font-medium">Round {Math.min(state.round, state.maxRounds)} / {state.maxRounds}</p>
           <p className="text-xs text-gray-300 mt-0.5">best of {state.maxRounds}</p>
         </div>
         <div className="text-center">
@@ -448,7 +448,7 @@ function RPSBoard({ session, onMove }: { session: Session; onMove: (data: unknow
             <p className="text-5xl">{emojiMap[isHost ? state.roundResult.hostChoice : state.roundResult.guestChoice]}</p>
             <p className="text-xs text-gray-500 mt-1.5">You</p>
           </div>
-          <p className="text-base font-bold text-gray-400">vs</p>
+          <p className="text-base font-bold text-gray-500">vs</p>
           <div className="text-center">
             <p className="text-5xl">{emojiMap[isHost ? state.roundResult.guestChoice : state.roundResult.hostChoice]}</p>
             <p className="text-xs text-gray-500 mt-1.5">Them</p>
@@ -483,7 +483,7 @@ function RPSBoard({ session, onMove }: { session: Session; onMove: (data: unknow
       {/* History */}
       {state.history.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Round history</p>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Round history</p>
           {state.history.map((h, i) => {
             const mine = isHost ? h.hostChoice : h.guestChoice;
             const theirs = isHost ? h.guestChoice : h.hostChoice;
@@ -730,7 +730,7 @@ function BSBoard({ session, onMove }: { session: Session; onMove: (data: unknown
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
           <span className="text-5xl">⚓</span>
           <p className="text-gray-700 font-semibold">Fleet deployed!</p>
-          <p className="text-sm text-gray-400">Waiting for opponent to place their ships…</p>
+          <p className="text-sm text-gray-500">Waiting for opponent to place their ships…</p>
         </div>
       );
     }
@@ -844,7 +844,7 @@ function MemoryBoard({ session, onMove }: { session: Session; onMove: (data: unk
           <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[80px]">{session.host.displayName}</p>
         </div>
         <div className="text-center px-2">
-          <p className="text-xs text-gray-400">{foundPairs}/{totalPairs} pairs</p>
+          <p className="text-xs text-gray-500">{foundPairs}/{totalPairs} pairs</p>
         </div>
         <div className="text-center">
           <p className="text-3xl font-bold text-gray-900">{state.guestScore}</p>
@@ -913,7 +913,7 @@ function MemoryBoard({ session, onMove }: { session: Session; onMove: (data: unk
               </button>
             </>
           ) : (
-            <p className="text-sm text-gray-400">Opponent is flipping cards back…</p>
+            <p className="text-sm text-gray-500">Opponent is flipping cards back…</p>
           )}
         </div>
       )}
@@ -995,7 +995,7 @@ function MobileBar({
           )}
         </div>
 
-        <span className="text-[10px] text-gray-400 shrink-0">vs</span>
+        <span className="text-[10px] text-gray-500 shrink-0">vs</span>
 
         {/* Opponent */}
         <div className={`rounded-full shrink-0 ${session.status === "ACTIVE" && !isMyTurn && opponent ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}>
@@ -1157,9 +1157,9 @@ function RightPanel({
             {session.status === "ACTIVE" && isMyTurn ? (
               <p className="text-xs text-indigo-600 font-semibold">▶ Your turn</p>
             ) : session.status === "ACTIVE" ? (
-              <p className="text-xs text-gray-400">Waiting <WaitingDots /></p>
+              <p className="text-xs text-gray-500">Waiting <WaitingDots /></p>
             ) : (
-              <p className="text-xs text-gray-400">{session.myRole === "host" ? "Host · X / ●1" : "Guest · O / ●2"}</p>
+              <p className="text-xs text-gray-500">{session.myRole === "host" ? "Host · X / ●1" : "Guest · O / ●2"}</p>
             )}
           </div>
           <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">You</span>
@@ -1168,7 +1168,7 @@ function RightPanel({
         {/* Vs divider */}
         <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-50">
           <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">vs</span>
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">vs</span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
@@ -1186,9 +1186,9 @@ function RightPanel({
             {session.status === "ACTIVE" && !isMyTurn ? (
               <p className="text-xs text-indigo-600 font-semibold">▶ Their turn</p>
             ) : session.status === "ACTIVE" ? (
-              <p className="text-xs text-gray-400">Waiting <WaitingDots /></p>
+              <p className="text-xs text-gray-500">Waiting <WaitingDots /></p>
             ) : (
-              <p className="text-xs text-gray-400">{session.myRole === "host" ? "Guest · O / ●2" : "Host · X / ●1"}</p>
+              <p className="text-xs text-gray-500">{session.myRole === "host" ? "Guest · O / ●2" : "Host · X / ●1"}</p>
             )}
           </div>
         </div>
@@ -1399,7 +1399,7 @@ export default function MinigameSessionPage() {
   }
 
   if (loading) return (
-    <div role="status" aria-label="Loading game" className="max-w-3xl mx-auto flex items-center justify-center gap-2 min-h-[300px] text-gray-400">
+    <div role="status" aria-label="Loading game" className="max-w-3xl mx-auto flex items-center justify-center gap-2 min-h-[300px] text-gray-500">
       <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
       <p className="text-sm">Loading game…</p>
     </div>
@@ -1440,7 +1440,7 @@ export default function MinigameSessionPage() {
         <button
           onClick={() => router.push("/minigames")}
           aria-label="Back to lobby"
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-0.5"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded px-1 py-0.5"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Lobby
         </button>
@@ -1448,7 +1448,7 @@ export default function MinigameSessionPage() {
         <button
           onClick={() => setShowHelp(true)}
           aria-label="How to play"
-          className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500"
+          className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500"
         >
           <span aria-hidden="true">?</span>
         </button>
@@ -1487,7 +1487,7 @@ export default function MinigameSessionPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <span className="text-5xl mb-4">⏳</span>
               <p className="text-gray-700 font-semibold">Waiting for someone to join</p>
-              <p className="text-sm text-gray-400 mt-1">Use the invite button to challenge a coworker directly.</p>
+              <p className="text-sm text-gray-500 mt-1">Use the invite button to challenge a coworker directly.</p>
             </div>
           ) : (
             <>

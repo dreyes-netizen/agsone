@@ -52,15 +52,67 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  // ?permanent=true requests an actual row delete instead of the default hide.
+  const permanent = req.nextUrl.searchParams.get("permanent") === "true";
 
-  const existing = await prisma.reward.findUnique({ where: { id }, select: { id: true } });
+  const existing = await prisma.reward.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      imageUrls: true,
+      pointCost: true,
+      stockQuantity: true,
+      category: true,
+      isActive: true,
+      createdById: true,
+      _count: { select: { redemptions: true } },
+    },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Soft-delete: rewards are never hard-deleted so redemption history stays intact.
-  // Admins can restore a hidden reward by toggling isActive back to true.
-  await prisma.reward.update({ where: { id }, data: { isActive: false } });
+  if (!permanent) {
+    // Soft-delete: rewards are never hard-deleted by default so redemption history stays intact.
+    // Admins can restore a hidden reward by toggling isActive back to true.
+    await prisma.reward.update({ where: { id }, data: { isActive: false } });
+    return NextResponse.json({ success: true });
+  }
+
+  // Hard-delete: only safe when nothing references this reward yet. A reward with
+  // redemption history must stay soft-deleted (hidden) — deleting the row would either
+  // orphan or fail on the Redemption.rewardId foreign key, and would erase that history.
+  if (existing._count.redemptions > 0) {
+    return NextResponse.json(
+      {
+        error: `Cannot permanently delete — ${existing._count.redemptions} redemption(s) reference this reward. Hide it instead.`,
+      },
+      { status: 409 }
+    );
+  }
+
+  await prisma.reward.delete({ where: { id } });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: user.id,
+      action: "HARD_DELETE_REWARD",
+      entityType: "Reward",
+      entityId: id,
+      beforeState: {
+        name: existing.name,
+        description: existing.description,
+        imageUrls: existing.imageUrls,
+        pointCost: existing.pointCost,
+        stockQuantity: existing.stockQuantity,
+        category: existing.category,
+        isActive: existing.isActive,
+        createdById: existing.createdById,
+      },
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

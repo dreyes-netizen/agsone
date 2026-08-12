@@ -15,7 +15,7 @@ export type OrderRow = {
   selectedAddOns: AddOn[];
   paidAt: string | null;
   createdAt: string;
-  user: { id: string; displayName: string; department: { name: string } | null };
+  user: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null };
 };
 
 export type Listing = {
@@ -31,6 +31,8 @@ export type Listing = {
   createdBy: { id: string; displayName: string; avatarUrl: string | null };
   myOrder: MyOrder | null;
   _count: { orders: number };
+  /** Every order on this listing — only populated when the caller owns it (Selling tab). */
+  orders?: OrderRow[];
 };
 
 export type Tab = "AVAILABLE" | "MY_ORDERS" | "MY_LISTINGS";

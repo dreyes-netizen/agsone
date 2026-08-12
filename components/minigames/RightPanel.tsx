@@ -75,15 +75,6 @@ export function RightPanel({
     }
   }
 
-  const statusColor = session.status === "FINISHED"
-    ? (session.winnerId === myId ? "text-emerald-700 bg-emerald-100" : session.winnerId ? "text-red-600 bg-red-100" : "text-yellow-700 bg-yellow-100")
-    : isMyTurn ? "text-navy-700 bg-navy-100" : "text-gray-600 bg-gray-100";
-
-  const statusLabel = session.status === "WAITING" ? "Waiting for opponent…"
-    : session.status === "FINISHED"
-      ? (!session.winnerId ? "Draw!" : session.winnerId === myId ? "You won! 🎉" : "You lost")
-    : isMyTurn ? "Your turn" : "Their turn";
-
   return (
     <div className="space-y-3">
       {/* Players — active player glows, inactive dims */}

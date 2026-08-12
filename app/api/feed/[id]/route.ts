@@ -34,7 +34,8 @@ export async function PATCH(
 
     const post = await prisma.socialPost.findUnique({ where: { id }, select: { authorId: true } });
     if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (post.authorId !== user.id && user.role !== "HR_ADMIN") {
+    const isAdmin = user.role === "HR_ADMIN" || user.role === "SUPER_ADMIN";
+    if (post.authorId !== user.id && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -50,8 +51,10 @@ export async function PATCH(
     return NextResponse.json({ data: updated });
   }
 
-  // Pin toggle — HR only
-  if (user.role !== "HR_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Pin toggle — HR/Super admin only
+  if (user.role !== "HR_ADMIN" && user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const post = await prisma.socialPost.findUnique({ where: { id }, select: { isPinned: true } });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });

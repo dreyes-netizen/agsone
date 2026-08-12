@@ -133,7 +133,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       >
         {/* Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <Search className="w-4 h-4 text-gray-400 shrink-0" />
+          <Search className="w-4 h-4 text-gray-500 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -146,7 +146,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             aria-activedescendant={
               focusIndex >= 0 && results[focusIndex] ? `cmdk-option-${results[focusIndex].id}` : undefined
             }
-            className="flex-1 text-sm bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
+            className="flex-1 text-sm bg-transparent outline-none text-gray-900 placeholder:text-gray-500"
           />
           {loading && (
             <div className="w-4 h-4 border-2 border-gray-200 border-t-navy-500 rounded-full animate-spin shrink-0" />
@@ -154,7 +154,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           <button
             aria-label="Close"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-500 hover:text-gray-600 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -163,13 +163,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         {/* Results */}
         <div id="cmdk-results" role="listbox" className="max-h-80 overflow-y-auto">
           {error ? (
-            <p className="text-sm text-gray-400 text-center py-8">Search unavailable</p>
+            <p className="text-sm text-gray-500 text-center py-8">Search unavailable</p>
           ) : query.length < 2 ? (
-            <p className="text-xs text-gray-400 text-center py-6">
+            <p className="text-xs text-gray-500 text-center py-6">
               Type at least 2 characters
             </p>
           ) : results.length === 0 && !loading ? (
-            <p className="text-sm text-gray-400 text-center py-8">
+            <p className="text-sm text-gray-500 text-center py-8">
               No employees found for &ldquo;{query}&rdquo;
             </p>
           ) : (
@@ -190,7 +190,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                     {r.displayName}
                   </p>
                   {r.email && (
-                    <p className="text-xs text-gray-400 truncate">{r.email}</p>
+                    <p className="text-xs text-gray-500 truncate">{r.email}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -208,8 +208,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
         {/* Footer hint */}
         <div className="flex items-center gap-3 px-4 py-2 border-t border-gray-100 bg-gray-50/80">
-          <span className="text-xs text-gray-400">↑↓ navigate</span>
-          <span className="text-xs text-gray-400">Esc to close</span>
+          <span className="text-xs text-gray-500">↑↓ navigate</span>
+          <span className="text-xs text-gray-500">Esc to close</span>
         </div>
       </div>
     </div>

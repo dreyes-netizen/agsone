@@ -213,7 +213,7 @@ export default function FeedbackPage() {
           ) : items.length === 0 && panel.mode !== "compose" ? (
             <div className="flex flex-col items-center justify-center flex-1 p-6 text-center">
               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                <MessageSquarePlus className="w-5 h-5 text-gray-400" aria-hidden="true" />
+                <MessageSquarePlus className="w-5 h-5 text-gray-500" aria-hidden="true" />
               </div>
               <p className="text-sm font-semibold text-gray-700">No reports yet</p>
               <p className="text-xs text-gray-500 mt-1">Report a concern confidentially</p>

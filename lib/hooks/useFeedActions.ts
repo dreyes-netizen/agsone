@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
@@ -520,7 +521,8 @@ export function useFeedActions() {
         method: "PATCH",
         body: JSON.stringify({ title: newTitle, content: encoded }),
       });
-    } catch {
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save changes");
       await load(activeFilter);
     } finally {
       setSavingPostEdit(false);
@@ -553,7 +555,8 @@ export function useFeedActions() {
     });
     try {
       await apiFetch(`/api/feed/${postId}`, { method: "PATCH" });
-    } catch {
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update pin");
       setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, isPinned: !newPinned } : p));
     }
   }

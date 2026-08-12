@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma/client";
-import { sendMail } from "@/lib/email/mailer";
-import { welcomeEmail } from "@/lib/email/templates";
 
 export async function POST(req: NextRequest) {
   try {

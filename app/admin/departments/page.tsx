@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Loader2, Trash2, Building2 } from "lucide-react";
+import { Loader2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -95,10 +95,6 @@ export default function DepartmentsPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  function handleDelete(dept: Department) {
-    setDeleteConfirmId(dept.id);
   }
 
   async function confirmDelete(dept: Department) {

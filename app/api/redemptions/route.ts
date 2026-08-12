@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
+import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { broadcast } from "@/lib/realtime/broadcast";

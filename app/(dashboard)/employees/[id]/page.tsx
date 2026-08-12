@@ -145,7 +145,6 @@ export default function EmployeeProfilePage() {
     // Move focus to close button when lightbox opens
     setTimeout(() => closeLightboxRef.current?.focus(), 50);
     return () => window.removeEventListener("keydown", onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarZoomed]);
 
   function loadEmployee() {

@@ -49,7 +49,7 @@ function AdminNavLink({ href, label, icon: Icon, active }: { href: string; label
         active ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
       }`}
     >
-      <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${active ? "text-gray-900" : "text-gray-400"}`} />
+      <Icon aria-hidden="true" className={`w-4 h-4 shrink-0 ${active ? "text-gray-900" : "text-gray-500"}`} />
       {label}
     </Link>
   );

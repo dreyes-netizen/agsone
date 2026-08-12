@@ -65,7 +65,10 @@ export default function DocumentsPage() {
     }
   }
 
-  useEffect(() => { queueMicrotask(load); }, [page]);
+  useEffect(() => {
+    queueMicrotask(load);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   useEffect(() => {
     apiFetch<{ data: { allyEnabled: boolean } }>("/api/admin/settings")
@@ -122,7 +125,7 @@ export default function DocumentsPage() {
     }
   }
 
-  async function handleDelete(id: string, name: string) {
+  async function handleDelete(id: string) {
     setDeleteConfirmId(id);
   }
 
@@ -356,7 +359,7 @@ export default function DocumentsPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => handleDelete(doc.id, doc.name)}
+                        onClick={() => handleDelete(doc.id)}
                         className="text-red-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
                         title="Delete"
                         aria-label="Delete"

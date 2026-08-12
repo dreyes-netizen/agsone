@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to omit isActive from the response
   const { isActive: _isActive, ...data } = profile;
   return NextResponse.json({ data });
 }

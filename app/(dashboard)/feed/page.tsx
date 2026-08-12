@@ -323,7 +323,7 @@ export default function FeedPage() {
             aria-label="Write a post"
           >
             <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
-            <span className="flex-1 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 hover:border-gray-300 hover:bg-white transition-all">
+            <span className="flex-1 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 hover:border-gray-300 hover:bg-white transition-all">
               What&apos;s on your mind?
             </span>
           </button>
@@ -487,7 +487,7 @@ export default function FeedPage() {
                 <button
                   type="button"
                   onClick={() => setShowAllFlairs(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-all"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-all"
                 >
                   +{FLAIRS.length - 8} more
                 </button>
@@ -727,16 +727,16 @@ export default function FeedPage() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-gray-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
                         {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                          <button onClick={() => togglePin(post.id)} className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"} aria-label={post.isPinned ? "Unpin post" : "Pin post"}>
+                          <button onClick={() => togglePin(post.id)} className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-500 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"} aria-label={post.isPinned ? "Unpin post" : "Pin post"}>
                             <Pin className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
                           <>
-                            <button onClick={() => startEditPost(post)} className="text-gray-400 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50" title="Edit shoutout" aria-label="Edit shoutout">
+                            <button onClick={() => startEditPost(post)} className="text-gray-500 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50" title="Edit shoutout" aria-label="Edit shoutout">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            <button onClick={() => deletePost(post.id)} className="text-gray-400 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Delete post" aria-label="Delete post">
+                            <button onClick={() => deletePost(post.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Delete post" aria-label="Delete post">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </>
@@ -925,7 +925,7 @@ export default function FeedPage() {
                       {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
                         <button
                           onClick={() => togglePin(post.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
+                          className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-500 hover:text-amber-500 hover:bg-amber-50"}`}
                           title={post.isPinned ? "Unpin post" : "Pin post"}
                           aria-label={post.isPinned ? "Unpin post" : "Pin post"}
                         >
@@ -936,7 +936,7 @@ export default function FeedPage() {
                         <>
                           <button
                             onClick={() => startEditPost(post)}
-                            className="text-gray-400 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50"
+                            className="text-gray-500 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50"
                             title="Edit post"
                             aria-label="Edit post"
                           >
@@ -944,7 +944,7 @@ export default function FeedPage() {
                           </button>
                           <button
                             onClick={() => deletePost(post.id)}
-                            className="text-gray-400 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                            className="text-gray-500 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50"
                             title="Delete post"
                             aria-label="Delete post"
                           >

@@ -59,6 +59,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     where: { pointsBalance: { gt: employee.pointsBalance }, isActive: true },
   }) + 1;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to omit from publicFields
   const { email, birthday, ...publicFields } = employee;
   const responseData = isPrivileged
     ? { ...employee, rank }

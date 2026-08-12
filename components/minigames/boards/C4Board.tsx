@@ -47,7 +47,7 @@ export function C4Board({ session, onMove }: { session: Session; onMove: (data: 
   const winCells = findC4Win(board);
   // Landing row (lowest empty) for the hovered column, for the ghost preview.
   const landingRow = hoverCol !== null ? board[hoverCol].findIndex(v => v === null) : -1;
-  const ghostColor = playerNum === 1 ? "bg-navy-600/30" : "bg-rose-500/30";
+  const ghostColor = playerNum === 1 ? "bg-navy-300/30" : "bg-rose-500/30";
 
   return (
     <div className="flex flex-col items-center py-2 gap-2">
@@ -84,7 +84,7 @@ export function C4Board({ session, onMove }: { session: Session; onMove: (data: 
                     onMouseEnter={() => isMyTurn && setHoverCol(col)}
                     onClick={() => isMyTurn && !cell && onMove({ column: col })}
                     className={`w-full aspect-square rounded-full border-2 transition-all ${isLast ? "c4-drop" : ""} ${
-                      cell === 1 ? "bg-navy-600 border-navy-500 shadow-sm" :
+                      cell === 1 ? "bg-navy-300 border-navy-200 shadow-sm" :
                       cell === 2 ? "bg-rose-500 border-rose-400 shadow-sm" :
                       isGhost ? `${ghostColor} border-white/20 cursor-pointer` :
                       "bg-white/10 border-white/5"
@@ -99,7 +99,7 @@ export function C4Board({ session, onMove }: { session: Session; onMove: (data: 
       <p className="text-xs text-gray-500">
         You are <span className={`inline-flex items-center gap-1 align-middle ${playerNum === 1 ? "text-navy-600 font-semibold" : "text-rose-600 font-semibold"}`}>
           <span className={`inline-block w-2.5 h-2.5 rounded-full ${playerNum === 1 ? "bg-navy-600" : "bg-rose-500"}`} aria-hidden="true" />
-          {playerNum === 1 ? "Navy" : "Red"}
+          {playerNum === 1 ? "Navy" : "Rose"}
         </span>
         {isMyTurn && " · Click a column to drop"}
       </p>

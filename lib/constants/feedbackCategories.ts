@@ -23,7 +23,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   SECURITY_POLICY:           "bg-rose-100 text-rose-700",
   COMPENSATION_BENEFITS: "bg-emerald-100 text-emerald-700",
   WORK_LIFE_BALANCE: "bg-navy-100 text-navy-700",
-  COMPANY_CULTURE: "bg-navy-100 text-navy-700",
+  COMPANY_CULTURE: "bg-navy-200 text-navy-800",
   TEAM_DYNAMICS: "bg-amber-100 text-amber-700",
   PROCESSES_TOOLS: "bg-gray-100 text-gray-700",
   RECOGNITION: "bg-amber-100 text-amber-700",

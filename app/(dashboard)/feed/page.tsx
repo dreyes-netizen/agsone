@@ -244,8 +244,8 @@ export default function FeedPage() {
 
           {/* Upcoming Birthdays */}
           {!widgetsLoading && birthdays.length > 0 && (
-            <div className="bg-gradient-to-br from-navy-50 to-navy-100 border border-rose-100 rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" aria-hidden="true" /> Birthdays</p>
+            <div className="bg-gradient-to-br from-navy-50 to-navy-100 border border-navy-100 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-navy-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" aria-hidden="true" /> Birthdays</p>
               <div className="space-y-2">
                 {birthdays.map((b) => (
                   <Link key={b.id} href={`/employees/${b.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">

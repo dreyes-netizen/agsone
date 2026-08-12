@@ -10,7 +10,7 @@ export const ROLE_LABEL: Record<string, string> = {
 
 export const ROLE_BADGE_CLASS: Record<string, string> = {
   EMPLOYEE:    "bg-gray-100 text-gray-600",
-  MANAGER:     "bg-blue-100 text-blue-700",
+  MANAGER:     "bg-navy-100 text-navy-700",
   HR_ADMIN:    "bg-amber-100 text-amber-700",
   SUPER_ADMIN: "bg-red-100 text-red-700",
 };

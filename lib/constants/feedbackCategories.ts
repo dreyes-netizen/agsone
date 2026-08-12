@@ -18,13 +18,13 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 export const CATEGORY_COLORS: Record<string, string> = {
   HARASSMENT_DISCRIMINATION: "bg-red-100 text-red-700",
-  ETHICAL_FRAUD:             "bg-orange-100 text-orange-700",
+  ETHICAL_FRAUD:             "bg-amber-100 text-amber-700",
   MISCONDUCT_ABUSE:          "bg-amber-100 text-amber-800",
   SECURITY_POLICY:           "bg-rose-100 text-rose-700",
   COMPENSATION_BENEFITS: "bg-emerald-100 text-emerald-700",
   WORK_LIFE_BALANCE: "bg-navy-100 text-navy-700",
-  COMPANY_CULTURE: "bg-blue-100 text-blue-700",
-  TEAM_DYNAMICS: "bg-orange-100 text-orange-700",
+  COMPANY_CULTURE: "bg-navy-100 text-navy-700",
+  TEAM_DYNAMICS: "bg-amber-100 text-amber-700",
   PROCESSES_TOOLS: "bg-gray-100 text-gray-700",
   RECOGNITION: "bg-amber-100 text-amber-700",
   OTHER: "bg-gray-100 text-gray-600",

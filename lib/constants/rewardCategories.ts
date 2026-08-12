@@ -13,8 +13,8 @@ export const REWARD_CATEGORY_CONFIG: Record<
   RewardCategory,
   { icon: LucideIcon; iconClass: string; label: string; accent: string; badge: string }
 > = {
-  PHYSICAL:  { icon: Package,  iconClass: "text-orange-600", label: "Physical",  accent: "from-orange-400 to-amber-400", badge: "bg-orange-50 text-orange-700 border-orange-200" },
-  VOUCHER:   { icon: Ticket,   iconClass: "text-blue-600",   label: "Voucher",   accent: "from-blue-500 to-navy-500",    badge: "bg-blue-50 text-blue-700 border-blue-200" },
-  PRIVILEGE: { icon: Star,     iconClass: "text-navy-600",   label: "Privilege", accent: "from-navy-500 to-blue-500",    badge: "bg-navy-50 text-navy-700 border-navy-200" },
+  PHYSICAL:  { icon: Package,  iconClass: "text-amber-600", label: "Physical",  accent: "from-amber-400 to-amber-600", badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  VOUCHER:   { icon: Ticket,   iconClass: "text-navy-600",   label: "Voucher",   accent: "from-navy-400 to-navy-600",    badge: "bg-navy-50 text-navy-700 border-navy-200" },
+  PRIVILEGE: { icon: Star,     iconClass: "text-navy-600",   label: "Privilege", accent: "from-navy-500 to-navy-700",    badge: "bg-navy-50 text-navy-700 border-navy-200" },
   DIGITAL:   { icon: Monitor,  iconClass: "text-emerald-600",label: "Digital",   accent: "from-emerald-500 to-emerald-700", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };

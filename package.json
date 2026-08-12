@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "setup:hooks": "cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Git hooks installed.'"
+    "setup:hooks": "cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Git hooks installed.'",
+    "reset:data": "npx tsx scripts/reset-data.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

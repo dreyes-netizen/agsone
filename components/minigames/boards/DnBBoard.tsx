@@ -28,7 +28,7 @@ export function DnBBoard({ session, onMove }: { session: Session; onMove: (data:
       const r = gr / 2;
       const c = (gc - 1) / 2;
       const drawn = hLines[r]?.[c];
-      const color = drawn ? (boxes[r]?.[c] === 1 || (r > 0 && boxes[r-1]?.[c] === 1) ? "bg-yellow-400" : boxes[r]?.[c] === 2 || (r > 0 && boxes[r-1]?.[c] === 2) ? "bg-rose-500" : "bg-gray-400") : "";
+      const color = drawn ? (boxes[r]?.[c] === 1 || (r > 0 && boxes[r-1]?.[c] === 1) ? "bg-navy-600" : boxes[r]?.[c] === 2 || (r > 0 && boxes[r-1]?.[c] === 2) ? "bg-rose-500" : "bg-gray-400") : "";
       return (
         <button
           key={`h-${r}-${c}`}
@@ -64,7 +64,7 @@ export function DnBBoard({ session, onMove }: { session: Session; onMove: (data:
     const owner = boxes[r]?.[c];
     return (
       <div key={`b-${r}-${c}`} className={`rounded-lg flex items-center justify-center text-base font-bold transition-colors ${
-        owner === 1 ? "bg-yellow-200 text-yellow-600" :
+        owner === 1 ? "bg-navy-200 text-navy-600" :
         owner === 2 ? "bg-rose-200 text-rose-600" :
         "bg-transparent"
       }`}>
@@ -77,7 +77,7 @@ export function DnBBoard({ session, onMove }: { session: Session; onMove: (data:
     <div className="space-y-4 py-2">
       <div className="flex items-center justify-center gap-8">
         <div className="text-center">
-          <div className="w-4 h-4 rounded-full bg-yellow-400 mx-auto mb-1 shadow-sm" />
+          <div className="w-4 h-4 rounded-full bg-navy-600 mx-auto mb-1 shadow-sm" />
           <p className="text-3xl font-bold text-gray-900">{score[0]}</p>
           <p className="text-xs text-gray-500 mt-0.5">{session.host.displayName}</p>
         </div>
@@ -105,8 +105,8 @@ export function DnBBoard({ session, onMove }: { session: Session; onMove: (data:
       </div>
 
       <p className="text-xs text-center text-gray-500">
-        You are <span className={myNum === 1 ? "text-yellow-600 font-semibold" : "text-rose-600 font-semibold"}>
-          {myNum === 1 ? "🟡 Yellow" : "🔴 Red"}
+        You are <span className={myNum === 1 ? "text-navy-600 font-semibold" : "text-rose-600 font-semibold"}>
+          {myNum === 1 ? "🔵 Navy" : "🔴 Red"}
         </span>
         {isMyTurn && " · Tap a line between dots"}
       </p>

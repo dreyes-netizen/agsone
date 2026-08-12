@@ -74,13 +74,13 @@ function BSGrid({
               onClick={() => canClick && onShoot?.(i)}
               disabled={!canClick}
               className={`w-full aspect-square rounded-sm border text-[11px] font-bold flex items-center justify-center transition-all ${
-                isSunkEnemy ? "bg-red-700 border-red-800 text-white" :
-                isHit && isMyShip ? "bg-red-500 border-red-600 text-white" :
+                isSunkEnemy ? "bg-rose-700 border-rose-800 text-white" :
+                isHit && isMyShip ? "bg-rose-500 border-rose-600 text-white" :
                 isMyShip ? "bg-slate-700 border-slate-600" :
-                isHit ? "bg-orange-400 border-orange-500 text-white" :
+                isHit ? "bg-amber-500 border-amber-600 text-white" :
                 isMiss ? "bg-slate-200 border-slate-300 text-slate-400" :
-                canClick ? "bg-blue-50 border-blue-200 hover:bg-blue-200 active:scale-95 cursor-pointer" :
-                "bg-blue-50 border-blue-100 cursor-default"
+                canClick ? "bg-navy-50 border-navy-200 hover:bg-navy-200 active:scale-95 cursor-pointer" :
+                "bg-navy-50 border-navy-100 cursor-default"
               }`}
             >
               {(isHit || isSunkEnemy) ? "✕" : isMiss ? "○" : null}
@@ -128,7 +128,7 @@ export function BSBoard({ session, onMove }: { session: Session; onMove: (data: 
             {Array.from({ length: BS_GRID * BS_GRID }, (_, i) => {
               const ship = pending.find(s => s.cells.includes(i));
               return (
-                <div key={i} className={`w-full aspect-square rounded-sm border ${ship ? SHIP_COLORS[ship.id] : "bg-blue-50 border-blue-100"}`} />
+                <div key={i} className={`w-full aspect-square rounded-sm border ${ship ? SHIP_COLORS[ship.id] : "bg-navy-50 border-navy-100"}`} />
               );
             })}
           </div>
@@ -187,9 +187,9 @@ export function BSBoard({ session, onMove }: { session: Session; onMove: (data: 
       </div>
       <div className="flex justify-center gap-4 text-xs text-gray-500">
         <span><span className="inline-block w-3 h-3 rounded-sm bg-slate-700 mr-1" />Ship</span>
-        <span><span className="inline-block w-3 h-3 rounded-sm bg-orange-400 mr-1" />Hit</span>
+        <span><span className="inline-block w-3 h-3 rounded-sm bg-amber-500 mr-1" />Hit</span>
         <span><span className="inline-block w-3 h-3 rounded-sm bg-slate-200 mr-1" />Miss</span>
-        <span><span className="inline-block w-3 h-3 rounded-sm bg-red-700 mr-1" />Sunk</span>
+        <span><span className="inline-block w-3 h-3 rounded-sm bg-rose-700 mr-1" />Sunk</span>
       </div>
     </div>
   );

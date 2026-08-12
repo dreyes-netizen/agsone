@@ -63,10 +63,10 @@ export function GameResultOverlay({ session, myId, h2h, onNavigate }: Props) {
   const pointsColor = draw ? "text-amber-300" : won ? "text-navy-300" : "text-rose-300";
 
   const bgGradient = draw
-    ? "from-[#451a03] to-[#78350f]"
+    ? "from-amber-950 to-amber-900"
     : won
-    ? "from-[#1e1b4b] to-[#312e81]"
-    : "from-[#1c1917] to-[#292524]";
+    ? "from-navy-900 to-navy-800"
+    : "from-stone-900 to-stone-800";
 
   let h2hLine: string | null = null;
   if (h2h && opponent && h2h.wins + h2h.losses + h2h.draws > 0) {

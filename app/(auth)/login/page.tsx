@@ -204,8 +204,8 @@ export default function LoginPage() {
             </button>
 
             {error && (
-              <div role="alert" className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div role="alert" className="mt-4 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20">
+                <p className="text-destructive text-sm">{error}</p>
               </div>
             )}
 

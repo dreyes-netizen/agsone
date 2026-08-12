@@ -145,8 +145,8 @@ export default function OnboardingPage() {
             )}
 
             {error && (
-              <div role="alert" className="px-4 py-3 rounded-lg bg-red-50 border border-red-100">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div role="alert" className="px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-destructive text-sm">{error}</p>
               </div>
             )}
 

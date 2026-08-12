@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import type { OrderRow } from "../types";
 import { formatPrice } from "../utils";
 
@@ -87,7 +87,9 @@ export function SellerOrdersPanel({ listingPrice, orders, onTogglePaid, onViewUs
                           <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{o.user.department.name}</span>
                         )}
                         {isPaid && (
-                          <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">✓ Paid</span>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium inline-flex items-center gap-0.5">
+                            <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Paid
+                          </span>
                         )}
                       </div>
                       <p className="text-[11px] text-gray-500 mt-0.5">×{o.quantity} @ {formatPrice(listingPrice)} each</p>

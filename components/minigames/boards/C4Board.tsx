@@ -97,8 +97,9 @@ export function C4Board({ session, onMove }: { session: Session; onMove: (data: 
         })}
       </div>
       <p className="text-xs text-gray-500">
-        You are <span className={playerNum === 1 ? "text-navy-600 font-semibold" : "text-rose-600 font-semibold"}>
-          {playerNum === 1 ? "🔵 Navy" : "🔴 Red"}
+        You are <span className={`inline-flex items-center gap-1 align-middle ${playerNum === 1 ? "text-navy-600 font-semibold" : "text-rose-600 font-semibold"}`}>
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${playerNum === 1 ? "bg-navy-600" : "bg-rose-500"}`} aria-hidden="true" />
+          {playerNum === 1 ? "Navy" : "Red"}
         </span>
         {isMyTurn && " · Click a column to drop"}
       </p>

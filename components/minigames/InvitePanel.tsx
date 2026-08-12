@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Check } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Avatar } from "./Avatar";
 import type { Employee } from "./types";
@@ -93,8 +93,8 @@ export function InvitePanel({ sessionId, apiFetch }: { sessionId: string; apiFet
                   >
                     <Avatar player={emp} size={28} />
                     <span className="flex-1 text-sm text-gray-800 truncate">{emp.displayName}</span>
-                    <span className={`text-xs font-semibold shrink-0 ${done ? "text-emerald-600" : "text-navy-600"}`}>
-                      {done ? "Sent ✓" : inviting === emp.id ? "…" : "Invite"}
+                    <span className={`text-xs font-semibold shrink-0 flex items-center gap-1 ${done ? "text-emerald-600" : "text-navy-600"}`}>
+                      {done ? <><Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent</> : inviting === emp.id ? "…" : "Invite"}
                     </span>
                   </button>
                 );

@@ -6,7 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   ArrowLeft, Coins, Star, CalendarDays, Building2,
-  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle, Loader2, X, Cake,
+  Award, Trophy, Sparkles, History, FileText, Tag, Briefcase, Lock, AlertCircle, Loader2, X, Cake, PartyPopper,
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -499,8 +499,8 @@ export default function EmployeeProfilePage() {
           </div>
           {shoutoutSuccess ? (
             <div className="text-center py-3" role="status" aria-live="polite">
-              <p className="text-emerald-600 font-medium text-sm">
-                Shoutout posted to the feed! <span aria-hidden="true">🎉</span>
+              <p className="text-emerald-600 font-medium text-sm inline-flex items-center gap-1.5">
+                Shoutout posted to the feed! <PartyPopper className="w-4 h-4" aria-hidden="true" />
               </p>
               <button
                 onClick={() => setShoutoutSuccess(false)}

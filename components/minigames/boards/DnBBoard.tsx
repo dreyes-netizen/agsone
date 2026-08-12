@@ -105,8 +105,9 @@ export function DnBBoard({ session, onMove }: { session: Session; onMove: (data:
       </div>
 
       <p className="text-xs text-center text-gray-500">
-        You are <span className={myNum === 1 ? "text-navy-600 font-semibold" : "text-rose-600 font-semibold"}>
-          {myNum === 1 ? "🔵 Navy" : "🔴 Red"}
+        You are <span className={`inline-flex items-center gap-1 align-middle ${myNum === 1 ? "text-navy-600 font-semibold" : "text-rose-600 font-semibold"}`}>
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${myNum === 1 ? "bg-navy-600" : "bg-rose-500"}`} aria-hidden="true" />
+          {myNum === 1 ? "Navy" : "Red"}
         </span>
         {isMyTurn && " · Tap a line between dots"}
       </p>

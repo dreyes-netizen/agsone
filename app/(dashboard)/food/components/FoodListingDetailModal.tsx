@@ -1,4 +1,4 @@
-import { Clock, AlertTriangle, Truck, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Clock, AlertTriangle, Truck, ChevronLeft, ChevronRight, Loader2, FileText } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Listing, AddOn } from "../types";
 import { formatPrice, formatCutoff, isClosed, getUrgencyLabel } from "../utils";
@@ -306,7 +306,10 @@ export function FoodListingDetailModal(props: FoodListingDetailModalProps) {
                           </div>
                         </div>
                         {listing.myOrder!.note && (
-                          <p className="text-xs text-gray-500 italic border-t border-emerald-100 pt-2"><span aria-hidden="true">📝 </span>&ldquo;{listing.myOrder!.note}&rdquo;</p>
+                          <p className="text-xs text-gray-500 italic border-t border-emerald-100 pt-2 flex items-start gap-1">
+                            <FileText className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                            &ldquo;{listing.myOrder!.note}&rdquo;
+                          </p>
                         )}
                         {!closed && (
                           <div className="flex items-center gap-3 pt-1">

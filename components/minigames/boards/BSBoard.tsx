@@ -114,7 +114,7 @@ export function BSBoard({ session, onMove }: { session: Session; onMove: (data: 
     if (myReady) {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-          <span className="text-5xl">⚓</span>
+          <Anchor className="w-12 h-12 text-navy-300" aria-hidden="true" />
           <p className="text-gray-700 font-semibold">Fleet deployed!</p>
           <p className="text-sm text-gray-500">Waiting for opponent to place their ships…</p>
         </div>

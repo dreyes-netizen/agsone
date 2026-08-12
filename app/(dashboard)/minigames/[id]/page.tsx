@@ -9,7 +9,7 @@ import { useConfetti } from "@/lib/hooks/useConfetti";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { sounds } from "@/lib/minigames/sounds";
-import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft, Hourglass } from "lucide-react";
 import { ForfeitModal } from "@/components/minigames/ForfeitModal";
 import { MobileBar } from "@/components/minigames/MobileBar";
 import { RightPanel } from "@/components/minigames/RightPanel";
@@ -233,7 +233,7 @@ export default function MinigameSessionPage() {
         <div className={`w-full lg:flex-1 min-w-0 bg-white border border-table-border rounded-card p-2 lg:p-6 transition-opacity ${moving ? "opacity-70 pointer-events-none" : ""}`}>
           {session.status === "WAITING" && session.gameType !== "BATTLESHIP" ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="text-5xl mb-4">⏳</span>
+              <Hourglass className="w-12 h-12 mb-4 text-gray-400" aria-hidden="true" />
               <p className="text-gray-700 font-semibold">Waiting for someone to join</p>
               <p className="text-sm text-gray-500 mt-1">Use the invite button to challenge a coworker directly.</p>
             </div>

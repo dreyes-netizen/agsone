@@ -1,7 +1,67 @@
-import type { Listing } from "./types";
+import type { AddOn, Listing, OrderRow } from "./types";
 
 export function formatPrice(price: string) {
   return `₱${parseFloat(price).toFixed(2)}`;
+}
+
+/** Order total = (base listing price + sum of selected add-on prices) × quantity. */
+export function computeOrderTotal(basePrice: number, order: { quantity: number; selectedAddOns: AddOn[] }) {
+  const addOnSum = (order.selectedAddOns ?? []).reduce((sum, a) => sum + a.price, 0);
+  return (basePrice + addOnSum) * order.quantity;
+}
+
+export type ListingStats = {
+  orderCount: number;
+  quantity: number;
+  total: number;
+  collected: number;
+  outstanding: number;
+};
+
+/** Aggregate order/prep/payment stats for one listing, derived from its `orders`. */
+export function computeListingStats(listing: Listing): ListingStats {
+  const orders = listing.orders ?? [];
+  const basePrice = parseFloat(listing.price);
+  let quantity = 0;
+  let total = 0;
+  let collected = 0;
+  for (const o of orders) {
+    const rowTotal = computeOrderTotal(basePrice, o);
+    quantity += o.quantity;
+    total += rowTotal;
+    if (o.paidAt) collected += rowTotal;
+  }
+  return { orderCount: orders.length, quantity, total, collected, outstanding: total - collected };
+}
+
+/** Sum per-listing stats across every listing a seller owns, for the dashboard summary cards. */
+export function computeSellerTotals(listings: Listing[]) {
+  return listings.reduce(
+    (acc, l) => {
+      const s = computeListingStats(l);
+      acc.orderCount += s.orderCount;
+      acc.quantity += s.quantity;
+      acc.outstanding += s.outstanding;
+      return acc;
+    },
+    { orderCount: 0, quantity: 0, outstanding: 0 }
+  );
+}
+
+export function formatOrderTime(createdAt: string) {
+  const d = new Date(createdAt);
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (d.toDateString() === new Date().toDateString()) return `Today, ${time}`;
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+export function initials(displayName: string) {
+  return displayName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+}
+
+export function matchesOrderSearch(order: OrderRow, query: string) {
+  if (!query.trim()) return true;
+  return order.user.displayName.toLowerCase().includes(query.trim().toLowerCase());
 }
 
 export function formatCutoff(cutoffAt: string) {

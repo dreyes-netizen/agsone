@@ -22,6 +22,7 @@ import type { AddOn, MyOrder, OrderRow, Listing, Tab } from "./types";
 import { ListingFormPanel } from "./components/ListingFormPanel";
 import { FoodListingCard } from "./components/FoodListingCard";
 import { FoodListingDetailModal } from "./components/FoodListingDetailModal";
+import { SellingView } from "./components/selling/SellingView";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -283,12 +284,24 @@ export default function FoodPage() {
         `/api/food/${listingId}/orders/${orderId}`,
         { method: "PATCH", body: JSON.stringify({ paid }) }
       );
+      // Two places hold a copy of this order: `sellerOrders` (the legacy
+      // expand-on-demand list still used when a seller's own listing shows
+      // up in the Available tab) and `listings[].orders` (the Selling tab's
+      // preloaded dashboard data). Keep both in sync so either view reflects
+      // the change immediately.
       setSellerOrders((prev) => ({
         ...prev,
         [listingId]: (prev[listingId] ?? []).map((o) =>
           o.id === orderId ? { ...o, paidAt: res.data.paidAt } : o
         ),
       }));
+      setListings((prev) =>
+        prev.map((l) =>
+          l.id === listingId
+            ? { ...l, orders: (l.orders ?? []).map((o) => o.id === orderId ? { ...o, paidAt: res.data.paidAt } : o) }
+            : l
+        )
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update payment status");
     }
@@ -306,6 +319,13 @@ export default function FoodPage() {
     setNewImages([]); setImagePreviews([]);
     setNewAddOns(listing.addOns ?? []);
     setAddOnName(""); setAddOnPrice("");
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── Sell Food CTA (Selling empty state) ──────────────────────────────────────
+  function openSellForm() {
+    resetForm();
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -376,7 +396,9 @@ export default function FoodPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Food Board</h1>
-          <p className="text-gray-500 text-sm mt-1">Order food from your colleagues</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {tab === "MY_LISTINGS" ? "Manage your listings and incoming orders" : "Order food from your colleagues"}
+          </p>
         </div>
         <button
           onClick={() => {
@@ -429,7 +451,7 @@ export default function FoodPage() {
 
       {/* Tabs — horizontal scroll on mobile */}
       <div role="tablist" aria-label="Food board views" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible pb-0.5">
-        {([["AVAILABLE", "Available"], ["MY_ORDERS", "My Orders"], ["MY_LISTINGS", "My Listings"]] as [Tab, string][]).map(([t, label]) => (
+        {([["AVAILABLE", "Available"], ["MY_ORDERS", "My Orders"], ["MY_LISTINGS", "Selling"]] as [Tab, string][]).map(([t, label]) => (
           <button
             key={t}
             role="tab"
@@ -450,7 +472,19 @@ export default function FoodPage() {
 
       {/* Listings */}
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={tab}>
-      {loading ? (
+      {tab === "MY_LISTINGS" ? (
+        <SellingView
+          listings={filtered}
+          loading={loading}
+          onSellFood={openSellForm}
+          onEdit={handleEdit}
+          onCloseListing={handleClose}
+          onSellAgain={handleSellAgain}
+          onDelete={handleDelete}
+          onTogglePaid={togglePaid}
+          onViewUser={(userId) => router.push(`/employees/${userId}`)}
+        />
+      ) : loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">

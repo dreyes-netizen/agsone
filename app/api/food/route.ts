@@ -45,11 +45,41 @@ export async function GET(req: NextRequest) {
     take: 200,
   });
 
+  // The seller dashboard (Selling tab) needs every order on every listing the
+  // caller owns — not just their own order like the `orders` include above.
+  // One batched query keyed off the caller's own listing ids, rather than a
+  // per-listing fetch, keeps this at 2 queries total regardless of how many
+  // listings the caller sells.
+  const ownListingIds = listings.filter((l) => l.createdById === authUser.id).map((l) => l.id);
+  const ownOrders = ownListingIds.length
+    ? await prisma.foodOrder.findMany({
+        where: { listingId: { in: ownListingIds } },
+        select: {
+          id: true,
+          listingId: true,
+          quantity: true,
+          note: true,
+          selectedAddOns: true,
+          paidAt: true,
+          createdAt: true,
+          user: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+
+  const ownOrdersByListing = new Map<string, typeof ownOrders>();
+  for (const o of ownOrders) {
+    const arr = ownOrdersByListing.get(o.listingId);
+    if (arr) arr.push(o);
+    else ownOrdersByListing.set(o.listingId, [o]);
+  }
+
   const data = listings.map((l) => ({
     ...l,
     price: l.price.toString(),
     myOrder: l.orders[0] ?? null,
-    orders: undefined,
+    orders: l.createdById === authUser.id ? (ownOrdersByListing.get(l.id) ?? []) : undefined,
   }));
 
   return NextResponse.json({ data });

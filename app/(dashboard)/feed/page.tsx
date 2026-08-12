@@ -146,7 +146,7 @@ export default function FeedPage() {
                 key={i}
                 type="button"
                 onClick={() => router.push(`/employees/${id}`)}
-                className="font-semibold text-blue-600 bg-blue-50 rounded-md px-1 py-0.5 hover:bg-blue-100 transition-colors cursor-pointer"
+                className="font-semibold text-navy-600 bg-navy-50 rounded-md px-1 py-0.5 hover:bg-navy-100 transition-colors cursor-pointer"
               >
                 @{name}
               </button>
@@ -244,7 +244,7 @@ export default function FeedPage() {
 
           {/* Upcoming Birthdays */}
           {!widgetsLoading && birthdays.length > 0 && (
-            <div className="bg-gradient-to-br from-rose-50 to-navy-50 border border-rose-100 rounded-xl px-4 py-3">
+            <div className="bg-gradient-to-br from-navy-50 to-navy-100 border border-rose-100 rounded-xl px-4 py-3">
               <p className="text-xs font-semibold text-rose-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" aria-hidden="true" /> Birthdays</p>
               <div className="space-y-2">
                 {birthdays.map((b) => (
@@ -266,7 +266,7 @@ export default function FeedPage() {
           <div className="hidden lg:block bg-white rounded-card border border-table-border overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
               <div className="flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5 text-yellow-500" aria-hidden="true" />
+                <Star className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
                 <span className="text-xs font-semibold text-gray-700">Top Performers</span>
               </div>
               <Link href="/leaderboard" className="text-xs text-navy-600 hover:text-navy-700 font-medium">See all →</Link>
@@ -303,7 +303,7 @@ export default function FeedPage() {
               <span className="text-xs font-semibold text-gray-700 leading-tight">Play a<br/>Minigame</span>
             </Link>
             <Link href="/marketplace" className="flex flex-col items-center gap-1.5 bg-white border border-gray-100 rounded-xl py-3 px-2 hover:border-gray-200 hover:shadow-sm transition-all text-center">
-              <ShoppingBag className="w-5 h-5 text-orange-400" />
+              <ShoppingBag className="w-5 h-5 text-amber-400" />
               <span className="text-xs font-semibold text-gray-700 leading-tight">Redeem<br/>Points</span>
             </Link>
           </div>
@@ -423,7 +423,7 @@ export default function FeedPage() {
                       role="option"
                       aria-selected={false}
                       onMouseDown={(e) => { e.preventDefault(); insertMention(emp); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-navy-50 transition-colors text-left"
                     >
                       <Avatar name={emp.displayName} url={emp.avatarUrl} size="sm" />
                       <span className="text-sm font-medium text-gray-900">{emp.displayName}</span>
@@ -705,7 +705,7 @@ export default function FeedPage() {
           if (post.type === "SHOUTOUT" && post.shoutoutRecipients.length > 0) {
             return (
               <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
-                <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
+                <div className="h-1.5 bg-gradient-to-r from-amber-400 to-amber-600" />
                 <div className="px-5 py-4 space-y-3">
                   {post.isPinned && (
                     <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600">

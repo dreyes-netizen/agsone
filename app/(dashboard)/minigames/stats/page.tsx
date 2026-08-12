@@ -33,7 +33,7 @@ type LeaderEntry = {
   total: number; winRate: number; isCurrentUser: boolean;
 };
 
-const rankColors: Record<number, string> = { 1: "text-yellow-500", 2: "text-gray-500", 3: "text-orange-500" };
+const rankColors: Record<number, string> = { 1: "text-amber-500", 2: "text-gray-500", 3: "text-amber-700" };
 
 function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" }) {
   const [errored, setErrored] = useState(false);
@@ -109,7 +109,7 @@ export default function MinigamesStatsPage() {
           </div>
         </div>
         {(stats?.currentStreak ?? 0) > 0 && (
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-orange-600 bg-orange-50 rounded-xl py-2">
+          <div className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-amber-600 bg-amber-50 rounded-xl py-2">
             <Flame className="w-4 h-4" aria-hidden="true" /> {stats!.currentStreak}-win streak
           </div>
         )}
@@ -137,7 +137,7 @@ export default function MinigamesStatsPage() {
       {/* Leaderboard */}
       <div className="bg-white rounded-card border border-table-border overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-yellow-500" /> Leaderboard</p>
+          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-500" /> Leaderboard</p>
           <div role="group" aria-label="Leaderboard period" className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
             <button aria-pressed={period === "monthly"} className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "monthly" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`} onClick={() => setPeriod("monthly")}>This Month</button>
             <button aria-pressed={period === "alltime"} className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "alltime" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`} onClick={() => setPeriod("alltime")}>All Time</button>

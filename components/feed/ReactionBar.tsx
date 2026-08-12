@@ -13,9 +13,9 @@ const EMOJIS = [
 ];
 
 const EMOJI_BG: Record<string, string> = {
-  "👍": "bg-blue-50 text-blue-700 border-blue-200",
+  "👍": "bg-navy-50 text-navy-700 border-navy-200",
   "❤️": "bg-rose-50 text-rose-600 border-rose-200",
-  "🔥": "bg-orange-50 text-orange-600 border-orange-200",
+  "🔥": "bg-amber-50 text-amber-600 border-amber-200",
   "👏": "bg-amber-50 text-amber-700 border-amber-200",
   "🎉": "bg-navy-50 text-navy-700 border-navy-200",
   "💪": "bg-emerald-50 text-emerald-700 border-emerald-200",

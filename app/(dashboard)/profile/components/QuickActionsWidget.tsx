@@ -7,8 +7,8 @@ export function QuickActionsWidget() {
       <p className="px-4 py-3 text-xs font-semibold text-gray-700 border-b border-gray-100">Quick Actions</p>
       <div className="divide-y divide-gray-100">
         {[
-          { href: "/marketplace", icon: ShoppingBag, label: "Redeem Points",   color: "text-violet-500" },
-          { href: "/minigames",   icon: Gamepad2,    label: "Play a Minigame", color: "text-indigo-500" },
+          { href: "/marketplace", icon: ShoppingBag, label: "Redeem Points",   color: "text-navy-500" },
+          { href: "/minigames",   icon: Gamepad2,    label: "Play a Minigame", color: "text-navy-700" },
           { href: "/feed",        icon: Megaphone,   label: "Send a Shoutout", color: "text-emerald-500" },
         ].map(({ href, icon: Icon, label, color }) => (
           <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">

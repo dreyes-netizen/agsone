@@ -57,8 +57,8 @@ function RankBadge({ rank }: { rank: number }) {
     </div>
   );
   if (rank === 3) return (
-    <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center shrink-0" aria-label="Rank 3">
-      <Medal className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
+    <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center shrink-0" aria-label="Rank 3">
+      <Medal className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
     </div>
   );
   return (

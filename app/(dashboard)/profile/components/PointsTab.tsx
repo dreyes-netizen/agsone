@@ -22,7 +22,7 @@ export function PointsTab({ pointsData, visibleCount, onLoadMore }: PointsTabPro
             </p>
           </div>
           <div className="text-right">
-            <span className="inline-block bg-violet-100 text-violet-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span className="inline-block bg-navy-100 text-navy-700 text-xs font-bold px-3 py-1 rounded-full">
               Level {pointsData.level}
             </span>
             <p className="text-xs text-gray-500 mt-2">

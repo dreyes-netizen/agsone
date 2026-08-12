@@ -22,8 +22,8 @@ export function BirthdayHireCard({ profile }: BirthdayHireCardProps) {
         </div>
         {profile.hireDate && (
           <div className="flex items-center gap-3 pl-4 border-l border-gray-100">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Trophy className="w-4 h-4 text-blue-500" aria-hidden="true" />
+            <div className="w-8 h-8 rounded-lg bg-navy-50 flex items-center justify-center">
+              <Trophy className="w-4 h-4 text-navy-500" aria-hidden="true" />
             </div>
             <div>
               <p className="text-xs text-gray-500 font-medium">Hire Date</p>

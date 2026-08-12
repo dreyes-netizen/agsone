@@ -163,7 +163,7 @@ export function FoodListingCard(props: FoodListingCardProps) {
 
           {/* Delivery — desktop only */}
           {listing.deliveryDate && (
-            <div className="hidden sm:flex items-center gap-1 text-xs text-sky-600 font-medium">
+            <div className="hidden sm:flex items-center gap-1 text-xs text-navy-600 font-medium">
               <Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span>Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
             </div>

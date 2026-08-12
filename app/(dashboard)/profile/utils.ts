@@ -32,18 +32,18 @@ export function getTenure(hireDate: string): string {
 export const txTypeLabel: Record<string, { label: string; color: string }> = {
   MANUAL_AWARD: { label: "Award",      color: "text-emerald-600" },
   KPI:          { label: "KPI",        color: "text-navy-600" },
-  CONTEST:      { label: "Contest",    color: "text-yellow-600" },
+  CONTEST:      { label: "Contest",    color: "text-amber-600" },
   REDEMPTION:   { label: "Redemption", color: "text-rose-500" },
   GAME_WIN:     { label: "Game Win",   color: "text-emerald-500" },
-  GAME_SPEND:   { label: "Game",       color: "text-orange-500" },
-  REFUND:       { label: "Refund",     color: "text-teal-600" },
+  GAME_SPEND:   { label: "Game",       color: "text-amber-500" },
+  REFUND:       { label: "Refund",     color: "text-navy-600" },
   MILESTONE:    { label: "Milestone",  color: "text-amber-600" },
   DEDUCTION:    { label: "Violation Deduction", color: "text-red-600" },
 };
 
 export const CATEGORY_BADGE: Record<string, { label: string; style: string }> = {
-  PERFORMANCE: { label: "Performance", style: "bg-violet-50 text-violet-700" },
-  TEAMWORK:    { label: "Teamwork",    style: "bg-blue-50 text-blue-700" },
+  PERFORMANCE: { label: "Performance", style: "bg-navy-50 text-navy-700" },
+  TEAMWORK:    { label: "Teamwork",    style: "bg-emerald-50 text-emerald-700" },
   INNOVATION:  { label: "Innovation",  style: "bg-amber-50 text-amber-700" },
   LEADERSHIP:  { label: "Leadership",  style: "bg-emerald-50 text-emerald-700" },
 };

@@ -170,7 +170,7 @@ export function FoodListingDetailModal(props: FoodListingDetailModalProps) {
 
                 {/* Delivery date */}
                 {listing.deliveryDate && (
-                  <p className="flex items-center gap-1 text-xs text-sky-600 font-medium"><Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+                  <p className="flex items-center gap-1 text-xs text-navy-600 font-medium"><Truck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" /> Delivery: {new Date(listing.deliveryDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
                 )}
 
                 {/* Action area */}

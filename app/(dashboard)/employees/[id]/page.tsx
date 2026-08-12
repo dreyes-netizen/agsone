@@ -61,7 +61,7 @@ const typeConfig: Record<string, { label: string; color: string; bg: string }> =
   REDEMPTION:   { label: "Redeemed",         color: "text-rose-500",    bg: "bg-rose-50" },
   REFUND:       { label: "Refund",           color: "text-emerald-600", bg: "bg-emerald-50" },
   GAME_WIN:     { label: "Game Win",         color: "text-amber-500",   bg: "bg-amber-50" },
-  GAME_SPEND:   { label: "Game Entry",       color: "text-orange-500",  bg: "bg-orange-50" },
+  GAME_SPEND:   { label: "Game Entry",       color: "text-amber-500",   bg: "bg-amber-50" },
   CONTEST:      { label: "Contest",          color: "text-navy-600",    bg: "bg-navy-50" },
   KPI:          { label: "KPI Bonus",        color: "text-emerald-600", bg: "bg-emerald-50" },
   MILESTONE:    { label: "Milestone Reward", color: "text-amber-700",   bg: "bg-amber-100" },
@@ -312,8 +312,8 @@ export default function EmployeeProfilePage() {
           <dt className="text-xs text-gray-500 mt-0.5">Level</dt>
         </div>
         <div className="bg-white rounded-card border border-table-border p-4 text-center">
-          <Trophy className="w-4 h-4 text-yellow-500 mx-auto mb-1" aria-hidden="true" />
-          <dd className="text-2xl font-black text-yellow-600">#{employee.rank}</dd>
+          <Trophy className="w-4 h-4 text-amber-500 mx-auto mb-1" aria-hidden="true" />
+          <dd className="text-2xl font-black text-amber-600">#{employee.rank}</dd>
           <dt className="text-xs text-gray-500 mt-0.5">All-Time Rank</dt>
         </div>
       </dl>
@@ -338,7 +338,7 @@ export default function EmployeeProfilePage() {
           </div>
           <ul className="flex flex-wrap gap-2" aria-label="Skills">
             {employee.skills.map((skill) => (
-              <li key={skill} className="text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">
+              <li key={skill} className="text-xs font-medium bg-navy-50 text-navy-700 border border-navy-100 px-2.5 py-1 rounded-full">
                 {skill}
               </li>
             ))}
@@ -363,7 +363,7 @@ export default function EmployeeProfilePage() {
                   <a href={`/employees/${s.post.author.id}`} className="shrink-0" aria-label={`View ${s.post.author.displayName}'s profile`}>
                     {s.post.author.avatarUrl
                       ? <img src={s.post.author.avatarUrl} alt={s.post.author.displayName} className="w-8 h-8 rounded-full object-cover" />
-                      : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold" aria-hidden="true">{s.post.author.displayName.charAt(0).toUpperCase()}</div>
+                      : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold" aria-hidden="true">{s.post.author.displayName.charAt(0).toUpperCase()}</div>
                     }
                   </a>
                   <div className="flex-1 min-w-0">

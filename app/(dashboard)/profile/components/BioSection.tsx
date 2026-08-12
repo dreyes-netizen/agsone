@@ -11,8 +11,8 @@ export function BioSection({ bio, isEditing, bioEdit, onBioChange }: BioSectionP
   return (
     <div className="bg-white rounded-card border border-table-border px-5 py-4 space-y-3">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
-          <FileText className="w-4 h-4 text-sky-500" aria-hidden="true" />
+        <div className="w-8 h-8 rounded-lg bg-navy-50 flex items-center justify-center">
+          <FileText className="w-4 h-4 text-navy-500" aria-hidden="true" />
         </div>
         <p className="text-sm font-semibold text-gray-800">About / Bio</p>
       </div>

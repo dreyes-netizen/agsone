@@ -37,6 +37,8 @@ export default function AdminRewardsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [permanentDeleteConfirmId, setPermanentDeleteConfirmId] = useState<string | null>(null);
+  const [hardDeletingId, setHardDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -180,6 +182,22 @@ export default function AdminRewardsPage() {
     }
   }
 
+  async function confirmPermanentDelete(id: string) {
+    setHardDeletingId(id);
+    try {
+      // ?permanent=true is a hard delete — the API only allows it when the reward
+      // has zero redemptions, and rejects with a 409 (surfaced below) otherwise.
+      await apiFetch(`/api/rewards/${id}?permanent=true`, { method: "DELETE" });
+      toast.success("Reward permanently deleted.");
+      await loadRewards();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to permanently delete reward.");
+    } finally {
+      setHardDeletingId(null);
+      setPermanentDeleteConfirmId(null);
+    }
+  }
+
   async function toggleActive(r: Reward) {
     setTogglingId(r.id);
     try {
@@ -194,6 +212,42 @@ export default function AdminRewardsPage() {
     } finally {
       setTogglingId(null);
     }
+  }
+
+  // Hidden rewards only — permanently removing the row is a separate, more dangerous
+  // action from the hide toggle above, so it gets its own confirm step and copy.
+  function renderPermanentDelete(r: Reward) {
+    if (r.isActive) return null;
+    if (permanentDeleteConfirmId === r.id) {
+      return (
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-red-600 font-medium">Delete forever?</span>
+          <button
+            onClick={() => confirmPermanentDelete(r.id)}
+            disabled={hardDeletingId === r.id}
+            className="px-2 py-1 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+          >
+            {hardDeletingId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes"}
+          </button>
+          <button
+            onClick={() => setPermanentDeleteConfirmId(null)}
+            disabled={hardDeletingId === r.id}
+            className="px-2 py-1 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+          >
+            No
+          </button>
+        </div>
+      );
+    }
+    return (
+      <button
+        onClick={() => setPermanentDeleteConfirmId(r.id)}
+        className="text-[11px] font-semibold text-red-500 hover:text-red-700 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded"
+        aria-label={`Permanently delete ${r.name}`}
+      >
+        Delete permanently
+      </button>
+    );
   }
 
   const inputClass =
@@ -444,6 +498,9 @@ export default function AdminRewardsPage() {
                       )}
                     </div>
                   </div>
+                  {!r.isActive && (
+                    <div className="flex justify-end pt-1">{renderPermanentDelete(r)}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -567,6 +624,7 @@ export default function AdminRewardsPage() {
                       </button>
                     )}
                   </div>
+                  {!r.isActive && <div className="mt-1.5">{renderPermanentDelete(r)}</div>}
                 </td>
               </tr>
             ))}

@@ -35,23 +35,25 @@ export function Pagination({ page, pages, total, onPageChange }: PaginationProps
         aria-label="Previous page"
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page === 1}
-        className="p-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+        className="p-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
       {pageNumbers.map((num, i) =>
         num === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-gray-500">
+          <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-muted-foreground">
             ...
           </span>
         ) : (
           <button
             key={num}
+            aria-label={`Go to page ${num}`}
+            aria-current={num === page ? "page" : undefined}
             onClick={() => onPageChange(num)}
-            className={`px-3 py-1.5 text-sm border rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 ${
+            className={`px-3 py-1.5 text-sm border rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring ${
               num === page
-                ? "bg-gray-900 text-white border-gray-900"
-                : "border-gray-200 hover:bg-gray-50"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "hover:bg-muted"
             }`}
           >
             {num}
@@ -62,12 +64,12 @@ export function Pagination({ page, pages, total, onPageChange }: PaginationProps
         aria-label="Next page"
         onClick={() => onPageChange(Math.min(pages, page + 1))}
         disabled={page === pages}
-        className="p-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900"
+        className="p-1.5 text-sm border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
       >
         <ChevronRight className="h-4 w-4" />
       </button>
       {total !== undefined && (
-        <span className="ml-2 text-sm text-gray-500">{total} total</span>
+        <span className="ml-2 text-sm text-muted-foreground">{total} total</span>
       )}
     </div>
   );

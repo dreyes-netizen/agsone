@@ -263,7 +263,7 @@ export default function AdminDashboardPage() {
       {birthdays.length > 0 && (
         <div className="bg-white rounded-card border border-table-border overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
-            <Cake aria-hidden="true" className="w-4 h-4 text-gray-400" />
+            <Cake aria-hidden="true" className="w-4 h-4 text-gray-500" />
             <p className="font-semibold text-gray-900 text-sm">Upcoming Birthdays</p>
             <span className="text-xs text-gray-500 ml-auto">Next 14 days</span>
           </div>

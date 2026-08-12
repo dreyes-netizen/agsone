@@ -66,7 +66,7 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    loadProfile();
+    queueMicrotask(loadProfile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, authUser]);
 

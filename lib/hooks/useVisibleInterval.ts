@@ -34,7 +34,6 @@ export function useVisibleInterval(fn: () => void, ms: number, enabled = true) {
 
     const interval = setInterval(() => cb.current(), ms);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, visible, ms]);
 
   useEffect(() => {

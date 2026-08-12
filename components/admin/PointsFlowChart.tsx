@@ -37,7 +37,7 @@ export function PointsFlowChart({ data }: { data: ChartPoint[] }) {
         </div>
       </div>
       {!hasEnoughActivity ? (
-        <div className="h-40 flex flex-col items-center justify-center gap-1.5 text-gray-400 text-sm">
+        <div className="h-40 flex flex-col items-center justify-center gap-1.5 text-gray-500 text-sm">
           <Inbox className="w-5 h-5" aria-hidden="true" />
           {data.length === 0 ? "No data yet" : "Not enough activity yet this period"}
         </div>

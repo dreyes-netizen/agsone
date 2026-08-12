@@ -376,7 +376,6 @@ export function hrReplyEmail(
   displayName: string,
   feedbackTitle: string,
   replyBody: string,
-  feedbackId: string,
 ) {
   return {
     subject: `HR responded to your feedback`,

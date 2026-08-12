@@ -54,7 +54,7 @@ export async function POST(
     }).catch((err) => console.error("feedback reply notification failed", err));
     sendMail({
       to: feedback.author.email,
-      ...hrReplyEmail(feedback.author.displayName, feedback.title, parsed.data.body, id),
+      ...hrReplyEmail(feedback.author.displayName, feedback.title, parsed.data.body),
     }).catch((err) => console.error("feedback reply email failed", err));
   }
 

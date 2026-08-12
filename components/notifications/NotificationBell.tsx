@@ -83,7 +83,7 @@ export function NotificationBell() {
 
           <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
             {notifications.length === 0 ? (
-              <li className="px-4 py-6 text-center text-sm text-gray-400">No notifications yet.</li>
+              <li className="px-4 py-6 text-center text-sm text-gray-500">No notifications yet.</li>
             ) : notifications.map((n) => {
               const link = getNotificationLink(n);
               return (
@@ -98,7 +98,7 @@ export function NotificationBell() {
                       <div className={!n.readAt ? "" : "ml-4"}>
                         <p className="text-sm font-medium text-gray-900">{n.title}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                        <p className="text-[10px] text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
                         {link && <p className="text-[10px] text-navy-500 mt-0.5">Tap to view →</p>}
                       </div>
                     </div>

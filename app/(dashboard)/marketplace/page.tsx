@@ -225,7 +225,7 @@ export default function MarketplacePage() {
             <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-card border border-table-border">
               <ShoppingBag className="w-10 h-10 text-gray-200 mb-4" />
               <p className="text-gray-600 font-medium">No rewards here yet</p>
-              <p className="text-gray-400 text-sm mt-1">Ask HR to add items to the marketplace.</p>
+              <p className="text-gray-500 text-sm mt-1">Ask HR to add items to the marketplace.</p>
             </div>
           ) : (
             // Mobile: single-column horizontal list  |  sm+: grid
@@ -363,7 +363,7 @@ export default function MarketplacePage() {
                         pt-2
                         sm:pt-3">
                         <div>
-                          <p className={`font-bold tabular-nums leading-none ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-400"}
+                          <p className={`font-bold tabular-nums leading-none ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-500"}
                             text-sm
                             sm:text-lg`}>
                             {reward.pointCost.toLocaleString()}
@@ -391,7 +391,7 @@ export default function MarketplacePage() {
                             text-xs px-3 py-1.5
                             sm:text-sm sm:px-4 sm:py-2
                             ${outOfStock || !canAfford
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                               : "bg-command-black text-white hover:bg-gray-800"
                             }`}
                         >
@@ -536,7 +536,7 @@ export default function MarketplacePage() {
                     <>
                       <div className="flex items-center justify-between">
                         <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>{cfg.label}</span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500">
                           {outOfStock ? "Out of stock" : selectedReward.stockQuantity === -1 ? "Unlimited" : `${selectedReward.stockQuantity} left`}
                         </span>
                       </div>
@@ -548,7 +548,7 @@ export default function MarketplacePage() {
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div>
-                          <p className={`font-bold text-lg tabular-nums ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-400"}`}>
+                          <p className={`font-bold text-lg tabular-nums ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-500"}`}>
                             {selectedReward.pointCost.toLocaleString()} <span className="text-sm font-medium">pts</span>
                           </p>
                           {!canAfford && !outOfStock && (
@@ -560,7 +560,7 @@ export default function MarketplacePage() {
                           onClick={() => setConfirming(true)}
                           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
                             outOfStock || !canAfford
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                               : "bg-command-black text-white hover:bg-gray-800"
                           }`}
                         >

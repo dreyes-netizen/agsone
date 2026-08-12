@@ -62,7 +62,7 @@ function RankBadge({ rank }: { rank: number }) {
     </div>
   );
   return (
-    <span className="w-7 text-center text-xs font-semibold text-gray-400 shrink-0" aria-label={`Rank ${rank}`}>
+    <span className="w-7 text-center text-xs font-semibold text-gray-500 shrink-0" aria-label={`Rank ${rank}`}>
       {rank}
     </span>
   );
@@ -205,12 +205,12 @@ export default function LeaderboardPage() {
           {/* Rankings list */}
           <div className="bg-white rounded-card border border-table-border overflow-hidden">
             {loading ? (
-              <div role="status" aria-label="Loading leaderboard" className="flex items-center justify-center gap-2 py-12 text-gray-400">
+              <div role="status" aria-label="Loading leaderboard" className="flex items-center justify-center gap-2 py-12 text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 <span className="text-sm">Loading…</span>
               </div>
             ) : entries.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 text-sm">No data yet. Start earning points!</div>
+              <div className="text-center py-12 text-gray-500 text-sm">No data yet. Start earning points!</div>
             ) : (
               <ul aria-label="Leaderboard rankings" className="divide-y divide-gray-100">
                 {entries.map((e, i) => {
@@ -230,7 +230,7 @@ export default function LeaderboardPage() {
                         <p className={`font-medium text-sm truncate ${e.isCurrentUser ? "text-navy-800 font-semibold" : "text-gray-900"}`}>
                           {e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}
                         </p>
-                        {e.department && <p className="text-xs text-gray-400 truncate">{e.department}</p>}
+                        {e.department && <p className="text-xs text-gray-500 truncate">{e.department}</p>}
                       </div>
                       <span className={`font-bold text-sm tabular-nums shrink-0 ${rank === 1 ? "text-amber-600" : rank <= 3 ? "text-gray-700" : "text-navy-600"}`}>
                         {e.points.toLocaleString()} pts
@@ -248,7 +248,7 @@ export default function LeaderboardPage() {
 
           {/* Card 1: Your Stats */}
           <div className="bg-white rounded-card border border-table-border p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Your Stats</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Your Stats</p>
             {profileLoading ? (
               <div className="space-y-3 motion-safe:animate-pulse">
                 <div className="h-8 bg-gray-100 rounded w-1/2" />
@@ -261,7 +261,7 @@ export default function LeaderboardPage() {
                   <p className="text-3xl font-black text-gray-900 tabular-nums leading-none">
                     {profile?.pointsBalance?.toLocaleString() ?? "—"}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">points balance</p>
+                  <p className="text-xs text-gray-500 mt-1">points balance</p>
                 </div>
                 <div className="flex items-center gap-4 pt-1 border-t border-gray-50">
                   <div className="flex items-center gap-1.5">
@@ -276,7 +276,7 @@ export default function LeaderboardPage() {
                   )}
                 </div>
                 {profile?.department && (
-                  <p className="text-xs text-gray-400 truncate">{profile.department.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{profile.department.name}</p>
                 )}
               </div>
             )}
@@ -285,7 +285,7 @@ export default function LeaderboardPage() {
           {/* Card 2: Period Summary */}
           {!loading && entries.length > 0 && (
             <div className="bg-white rounded-card border border-table-border p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Period Summary</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Period Summary</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Participants</span>
@@ -306,7 +306,7 @@ export default function LeaderboardPage() {
           {/* Card 3: Top Departments */}
           {!loading && topDepts.length > 0 && (
             <div className="bg-white rounded-card border border-table-border p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Top Departments</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Top Departments</p>
               <div className="space-y-3">
                 {topDepts.map(({ name, points, pct }) => (
                   <div key={name}>
@@ -334,14 +334,14 @@ export default function LeaderboardPage() {
           {/* Card 4: Recent Achievers */}
           <div className="bg-white rounded-card border border-table-border overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-50">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Achievers</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recent Achievers</p>
             </div>
             {achieversLoading ? (
               <div className="p-4 space-y-3 motion-safe:animate-pulse">
                 {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-gray-100 rounded" />)}
               </div>
             ) : achievers.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-6">No recent achievements</p>
+              <p className="text-xs text-gray-500 text-center py-6">No recent achievements</p>
             ) : (
               <div className="divide-y divide-gray-50">
                 {achievers.map((a, i) => (
@@ -351,7 +351,7 @@ export default function LeaderboardPage() {
                       <p className="text-xs font-semibold text-gray-800 truncate">{a.displayName}</p>
                       <p className="text-[10px] text-gray-500 truncate">{a.label}</p>
                     </div>
-                    <span className="text-[10px] text-gray-400 shrink-0">{timeAgo(a.achievedAt)}</span>
+                    <span className="text-[10px] text-gray-500 shrink-0">{timeAgo(a.achievedAt)}</span>
                   </div>
                 ))}
               </div>

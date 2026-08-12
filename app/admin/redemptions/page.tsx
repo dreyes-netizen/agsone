@@ -268,7 +268,7 @@ export default function AdminRedemptionsPage() {
                     )}
                     {r.status === "APPROVED" && (
                       <button
-                        className="w-full bg-blue-50 text-blue-600 border border-blue-200 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600"
+                        className="w-full bg-navy-50 text-navy-600 border border-navy-200 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-600"
                         disabled={actionId === r.id}
                         onClick={() => updateStatus(r.id, "FULFILLED")}
                         aria-label={`Mark ${r.reward.name} as fulfilled for ${r.user.displayName}`}
@@ -330,7 +330,7 @@ export default function AdminRedemptionsPage() {
                   <td className={tdClass}>
                     {r.status === "APPROVED" && (
                       <button
-                        className="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600"
+                        className="bg-navy-50 text-navy-600 border border-navy-200 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-600"
                         disabled={actionId === r.id}
                         onClick={() => updateStatus(r.id, "FULFILLED")}
                         aria-label={`Mark ${r.reward.name} as fulfilled for ${r.user.displayName}`}

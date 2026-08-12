@@ -13,7 +13,7 @@ export type ActionItem = {
 };
 
 const KIND_META: Record<ActionItem["kind"], { icon: React.ElementType; iconColor: string; href: (id: string) => string }> = {
-  REDEMPTION: { icon: ShoppingBag,          iconColor: "bg-blue-500",    href: () => "/admin/redemptions" },
+  REDEMPTION: { icon: ShoppingBag,          iconColor: "bg-navy-500",    href: () => "/admin/redemptions" },
   MEDICINE:   { icon: Pill,                 iconColor: "bg-emerald-500", href: () => "/admin/medicine" },
   REPORT:     { icon: MessageSquareWarning, iconColor: "bg-red-500",     href: (id) => `/admin/feedback/${id}` },
 };

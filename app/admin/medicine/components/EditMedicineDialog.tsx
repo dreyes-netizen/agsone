@@ -80,7 +80,7 @@ export function EditMedicineDialog(props: EditMedicineDialogProps) {
               )}
               <button
                 onClick={() => imageInputRef.current?.click()}
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-navy-600 hover:underline"
               >
                 Change photo
               </button>

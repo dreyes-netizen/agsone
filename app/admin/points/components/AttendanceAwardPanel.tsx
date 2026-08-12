@@ -28,9 +28,9 @@ export function AttendanceAwardPanel(props: AttendanceAwardPanelProps) {
         <p className="text-xs text-gray-500">Select the month this attendance data covers — not today&apos;s date.</p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-0.5">
-        <p className="text-sm font-semibold text-blue-800">Perfect Attendance = 50 pts</p>
-        <p className="text-xs text-blue-600">Days Present &gt; 20, Days Absent = 0, Undertime = 0</p>
+      <div className="bg-navy-50 border border-navy-100 rounded-xl px-4 py-3 space-y-0.5">
+        <p className="text-sm font-semibold text-navy-800">Perfect Attendance = 50 pts</p>
+        <p className="text-xs text-navy-600">Days Present &gt; 20, Days Absent = 0, Undertime = 0</p>
       </div>
 
       <div>

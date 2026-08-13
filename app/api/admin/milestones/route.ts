@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const MILESTONE_TYPES = [
   "BIRTHDAY",
@@ -73,6 +75,8 @@ export async function PUT(req: NextRequest) {
       })
     )
   );
+
+  scheduleBroadcast([{ topic: realtimeTopics.milestones }]);
 
   return NextResponse.json({ data: results });
 }

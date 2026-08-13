@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma/client";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +32,11 @@ export async function POST(req: NextRequest) {
             displayName: pending.displayName !== email ? pending.displayName : displayName,
           },
         });
+        scheduleBroadcast([
+          { topic: realtimeTopics.profile(pending.id) },
+          { topic: realtimeTopics.employees },
+          { topic: realtimeTopics.adminAnalytics },
+        ]);
         return NextResponse.json({ status: "linked" });
       }
     }

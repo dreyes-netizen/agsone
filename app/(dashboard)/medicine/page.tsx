@@ -15,6 +15,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { Pagination } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useRealtimeChannels } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -44,7 +46,7 @@ const statusChip = MEDICINE_REQUEST_STATUS_BADGE;
 
 export default function MedicinePage() {
   const { apiFetch } = useApiClient();
-  const { user, loading: authLoading } = useAuth();
+  const { user, dbUser, loading: authLoading } = useAuth();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
   const [pendingMedicineIds, setPendingMedicineIds] = useState<Set<string>>(new Set());
@@ -61,24 +63,36 @@ export default function MedicinePage() {
   const [reqPage, setReqPage] = useState(1);
   const [reqPages, setReqPages] = useState(1);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    apiFetch<{
+  async function load() {
+    try {
+      const res = await apiFetch<{
       data: { medicines: Medicine[]; pendingMedicineIds: string[]; myRequests: MyRequest[] };
       total: number;
       page: number;
       pages: number;
-    }>(`/api/medicine?page=${reqPage}`)
-      .then((res) => {
-        setMedicines(res.data.medicines);
-        setMyRequests(res.data.myRequests);
-        setPendingMedicineIds(new Set(res.data.pendingMedicineIds));
-        setReqPages(res.pages);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      }>(`/api/medicine?page=${reqPage}`);
+      setMedicines(res.data.medicines);
+      setMyRequests(res.data.myRequests);
+      setPendingMedicineIds(new Set(res.data.pendingMedicineIds));
+      setReqPages(res.pages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    queueMicrotask(load);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, reqPage]);
+
+  useRealtimeChannels(
+    [realtimeTopics.medicine, dbUser ? realtimeTopics.medicineUser(dbUser.id) : null],
+    load,
+    { debounceMs: 200 },
+  );
 
   async function handleRequest(medicineId: string, qty: number) {
     setRequesting(medicineId);

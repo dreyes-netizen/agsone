@@ -3,6 +3,7 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import type { FeedbackCategory, FeedbackStatus } from "@/lib/generated/prisma/client";
+import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -44,5 +45,8 @@ export async function GET(req: NextRequest) {
     author: f.isAnonymous ? null : f.author,
   }));
 
-  return NextResponse.json(paginatedResponse(sanitized, total, page, limit));
+  return NextResponse.json({
+    ...paginatedResponse(sanitized, total, page, limit),
+    realtimeTopic: confidentialRealtimeTopic("feedback-admin"),
+  });
 }

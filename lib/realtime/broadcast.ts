@@ -21,33 +21,72 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // remembering to fire-and-forget it.
 const BROADCAST_TIMEOUT_MS = 3000;
 
-export async function broadcast(
-  topic: string,
-  event: string = "update",
-  payload: Record<string, unknown> = {},
-): Promise<void> {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return;
+type BroadcastMessage = {
+  topic: string;
+  event?: string;
+  payload?: Record<string, unknown>;
+};
+
+import { after } from "next/server";
+
+/**
+ * Send several invalidations in one Supabase HTTP request. This is important
+ * for mutations that affect multiple views (for example a redemption affects
+ * rewards, the user's history, admin redemptions, points, and leaderboards).
+ */
+export async function broadcastMany(messages: BroadcastMessage[]): Promise<void> {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || messages.length === 0) return;
+
+  const uniqueMessages = [...new Map(
+    messages.map((message) => [
+      `${message.topic}\u0000${message.event ?? "update"}`,
+      {
+        topic: message.topic,
+        event: message.event ?? "update",
+        payload: message.payload ?? {},
+      },
+    ]),
+  ).values()];
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), BROADCAST_TIMEOUT_MS);
 
   try {
-    await fetch(`${SUPABASE_URL}/realtime/v1/api/broadcast`, {
+    const response = await fetch(`${SUPABASE_URL}/realtime/v1/api/broadcast`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: SERVICE_ROLE_KEY,
         Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       },
-      body: JSON.stringify({
-        messages: [{ topic, event, payload }],
-      }),
+      body: JSON.stringify({ messages: uniqueMessages }),
       signal: controller.signal,
     });
+    if (!response.ok) {
+      throw new Error(`Supabase Realtime returned ${response.status}`);
+    }
   } catch (err) {
-    // Swallow — broadcast is best-effort; the fallback poll covers misses.
-    console.error(`[realtime] broadcast to "${topic}" failed:`, err);
+    // Realtime is a freshness accelerator, never a mutation dependency. A
+    // normal screen load/resync still recovers the authoritative API state.
+    console.error("[realtime] broadcast batch failed:", err);
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function broadcast(
+  topic: string,
+  event: string = "update",
+  payload: Record<string, unknown> = {},
+): Promise<void> {
+  await broadcastMany([{ topic, event, payload }]);
+}
+
+/**
+ * Reliably finish a best-effort broadcast after the mutation response is sent.
+ * Next.js maps `after` to Vercel's waitUntil primitive, avoiding both response
+ * latency and the unreliable "floating promise after return" pattern.
+ */
+export function scheduleBroadcast(messages: BroadcastMessage[]): void {
+  after(() => broadcastMany(messages));
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
@@ -87,6 +89,8 @@ export async function POST(
     data: { postId: id, authorId: user.id, content, parentId: parentId ?? null },
     include: { author: { select: authorSelect } },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.feed }]);
 
   return NextResponse.json({
     data: {

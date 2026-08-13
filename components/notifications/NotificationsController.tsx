@@ -7,7 +7,7 @@ import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { useNotificationsStore } from "@/lib/stores/notifications";
 
 /**
- * Owns the notification fetch-on-mount, 60s fallback poll, and Realtime
+ * Owns the notification fetch-on-mount, fallback poll, and Realtime
  * subscription — mount this ONCE per dashboard layout (see
  * app/(dashboard)/layout.tsx). Every <NotificationBell> just reads the
  * shared store; only this controller talks to the network.
@@ -23,8 +23,10 @@ export function NotificationsController() {
   }, [authLoading, user]);
 
   // Slow fallback poll — Realtime delivers new notifications instantly; this
-  // only backstops a rare dropped message. Paused while the tab is hidden.
-  useVisibleInterval(load, 60_000, !authLoading && !!user);
+  // only backstops a rare dropped message. Five minutes avoids spending a
+  // function invocation every minute while the websocket is healthy. It is
+  // still paused while hidden, and the Realtime lifecycle resyncs on wake.
+  useVisibleInterval(load, 300_000, !authLoading && !!user);
 
   // Real-time: refresh the bell the moment a notification (invite, win, etc.)
   // is created for this user.

@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -56,6 +58,11 @@ export async function POST(req: NextRequest) {
   const reward = await prisma.reward.create({
     data: { ...parsed.data, createdById: user.id },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.rewards },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: reward }, { status: 201 });
 }

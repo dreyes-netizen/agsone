@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
   displayName: z.string().min(2).max(100),
@@ -37,6 +39,14 @@ export async function PATCH(req: NextRequest) {
       ...(birthday ? { birthday: new Date(birthday) } : {}),
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.profile(user.id) },
+    { topic: realtimeTopics.employees },
+    { topic: realtimeTopics.departments },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: { onboardingComplete: true } });
 }

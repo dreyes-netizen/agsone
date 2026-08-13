@@ -3,6 +3,9 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
+import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 
 const patchSchema = z.object({
   status: z.enum(["OPEN", "IN_REVIEW", "RESOLVED"]),
@@ -34,6 +37,7 @@ export async function GET(
 
   return NextResponse.json({
     data: { ...feedback, author: feedback.isAnonymous ? null : feedback.author },
+    realtimeTopic: confidentialRealtimeTopic("feedback-thread", id),
   });
 }
 
@@ -66,6 +70,13 @@ export async function PATCH(
       body: `HR has marked your feedback "${feedback.title}" as resolved.`,
     }).catch((err) => console.error("feedback resolved notification failed", err));
   }
+
+  scheduleBroadcast([
+    { topic: confidentialRealtimeTopic("feedback-admin") },
+    { topic: confidentialRealtimeTopic("feedback-thread", id) },
+    { topic: realtimeTopics.adminAnalytics },
+    ...(feedback.authorId ? [{ topic: confidentialRealtimeTopic("feedback-user", feedback.authorId) }] : []),
+  ]);
 
   return NextResponse.json({ data: { status: updated.status } });
 }

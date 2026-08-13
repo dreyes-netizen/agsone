@@ -7,6 +7,8 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Trophy, Flame, Medal, Loader2, Gamepad2 } from "lucide-react";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 import { GAME_TYPE_LABELS, GAME_TYPE_ICONS } from "@/lib/constants/gameTypes";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const GAME_LABEL = GAME_TYPE_LABELS;
 
@@ -62,21 +64,40 @@ export default function MinigamesStatsPage() {
   const [period, setPeriod] = useState<"monthly" | "alltime">("alltime");
   const [loading, setLoading] = useState(true);
 
+  function loadStats() {
+    return apiFetch<{ data: Stats }>("/api/minigames/stats")
+      .then((res) => setStats(res.data))
+      .catch((err) => console.error("minigame stats fetch failed", err));
+  }
+
+  function loadBoard() {
+    setLoading(true);
+    return apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
+      .then((res) => setBoard(res.data))
+      .catch(() => setBoard([]))
+      .finally(() => setLoading(false));
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Stats }>("/api/minigames/stats").then(res => setStats(res.data)).catch((err) => console.error("minigame stats fetch failed", err));
+    loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    queueMicrotask(() => setLoading(true));
-    apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
-      .then(res => setBoard(res.data))
-      .catch(() => setBoard([]))
-      .finally(() => setLoading(false));
+    queueMicrotask(loadBoard);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, period]);
+
+  useRealtimeChannel(
+    realtimeTopics.minigameStats,
+    () => {
+      loadStats();
+      loadBoard();
+    },
+    { debounceMs: 200 },
+  );
 
   return (
     <div className="space-y-5">

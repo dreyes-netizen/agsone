@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
   departmentId: z.string().uuid().nullable(),
@@ -46,6 +48,14 @@ export async function PATCH(
       department: { select: { id: true, name: true } },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.employees },
+    { topic: realtimeTopics.departments },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.profile(id) },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: updated });
 }

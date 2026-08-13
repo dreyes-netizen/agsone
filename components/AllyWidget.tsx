@@ -6,6 +6,8 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { X, Send, Copy, Check, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Message = {
   role: "user" | "model";
@@ -99,16 +101,22 @@ export function AllyWidget() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Check the global on/off switch once on mount. Until we know, render
-  // nothing so a disabled Ally never flashes on screen.
-  useEffect(() => {
+  function loadEnabled() {
     apiFetch<{ data: { allyEnabled: boolean } }>("/api/settings")
       .then((res) => setEnabled(res.data.allyEnabled))
       .catch(() => setEnabled(false));
+  }
+
+  // Check the global on/off switch once on mount. Until we know, render
+  // nothing so a disabled Ally never flashes on screen.
+  useEffect(() => {
+    loadEnabled();
     // apiFetch is recreated each render; run this once on mount like the rest
     // of the codebase's data-loading effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeChannel(realtimeTopics.settings, loadEnabled, { debounceMs: 200 });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

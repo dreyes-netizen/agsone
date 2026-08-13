@@ -6,6 +6,8 @@ import { uploadPdf } from "@/lib/supabase/storageClient";
 import { storeDocumentChunks } from "@/lib/rag/search";
 import { randomUUID } from "crypto";
 import { extractText, getDocumentProxy } from "unpdf";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -96,6 +98,8 @@ export async function POST(req: NextRequest) {
   storeDocumentChunks(doc.id, text).catch((err) =>
     console.error(`[RAG] Failed to index document ${doc.id}:`, err)
   );
+
+  scheduleBroadcast([{ topic: realtimeTopics.documents }]);
 
   return NextResponse.json({ data: doc }, { status: 201 });
 }

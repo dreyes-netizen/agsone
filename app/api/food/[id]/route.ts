@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function DELETE(
   req: NextRequest,
@@ -23,6 +25,8 @@ export async function DELETE(
     prisma.foodOrder.deleteMany({ where: { listingId: id } }),
     prisma.foodListing.delete({ where: { id } }),
   ]);
+
+  scheduleBroadcast([{ topic: realtimeTopics.food }]);
 
   return NextResponse.json({ data: null });
 }
@@ -76,6 +80,8 @@ export async function PATCH(
       ...(addOns !== undefined && { addOns }),
     },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.food }]);
 
   return NextResponse.json({ data: { ...updated, price: updated.price.toString() } });
 }

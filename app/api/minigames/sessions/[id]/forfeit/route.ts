@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { broadcastMany } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function POST(
   req: NextRequest,
@@ -22,7 +23,7 @@ export async function POST(
   if (session.status === "WAITING" && isHost) {
     await prisma.gameSession.update({ where: { id }, data: { status: "CANCELLED" } });
     // Cancelled challenge — drop it from open lobbies.
-    await broadcast("lobby");
+    await broadcastMany([{ topic: "lobby" }]);
     return NextResponse.json({ data: { status: "CANCELLED" } });
   }
 
@@ -62,7 +63,19 @@ export async function POST(
   ]);
 
   // Wake the opponent's board (game over) and refresh lobbies.
-  await Promise.all([broadcast(`game:${id}`), broadcast("lobby")]);
+  await broadcastMany([
+    { topic: `game:${id}` },
+    { topic: "lobby" },
+    { topic: realtimeTopics.minigameStats },
+    { topic: realtimeTopics.adminAnalytics },
+    ...(session.pointsWager > 0
+      ? [
+          { topic: realtimeTopics.profile(winnerId) },
+          { topic: realtimeTopics.pointsTransactions },
+          { topic: realtimeTopics.leaderboard },
+        ]
+      : []),
+  ]);
 
   return NextResponse.json({ data: { status: "FINISHED", winnerId } });
 }

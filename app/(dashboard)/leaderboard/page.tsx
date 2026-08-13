@@ -5,6 +5,8 @@ import { Star, Loader2, Trophy, Medal } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { timeAgo } from "@/lib/helpers/timeAgo";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Entry = {
   userId: string;
@@ -69,7 +71,7 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 export default function LeaderboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
 
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -77,8 +79,16 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentId, setDepartmentId] = useState<string | "ALL">("ALL");
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const profile: UserProfile | null = dbUser
+    ? {
+        pointsBalance: dbUser.pointsBalance,
+        level: dbUser.level,
+        displayName: dbUser.displayName,
+        avatarUrl: user?.photoURL ?? null,
+        department: dbUser.department,
+      }
+    : null;
+  const profileLoading = authLoading || !dbUser;
   const [achievers, setAchievers] = useState<Achiever[]>([]);
   const [achieversLoading, setAchieversLoading] = useState(true);
 
@@ -88,19 +98,12 @@ export default function LeaderboardPage() {
       .catch((err) => console.error("departments fetch failed", err));
   }
 
-  function loadProfileAndAchievers() {
-    setProfileLoading(true);
+  function loadAchievers() {
     setAchieversLoading(true);
-    Promise.allSettled([
-      apiFetch<{ data: UserProfile }>("/api/me"),
-      apiFetch<{ data: Achiever[] }>("/api/leaderboard/achievers"),
-    ]).then(([me, ach]) => {
-      if (me.status === "fulfilled") setProfile(me.value.data);
-      if (ach.status === "fulfilled") setAchievers(ach.value.data ?? []);
-    }).finally(() => {
-      setProfileLoading(false);
-      setAchieversLoading(false);
-    });
+    apiFetch<{ data: Achiever[] }>("/api/leaderboard/achievers")
+      .then((res) => setAchievers(res.data ?? []))
+      .catch((err) => console.error("achievers fetch failed", err))
+      .finally(() => setAchieversLoading(false));
   }
 
   async function load() {
@@ -118,7 +121,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (authLoading || !user) return;
     loadDepartments();
-    queueMicrotask(loadProfileAndAchievers);
+    queueMicrotask(loadAchievers);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -127,6 +130,23 @@ export default function LeaderboardPage() {
     queueMicrotask(load);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, period, departmentId]);
+
+  useRealtimeChannel(
+    realtimeTopics.leaderboard,
+    () => {
+      load();
+      loadAchievers();
+    },
+    { debounceMs: 200 },
+  );
+  useRealtimeChannel(
+    realtimeTopics.departments,
+    () => {
+      loadDepartments();
+      load();
+    },
+    { debounceMs: 200 },
+  );
 
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const avgPoints = entries.length > 0 ? Math.round(totalPoints / entries.length) : 0;

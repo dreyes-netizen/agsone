@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 
 export async function PATCH(
   req: NextRequest,
@@ -15,6 +16,8 @@ export async function PATCH(
     where: { id, userId: user.id },
     data: { readAt: new Date() },
   });
+
+  scheduleBroadcast([{ topic: `user:${user.id}` }]);
 
   return NextResponse.json({ ok: true });
 }

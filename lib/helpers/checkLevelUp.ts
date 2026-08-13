@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "./createNotification";
 import { getLevelFromBalance } from "./levelUtils";
+import { broadcastMany } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function checkLevelUp(userId: string, newBalance: number) {
   const newLevel = getLevelFromBalance(newBalance);
@@ -24,5 +26,11 @@ export async function checkLevelUp(userId: string, newBalance: number) {
         content: `🆙 ${user.displayName} just reached Level ${newLevel}! Congratulations! 🎉`,
       },
     }),
+  ]);
+
+  await broadcastMany([
+    { topic: realtimeTopics.profile(userId) },
+    { topic: realtimeTopics.feed },
+    { topic: realtimeTopics.leaderboard },
   ]);
 }

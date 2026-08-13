@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { sendMail } from "@/lib/email/mailer";
 import { newWhistleblowerEmail } from "@/lib/email/templates";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
+import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 
 const HR_EMAILS = "hr.ags@allianceglobalsolutions.com, hr@allianceglobalsolutions.com";
 
@@ -38,7 +41,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ data: feedbacks });
+  return NextResponse.json({
+    data: feedbacks,
+    realtimeTopic: confidentialRealtimeTopic("feedback-user", user.id),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -66,6 +72,13 @@ export async function POST(req: NextRequest) {
     to: HR_EMAILS,
     ...newWhistleblowerEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
   }).catch((err) => console.error("whistleblower notify email failed", err));
+
+  // Empty invalidations only: confidential report fields never enter Realtime.
+  scheduleBroadcast([
+    { topic: confidentialRealtimeTopic("feedback-user", user.id) },
+    { topic: confidentialRealtimeTopic("feedback-admin") },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: feedback }, { status: 201 });
 }

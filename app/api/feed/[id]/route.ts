@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const editSchema = z.object({
   title: z.string().max(120).nullable().optional(),
@@ -48,6 +50,8 @@ export async function PATCH(
       select: { id: true, title: true, content: true, updatedAt: true },
     });
 
+    scheduleBroadcast([{ topic: realtimeTopics.feed }]);
+
     return NextResponse.json({ data: updated });
   }
 
@@ -64,6 +68,8 @@ export async function PATCH(
     data: { isPinned: !post.isPinned },
     select: { id: true, isPinned: true },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.feed }]);
 
   return NextResponse.json({ data: updated });
 }
@@ -101,6 +107,11 @@ export async function DELETE(
       },
     });
   }
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.feed },
+    ...(isAdmin && post.authorId !== user.id ? [{ topic: realtimeTopics.adminAudit }] : []),
+  ]);
 
   return NextResponse.json({ success: true });
 }

@@ -7,6 +7,7 @@ import { Plus, Send, MessageSquarePlus, Loader2, AlertCircle, EyeOff, AlertTrian
 import { toast } from "sonner";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
+import { useRealtimeChannels } from "@/lib/hooks/useRealtimeChannel";
 
 type FeedbackItem = {
   id: string;
@@ -59,7 +60,7 @@ function isHrRole(role: string) {
 }
 
 export default function FeedbackPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
 
   const [items, setItems] = useState<FeedbackItem[]>([]);
@@ -80,28 +81,61 @@ export default function FeedbackPage() {
   const [replyBody, setReplyBody] = useState("");
   const [sending, setSending] = useState(false);
   const repliesEndRef = useRef<HTMLDivElement>(null);
+  const [feedbackTopic, setFeedbackTopic] = useState<string | null>(null);
+  const [threadTopic, setThreadTopic] = useState<string | null>(null);
 
   const [prevPanel, setPrevPanel] = useState<PanelState>({ mode: "welcome" });
+
+  async function loadItems() {
+    try {
+      const r = await apiFetch<{ data: FeedbackItem[]; realtimeTopic: string }>("/api/feedback");
+      setItems(r.data);
+      setFeedbackTopic(r.realtimeTopic);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setListLoading(false);
+    }
+  }
+
+  async function loadThread(id: string) {
+    setThreadLoading(true);
+    setThreadError(null);
+    try {
+      const r = await apiFetch<{ data: FeedbackThread; realtimeTopic: string }>(`/api/feedback/${id}`);
+      setThread(r.data);
+      setThreadTopic(r.realtimeTopic);
+    } catch (err) {
+      setThreadError(err instanceof Error ? err.message : "Failed to load");
+    } finally {
+      setThreadLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { queueMicrotask(() => setListLoading(false)); return; }
-    apiFetch<{ data: FeedbackItem[] }>("/api/feedback")
-      .then((r) => setItems(r.data))
-      .catch(console.error)
-      .finally(() => setListLoading(false));
+    queueMicrotask(loadItems);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
   useEffect(() => {
-    if (panel.mode !== "thread") { queueMicrotask(() => { setThread(null); setThreadError(null); }); return; }
-    queueMicrotask(() => { setThreadLoading(true); setThreadError(null); });
-    apiFetch<{ data: FeedbackThread }>(`/api/feedback/${panel.id}`)
-      .then((r) => setThread(r.data))
-      .catch((err) => setThreadError(err instanceof Error ? err.message : "Failed to load"))
-      .finally(() => setThreadLoading(false));
+    if (panel.mode !== "thread") { queueMicrotask(() => { setThread(null); setThreadError(null); setThreadTopic(null); }); return; }
+    queueMicrotask(() => loadThread(panel.id));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panel]);
+
+  useRealtimeChannels(
+    [
+      dbUser ? feedbackTopic : null,
+      panel.mode === "thread" ? threadTopic : null,
+    ],
+    () => {
+      loadItems();
+      if (panel.mode === "thread") loadThread(panel.id);
+    },
+    { debounceMs: 150 },
+  );
 
   // Auto-scroll replies to bottom when new reply is added
   useEffect(() => {

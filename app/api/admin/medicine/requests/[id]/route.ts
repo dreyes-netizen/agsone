@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -25,7 +27,7 @@ export async function PATCH(
 
   const request = await prisma.medicineRequest.findUnique({
     where: { id },
-    select: { id: true, status: true, medicineId: true, quantity: true },
+    select: { id: true, status: true, medicineId: true, quantity: true, userId: true },
   });
   if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (request.status !== "PENDING") {
@@ -70,6 +72,12 @@ export async function PATCH(
       throw err;
     }
 
+    scheduleBroadcast([
+      { topic: realtimeTopics.medicine },
+      { topic: realtimeTopics.medicineRequests },
+      { topic: realtimeTopics.medicineUser(request.userId) },
+      { topic: realtimeTopics.adminAnalytics },
+    ]);
     return NextResponse.json({ data: updatedRequest });
   }
 
@@ -85,6 +93,12 @@ export async function PATCH(
     where: { id },
     select: { id: true, status: true, approvedAt: true, approvedById: true },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.medicineRequests },
+    { topic: realtimeTopics.medicineUser(request.userId) },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: updatedRequest });
 }

@@ -8,6 +8,8 @@ import { ACTION_LABELS, ALL_ACTIONS } from "@/lib/constants/auditActions";
 import { ActionBadge } from "@/components/admin/ActionBadge";
 import { ROLE_LABEL } from "@/lib/constants/roles";
 import { VIOLATION_TYPES } from "@/lib/constants/awardActivities";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 function violationLabel(violationType: string): string {
   return VIOLATION_TYPES.find((v) => v.key === violationType)?.label
@@ -122,6 +124,8 @@ export default function AuditLogPage() {
     queueMicrotask(load);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, filterAction]);
+
+  useRealtimeChannel(realtimeTopics.adminAudit, load, { debounceMs: 200 });
 
   function handleFilterChange(action: string) {
     setFilterAction(action);

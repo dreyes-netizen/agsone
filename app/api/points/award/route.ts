@@ -6,7 +6,8 @@ import { sendMail } from "@/lib/email/mailer";
 import { pointsReceivedEmail } from "@/lib/email/templates";
 import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
 import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
@@ -117,9 +118,6 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  // Notify recipient's browser to refresh points balance in real-time
-  broadcast(`points:${toUserId}`).catch((err) => console.error("points-award broadcast failed", err));
-
   // Check badge milestones + level-up (fire-and-forget)
   prisma.pointTransaction.aggregate({ where: { toUserId: toUserId, amount: { gt: 0 } }, _sum: { amount: true } })
     .then((agg) => checkAndAwardBadges({ userId: toUserId, totalEarned: agg._sum.amount ?? 0 }))
@@ -135,6 +133,15 @@ export async function POST(req: NextRequest) {
       afterState: { toUserId, toUserName: recipient.displayName, amount, note },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.profile(toUserId) },
+    { topic: realtimeTopics.pointsTransactions },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.feed },
+    { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({ data: transaction });
 }

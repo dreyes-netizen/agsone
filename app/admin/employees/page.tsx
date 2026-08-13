@@ -12,6 +12,8 @@ import { EmployeeToolbar } from "./components/EmployeeToolbar";
 import { EmployeeTable } from "./components/EmployeeTable";
 import { AddEmployeeModal } from "./components/AddEmployeeModal";
 import { EditEmployeeModal } from "./components/EditEmployeeModal";
+import { useRealtimeChannels } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export default function EmployeesPage() {
   const { apiFetch, streamFetch } = useApiClient();
@@ -55,9 +57,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     if (authLoading || !user) return;
     loadEmployees();
-    apiFetch<{ data: Department[] }>("/api/admin/departments")
-      .then((res) => setDepartments(res.data))
-      .catch(console.error);
+    loadDepartments();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -86,6 +86,24 @@ export default function EmployeesPage() {
       setLoading(false);
     }
   }
+
+  async function loadDepartments() {
+    try {
+      const res = await apiFetch<{ data: Department[] }>("/api/admin/departments");
+      setDepartments(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  useRealtimeChannels(
+    [realtimeTopics.employees, realtimeTopics.departments],
+    () => {
+      loadEmployees();
+      loadDepartments();
+    },
+    { debounceMs: 200 },
+  );
 
   async function handleRoleChange(employeeId: string, role: string) {
     setUpdatingId(employeeId);

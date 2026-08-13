@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().min(0) });
 
@@ -116,6 +118,8 @@ export async function POST(req: NextRequest) {
       createdById: authUser.id,
     },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.food }]);
 
   return NextResponse.json({ data: { ...listing, price: listing.price.toString() } }, { status: 201 });
 }

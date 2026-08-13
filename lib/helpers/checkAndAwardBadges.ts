@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "./createNotification";
+import { broadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const BADGE_DEFS = [
   { name: "first-steps",   label: "First Steps",        description: "Received your first points",                   icon: "🌱" },
@@ -50,6 +52,7 @@ export async function checkAndAwardBadges(ctx: CheckContext) {
   const owned = new Set(existing.map((ub) => ub.badge.name));
 
   const toAward: BadgeName[] = [];
+  let awardedAny = false;
 
   const { totalEarned = 0, redemptionCount = 0, gamePlaysCount = 0, biggestGameWin = 0 } = ctx;
 
@@ -76,5 +79,8 @@ export async function checkAndAwardBadges(ctx: CheckContext) {
       body: def.description,
     });
     owned.add(def.label);
+    awardedAny = true;
   }
+
+  if (awardedAny) await broadcast(realtimeTopics.profile(ctx.userId));
 }

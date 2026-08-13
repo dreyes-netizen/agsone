@@ -68,7 +68,9 @@ export default function MinigamesPage() {
 
   // Slow fallback poll — Realtime handles the common case; this only catches
   // a rare dropped message. Paused while the tab is hidden.
-  useVisibleInterval(load, 15_000);
+  // Realtime is the primary delivery path; this visible-tab poll is only the
+  // fallback for a dropped broadcast or socket outage.
+  useVisibleInterval(load, 60_000);
 
   async function createChallenge() {
     setCreating(true);

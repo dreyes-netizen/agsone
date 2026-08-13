@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Pagination } from "@/components/ui/pagination";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type MilestoneType =
   | "BIRTHDAY"
@@ -46,26 +48,31 @@ export default function MilestonesPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
 
+  async function load() {
+    try {
+      const res = await apiFetch<{ data: MilestoneConfig[]; total: number; page: number; pages: number }>(
+        `/api/admin/milestones?page=${page}`,
+      );
+      setPages(res.pages);
+      setPage(res.page);
+      if (res.data.length > 0) {
+        const merged = DEFAULTS.map((d) => res.data.find((c) => c.type === d.type) ?? d);
+        setConfigs(merged);
+      }
+    } catch (err) {
+      console.error("milestone load failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: MilestoneConfig[]; total: number; page: number; pages: number }>(
-      `/api/admin/milestones?page=${page}`
-    )
-      .then((res) => {
-        setPages(res.pages);
-        setPage(res.page);
-        if (res.data.length > 0) {
-          const merged = DEFAULTS.map((d) => {
-            const found = res.data.find((c) => c.type === d.type);
-            return found ?? d;
-          });
-          setConfigs(merged);
-        }
-      })
-      .catch((err) => console.error("milestone load failed", err))
-      .finally(() => setLoading(false));
+    queueMicrotask(load);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, page]);
+
+  useRealtimeChannel(realtimeTopics.milestones, load, { debounceMs: 200 });
 
   function updatePoints(type: MilestoneType, value: string) {
     const num = parseInt(value, 10);

@@ -3,22 +3,36 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Bell, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export function NotificationsTab() {
   const { apiFetch } = useApiClient();
+  const { dbUser } = useAuth();
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean> | null>(null);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifSaving, setNotifSaving] = useState<string | null>(null);
   const [notifError, setNotifError] = useState("");
 
-  useEffect(() => {
-    queueMicrotask(() => setNotifLoading(true));
+  function load() {
+    setNotifLoading(true);
     apiFetch<{ data: Record<string, boolean> }>("/api/me/notification-preferences")
       .then((res) => setNotifPrefs(res.data))
       .catch(() => setNotifError("Failed to load preferences"))
       .finally(() => setNotifLoading(false));
+  }
+
+  useEffect(() => {
+    queueMicrotask(load);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeChannel(
+    dbUser ? realtimeTopics.notificationPreferences(dbUser.id) : null,
+    load,
+    { debounceMs: 150 },
+  );
 
   async function handleNotifToggle(type: string, value: boolean) {
     if (!notifPrefs) return;

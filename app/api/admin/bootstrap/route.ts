@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { timingSafeCompare } from "@/lib/auth/timingSafeCompare";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 // One-time route: promotes the calling user to HR_ADMIN
 // Disabled automatically once any HR_ADMIN exists
@@ -31,6 +33,12 @@ export async function POST(req: NextRequest) {
     data: { role: "HR_ADMIN" },
     select: { displayName: true, email: true, role: true },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.profile(user.id) },
+    { topic: realtimeTopics.employees },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({
     message: `${updated.displayName} has been promoted to HR_ADMIN.`,

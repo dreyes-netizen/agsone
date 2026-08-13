@@ -2,6 +2,19 @@
 
 import { ZoomIn } from "lucide-react";
 
+/**
+ * Shared layout for an N-image mosaic: 1 image sits at a fixed proportion of
+ * the card so it doesn't stretch across an oversized empty card, 2 images
+ * split the width evenly, 3+ fall back to a full-width 3-column grid with a
+ * "+N" overlay on the last tile. Used by both the post-card image grid
+ * (below) and the composer's upload preview, so the two never drift apart.
+ */
+export function imageGridClasses(count: number) {
+  if (count <= 1) return { container: "w-full sm:w-[40%]", grid: "" };
+  if (count === 2) return { container: "w-full sm:w-[80%]", grid: "grid grid-cols-2 gap-1" };
+  return { container: "w-full", grid: "grid grid-cols-3 gap-1" };
+}
+
 export function PostImages({
   urls,
   onOpen,
@@ -15,8 +28,7 @@ export function PostImages({
 
   const shown = urls.slice(0, 3);
   const extra = urls.length - 3;
-  const cols = urls.length === 2 ? "grid grid-cols-2 gap-1" : "grid grid-cols-3 gap-1";
-  const containerWidth = urls.length === 2 ? "w-full sm:w-[80%]" : "w-full";
+  const { container: containerWidth, grid: cols } = imageGridClasses(urls.length);
 
   // Single image: full-width on mobile, 40% on desktop
   if (urls.length === 1) {

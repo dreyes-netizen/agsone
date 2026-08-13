@@ -6,6 +6,8 @@ import Image from "next/image";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Loader2 } from "lucide-react";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Department = { id: string; name: string };
 
@@ -21,6 +23,12 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  function loadDepartments() {
+    apiFetch<{ data: Department[] }>("/api/departments")
+      .then((res) => setDepartments(res.data))
+      .catch((err) => console.error("departments fetch failed", err));
+  }
+
   useEffect(() => {
     if (authLoading || !authUser) return;
     // Compiler forbids a bare synchronous setState in an effect body.
@@ -29,9 +37,11 @@ export default function OnboardingPage() {
       if (dbUser?.department?.id) setDepartmentId(dbUser.department.id);
       if (dbUser?.birthday) setBirthday(dbUser.birthday.slice(0, 10));
     });
-    apiFetch<{ data: Department[] }>("/api/departments").then((res) => setDepartments(res.data));
+    loadDepartments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, authUser, dbUser]);
+
+  useRealtimeChannel(realtimeTopics.departments, loadDepartments, { debounceMs: 200 });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,7 +84,7 @@ export default function OnboardingPage() {
           {/* Header */}
           <div className="flex items-center gap-2.5 mb-7">
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
-              <Image src="/agslogo.png" alt="AGS One" width={32} height={32} className="w-full h-full object-contain p-1" />
+              <Image src="/agslogo.png" alt="AGS One" width={32} height={32} unoptimized className="w-full h-full object-contain p-1" />
             </div>
             <span className="text-zinc-900 font-semibold">AGS One</span>
           </div>

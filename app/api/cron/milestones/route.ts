@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { timingSafeCompare } from "@/lib/auth/timingSafeCompare";
+import { broadcastMany } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const ANNIVERSARY_TYPES = {
   1:  "WORK_ANNIVERSARY_1",
@@ -131,6 +133,15 @@ export async function GET(req: NextRequest) {
       createNotification({ userId: n.userId, type: "MILESTONE", title: n.title, body: n.body })
     )
   );
+
+  if (awarded > 0) {
+    await broadcastMany([
+      ...notifications.map((notification) => ({ topic: realtimeTopics.profile(notification.userId) })),
+      { topic: realtimeTopics.pointsTransactions },
+      { topic: realtimeTopics.leaderboard },
+      { topic: realtimeTopics.adminAnalytics },
+    ]);
+  }
 
   return NextResponse.json({ data: { awarded } });
 }

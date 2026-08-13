@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Params = { params: Promise<{ id: string; commentId: string }> };
 
@@ -28,6 +30,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     data: { content: parsed.data.content },
     select: { id: true, content: true },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.feed }]);
 
   return NextResponse.json({ data: updated });
 }
@@ -62,6 +66,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       },
     });
   }
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.feed },
+    ...(isAdmin && comment.authorId !== user.id ? [{ topic: realtimeTopics.adminAudit }] : []),
+  ]);
 
   return NextResponse.json({ success: true });
 }

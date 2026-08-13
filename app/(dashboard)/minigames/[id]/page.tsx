@@ -88,7 +88,9 @@ export default function MinigameSessionPage() {
   // Slow fallback poll — only catches the rare dropped Realtime message.
   // Stops once the game is over, and paused while the tab is hidden.
   const gameInProgress = !!session && session.status !== "FINISHED" && session.status !== "CANCELLED";
-  useVisibleInterval(fetchSession, 10_000, gameInProgress);
+  // Moves arrive through Realtime. Keep a slower visible-tab fallback so a
+  // dropped broadcast self-heals without invoking Vercel every ten seconds.
+  useVisibleInterval(fetchSession, 30_000, gameInProgress);
 
   useEffect(() => {
     if (!session || !dbUser) return;

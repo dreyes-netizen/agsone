@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { REWARD_CATEGORIES, REWARD_CATEGORY_CONFIG } from "@/lib/constants/rewardCategories";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Reward = {
   id: string;
@@ -84,6 +86,8 @@ export default function AdminRewardsPage() {
       setLoading(false);
     }
   }
+
+  useRealtimeChannel(realtimeTopics.rewards, loadRewards, { debounceMs: 200 });
 
   function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);

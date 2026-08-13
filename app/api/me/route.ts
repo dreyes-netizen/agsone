@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, verifyToken } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function GET(req: NextRequest) {
   // verifyAuth() would query the User row by firebaseUid, return a narrow
@@ -69,6 +71,11 @@ export async function PATCH(req: NextRequest) {
     data: parsed.data,
     select: { bio: true, skills: true },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.profile(user.id) },
+    { topic: realtimeTopics.employees },
+  ]);
 
   return NextResponse.json({ data: updated });
 }

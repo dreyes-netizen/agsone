@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const TOGGLEABLE_TYPES = [
   "SHOUTOUT_RECEIVED",
@@ -81,6 +83,8 @@ export async function PUT(req: NextRequest) {
   for (const key of TOGGLEABLE_TYPES) {
     if (key in updated) merged[key] = (updated as Record<string, boolean>)[key];
   }
+
+  scheduleBroadcast([{ topic: realtimeTopics.notificationPreferences(user.id) }]);
 
   return NextResponse.json({ data: merged });
 }

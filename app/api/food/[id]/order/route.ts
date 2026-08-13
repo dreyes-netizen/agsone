@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().min(0) });
 
@@ -79,6 +81,7 @@ export async function POST(
         selectedAddOns: addOns.value,
       },
     });
+    scheduleBroadcast([{ topic: realtimeTopics.food }]);
     return NextResponse.json({ data: order }, { status: 201 });
   } catch (err) {
     // Concurrent double-submit can race past the existing-order check and hit
@@ -126,6 +129,8 @@ export async function PATCH(
     },
   });
 
+  scheduleBroadcast([{ topic: realtimeTopics.food }]);
+
   return NextResponse.json({ data: updated });
 }
 
@@ -150,6 +155,8 @@ export async function DELETE(
   await prisma.foodOrder.delete({
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.food }]);
 
   return NextResponse.json({ data: null });
 }

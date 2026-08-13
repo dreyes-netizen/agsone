@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({ paid: z.boolean() });
 
@@ -25,6 +27,8 @@ export async function PATCH(
     where: { id: orderId, listingId: id },
     data: { paidAt: parsed.data.paid ? new Date() : null },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.food }]);
 
   return NextResponse.json({ data: updated });
 }

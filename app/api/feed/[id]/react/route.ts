@@ -4,8 +4,10 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { REACTION_EMOJIS } from "@/lib/constants/reactions";
+import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 
-const schema = z.object({ emoji: z.enum(['👍', '❤️', '🔥', '👏', '🎉', '💪']) });
+const schema = z.object({ emoji: z.enum(REACTION_EMOJIS) });
 
 export async function POST(
   req: NextRequest,
@@ -20,6 +22,15 @@ export async function POST(
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const { emoji } = parsed.data;
+
+  // Same department-visibility scoping as GET /api/feed. Without this, any
+  // authenticated employee who knows a post id could react to a post they
+  // can't otherwise see.
+  const post = await prisma.socialPost.findFirst({
+    where: { id, ...postVisibilityWhere(user) },
+    select: { id: true },
+  });
+  if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Find any existing reaction from this user on this post (any emoji)
   const existing = await prisma.socialReaction.findFirst({

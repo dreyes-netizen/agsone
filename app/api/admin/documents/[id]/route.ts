@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { deletePdf } from "@/lib/supabase/storageClient";
 import { deleteDocumentChunks } from "@/lib/rag/search";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function DELETE(
   req: NextRequest,
@@ -20,6 +22,8 @@ export async function DELETE(
   await deletePdf(doc.storagePath);
   await deleteDocumentChunks(id);
   await prisma.policyDocument.delete({ where: { id } });
+
+  scheduleBroadcast([{ topic: realtimeTopics.documents }]);
 
   return new NextResponse(null, { status: 204 });
 }
@@ -48,6 +52,8 @@ export async function PATCH(
     where: { id },
     data: updates,
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.documents }]);
 
   return NextResponse.json({ data: doc });
 }

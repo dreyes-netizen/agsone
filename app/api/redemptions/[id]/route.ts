@@ -5,6 +5,8 @@ import { createNotification } from "@/lib/helpers/createNotification";
 import { sendMail } from "@/lib/email/mailer";
 import { redemptionStatusEmail } from "@/lib/email/templates";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
   status: z.enum(["APPROVED", "REJECTED", "FULFILLED"]),
@@ -94,6 +96,19 @@ export async function PATCH(
       }),
     ]);
   }
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.redemptionsUser(redemption.userId) },
+    { topic: realtimeTopics.redemptionsAdmin },
+    { topic: realtimeTopics.adminAnalytics },
+    ...(status === "REJECTED"
+      ? [
+          { topic: realtimeTopics.profile(redemption.userId) },
+          { topic: realtimeTopics.pointsTransactions },
+          { topic: realtimeTopics.leaderboard },
+        ]
+      : []),
+  ]);
 
   return NextResponse.json({ data: updated });
 }

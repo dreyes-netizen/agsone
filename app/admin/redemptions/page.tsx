@@ -6,6 +6,8 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { CheckCircle, XCircle, Package, Loader2 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Redemption = {
   id: string;
@@ -50,6 +52,8 @@ export default function AdminRedemptionsPage() {
       setLoading(false);
     }
   }
+
+  useRealtimeChannel(realtimeTopics.redemptionsAdmin, load, { debounceMs: 200 });
 
   async function updateStatus(id: string, status: "APPROVED" | "REJECTED" | "FULFILLED") {
     setActionId(id);

@@ -6,6 +6,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { FileText, Upload, Trash2, ToggleLeft, ToggleRight, X, RefreshCw, Pencil, Check, Copy, CheckCheck, Loader2, Bot } from "lucide-react";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const MD_CONVERSION_PROMPT = `Convert this PDF to clean Markdown. Preserve all section headings with proper heading levels (# ## ###), numbered lists, bullet points, and tables exactly as they appear. Do not summarize or skip any content — include everything word for word. Output only the Markdown, no commentary.`;
 
@@ -76,6 +78,17 @@ export default function DocumentsPage() {
       .catch((err) => console.error("Ally settings fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeChannel(realtimeTopics.documents, load, { debounceMs: 200 });
+  useRealtimeChannel(
+    realtimeTopics.settings,
+    () => {
+      apiFetch<{ data: { allyEnabled: boolean } }>("/api/admin/settings")
+        .then((res) => setAllyEnabled(res.data.allyEnabled))
+        .catch((err) => console.error("Ally settings refresh failed", err));
+    },
+    { debounceMs: 200 },
+  );
 
   async function handleToggleAlly() {
     if (allyEnabled === null || togglingAlly) return;

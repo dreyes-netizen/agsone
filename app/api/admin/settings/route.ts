@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { getAllyEnabled, setAllyEnabled } from "@/lib/settings/appSettings";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
   allyEnabled: z.boolean(),
@@ -43,6 +45,11 @@ export async function PATCH(req: NextRequest) {
       afterState: { allyEnabled: parsed.data.allyEnabled },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.settings },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({ data: { allyEnabled: parsed.data.allyEnabled } });
 }

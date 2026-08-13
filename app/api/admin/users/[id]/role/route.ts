@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
   role: z.enum(["EMPLOYEE", "MANAGER", "HR_ADMIN", "SUPER_ADMIN"]),
@@ -55,6 +57,13 @@ export async function PATCH(
       afterState: { role: parsed.data.role },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.employees },
+    { topic: realtimeTopics.profile(id) },
+    { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({ data: updated });
 }

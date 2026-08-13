@@ -27,5 +27,7 @@ export const config = {
   // robots.txt must stay reachable unauthenticated — otherwise crawlers get
   // a 307 to /login instead of the actual (disallow-all) robots response,
   // which Lighthouse flags as an invalid robots.txt.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|.*\\.png$).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|.*\\.(?:svg|png|jpe?g|gif|webp|avif|ico)$).*)",
+  ],
 };

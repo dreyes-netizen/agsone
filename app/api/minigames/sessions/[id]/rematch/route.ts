@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { broadcastMany } from "@/lib/realtime/broadcast";
 import { initState, type GameType } from "@/lib/minigames/initState";
 
 const GAME_LABELS: Record<string, string> = {
@@ -102,7 +102,7 @@ export async function POST(
   });
 
   // Wake the opponent's finished screen + refresh lobbies.
-  await Promise.all([broadcast(`game:${id}`), broadcast("lobby")]);
+  await broadcastMany([{ topic: `game:${id}` }, { topic: "lobby" }]);
 
   return NextResponse.json({ data: created }, { status: 201 });
 }

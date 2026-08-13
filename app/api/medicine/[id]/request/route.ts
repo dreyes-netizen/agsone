@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function POST(
   req: NextRequest,
@@ -50,6 +52,12 @@ export async function POST(
     data: { medicineId: id, userId: user.id, quantity },
     select: { id: true, medicineId: true, quantity: true, status: true, createdAt: true },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.medicineUser(user.id) },
+    { topic: realtimeTopics.medicineRequests },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: request }, { status: 201 });
 }

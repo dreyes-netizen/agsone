@@ -23,6 +23,8 @@ import { ListingFormPanel } from "./components/ListingFormPanel";
 import { FoodListingCard } from "./components/FoodListingCard";
 import { FoodListingDetailModal } from "./components/FoodListingDetailModal";
 import { SellingView } from "./components/selling/SellingView";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -90,6 +92,8 @@ export default function FoodPage() {
       setLoading(false);
     }
   }
+
+  useRealtimeChannel(realtimeTopics.food, load, { debounceMs: 200 });
 
   // ── Image picker ─────────────────────────────────────────────────────────────
   function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {

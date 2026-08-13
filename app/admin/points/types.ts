@@ -26,4 +26,4 @@ export type AttendanceResult = {
   skipped: { notFound: string[]; alreadyAwarded: string[] };
 };
 
-export type EmployeesPage = { data: (Employee & { role: string })[]; page: number; pages: number };
+export type EmployeePickerResponse = { data: (Employee & { role: string })[] };

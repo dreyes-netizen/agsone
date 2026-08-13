@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 
 export async function GET(
   req: NextRequest,
@@ -26,5 +27,8 @@ export async function GET(
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (feedback.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  return NextResponse.json({ data: feedback });
+  return NextResponse.json({
+    data: feedback,
+    realtimeTopic: confidentialRealtimeTopic("feedback-thread", id),
+  });
 }

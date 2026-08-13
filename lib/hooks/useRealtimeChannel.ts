@@ -12,6 +12,8 @@ type Options = {
    * return. See lib/realtime/lifecycle.ts.
    */
   keepAliveWhenHidden?: boolean;
+  /** Coalesce bursts of related invalidations into one authenticated refetch. */
+  debounceMs?: number;
 };
 
 /**
@@ -35,28 +37,68 @@ export function useRealtimeChannel(
   onMessage: () => void,
   options: Options = {},
 ) {
+  useRealtimeChannels(topic ? [topic] : [], onMessage, options);
+}
+
+/**
+ * Subscribe one screen to several scopes while sharing a single coalesced
+ * refresh callback. All channels still use the one module-level Supabase
+ * client/WebSocket.
+ */
+export function useRealtimeChannels(
+  topics: readonly (string | null)[],
+  onMessage: () => void,
+  options: Options = {},
+) {
   const cb = useRef(onMessage);
   useEffect(() => {
     cb.current = onMessage;
   });
   const keepAliveWhenHidden = options.keepAliveWhenHidden ?? false;
+  const debounceMs = options.debounceMs ?? 0;
+  const topicKey = [...new Set(topics.filter((topic): topic is string => !!topic))]
+    .sort()
+    .join("\u0000");
 
   useEffect(() => {
-    if (!topic) return;
+    if (!topicKey) return;
 
     const supabase = getBrowserSupabase();
-    const channel = supabase
-      .channel(topic)
-      .on("broadcast", { event: "update" }, () => cb.current())
-      .subscribe();
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const notify = () => {
+      if (debounceMs <= 0) {
+        cb.current();
+        return;
+      }
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        cb.current();
+      }, debounceMs);
+    };
+    const channels = topicKey.split("\u0000").map((topic) => {
+      let subscribedOnce = false;
+      return supabase
+        .channel(topic)
+        .on("broadcast", { event: "update" }, notify)
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          // A reconnect can miss broadcasts sent while the socket was down.
+          // The first SUBSCRIBED is covered by the screen's initial load; each
+          // later one performs a single coalesced authoritative resync.
+          if (subscribedOnce) notify();
+          subscribedOnce = true;
+        });
+    });
 
-    const unsubscribeResync = subscribeResync(() => cb.current());
+    const unsubscribeResync = subscribeResync(notify);
     const unpin = keepAliveWhenHidden ? pinRealtimeAlive() : null;
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       unsubscribeResync();
       unpin?.();
-      supabase.removeChannel(channel);
+      channels.forEach((channel) => supabase.removeChannel(channel));
     };
-  }, [topic, keepAliveWhenHidden]);
+  }, [topicKey, keepAliveWhenHidden, debounceMs]);
 }

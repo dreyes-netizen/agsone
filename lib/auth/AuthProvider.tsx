@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { onIdTokenChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type DbProfile = {
   id: string;
@@ -105,15 +106,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Real-time: refresh points balance whenever the server broadcasts a points
-  // change. Uses the shared hook (rather than a hand-rolled channel) so this
+  // Real-time: refresh the authenticated profile whenever points, level,
+  // badges, role, department, or editable profile fields change. Uses the
+  // shared hook (rather than a hand-rolled channel) so this
   // subscription participates in the tab-hidden idle-disconnect + resync
   // behavior like every other channel — see lib/hooks/useRealtimeChannel.ts.
   const refreshRef = useRef(refreshProfile);
   useEffect(() => {
     refreshRef.current = refreshProfile;
   });
-  useRealtimeChannel(dbUser?.id ? `points:${dbUser.id}` : null, () => refreshRef.current());
+  useRealtimeChannel(
+    dbUser?.id ? realtimeTopics.profile(dbUser.id) : null,
+    () => refreshRef.current(),
+    { debounceMs: 150 },
+  );
 
   return (
     <AuthContext.Provider value={{ user, loading, token, dbUser, refreshProfile }}>

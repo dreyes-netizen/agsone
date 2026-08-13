@@ -5,6 +5,9 @@ import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { sendMail } from "@/lib/email/mailer";
 import { hrReplyEmail } from "@/lib/email/templates";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
+import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 
 const replySchema = z.object({
   body: z.string().min(1).max(1000),
@@ -57,6 +60,13 @@ export async function POST(
       ...hrReplyEmail(feedback.author.displayName, feedback.title, parsed.data.body),
     }).catch((err) => console.error("feedback reply email failed", err));
   }
+
+  scheduleBroadcast([
+    { topic: confidentialRealtimeTopic("feedback-admin") },
+    { topic: confidentialRealtimeTopic("feedback-thread", id) },
+    { topic: realtimeTopics.adminAnalytics },
+    ...(feedback.authorId ? [{ topic: confidentialRealtimeTopic("feedback-user", feedback.authorId) }] : []),
+  ]);
 
   return NextResponse.json({ data: reply }, { status: 201 });
 }

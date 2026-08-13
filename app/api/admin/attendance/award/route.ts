@@ -7,7 +7,8 @@ import { sendMail } from "@/lib/email/mailer";
 import { pointsReceivedEmail } from "@/lib/email/templates";
 import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 import { findActivity } from "@/lib/constants/awardActivities";
 import { sheetToRows } from "@/lib/excel/sheetToRows";
 
@@ -150,7 +151,7 @@ export async function POST(req: NextRequest) {
   });
   const earnedMap = new Map(earnedTotals.map((e) => [e.toUserId, e._sum.amount ?? 0]));
 
-  // Per-user: notification + email + level-up + badges + broadcast
+  // Per-user: notification + email + level-up + badges
   for (const u of toAward) {
     const newBalance = balanceMap.get(u.id) ?? (u.pointsBalance + amount);
     createNotification({
@@ -166,7 +167,6 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("points-received email failed", err));
     checkLevelUp(u.id, newBalance).catch((err) => console.error("checkLevelUp failed", err));
     checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch((err) => console.error("checkAndAwardBadges failed", err));
-    broadcast(`points:${u.id}`).catch((err) => console.error("attendance award broadcast failed", err));
   }
 
   prisma.auditLog.create({
@@ -178,6 +178,14 @@ export async function POST(req: NextRequest) {
       afterState: { attendanceMonth, recipientIds, amount, count: recipientIds.length, notFound },
     },
   }).catch((err) => console.error("attendance award audit log write failed", err));
+
+  scheduleBroadcast([
+    ...toAward.map((u) => ({ topic: realtimeTopics.profile(u.id) })),
+    { topic: realtimeTopics.pointsTransactions },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({
     data: {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -38,6 +40,11 @@ export async function PATCH(
     where: { id },
     data: parsed.data,
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.rewards },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: reward });
 }
@@ -78,6 +85,10 @@ export async function DELETE(
     // Soft-delete: rewards are never hard-deleted by default so redemption history stays intact.
     // Admins can restore a hidden reward by toggling isActive back to true.
     await prisma.reward.update({ where: { id }, data: { isActive: false } });
+    scheduleBroadcast([
+      { topic: realtimeTopics.rewards },
+      { topic: realtimeTopics.adminAnalytics },
+    ]);
     return NextResponse.json({ success: true });
   }
 
@@ -113,6 +124,12 @@ export async function DELETE(
       },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.rewards },
+    { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({ success: true });
 }

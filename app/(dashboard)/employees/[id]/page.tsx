@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { AWARD_ACTIVITIES, AWARD_CATEGORIES, findActivity, type AwardCategory } from "@/lib/constants/awardActivities";
 import { RoleBadge } from "@/components/RoleBadge";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type ShoutoutPost = {
   id: string;
@@ -159,6 +161,15 @@ export default function EmployeeProfilePage() {
       .catch((err) => console.error("budget fetch failed", err));
   }
 
+  function loadHistory() {
+    if (!isAdminOrManager) return Promise.resolve();
+    setHistoryLoading(true);
+    return apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
+      .then((r) => setTransactions(r.data.slice(0, 15)))
+      .catch((err) => console.error("transaction history fetch failed", err))
+      .finally(() => setHistoryLoading(false));
+  }
+
   useEffect(() => {
     loadEmployee().finally(() => setLoading(false));
     if (isAdminOrManager && !isSelf) loadBudget();
@@ -167,13 +178,19 @@ export default function EmployeeProfilePage() {
 
   useEffect(() => {
     if (!isAdminOrManager) return;
-    queueMicrotask(() => setHistoryLoading(true));
-    apiFetch<{ data: Transaction[] }>(`/api/points/history?userId=${id}`)
-      .then((r) => setTransactions(r.data.slice(0, 15)))
-      .catch((err) => console.error("transaction history fetch failed", err))
-      .finally(() => setHistoryLoading(false));
+    queueMicrotask(loadHistory);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isAdminOrManager]);
+
+  useRealtimeChannel(
+    realtimeTopics.profile(id),
+    () => {
+      loadEmployee();
+      loadHistory();
+      if (isAdminOrManager && !isSelf) loadBudget();
+    },
+    { debounceMs: 200 },
+  );
 
   async function handleAwardPoints(e: React.FormEvent) {
     e.preventDefault();

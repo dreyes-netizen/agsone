@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({ emoji: z.enum(['👍', '❤️', '🔥', '👏', '🎉', '💪']) });
 
@@ -28,6 +30,7 @@ export async function POST(
     if (existing.emoji === emoji) {
       // Same emoji — toggle off
       await prisma.socialReaction.delete({ where: { id: existing.id } });
+      scheduleBroadcast([{ topic: realtimeTopics.feed }]);
       return NextResponse.json({ action: "removed", emoji });
     } else {
       // Different emoji — swap
@@ -35,6 +38,7 @@ export async function POST(
         where: { id: existing.id },
         data: { emoji },
       });
+      scheduleBroadcast([{ topic: realtimeTopics.feed }]);
       return NextResponse.json({ action: "changed", emoji, previous: existing.emoji });
     }
   }
@@ -46,9 +50,11 @@ export async function POST(
     // race to create, the second hitting the @@unique([postId,userId,emoji])
     // constraint. That's a benign no-op (the reaction exists), not a 500.
     if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
+      scheduleBroadcast([{ topic: realtimeTopics.feed }]);
       return NextResponse.json({ action: "added", emoji });
     }
     throw err;
   }
+  scheduleBroadcast([{ topic: realtimeTopics.feed }]);
   return NextResponse.json({ action: "added", emoji });
 }

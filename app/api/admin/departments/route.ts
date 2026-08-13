@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -79,6 +81,11 @@ export async function POST(req: NextRequest) {
       createdAt: true,
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.departments },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: department }, { status: 201 });
 }

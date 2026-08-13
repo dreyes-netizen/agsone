@@ -25,9 +25,11 @@ import { DepartmentRankWidget } from "./components/DepartmentRankWidget";
 import { RecentActivityWidget } from "./components/RecentActivityWidget";
 import { QuickActionsWidget } from "./components/QuickActionsWidget";
 import { RecentBadgesWidget } from "./components/RecentBadgesWidget";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export default function ProfilePage() {
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pointsData, setPointsData] = useState<PointsData | null>(null);
@@ -68,7 +70,17 @@ export default function ProfilePage() {
   useEffect(() => {
     queueMicrotask(loadProfile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, authUser]);
+  }, [authLoading, authUser, dbUser]);
+
+  useRealtimeChannel(
+    realtimeTopics.feed,
+    () => {
+      apiFetch<{ data: ShoutoutEntry[] }>("/api/me/shoutouts")
+        .then((res) => setShoutouts(res.data))
+        .catch(() => {});
+    },
+    { debounceMs: 300 },
+  );
 
   async function handleProfileSave() {
     setProfileSaving(true);
@@ -119,6 +131,20 @@ export default function ProfilePage() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.department?.id]);
+
+  useRealtimeChannel(
+    realtimeTopics.leaderboard,
+    () => {
+      if (!profile?.department) return;
+      apiFetch<{ data: Array<{ rank: number; isCurrentUser: boolean }> }>(
+        `/api/leaderboard?departmentId=${profile.department.id}`,
+      ).then((res) => {
+        const me = res.data.find((entry) => entry.isCurrentUser);
+        if (me) setDeptRank({ rank: me.rank, total: res.data.length });
+      }).catch(() => {});
+    },
+    { debounceMs: 200 },
+  );
 
   if (loadError && !profile) {
     return (

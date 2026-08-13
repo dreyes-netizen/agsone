@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -31,6 +32,8 @@ export async function PATCH(req: NextRequest) {
     where: { userId: user.id, readAt: null },
     data: { readAt: new Date() },
   });
+
+  scheduleBroadcast([{ topic: `user:${user.id}` }]);
 
   return NextResponse.json({ ok: true });
 }

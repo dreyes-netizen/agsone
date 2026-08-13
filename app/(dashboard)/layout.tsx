@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
-              <Image src="/agslogo.png" alt="AGS One" width={28} height={28} className="w-full h-full object-contain p-0.5" />
+              <Image src="/agslogo.png" alt="AGS One" width={28} height={28} unoptimized className="w-full h-full object-contain p-0.5" />
             </div>
             <div>
               <p className="text-white font-semibold text-[13px] leading-tight">AGS One</p>
@@ -226,7 +226,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
-            <Image src="/agslogo.png" alt="AGS One" width={24} height={24} className="w-full h-full object-contain p-0.5" />
+            <Image src="/agslogo.png" alt="AGS One" width={24} height={24} unoptimized className="w-full h-full object-contain p-0.5" />
           </div>
           <span className="text-white font-semibold text-sm">AGS One</span>
         </div>

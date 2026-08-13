@@ -8,6 +8,7 @@ import { ArrowLeft, Send, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 
 type Reply = {
   id: string;
@@ -50,15 +51,27 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
   const [replyBody, setReplyBody] = useState("");
   const [sending, setSending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [realtimeTopic, setRealtimeTopic] = useState<string | null>(null);
+
+  async function load() {
+    try {
+      const r = await apiFetch<{ data: FeedbackThread; realtimeTopic: string }>(`/api/admin/feedback/${id}`);
+      setThread(r.data);
+      setRealtimeTopic(r.realtimeTopic);
+    } catch {
+      router.push("/admin/feedback");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: FeedbackThread }>(`/api/admin/feedback/${id}`)
-      .then((r) => setThread(r.data))
-      .catch(() => router.push("/admin/feedback"))
-      .finally(() => setLoading(false));
+    queueMicrotask(load);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, id]);
+
+  useRealtimeChannel(realtimeTopic, load, { debounceMs: 150 });
 
   async function handleStatusChange(status: string) {
     if (!thread) return;

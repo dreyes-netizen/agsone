@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Send, ImagePlus, X, MessageCircle, Trash2, Pencil, Check, PartyPopper, Megaphone, Trophy, BarChart2, Sparkles, Pin, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2, Cake, Building2 } from "lucide-react";
-import { postTimestamp } from "@/lib/helpers/timeAgo";
-import { FLAIRS, flairById } from "@/lib/flairs";
-import { PostImages } from "@/components/feed/PostImages";
+import { Send, ImagePlus, X, Check, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2 } from "lucide-react";
+import { FLAIRS } from "@/lib/flairs";
+import { PostImages, imageGridClasses } from "@/components/feed/PostImages";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
 import { Avatar } from "@/components/feed/Avatar";
-import { ReactionBar } from "@/components/feed/ReactionBar";
 import { PollBlock } from "@/components/feed/PollBlock";
 import { CommentThread } from "@/components/feed/CommentThread";
+import { PostHeader } from "@/components/feed/PostHeader";
+import { PostBadges } from "@/components/feed/PostBadges";
+import { PostEngagement } from "@/components/feed/PostEngagement";
+import { ExpandableText } from "@/components/feed/ExpandableText";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
   AlertDialog,
@@ -39,14 +41,6 @@ function getGreeting() {
   if (h < 17) return "Good afternoon";
   return "Good evening";
 }
-
-const postTypeMeta: Record<string, { bg: string; chip: string; label: string; icon?: React.ElementType }> = {
-  CELEBRATION:  { bg: "bg-amber-50 border-amber-200",   chip: "bg-amber-100 text-amber-700",   label: "Celebration", icon: PartyPopper },
-  ANNOUNCEMENT: { bg: "bg-navy-50 border-navy-200",     chip: "bg-navy-100 text-navy-700",     label: "Announcement", icon: Megaphone },
-  ACHIEVEMENT:  { bg: "bg-emerald-50 border-emerald-200", chip: "bg-emerald-100 text-emerald-700", label: "Achievement", icon: Trophy },
-  UPDATE:       { bg: "bg-white border-table-border",        chip: "",                              label: "" },
-  POLL:         { bg: "bg-white border-table-border",        chip: "bg-navy-100 text-navy-700",     label: "Poll", icon: BarChart2 },
-};
 
 export default function FeedPage() {
   const router = useRouter();
@@ -161,7 +155,9 @@ export default function FeedPage() {
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
   return (
-    <div className="space-y-5">
+    // Capped so the feed reads at ~660px on wide screens instead of stretching
+    // to fill the viewport (sidebar 300px + gap 20px + 660px feed = 980px).
+    <div className="space-y-5 max-w-[980px] mx-auto">
       {/* Greeting */}
       <div>
         <p className="text-sm text-gray-500 font-medium">
@@ -434,10 +430,9 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {/* Image previews — mirrors PostImages layout */}
+          {/* Image previews — shares PostImages' grid layout so composer and card never drift apart */}
           {imagePreviews.length > 0 && (() => {
-            const gridClass = imagePreviews.length === 2 ? "grid grid-cols-2 gap-1" : "grid grid-cols-3 gap-1";
-            const containerWidth = imagePreviews.length === 1 ? "w-[40%]" : imagePreviews.length === 2 ? "w-[80%]" : "w-full";
+            const { container: containerWidth, grid: gridClass } = imageGridClasses(imagePreviews.length);
             return (
               <div className={`${containerWidth} ${gridClass}`}>
                 {imagePreviews.map((src, i) => (
@@ -706,47 +701,23 @@ export default function FeedPage() {
             return (
               <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
-                <div className="px-5 py-4 space-y-3">
-                  {post.isPinned && (
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600">
-                      <Pin className="w-3 h-3" /> Pinned
-                    </div>
-                  )}
-
-                  {/* Sender row */}
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="shrink-0 hover:opacity-80 transition-opacity">
-                      <Avatar name={post.author.displayName} url={post.author.avatarUrl} size="sm" />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="font-semibold text-sm text-gray-800 hover:underline whitespace-nowrap min-w-0 truncate">
-                          {post.author.displayName}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
-                        {(dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                          <button onClick={() => togglePin(post.id)} className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50" : "text-gray-500 hover:text-amber-500 hover:bg-amber-50"}`} title={post.isPinned ? "Unpin post" : "Pin post"} aria-label={post.isPinned ? "Unpin post" : "Pin post"}>
-                            <Pin className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                          <>
-                            <button onClick={() => startEditPost(post)} className="text-gray-500 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50" title="Edit shoutout" aria-label="Edit shoutout">
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => deletePost(post.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Delete post" aria-label="Delete post">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                      {post.author.department && (
-                        <span className="text-xs text-gray-500 font-medium block">{post.author.department.name}</span>
-                      )}
-                    </div>
-                  </div>
+                <div className="px-5 pt-4 pb-4 space-y-3">
+                  <PostHeader
+                    authorId={post.authorId}
+                    authorName={post.author.displayName}
+                    authorAvatarUrl={post.author.avatarUrl}
+                    department={post.author.department?.name}
+                    createdAt={post.createdAt}
+                    isPinned={post.isPinned}
+                    canPin={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                    canEdit={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                    canDelete={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                    onAuthorClick={(id) => router.push(`/employees/${id}`)}
+                    onPin={() => togglePin(post.id)}
+                    onEdit={() => startEditPost(post)}
+                    onDelete={() => deletePost(post.id)}
+                    editLabel="Edit shoutout"
+                  />
 
                   {/* Divider */}
                   <div className="flex items-center gap-3">
@@ -791,22 +762,17 @@ export default function FeedPage() {
                       </div>
                     </div>
                   ) : post.shoutoutRecipients.length === 1 ? (
-                    <>
-                      <div className="flex gap-3 items-start">
-                        <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="shrink-0 hover:opacity-80 transition-opacity">
-                          <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
+                    <div className="flex gap-3 items-start">
+                      <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="shrink-0 hover:opacity-80 transition-opacity">
+                        <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-gray-900 hover:underline block">
+                          {post.shoutoutRecipients[0].user.displayName}
                         </button>
-                        <div className="flex-1 min-w-0">
-                          <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-gray-900 hover:underline block">
-                            {post.shoutoutRecipients[0].user.displayName}
-                          </button>
-                          <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
-                        </div>
+                        <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
                       </div>
-                      {post.imageUrls?.length > 0 && (
-                        <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
-                      )}
-                    </>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -818,32 +784,24 @@ export default function FeedPage() {
                         ))}
                       </div>
                       <p className="text-sm text-gray-600 italic leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
-                      {post.imageUrls?.length > 0 && (
-                        <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
-                      )}
                     </div>
                   )}
-                  <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-3 flex-wrap">
-                    <ReactionBar
-                      postId={post.id}
-                      reactions={post.reactions}
-                      myReactions={post.myReactions}
-                      onReact={toggleReaction}
-                    />
-                    <button
-                      onClick={() => toggleComments(post.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                        openComments[post.id]
-                          ? "bg-navy-50 border-navy-200 text-navy-700"
-                          : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
-                      }`}
-                      aria-expanded={!!openComments[post.id]}
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
-                      <ChevronDown className={`w-3 h-3 transition-transform ${openComments[post.id] ? "rotate-180" : ""}`} />
-                    </button>
-                  </div>
+                </div>
+
+                {post.imageUrls?.length > 0 && (
+                  <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
+                )}
+
+                <div className="px-5 pt-3 pb-4">
+                  <PostEngagement
+                    postId={post.id}
+                    reactions={post.reactions}
+                    myReactions={post.myReactions}
+                    commentCount={post.commentCount}
+                    commentsOpen={!!openComments[post.id]}
+                    onReact={toggleReaction}
+                    onToggleComments={() => toggleComments(post.id)}
+                  />
                   {openComments[post.id] && (
                     <CommentThread
                       postId={post.id}
@@ -867,7 +825,7 @@ export default function FeedPage() {
                       onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
                       onSubmitComment={submitComment}
                       autoResize={autoResize}
-                      wrapperClassName="mt-1 pt-3 border-t border-black/5 space-y-4"
+                      wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                     />
                   )}
                 </div>
@@ -875,137 +833,68 @@ export default function FeedPage() {
             );
           }
 
-          const meta = postTypeMeta[post.type] ?? postTypeMeta.UPDATE;
           return (
-            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400 bg-amber-50/30" : `${meta.bg} hover:border-gray-300`}`}>
-              <div className="p-5">
-                {/* Pinned indicator */}
-                {post.isPinned && (
-                  <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 mb-2">
-                    <Pin className="w-3 h-3" /> Pinned
-                  </div>
-                )}
+            <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-card border overflow-hidden bg-white transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
+              <div className="p-4 sm:p-5">
+                <PostHeader
+                  authorId={post.authorId}
+                  authorName={post.author.displayName}
+                  authorAvatarUrl={post.author.avatarUrl}
+                  department={post.author.department?.name}
+                  createdAt={post.createdAt}
+                  isPinned={post.isPinned}
+                  canPin={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                  canEdit={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                  canDelete={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+                  onAuthorClick={(id) => router.push(`/employees/${id}`)}
+                  onPin={() => togglePin(post.id)}
+                  onEdit={() => startEditPost(post)}
+                  onDelete={() => deletePost(post.id)}
+                />
 
-                {/* Flair + structural type chips */}
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {(() => {
-                    const flair = flairById[post.flair ?? "CASUAL"] ?? flairById["CASUAL"];
-                    return (
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${flair.color}`}>
-                        <span>{flair.emoji}</span>
-                        <span>{flair.label}</span>
-                      </span>
-                    );
-                  })()}
-                  {post.type === "POLL" && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-100 text-navy-700">
-                      <BarChart2 className="w-3 h-3" /> Poll
-                    </span>
-                  )}
-                  {post.department && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-navy-100 text-navy-700 border border-navy-200">
-                      <Building2 className="w-3 h-3" aria-hidden="true" /> {post.department.name} only
-                    </span>
-                  )}
-                </div>
+                <PostBadges flairId={post.flair} isPoll={post.type === "POLL"} departmentName={post.department?.name} />
 
-                {/* Author row */}
-                <div className="flex items-start gap-3">
-                  <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="shrink-0 hover:opacity-80 transition-opacity">
-                    <Avatar name={post.author.displayName} url={post.author.avatarUrl} />
-                  </button>
-                  <div className="flex-1 min-w-0">
+                {editingPost?.id === post.id ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editingPost.title}
+                      onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+                      maxLength={120}
+                      placeholder="Title *"
+                      className="w-full text-sm font-semibold bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:font-normal placeholder:text-gray-500 transition-all"
+                    />
+                    <textarea
+                      value={editingPost.content}
+                      onChange={(e) => { setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev)); autoResize(e.target); }}
+                      rows={3}
+                      className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
+                    />
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => router.push(`/employees/${post.authorId}`)} className="font-semibold text-sm text-gray-900 hover:underline transition-colors whitespace-nowrap min-w-0 truncate">
-                        {post.author.displayName}
+                      <button
+                        onClick={() => saveEditPost(post)}
+                        disabled={savingPostEdit || !editingPost.content.trim() || !editingPost.title.trim()}
+                        className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Save
+                      </button>
+                      <button
+                        onClick={() => setEditingPost(null)}
+                        className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors"
+                      >
+                        Cancel
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-500 whitespace-nowrap">{postTimestamp(post.createdAt)}</span>
-                      {dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN" && (
-                        <button
-                          onClick={() => togglePin(post.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${post.isPinned ? "text-amber-500 hover:text-amber-700 hover:bg-amber-100" : "text-gray-500 hover:text-amber-500 hover:bg-amber-50"}`}
-                          title={post.isPinned ? "Unpin post" : "Pin post"}
-                          aria-label={post.isPinned ? "Unpin post" : "Pin post"}
-                        >
-                          <Pin className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {(post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
-                        <>
-                          <button
-                            onClick={() => startEditPost(post)}
-                            className="text-gray-500 hover:text-navy-500 transition-colors p-1.5 rounded-lg hover:bg-navy-50"
-                            title="Edit post"
-                            aria-label="Edit post"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => deletePost(post.id)}
-                            className="text-gray-500 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50"
-                            title="Delete post"
-                            aria-label="Delete post"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {post.author.department && (
-                      <span className="text-xs text-gray-500 font-medium block">{post.author.department.name}</span>
-                    )}
-                    {editingPost?.id === post.id ? (
-                      <div className="mt-2 space-y-2">
-                        <input
-                          type="text"
-                          value={editingPost.title}
-                          onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                          maxLength={120}
-                          placeholder="Title *"
-                          className="w-full text-sm font-semibold bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:font-normal placeholder:text-gray-500 transition-all"
-                        />
-                        <textarea
-                          value={editingPost.content}
-                          onChange={(e) => { setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev)); autoResize(e.target); }}
-                          rows={3}
-                          className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
-                        />
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => saveEditPost(post)}
-                            disabled={savingPostEdit || !editingPost.content.trim() || !editingPost.title.trim()}
-                            className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Check className="w-3.5 h-3.5" /> Save
-                          </button>
-                          <button
-                            onClick={() => setEditingPost(null)}
-                            className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {post.title && (
-                          <p className="text-base font-bold text-gray-900 mt-1 leading-snug">{post.title}</p>
-                        )}
-                        <p className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
-                      </>
-                    )}
-
                   </div>
-                </div>
-
-                {post.imageUrls?.length > 0 && (
-                  <PostImages
-                    urls={post.imageUrls}
-                    authorName={post.author.displayName}
-                    onOpen={(index) => setLightbox({ images: post.imageUrls, index })}
-                  />
+                ) : (
+                  <div className="mt-1">
+                    {post.title && (
+                      <p className="text-base font-bold text-gray-900 leading-snug">{post.title}</p>
+                    )}
+                    <ExpandableText className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">
+                      {renderContent(post.content)}
+                    </ExpandableText>
+                  </div>
                 )}
 
                 {post.type === "POLL" && post.pollOptions.length > 0 && (
@@ -1017,31 +906,27 @@ export default function FeedPage() {
                     onVote={handleVote}
                   />
                 )}
+              </div>
 
-                {/* Reactions + comments bar */}
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-black/5 gap-3 flex-wrap">
-                  <ReactionBar
-                    postId={post.id}
-                    reactions={post.reactions}
-                    myReactions={post.myReactions}
-                    onReact={toggleReaction}
-                  />
-                  <button
-                    onClick={() => toggleComments(post.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      openComments[post.id]
-                        ? "bg-navy-50 border-navy-200 text-navy-700"
-                        : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
-                    }`}
-                    aria-expanded={!!openComments[post.id]}
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
-                    <ChevronDown className={`w-3 h-3 transition-transform ${openComments[post.id] ? "rotate-180" : ""}`} />
-                  </button>
-                </div>
+              {post.imageUrls?.length > 0 && (
+                <PostImages
+                  urls={post.imageUrls}
+                  authorName={post.author.displayName}
+                  onOpen={(index) => setLightbox({ images: post.imageUrls, index })}
+                />
+              )}
 
-                {/* Threaded comments */}
+              <div className="px-4 sm:px-5 pt-3 pb-4 sm:pb-5">
+                <PostEngagement
+                  postId={post.id}
+                  reactions={post.reactions}
+                  myReactions={post.myReactions}
+                  commentCount={post.commentCount}
+                  commentsOpen={!!openComments[post.id]}
+                  onReact={toggleReaction}
+                  onToggleComments={() => toggleComments(post.id)}
+                />
+
                 {openComments[post.id] && (
                   <CommentThread
                     postId={post.id}

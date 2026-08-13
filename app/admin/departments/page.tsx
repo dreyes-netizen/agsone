@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { Loader2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 type Department = {
   id: string;
@@ -33,14 +35,25 @@ export default function DepartmentsPage() {
   const [pages, setPages] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  async function loadDepartments() {
+    try {
+      const r = await apiFetch<{ data: Department[]; pages: number }>(`/api/admin/departments?page=${page}`);
+      setDepartments(r.data);
+      setPages(r.pages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    apiFetch<{ data: Department[]; pages: number }>(`/api/admin/departments?page=${page}`)
-      .then((r) => { setDepartments(r.data); setPages(r.pages); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    queueMicrotask(loadDepartments);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, page]);
+
+  useRealtimeChannel(realtimeTopics.departments, loadDepartments, { debounceMs: 200 });
 
   async function handleCreate() {
     if (!createName.trim()) {

@@ -6,7 +6,8 @@ import { sendMail } from "@/lib/email/mailer";
 import { pointsReceivedEmail } from "@/lib/email/templates";
 import { checkAndAwardBadges } from "@/lib/helpers/checkAndAwardBadges";
 import { checkLevelUp } from "@/lib/helpers/checkLevelUp";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
 import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
@@ -160,8 +161,16 @@ export async function POST(req: NextRequest) {
     checkAndAwardBadges({ userId: r.id, totalEarned: earnedMap.get(r.id) ?? 0 }).catch((err) => console.error("checkAndAwardBadges failed", err));
   }
 
-  // Notify each recipient's browser to refresh their points balance
-  Promise.all(recipients.map((r) => broadcast(`points:${r.id}`))).catch((err) => console.error("bulk award broadcast failed", err));
+  // One Supabase HTTP request can carry all per-user invalidations plus the
+  // shared views; this avoids one outbound request per recipient.
+  scheduleBroadcast([
+    ...recipients.map((r) => ({ topic: realtimeTopics.profile(r.id) })),
+    { topic: realtimeTopics.pointsTransactions },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.feed },
+    { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({ data: { awarded: recipients.length } });
 }

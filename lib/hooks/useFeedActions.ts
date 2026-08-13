@@ -15,6 +15,7 @@ import type {
   BirthdayPerson,
   PollOption,
 } from "@/lib/types/feed";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 // Turn stored "@[Name|id]" tokens back into "@Name" for editing, keeping a name→id map
 function decodeMentions(content: string): { text: string; map: Record<string, string> } {
@@ -43,7 +44,7 @@ export function autoResize(el: HTMLTextAreaElement) {
 }
 
 export function useFeedActions() {
-  const { user, token, loading: authLoading } = useAuth();
+  const { user, token, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -99,7 +100,14 @@ export function useFeedActions() {
   const recipientSearchRef = useRef<HTMLDivElement>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const profile: UserProfile | null = dbUser
+    ? {
+        pointsBalance: dbUser.pointsBalance,
+        level: dbUser.level,
+        displayName: dbUser.displayName,
+        department: dbUser.department,
+      }
+    : null;
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [birthdays, setBirthdays] = useState<BirthdayPerson[]>([]);
   const [widgetsLoading, setWidgetsLoading] = useState(true);
@@ -110,30 +118,52 @@ export function useFeedActions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, activeFilter]);
 
-  // Real-time: show banner when someone posts while you're reading
-  useRealtimeChannel("feed", () => setHasNewPosts(true));
+  // Keep open discussions live without resetting the reader's scroll/pagination.
+  // New/edited feed items still use the existing banner so content does not
+  // jump underneath someone who is reading or composing.
+  useRealtimeChannel(realtimeTopics.feed, () => {
+    setHasNewPosts(true);
+    Object.entries(openComments)
+      .filter(([, isOpen]) => isOpen)
+      .forEach(([postId]) => refreshComments(postId, false));
+  }, { debounceMs: 200 });
+
+  useRealtimeChannel(realtimeTopics.employees, () => {
+    apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming")
+      .then((res) => setBirthdays((res.data ?? []).filter((birthday) => birthday.daysUntil <= 7)))
+      .catch((err) => console.error("birthdays refresh failed", err));
+    if (composeExpanded) {
+      apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
+        .then((res) => setEmployees(res.data))
+        .catch((err) => console.error("employees refresh failed", err));
+    }
+  }, { debounceMs: 250 });
 
   useEffect(() => {
-    if (authLoading || !user || employees.length > 0) return;
+    if (authLoading || !user || !composeExpanded || employees.length > 0) return;
     apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
       .then((res) => setEmployees(res.data))
       .catch((err) => console.error("employees fetch failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, composeExpanded]);
 
   useEffect(() => {
     if (authLoading || !user) return;
     Promise.allSettled([
-      apiFetch<{ data: UserProfile }>("/api/me"),
       apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard"),
       apiFetch<{ data: BirthdayPerson[] }>("/api/birthdays/upcoming"),
-    ]).then(([me, lb, bd]) => {
-      if (me.status === "fulfilled") setProfile(me.value.data);
+    ]).then(([lb, bd]) => {
       if (lb.status === "fulfilled") setLeaderboard(lb.value.data ?? []);
       if (bd.status === "fulfilled") setBirthdays((bd.value.data ?? []).filter((b) => b.daysUntil <= 7));
     }).finally(() => setWidgetsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
+
+  useRealtimeChannel(realtimeTopics.leaderboard, () => {
+    apiFetch<{ data: LeaderboardEntry[] }>("/api/leaderboard")
+      .then((res) => setLeaderboard(res.data ?? []))
+      .catch((err) => console.error("feed leaderboard refresh failed", err));
+  }, { debounceMs: 250 });
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -335,17 +365,21 @@ export function useFeedActions() {
     }
   }
 
+  async function refreshComments(postId: string, showLoading = true) {
+    if (showLoading) setCommentsLoading((prev) => ({ ...prev, [postId]: true }));
+    try {
+      const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
+      setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
+    } finally {
+      if (showLoading) setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
+    }
+  }
+
   async function toggleComments(postId: string) {
     const next = !openComments[postId];
     setOpenComments((prev) => ({ ...prev, [postId]: next }));
     if (next && !commentsCache[postId]) {
-      setCommentsLoading((prev) => ({ ...prev, [postId]: true }));
-      try {
-        const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
-        setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
-      } finally {
-        setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
-      }
+      await refreshComments(postId);
     }
   }
 

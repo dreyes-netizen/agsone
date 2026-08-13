@@ -7,6 +7,8 @@ import { createNotification } from "@/lib/helpers/createNotification";
 import { sendMail } from "@/lib/email/mailer";
 import { birthdayEmail } from "@/lib/email/templates";
 import { timingSafeCompare } from "@/lib/auth/timingSafeCompare";
+import { broadcastMany } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -112,6 +114,15 @@ export async function GET(req: NextRequest) {
       ])
     )
   );
+
+  if (awardPoints) {
+    await broadcastMany([
+      ...toAward.map((user) => ({ topic: realtimeTopics.profile(user.id) })),
+      { topic: realtimeTopics.pointsTransactions },
+      { topic: realtimeTopics.leaderboard },
+      { topic: realtimeTopics.adminAnalytics },
+    ]);
+  }
 
   return NextResponse.json({ data: { processed: toAward.length } });
 }

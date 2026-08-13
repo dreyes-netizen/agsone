@@ -15,6 +15,8 @@ import { useConfetti } from "@/lib/hooks/useConfetti";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
 import { REWARD_CATEGORY_CONFIG } from "@/lib/constants/rewardCategories";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -43,10 +45,20 @@ type Redemption = {
 };
 
 export default function MarketplacePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const [balance, setBalance] = useState(0);
+  const serverBalance = dbUser?.pointsBalance ?? 0;
+  const [balanceState, setBalanceState] = useState({
+    server: serverBalance,
+    display: serverBalance,
+  });
+  // Preserve immediate optimistic feedback after a redemption, then adopt the
+  // authoritative AuthProvider balance as soon as the points broadcast lands.
+  if (balanceState.server !== serverBalance) {
+    setBalanceState({ server: serverBalance, display: serverBalance });
+  }
+  const balance = balanceState.display;
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
@@ -73,18 +85,20 @@ export default function MarketplacePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  async function loadRewards() {
+    try {
+      const rewardsRes = await apiFetch<{ data: Reward[] }>("/api/rewards");
+      setRewards(rewardsRes.data);
+    } catch {
+      // Keep the last known catalog if a transient refresh fails.
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    Promise.all([
-      apiFetch<{ data: Reward[] }>("/api/rewards"),
-      apiFetch<{ data: { pointsBalance: number } }>("/api/me"),
-    ])
-      .then(([rewardsRes, meRes]) => {
-        setRewards(rewardsRes.data);
-        setBalance(meRes.data.pointsBalance);
-      })
-      .catch(() => { /* fetch failed — rewards/balance stay at defaults */ })
-      .finally(() => setLoading(false));
+    queueMicrotask(loadRewards);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
 
@@ -92,6 +106,15 @@ export default function MarketplacePage() {
     if (view === "requests" && !authLoading && user) queueMicrotask(loadRedemptions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, authLoading, user]);
+
+  useRealtimeChannel(realtimeTopics.rewards, loadRewards, { debounceMs: 200 });
+  useRealtimeChannel(
+    dbUser ? realtimeTopics.redemptionsUser(dbUser.id) : null,
+    () => {
+      if (view === "requests") loadRedemptions();
+    },
+    { debounceMs: 200 },
+  );
 
   function openModal(reward: Reward, startConfirming = false) {
     setSelectedReward(reward);
@@ -108,7 +131,10 @@ export default function MarketplacePage() {
     setRedeeming(reward.id);
     try {
       await apiFetch("/api/redemptions", { method: "POST", body: JSON.stringify({ rewardId: reward.id }) });
-      setBalance((b) => b - reward.pointCost);
+      setBalanceState((current) => ({
+        ...current,
+        display: current.display - reward.pointCost,
+      }));
       closeModal();
       toast.success(`"${reward.name}" redeemed! Pending HR approval.`);
       fireConfetti();

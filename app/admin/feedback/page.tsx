@@ -8,6 +8,7 @@ import { Loader2, ShieldAlert, Lock } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { Pagination } from "@/components/ui/pagination";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/constants/feedbackCategories";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 
 type FeedbackItem = {
   id: string;
@@ -41,20 +42,33 @@ export default function AdminFeedbackPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [prevFilters, setPrevFilters] = useState({ statusFilter, categoryFilter });
+  const [realtimeTopic, setRealtimeTopic] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
+  async function load() {
     const params = new URLSearchParams();
     params.set("page", String(page));
     if (statusFilter !== "ALL") params.set("status", statusFilter);
     if (categoryFilter) params.set("category", categoryFilter);
-    queueMicrotask(() => setLoading(true));
-    apiFetch<{ data: FeedbackItem[]; pages: number }>(`/api/admin/feedback?${params}`)
-      .then((r) => { setFeedbacks(r.data); setPages(r.pages); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    setLoading(true);
+    try {
+      const r = await apiFetch<{ data: FeedbackItem[]; pages: number; realtimeTopic: string }>(`/api/admin/feedback?${params}`);
+      setFeedbacks(r.data);
+      setPages(r.pages);
+      setRealtimeTopic(r.realtimeTopic);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    queueMicrotask(load);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, statusFilter, categoryFilter, page]);
+
+  useRealtimeChannel(realtimeTopic, load, { debounceMs: 200 });
 
   if (statusFilter !== prevFilters.statusFilter || categoryFilter !== prevFilters.categoryFilter) {
     setPrevFilters({ statusFilter, categoryFilter });

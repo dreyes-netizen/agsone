@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { sendMail } from "@/lib/email/mailer";
 import { pointsDeductedEmail } from "@/lib/email/templates";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 import { VIOLATION_TYPES } from "@/lib/constants/awardActivities";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
@@ -108,8 +109,6 @@ export async function POST(req: NextRequest) {
     data: { amount: result.deducted, violationType },
   }).catch((err) => console.error("points-deducted notification failed", err));
 
-  broadcast(`points:${toUserId}`).catch((err) => console.error("points-deduct broadcast failed", err));
-
   if (recipient?.email && recipient.displayName) {
     sendMail({
       to: recipient.email,
@@ -126,6 +125,14 @@ export async function POST(req: NextRequest) {
       afterState: { toUserId, toUserName: result.toUserName, violationType, deducted: result.deducted, reason, newBalance: result.newBalance },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.profile(toUserId) },
+    { topic: realtimeTopics.pointsTransactions },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
+  ]);
 
   return NextResponse.json({
     data: { requested, deducted: result.deducted, newBalance: result.newBalance },

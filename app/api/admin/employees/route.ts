@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -16,6 +18,27 @@ export async function GET(req: NextRequest) {
   const department = searchParams.get("department") ?? undefined;
   const role = searchParams.get("role") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
+
+  // The points-award picker needs the complete roster, but not the wider
+  // employee-management DTO or a count query for every 100-row page. Keep
+  // this an explicit, role-gated response shape so the normal admin table
+  // remains paginated and bounded.
+  if (searchParams.get("picker") === "true") {
+    const employees = await prisma.user.findMany({
+      where: { isActive: true },
+      orderBy: { displayName: "asc" },
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        role: true,
+        pointsBalance: true,
+        department: { select: { id: true, name: true } },
+      },
+    });
+
+    return NextResponse.json({ data: employees });
+  }
 
   const where: Record<string, unknown> = {};
   if (search) {
@@ -130,6 +153,12 @@ export async function POST(req: NextRequest) {
       department: { select: { id: true, name: true } },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.employees },
+    { topic: realtimeTopics.departments },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: employee }, { status: 201 });
 }

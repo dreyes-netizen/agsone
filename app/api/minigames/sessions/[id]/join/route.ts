@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { broadcastMany } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export async function POST(
   req: NextRequest,
@@ -97,7 +98,18 @@ export async function POST(
   });
 
   // Game is now active: wake the host's board, and drop it from open lobbies.
-  await Promise.all([broadcast(`game:${id}`), broadcast("lobby")]);
+  await broadcastMany([
+    { topic: `game:${id}` },
+    { topic: "lobby" },
+    ...(session.pointsWager > 0
+      ? [
+          { topic: realtimeTopics.profile(session.hostId) },
+          { topic: realtimeTopics.profile(authUser.id) },
+          { topic: realtimeTopics.pointsTransactions },
+          { topic: realtimeTopics.leaderboard },
+        ]
+      : []),
+  ]);
 
   return NextResponse.json({ data: { ...updated, myRole: "guest" } });
 }

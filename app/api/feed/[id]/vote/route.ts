@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const voteSchema = z.object({ optionId: z.string().min(1) });
 
@@ -37,6 +39,8 @@ export async function POST(
     where: { postId: id },
     select: { id: true, text: true, _count: { select: { votes: true } } },
   });
+
+  scheduleBroadcast([{ topic: realtimeTopics.feed }]);
 
   return NextResponse.json({ data: { pollOptions, myVoteOptionId: parsed.data.optionId } });
 }

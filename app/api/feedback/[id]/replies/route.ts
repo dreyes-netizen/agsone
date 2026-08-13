@@ -3,6 +3,9 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
+import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 
 const replySchema = z.object({
   body: z.string().min(1).max(1000),
@@ -49,6 +52,13 @@ export async function POST(
       body: "A reply was added to a feedback thread you responded to.",
     });
   }
+
+  scheduleBroadcast([
+    { topic: confidentialRealtimeTopic("feedback-user", user.id) },
+    { topic: confidentialRealtimeTopic("feedback-thread", id) },
+    { topic: confidentialRealtimeTopic("feedback-admin") },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: reply }, { status: 201 });
 }

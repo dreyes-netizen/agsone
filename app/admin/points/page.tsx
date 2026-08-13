@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { VIOLATION_TYPES, findActivity } from "@/lib/constants/awardActivities";
-import type { Department, Employee, Transaction, Budget, AttendanceResult, EmployeesPage } from "./types";
+import type { Department, Employee, Transaction, Budget, AttendanceResult, EmployeePickerResponse } from "./types";
 import { getDepartmentsFromEmployees, filterEmployeesForBulk, inputClass } from "./utils";
 import { SingleAwardForm } from "./components/SingleAwardForm";
 import { BudgetBar } from "./components/BudgetBar";
@@ -12,6 +12,8 @@ import { AttendanceAwardPanel } from "./components/AttendanceAwardPanel";
 import { DeductPointsForm } from "./components/DeductPointsForm";
 import { BulkAwardForm } from "./components/BulkAwardForm";
 import { TransactionHistoryTable } from "./components/TransactionHistoryTable";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export default function AwardPointsPage() {
   const { apiFetch } = useApiClient();
@@ -76,19 +78,12 @@ export default function AwardPointsPage() {
 
   const isSuperAdmin = dbUser?.role === "SUPER_ADMIN";
 
-  // /api/admin/employees is paginated (100/page max, by design — see
-  // lib/api/pagination.ts) but the bulk-award picker and single-award
-  // <select> need the FULL active roster, not just page 1. Calling it with
-  // no params silently truncated to the first 25 employees alphabetically.
-  // Page through it instead of raising the cap.
+  // The picker endpoint returns only the fields these forms need and skips
+  // the management table's pagination/count fan-out. The role check remains
+  // in /api/admin/employees and the client still applies award eligibility.
   async function loadAllEmployees() {
-    const first = await apiFetch<EmployeesPage>("/api/admin/employees?limit=100");
-    const rest = await Promise.all(
-      Array.from({ length: Math.max(0, first.pages - 1) }, (_, i) =>
-        apiFetch<EmployeesPage>(`/api/admin/employees?limit=100&page=${i + 2}`)
-      )
-    );
-    const all = [first, ...rest].flatMap((r) => r.data);
+    const response = await apiFetch<EmployeePickerResponse>("/api/admin/employees?picker=true");
+    const all = response.data;
     // Only Super Admin can award Managers — filter the list for other roles
     const eligible = isSuperAdmin ? all : all.filter((e) => e.role === "EMPLOYEE");
     setEmployees(eligible);
@@ -124,6 +119,17 @@ export default function AwardPointsPage() {
       setTxLoading(false);
     }
   }
+
+  useRealtimeChannel(
+    realtimeTopics.pointsTransactions,
+    () => {
+      loadHistory(txPage);
+      loadBudget();
+      loadAllEmployees();
+    },
+    { debounceMs: 200 },
+  );
+  useRealtimeChannel(realtimeTopics.employees, loadAllEmployees, { debounceMs: 200 });
 
   async function handleAttendanceFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

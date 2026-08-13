@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -53,6 +55,11 @@ export async function PATCH(
     },
   });
 
+  scheduleBroadcast([
+    { topic: realtimeTopics.medicine },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
+
   return NextResponse.json({ data: updated });
 }
 
@@ -78,5 +85,9 @@ export async function DELETE(
   }
 
   await prisma.medicineItem.delete({ where: { id } });
+  scheduleBroadcast([
+    { topic: realtimeTopics.medicine },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
   return NextResponse.json({ data: null });
 }

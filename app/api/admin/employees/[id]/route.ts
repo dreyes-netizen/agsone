@@ -3,6 +3,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import type { Role } from "@/lib/generated/prisma/client";
 import { z } from "zod";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 const ELEVATED_ROLES: Role[] = ["HR_ADMIN", "SUPER_ADMIN"];
 
@@ -74,6 +76,14 @@ export async function PATCH(
       department: { select: { id: true, name: true } },
     },
   });
+
+  scheduleBroadcast([
+    { topic: realtimeTopics.employees },
+    { topic: realtimeTopics.departments },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.profile(id) },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: updated });
 }

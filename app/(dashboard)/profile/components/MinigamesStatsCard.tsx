@@ -4,16 +4,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Gamepad2, Flame } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export function MinigamesStatsCard() {
   const { apiFetch } = useApiClient();
   const router = useRouter();
   const [s, setS] = useState<{ wins: number; losses: number; draws: number; winRate: number; currentStreak: number; total: number } | null>(null);
 
+  function load() {
+    apiFetch<{ data: typeof s }>("/api/minigames/stats")
+      .then((r) => setS(r.data))
+      .catch((err) => console.error("minigame stats fetch failed", err));
+  }
+
   useEffect(() => {
-    apiFetch<{ data: typeof s }>("/api/minigames/stats").then((r) => setS(r.data)).catch((err) => console.error("minigame stats fetch failed", err));
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeChannel(realtimeTopics.minigameStats, load, { debounceMs: 200 });
 
   if (!s || s.total === 0) return null;
 

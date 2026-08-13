@@ -4,6 +4,8 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { sheetToRows } from "@/lib/excel/sheetToRows";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 /*
  * EMPLOYEE SYNC — EXCEL FILE REQUIREMENTS
@@ -311,6 +313,13 @@ export async function POST(req: NextRequest) {
 
       return { imported, failedEmails, birthdaysUpdated, deactivateResult, reactivateResult, removedResult };
     }, { timeout: 30_000, maxWait: 10_000 });
+
+    scheduleBroadcast([
+      { topic: realtimeTopics.employees },
+      { topic: realtimeTopics.departments },
+      { topic: realtimeTopics.leaderboard },
+      { topic: realtimeTopics.adminAnalytics },
+    ]);
 
     return NextResponse.json({
       data: {

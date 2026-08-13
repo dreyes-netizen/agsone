@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { z } from "zod";
 
@@ -108,7 +109,15 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
-  broadcast(`points:${user.id}`).catch((err) => console.error("redemption broadcast failed", err));
+  scheduleBroadcast([
+    { topic: realtimeTopics.profile(user.id) },
+    { topic: realtimeTopics.pointsTransactions },
+    { topic: realtimeTopics.leaderboard },
+    { topic: realtimeTopics.rewards },
+    { topic: realtimeTopics.redemptionsUser(user.id) },
+    { topic: realtimeTopics.redemptionsAdmin },
+    { topic: realtimeTopics.adminAnalytics },
+  ]);
 
   return NextResponse.json({ data: redemption }, { status: 201 });
 }

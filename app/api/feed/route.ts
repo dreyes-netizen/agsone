@@ -3,7 +3,8 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { scheduleBroadcast } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 import { FLAIR_IDS } from "@/lib/flairs";
 
 const PAGE_SIZE = 15;
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
         pollOptions: { include: { _count: { select: { votes: true } } } },
       },
     });
-    broadcast("feed").catch((err) => console.error("feed broadcast failed", err));
+    scheduleBroadcast([{ topic: realtimeTopics.feed }]);
     return NextResponse.json({ data: { ...post, myVoteOptionId: null } }, { status: 201 });
   }
 
@@ -203,7 +204,10 @@ export async function POST(req: NextRequest) {
         })
       )
     );
-    broadcast("feed").catch((err) => console.error("feed broadcast failed", err));
+    scheduleBroadcast([
+      { topic: realtimeTopics.feed },
+      ...parsed.data.recipientIds.map((recipientId) => ({ topic: realtimeTopics.profile(recipientId) })),
+    ]);
     return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
   }
 
@@ -220,6 +224,6 @@ export async function POST(req: NextRequest) {
     include: { author: { select: { displayName: true, avatarUrl: true } } },
   });
 
-  broadcast("feed").catch((err) => console.error("feed broadcast failed", err));
+  scheduleBroadcast([{ topic: realtimeTopics.feed }]);
   return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });
 }

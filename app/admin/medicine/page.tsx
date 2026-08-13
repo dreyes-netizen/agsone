@@ -11,6 +11,8 @@ import { EditMedicineDialog } from "./components/EditMedicineDialog";
 import { MedicineCatalogGrid } from "./components/MedicineCatalogGrid";
 import { MedicineInventoryTable } from "./components/MedicineInventoryTable";
 import { MedicineRequestsPanel } from "./components/MedicineRequestsPanel";
+import { useRealtimeChannels } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 export default function AdminMedicinePage() {
   const { apiFetch } = useApiClient();
@@ -51,29 +53,56 @@ export default function AdminMedicinePage() {
     if (tab === "requests") setReqPage(1);
   }
 
+  async function loadMedicines() {
+    setLoadingMeds(true);
+    try {
+      const r = await apiFetch<{ data: Medicine[]; pages: number }>(`/api/admin/medicine?page=${invPage}`);
+      setMedicines(r.data);
+      setInvPages(r.pages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMeds(false);
+    }
+  }
+
+  async function loadRequests() {
+    setLoadingReqs(true);
+    const params = new URLSearchParams({ page: String(reqPage) });
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    if (statusFilter) params.set("status", statusFilter);
+    try {
+      const r = await apiFetch<{ data: MedicineRequest[]; pages: number }>(`/api/admin/medicine/requests?${params}`);
+      setRequests(r.data);
+      setReqPages(r.pages);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingReqs(false);
+    }
+  }
+
   useEffect(() => {
     if (authLoading || !user) return;
-    queueMicrotask(() => setLoadingMeds(true));
-    apiFetch<{ data: Medicine[]; pages: number }>(`/api/admin/medicine?page=${invPage}`)
-      .then((r) => { setMedicines(r.data); setInvPages(r.pages); })
-      .catch(console.error)
-      .finally(() => setLoadingMeds(false));
+    queueMicrotask(loadMedicines);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, invPage]);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    queueMicrotask(() => setLoadingReqs(true));
-    const params = new URLSearchParams({ page: String(reqPage) });
-    if (dateFrom) params.set("from", dateFrom);
-    if (dateTo) params.set("to", dateTo);
-    if (statusFilter) params.set("status", statusFilter);
-    apiFetch<{ data: MedicineRequest[]; pages: number }>(`/api/admin/medicine/requests?${params}`)
-      .then((r) => { setRequests(r.data); setReqPages(r.pages); })
-      .catch(console.error)
-      .finally(() => setLoadingReqs(false));
+    queueMicrotask(loadRequests);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, reqPage, dateFrom, dateTo, statusFilter]);
+
+  useRealtimeChannels(
+    [realtimeTopics.medicine, realtimeTopics.medicineRequests],
+    () => {
+      loadMedicines();
+      loadRequests();
+    },
+    { debounceMs: 200 },
+  );
 
   if (
     dateFrom !== prevReqFilters.dateFrom ||

@@ -10,6 +10,8 @@ import {
 import { ActionQueue, type ActionItem } from "@/components/admin/ActionQueue";
 import { StockAlerts, type StockItem } from "@/components/admin/StockAlerts";
 import { RecentActivity } from "@/components/admin/RecentActivity";
+import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 // recharts is the largest chunk in the build (~349 KB) for a chart that
 // renders below the fold on one admin page — load it only once this page
@@ -98,16 +100,35 @@ export default function AdminDashboardPage() {
   const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
 
+  async function loadAnalytics() {
+    try {
+      const r = await apiFetch<{ data: Analytics }>("/api/admin/analytics");
+      setData(r.data);
+    } catch (err) {
+      console.error("admin analytics fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    apiFetch<{ data: Analytics }>("/api/admin/analytics")
-      .then((r) => setData(r.data))
-      .catch((err) => console.error("admin analytics fetch failed", err))
-      .finally(() => setLoading(false));
+    queueMicrotask(loadAnalytics);
     apiFetch<{ data: UpcomingBirthday[] }>("/api/birthdays/upcoming")
       .then((r) => setBirthdays(r.data))
       .catch((err) => console.error("upcoming birthdays fetch failed", err));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtimeChannel(realtimeTopics.adminAnalytics, loadAnalytics, { debounceMs: 300 });
+  useRealtimeChannel(
+    realtimeTopics.employees,
+    () => {
+      apiFetch<{ data: UpcomingBirthday[] }>("/api/birthdays/upcoming")
+        .then((res) => setBirthdays(res.data))
+        .catch((err) => console.error("upcoming birthdays refresh failed", err));
+    },
+    { debounceMs: 300 },
+  );
 
   if (loading) {
     return (

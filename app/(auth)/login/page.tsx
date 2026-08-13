@@ -160,7 +160,7 @@ export default function LoginPage() {
 
           {/* Mobile branding */}
           <div className="lg:hidden mb-8 flex flex-col items-center text-center">
-            <Image src="/agslogo.png" alt="AGS One" width={72} height={72} className="object-contain mb-3" />
+            <Image src="/agslogo.png" alt="AGS One" width={72} height={72} unoptimized className="object-contain mb-3" />
             <p className="text-zinc-900 font-bold text-xl leading-tight">AGS One</p>
             <p className="text-zinc-500 text-xs mb-2">Alliance Global Solutions</p>
             <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">
@@ -173,7 +173,7 @@ export default function LoginPage() {
 
             {/* Desktop logo inside card */}
             <div className="hidden lg:flex flex-col items-center mb-7">
-              <Image src="/agslogo.png" alt="AGS One" width={80} height={80} className="object-contain mb-3" />
+              <Image src="/agslogo.png" alt="AGS One" width={80} height={80} unoptimized className="object-contain mb-3" />
               <p className="text-zinc-900 font-bold text-base leading-tight">AGS One</p>
               <p className="text-zinc-500 text-xs">Alliance Global Solutions</p>
             </div>

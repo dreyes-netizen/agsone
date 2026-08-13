@@ -9,7 +9,8 @@ import { applyDnBMove, checkDnBResult } from "@/lib/minigames/dotsandboxes";
 import { applyBSMove, checkBSResult, maskBSState, type BSState } from "@/lib/minigames/battleship";
 import { applyMemoryMove, checkMemoryResult, maskMemoryState, type MemoryState } from "@/lib/minigames/memory";
 import { createNotification } from "@/lib/helpers/createNotification";
-import { broadcast } from "@/lib/realtime/broadcast";
+import { broadcastMany } from "@/lib/realtime/broadcast";
+import { realtimeTopics } from "@/lib/realtime/topics";
 
 function resolveWinnerId(result: unknown, session: { hostId: string; guestId: string | null }): string | null | "draw" {
   if (result === "draw") return "draw";
@@ -253,8 +254,24 @@ export async function POST(
 
   // Wake the opponent's board so the move shows instantly. When the game ends,
   // also refresh lobbies so the finished session leaves any open lists.
-  await broadcast(`game:${id}`);
-  if (isFinished) await broadcast("lobby");
+  await broadcastMany([
+    { topic: `game:${id}` },
+    ...(isFinished
+      ? [
+          { topic: "lobby" },
+          { topic: realtimeTopics.minigameStats },
+          { topic: realtimeTopics.adminAnalytics },
+          ...(session.pointsWager > 0
+            ? [
+                { topic: realtimeTopics.profile(session.hostId) },
+                ...(session.guestId ? [{ topic: realtimeTopics.profile(session.guestId) }] : []),
+                { topic: realtimeTopics.pointsTransactions },
+                { topic: realtimeTopics.leaderboard },
+              ]
+            : []),
+        ]
+      : []),
+  ]);
 
   return NextResponse.json({ data: { ...updated, state: returnState, myRole: isHost ? "host" : "guest" } });
 }

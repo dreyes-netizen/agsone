@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Send, ImagePlus, X, MessageCircle, Check, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, ChevronDown, Loader2, Cake, Building2 } from "lucide-react";
+import { Send, ImagePlus, X, Check, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2 } from "lucide-react";
 import { FLAIRS } from "@/lib/flairs";
 import { PostImages, imageGridClasses } from "@/components/feed/PostImages";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
 import { Avatar } from "@/components/feed/Avatar";
-import { ReactionBar } from "@/components/feed/ReactionBar";
 import { PollBlock } from "@/components/feed/PollBlock";
 import { CommentThread } from "@/components/feed/CommentThread";
 import { PostHeader } from "@/components/feed/PostHeader";
 import { PostBadges } from "@/components/feed/PostBadges";
+import { PostEngagement } from "@/components/feed/PostEngagement";
+import { ExpandableText } from "@/components/feed/ExpandableText";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
   AlertDialog,
@@ -154,9 +155,9 @@ export default function FeedPage() {
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
   return (
-    // Capped so the feed reads at ~720-850px on wide screens instead of stretching
-    // to fill the viewport (sidebar 300px + gap 20px + ~780px feed = 1100px).
-    <div className="space-y-5 max-w-[1100px] mx-auto">
+    // Capped so the feed reads at ~660px on wide screens instead of stretching
+    // to fill the viewport (sidebar 300px + gap 20px + 660px feed = 980px).
+    <div className="space-y-5 max-w-[980px] mx-auto">
       {/* Greeting */}
       <div>
         <p className="text-sm text-gray-500 font-medium">
@@ -700,7 +701,7 @@ export default function FeedPage() {
             return (
               <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
-                <div className="px-5 py-4 space-y-3">
+                <div className="px-5 pt-4 pb-4 space-y-3">
                   <PostHeader
                     authorId={post.authorId}
                     authorName={post.author.displayName}
@@ -761,22 +762,17 @@ export default function FeedPage() {
                       </div>
                     </div>
                   ) : post.shoutoutRecipients.length === 1 ? (
-                    <>
-                      <div className="flex gap-3 items-start">
-                        <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="shrink-0 hover:opacity-80 transition-opacity">
-                          <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
+                    <div className="flex gap-3 items-start">
+                      <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="shrink-0 hover:opacity-80 transition-opacity">
+                        <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-gray-900 hover:underline block">
+                          {post.shoutoutRecipients[0].user.displayName}
                         </button>
-                        <div className="flex-1 min-w-0">
-                          <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-gray-900 hover:underline block">
-                            {post.shoutoutRecipients[0].user.displayName}
-                          </button>
-                          <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
-                        </div>
+                        <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
                       </div>
-                      {post.imageUrls?.length > 0 && (
-                        <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
-                      )}
-                    </>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -788,32 +784,24 @@ export default function FeedPage() {
                         ))}
                       </div>
                       <p className="text-sm text-gray-600 italic leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
-                      {post.imageUrls?.length > 0 && (
-                        <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
-                      )}
                     </div>
                   )}
-                  <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-3 flex-wrap">
-                    <ReactionBar
-                      postId={post.id}
-                      reactions={post.reactions}
-                      myReactions={post.myReactions}
-                      onReact={toggleReaction}
-                    />
-                    <button
-                      onClick={() => toggleComments(post.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                        openComments[post.id]
-                          ? "bg-navy-50 border-navy-200 text-navy-700"
-                          : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
-                      }`}
-                      aria-expanded={!!openComments[post.id]}
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
-                      <ChevronDown className={`w-3 h-3 transition-transform ${openComments[post.id] ? "rotate-180" : ""}`} />
-                    </button>
-                  </div>
+                </div>
+
+                {post.imageUrls?.length > 0 && (
+                  <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
+                )}
+
+                <div className="px-5 pt-3 pb-4">
+                  <PostEngagement
+                    postId={post.id}
+                    reactions={post.reactions}
+                    myReactions={post.myReactions}
+                    commentCount={post.commentCount}
+                    commentsOpen={!!openComments[post.id]}
+                    onReact={toggleReaction}
+                    onToggleComments={() => toggleComments(post.id)}
+                  />
                   {openComments[post.id] && (
                     <CommentThread
                       postId={post.id}
@@ -837,7 +825,7 @@ export default function FeedPage() {
                       onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
                       onSubmitComment={submitComment}
                       autoResize={autoResize}
-                      wrapperClassName="mt-1 pt-3 border-t border-black/5 space-y-4"
+                      wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                     />
                   )}
                 </div>
@@ -847,7 +835,7 @@ export default function FeedPage() {
 
           return (
             <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-card border overflow-hidden bg-white transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
-              <div className="p-5">
+              <div className="p-4 sm:p-5">
                 <PostHeader
                   authorId={post.authorId}
                   authorName={post.author.displayName}
@@ -903,16 +891,10 @@ export default function FeedPage() {
                     {post.title && (
                       <p className="text-base font-bold text-gray-900 leading-snug">{post.title}</p>
                     )}
-                    <p className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">{renderContent(post.content)}</p>
+                    <ExpandableText className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">
+                      {renderContent(post.content)}
+                    </ExpandableText>
                   </div>
-                )}
-
-                {post.imageUrls?.length > 0 && (
-                  <PostImages
-                    urls={post.imageUrls}
-                    authorName={post.author.displayName}
-                    onOpen={(index) => setLightbox({ images: post.imageUrls, index })}
-                  />
                 )}
 
                 {post.type === "POLL" && post.pollOptions.length > 0 && (
@@ -924,31 +906,27 @@ export default function FeedPage() {
                     onVote={handleVote}
                   />
                 )}
+              </div>
 
-                {/* Reactions + comments bar */}
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-black/5 gap-3 flex-wrap">
-                  <ReactionBar
-                    postId={post.id}
-                    reactions={post.reactions}
-                    myReactions={post.myReactions}
-                    onReact={toggleReaction}
-                  />
-                  <button
-                    onClick={() => toggleComments(post.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      openComments[post.id]
-                        ? "bg-navy-50 border-navy-200 text-navy-700"
-                        : "bg-white border-gray-200 text-gray-500 hover:border-navy-300 hover:text-navy-600"
-                    }`}
-                    aria-expanded={!!openComments[post.id]}
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
-                    <ChevronDown className={`w-3 h-3 transition-transform ${openComments[post.id] ? "rotate-180" : ""}`} />
-                  </button>
-                </div>
+              {post.imageUrls?.length > 0 && (
+                <PostImages
+                  urls={post.imageUrls}
+                  authorName={post.author.displayName}
+                  onOpen={(index) => setLightbox({ images: post.imageUrls, index })}
+                />
+              )}
 
-                {/* Threaded comments */}
+              <div className="px-4 sm:px-5 pt-3 pb-4 sm:pb-5">
+                <PostEngagement
+                  postId={post.id}
+                  reactions={post.reactions}
+                  myReactions={post.myReactions}
+                  commentCount={post.commentCount}
+                  commentsOpen={!!openComments[post.id]}
+                  onReact={toggleReaction}
+                  onToggleComments={() => toggleComments(post.id)}
+                />
+
                 {openComments[post.id] && (
                   <CommentThread
                     postId={post.id}

@@ -6,6 +6,7 @@ import { createNotification } from "@/lib/helpers/createNotification";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { FLAIR_IDS } from "@/lib/flairs";
+import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 
 const PAGE_SIZE = 15;
 
@@ -26,9 +27,7 @@ export async function GET(req: NextRequest) {
   const parsedLimit = parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10);
   const limit      = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), PAGE_SIZE) : PAGE_SIZE;
 
-  const visibilityWhere = user.role === "HR_ADMIN"
-    ? {}
-    : { OR: [{ departmentId: null }, { departmentId: user.departmentId }] };
+  const visibilityWhere = postVisibilityWhere(user);
   const typeWhere = typeFilter ? { type: typeFilter as (typeof POST_TYPES)[number] } : {};
   const deptWhere = (deptFilter === "mine" && user.departmentId)
     ? { departmentId: user.departmentId }

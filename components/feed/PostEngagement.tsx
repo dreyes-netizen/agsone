@@ -2,6 +2,7 @@
 
 import { MessageCircle } from "lucide-react";
 import { ReactionBar } from "@/components/feed/ReactionBar";
+import { getReactionSummary } from "@/lib/helpers/reactionSummary";
 
 /**
  * The post footer: a reaction-emoji + count summary line (only rendered
@@ -18,6 +19,7 @@ export function PostEngagement({
   commentsOpen,
   onReact,
   onToggleComments,
+  onOpenReactions,
 }: {
   postId: string;
   reactions: Record<string, number>;
@@ -26,22 +28,24 @@ export function PostEngagement({
   commentsOpen: boolean;
   onReact: (postId: string, emoji: string) => void;
   onToggleComments: () => void;
+  onOpenReactions: () => void;
 }) {
-  const totalReactions = Object.values(reactions).reduce((a, b) => a + b, 0);
-  const topEmojis = Object.entries(reactions)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([emoji]) => emoji);
+  const { total: totalReactions, topEmojis } = getReactionSummary(reactions);
 
   return (
     <div>
       {(totalReactions > 0 || commentCount > 0) && (
         <div className="flex items-center justify-between px-1 pb-2 text-xs text-gray-500">
           {totalReactions > 0 ? (
-            <span className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onOpenReactions}
+              className="flex items-center gap-1 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400 rounded-sm"
+              aria-label={`${totalReactions} ${totalReactions === 1 ? "reaction" : "reactions"} — view who reacted`}
+            >
               <span className="text-sm leading-none" aria-hidden="true">{topEmojis.join("")}</span>
               {totalReactions}
-            </span>
+            </button>
           ) : <span />}
           {commentCount > 0 && (
             <button type="button" onClick={onToggleComments} className="hover:underline">

@@ -25,6 +25,14 @@ export type FeedPost = {
   department: { name: string } | null;
 };
 
+export type ReactorItem = {
+  id: string;
+  emoji: string;
+  createdAt: string;
+  isCurrentUser: boolean;
+  user: { id: string; displayName: string; avatarUrl: string | null; department: string | null };
+};
+
 export type ReplyItem = {
   id: string;
   content: string;

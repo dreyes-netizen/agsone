@@ -2,15 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { SmilePlus } from "lucide-react";
-
-const EMOJIS = [
-  { emoji: "👍", label: "Like" },
-  { emoji: "❤️", label: "Love" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "👏", label: "Clap" },
-  { emoji: "🎉", label: "Celebrate" },
-  { emoji: "💪", label: "Strong" },
-];
+import { REACTIONS as EMOJIS } from "@/lib/constants/reactions";
 
 /**
  * Just the interactive "React" trigger + its emoji picker — the reaction

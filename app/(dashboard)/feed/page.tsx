@@ -15,6 +15,7 @@ import { CommentThread } from "@/components/feed/CommentThread";
 import { PostHeader } from "@/components/feed/PostHeader";
 import { PostBadges } from "@/components/feed/PostBadges";
 import { PostEngagement } from "@/components/feed/PostEngagement";
+import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
 import { ExpandableText } from "@/components/feed/ExpandableText";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
@@ -122,6 +123,15 @@ export default function FeedPage() {
     insertMention,
     toggleReaction,
   } = useFeedActions();
+
+  // Which post's "who reacted" modal is open, if any. Kept local to the page
+  // (not in useFeedActions) — it's transient UI state only relevant while the
+  // dialog is mounted, unlike the reaction data itself which lives on `posts`.
+  const [reactionsPostId, setReactionsPostId] = React.useState<string | null>(null);
+  const reactionsPost = posts.find((p) => p.id === reactionsPostId) ?? null;
+  const currentUserMeta = dbUser
+    ? { id: dbUser.id, displayName: dbUser.displayName, avatarUrl: user?.photoURL ?? null, department: dbUser.department?.name ?? null }
+    : null;
 
   const pinnedItems = posts
     .filter((p) => p.isPinned)
@@ -801,6 +811,7 @@ export default function FeedPage() {
                     commentsOpen={!!openComments[post.id]}
                     onReact={toggleReaction}
                     onToggleComments={() => toggleComments(post.id)}
+                    onOpenReactions={() => setReactionsPostId(post.id)}
                   />
                   {openComments[post.id] && (
                     <CommentThread
@@ -925,6 +936,7 @@ export default function FeedPage() {
                   commentsOpen={!!openComments[post.id]}
                   onReact={toggleReaction}
                   onToggleComments={() => toggleComments(post.id)}
+                  onOpenReactions={() => setReactionsPostId(post.id)}
                 />
 
                 {openComments[post.id] && (
@@ -1021,6 +1033,14 @@ export default function FeedPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReactionDetailsDialog
+        postId={reactionsPostId}
+        onClose={() => setReactionsPostId(null)}
+        myEmoji={reactionsPost?.myReactions[0] ?? null}
+        currentUser={currentUserMeta}
+        onOpenProfile={(id) => { setReactionsPostId(null); router.push(`/employees/${id}`); }}
+      />
     </div>
   );
 }

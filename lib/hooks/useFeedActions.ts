@@ -88,7 +88,7 @@ export function useFeedActions() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [lightbox, setLightbox] = useState<{ postId: string; images: string[]; index: number } | null>(null);
   const [postToast, setPostToast] = useState<string | null>(null);
   const [commentDeleteTarget, setCommentDeleteTarget] = useState<{ postId: string; commentId: string; parentId?: string } | null>(null);
   const [postDeleteTarget, setPostDeleteTarget] = useState<string | null>(null);
@@ -370,6 +370,13 @@ export function useFeedActions() {
     try {
       const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
       setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
+    } catch (err) {
+      // Leave the cache empty on failure rather than throwing — an uncaught
+      // rejection here previously let a transient backend error retry forever
+      // (every re-render re-triggered the "ensure loaded" effect since the
+      // cache never got populated), which crashed the page with a React
+      // "Maximum update depth exceeded" error.
+      console.error("comments refresh failed", err);
     } finally {
       if (showLoading) setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
     }
@@ -748,6 +755,7 @@ export function useFeedActions() {
     handlePost,
     handleVote,
     toggleComments,
+    refreshComments,
     submitComment,
     submitReply,
     deleteComment,

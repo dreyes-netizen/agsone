@@ -62,8 +62,8 @@ export function ReactionBar({
     >
       {/* Floating picker — pb-2 bridges the gap so mouse doesn't leave container */}
       {pickerOpen && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-20 pb-2">
-          <div className="flex items-center gap-1 bg-white rounded-full shadow-xl border border-gray-100 px-3 py-2.5" role="group" aria-label="Emoji reactions">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 z-20 pb-2 max-w-[92vw]">
+          <div className="flex items-center gap-1 bg-white rounded-full shadow-xl border border-gray-100 px-3 py-2.5 overflow-x-auto" role="group" aria-label="Emoji reactions">
             {EMOJIS.map(({ emoji, label }) => (
               <button
                 key={emoji}

@@ -33,9 +33,14 @@ export type ReactorItem = {
   user: { id: string; displayName: string; avatarUrl: string | null; department: string | null };
 };
 
+export type CommentType = "TEXT" | "GIF";
+
 export type ReplyItem = {
   id: string;
-  content: string;
+  content: string | null;
+  commentType: CommentType;
+  gifProvider: string | null;
+  gifId: string | null;
   createdAt: string;
   parentId: string | null;
   authorId: string;
@@ -44,7 +49,10 @@ export type ReplyItem = {
 
 export type CommentItem = {
   id: string;
-  content: string;
+  content: string | null;
+  commentType: CommentType;
+  gifProvider: string | null;
+  gifId: string | null;
   createdAt: string;
   authorId: string;
   author: { displayName: string; avatarUrl: string | null };

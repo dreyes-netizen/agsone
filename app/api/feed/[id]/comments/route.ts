@@ -4,13 +4,29 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { GIF_PROVIDERS, GIF_ID_PATTERN } from "@/lib/constants/gif";
 
 const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
-const commentSchema = z.object({
-  content:  z.string().min(1).max(1000),
-  parentId: z.string().uuid().optional(),
-});
+// A GIF comment carries only the provider's id (never a media URL — the
+// client resolves current media live from the provider by id, see
+// lib/giphy/client.ts) plus optional caption text. A text comment requires
+// non-empty content. Either way `content` tops out at 1000 chars.
+const commentSchema = z
+  .object({
+    content: z.string().max(1000).optional(),
+    parentId: z.string().uuid().optional(),
+    commentType: z.enum(["TEXT", "GIF"]).default("TEXT"),
+    gifProvider: z.enum(GIF_PROVIDERS).optional(),
+    gifId: z.string().regex(GIF_ID_PATTERN).optional(),
+  })
+  .refine(
+    (data) =>
+      data.commentType === "GIF"
+        ? Boolean(data.gifProvider && data.gifId)
+        : Boolean(data.content && data.content.trim().length > 0),
+    { message: "A text comment needs content; a GIF comment needs gifProvider and gifId." }
+  );
 
 export async function GET(
   req: NextRequest,
@@ -42,12 +58,18 @@ export async function GET(
   const data = comments.map((c) => ({
     id: c.id,
     content: c.content,
+    commentType: c.commentType,
+    gifProvider: c.gifProvider,
+    gifId: c.gifId,
     createdAt: c.createdAt.toISOString(),
     authorId: c.authorId,
     author: { displayName: c.author.displayName, avatarUrl: c.author.avatarUrl },
     replies: c.replies.map((r) => ({
       id: r.id,
       content: r.content,
+      commentType: r.commentType,
+      gifProvider: r.gifProvider,
+      gifId: r.gifId,
       createdAt: r.createdAt.toISOString(),
       authorId: r.authorId,
       author: { displayName: r.author.displayName, avatarUrl: r.author.avatarUrl },
@@ -70,7 +92,7 @@ export async function POST(
   const parsed = commentSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { content, parentId } = parsed.data;
+  const { content, parentId, commentType, gifProvider, gifId } = parsed.data;
 
   // Both lookups are independent — run them concurrently, then apply the
   // same checks (post-not-found first, then invalid-parent) as before.
@@ -86,7 +108,15 @@ export async function POST(
   }
 
   const comment = await prisma.socialComment.create({
-    data: { postId: id, authorId: user.id, content, parentId: parentId ?? null },
+    data: {
+      postId: id,
+      authorId: user.id,
+      content: content?.trim() ? content.trim() : null,
+      parentId: parentId ?? null,
+      commentType,
+      gifProvider: commentType === "GIF" ? gifProvider : null,
+      gifId: commentType === "GIF" ? gifId : null,
+    },
     include: { author: { select: authorSelect } },
   });
 
@@ -96,6 +126,9 @@ export async function POST(
     data: {
       id: comment.id,
       content: comment.content,
+      commentType: comment.commentType,
+      gifProvider: comment.gifProvider,
+      gifId: comment.gifId,
       createdAt: comment.createdAt.toISOString(),
       authorId: comment.authorId,
       author: { displayName: comment.author.displayName, avatarUrl: comment.author.avatarUrl },

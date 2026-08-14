@@ -107,6 +107,11 @@ enum GameSessionStatus {
   CANCELLED
 }
 
+enum CommentType {
+  TEXT
+  GIF
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Department {
@@ -357,13 +362,19 @@ model SocialReaction {
 }
 
 model SocialComment {
-  id        String   @id @default(uuid())
-  postId    String
-  authorId  String
-  parentId  String?
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String      @id @default(uuid())
+  postId      String
+  authorId    String
+  parentId    String?
+  content     String?
+  commentType CommentType @default(TEXT)
+  // Canonical external GIF identity only — media/preview URLs are never
+  // persisted (GIPHY's API terms prohibit caching/storing its media URLs
+  // server-side); renderers resolve current URLs live from the provider by id.
+  gifProvider String?
+  gifId       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   post    SocialPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
   author  User            @relation(fields: [authorId], references: [id])

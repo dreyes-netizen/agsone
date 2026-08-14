@@ -62,7 +62,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         action: "DELETE_COMMENT",
         entityType: "SocialComment",
         entityId: commentId,
-        beforeState: { authorId: comment.authorId, postId: comment.postId, content: comment.content.slice(0, 500) },
+        beforeState: { authorId: comment.authorId, postId: comment.postId, content: comment.content?.slice(0, 500) ?? null },
       },
     });
   }

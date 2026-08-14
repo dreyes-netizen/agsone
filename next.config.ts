@@ -35,6 +35,9 @@ const securityHeaders = [
         "https://firebasestorage.googleapis.com",
         "https://*.supabase.co",
         "https://api.dicebear.com",
+        // GIF comments — GIPHY's API terms require media to be loaded
+        // directly from their CDN, never proxied/re-hosted by us
+        "https://*.giphy.com",
       ].join(" "),
       // API connections — Firebase, Supabase realtime, Cloudinary, AI APIs
       [
@@ -50,6 +53,9 @@ const securityHeaders = [
         "https://api.cloudinary.com",
         "https://res.cloudinary.com",
         "https://api.groq.com",
+        // GIF search/trending — GIPHY requires these calls made directly
+        // from the client, not proxied through our own API routes
+        "https://api.giphy.com",
       ].join(" "),
       // Firebase auth popup and Google OAuth page
       [

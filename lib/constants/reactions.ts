@@ -7,10 +7,12 @@
 export const REACTIONS = [
   { emoji: "👍", label: "Like" },
   { emoji: "❤️", label: "Love" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "👏", label: "Clap" },
+  { emoji: "👏", label: "Kudos" },
   { emoji: "🎉", label: "Celebrate" },
-  { emoji: "💪", label: "Strong" },
+  { emoji: "🔥", label: "Awesome" },
+  { emoji: "😂", label: "Funny" },
+  { emoji: "💡", label: "Insightful" },
+  { emoji: "💪", label: "Support" },
 ] as const;
 
 export type ReactionEmoji = (typeof REACTIONS)[number]["emoji"];

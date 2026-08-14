@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
+import { seedGifCache, type GifResult } from "@/lib/giphy/client";
 import type {
   FeedPost,
   ReplyItem,
@@ -390,26 +391,35 @@ export function useFeedActions() {
     }
   }
 
-  async function submitComment(postId: string) {
+  async function submitComment(postId: string, gif?: GifResult) {
     const content = (commentDraft[postId] ?? "").trim();
-    if (!content) return;
+    if (!content && !gif) return;
     setCommentSending((prev) => ({ ...prev, [postId]: true }));
     const optimisticId = `opt-${Date.now()}`;
     const optimistic: CommentItem = {
       id: optimisticId,
-      content,
+      content: content || null,
+      commentType: gif ? "GIF" : "TEXT",
+      gifProvider: gif?.provider ?? null,
+      gifId: gif?.id ?? null,
       createdAt: new Date().toISOString(),
       authorId: user?.uid ?? "",
       author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
       replies: [],
     };
+    if (gif) seedGifCache(gif);
     setCommentsCache((prev) => ({ ...prev, [postId]: [...(prev[postId] ?? []), optimistic] }));
     setCommentDraft((prev) => ({ ...prev, [postId]: "" }));
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p)));
     try {
       const res = await apiFetch<{ data: CommentItem }>(`/api/feed/${postId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content: content || undefined,
+          commentType: gif ? "GIF" : "TEXT",
+          gifProvider: gif?.provider,
+          gifId: gif?.id,
+        }),
       });
       setCommentsCache((prev) => ({
         ...prev,
@@ -427,19 +437,23 @@ export function useFeedActions() {
     }
   }
 
-  async function submitReply(postId: string, parentId: string) {
+  async function submitReply(postId: string, parentId: string, gif?: GifResult) {
     const content = (replyDraft[parentId] ?? "").trim();
-    if (!content) return;
+    if (!content && !gif) return;
     setReplySending((prev) => ({ ...prev, [parentId]: true }));
     const optimisticId = `opt-reply-${Date.now()}`;
     const optimistic: ReplyItem = {
       id: optimisticId,
-      content,
+      content: content || null,
+      commentType: gif ? "GIF" : "TEXT",
+      gifProvider: gif?.provider ?? null,
+      gifId: gif?.id ?? null,
       createdAt: new Date().toISOString(),
       parentId,
       authorId: user?.uid ?? "",
       author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
     };
+    if (gif) seedGifCache(gif);
     setCommentsCache((prev) => ({
       ...prev,
       [postId]: (prev[postId] ?? []).map((c) =>
@@ -452,7 +466,13 @@ export function useFeedActions() {
     try {
       const res = await apiFetch<{ data: ReplyItem }>(`/api/feed/${postId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content, parentId }),
+        body: JSON.stringify({
+          content: content || undefined,
+          parentId,
+          commentType: gif ? "GIF" : "TEXT",
+          gifProvider: gif?.provider,
+          gifId: gif?.id,
+        }),
       });
       setCommentsCache((prev) => ({
         ...prev,

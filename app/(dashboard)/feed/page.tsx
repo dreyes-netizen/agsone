@@ -5,18 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Send, ImagePlus, X, Check, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2 } from "lucide-react";
+import { Send, ImagePlus, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2 } from "lucide-react";
 import { FLAIRS } from "@/lib/flairs";
 import { PostImages, imageGridClasses } from "@/components/feed/PostImages";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
 import { Avatar } from "@/components/feed/Avatar";
-import { PollBlock } from "@/components/feed/PollBlock";
 import { CommentThread } from "@/components/feed/CommentThread";
-import { PostHeader } from "@/components/feed/PostHeader";
-import { PostBadges } from "@/components/feed/PostBadges";
+import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
-import { ExpandableText } from "@/components/feed/ExpandableText";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
   AlertDialog,
@@ -29,9 +26,11 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // Closed by default — split into its own chunk instead of shipping with the
-// page bundle (this is the largest page in the app).
-const ImageLightbox = dynamic(
-  () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
+// page bundle (this is the largest page in the app). Feed-specific viewer;
+// components/ImageLightbox.tsx remains the simpler lightbox used by the
+// medicine/marketplace/food pages.
+const MediaViewer = dynamic(
+  () => import("@/components/feed/MediaViewer").then((m) => m.MediaViewer),
   { ssr: false },
 );
 
@@ -108,6 +107,7 @@ export default function FeedPage() {
     handlePost,
     handleVote,
     toggleComments,
+    refreshComments,
     submitComment,
     submitReply,
     deleteComment,
@@ -129,6 +129,10 @@ export default function FeedPage() {
   // dialog is mounted, unlike the reaction data itself which lives on `posts`.
   const [reactionsPostId, setReactionsPostId] = React.useState<string | null>(null);
   const reactionsPost = posts.find((p) => p.id === reactionsPostId) ?? null;
+  // Reads from the same `posts` array the feed card renders from, so a
+  // reaction/comment made inside the viewer is the same state update the
+  // card sees — no separate store, no refetch needed to stay in sync.
+  const lightboxPost = lightbox ? posts.find((p) => p.id === lightbox.postId) ?? null : null;
   const currentUserMeta = dbUser
     ? { id: dbUser.id, displayName: dbUser.displayName, avatarUrl: user?.photoURL ?? null, department: dbUser.department?.name ?? null }
     : null;
@@ -136,31 +140,6 @@ export default function FeedPage() {
   const pinnedItems = posts
     .filter((p) => p.isPinned)
     .map((p) => ({ id: p.id, title: p.title, authorName: p.author.displayName }));
-
-  function renderContent(content: string) {
-    const parts = content.split(/(@\[[^\|]+\|[^\]]+\])/g);
-    return (
-      <>
-        {parts.map((part, i) => {
-          const match = part.match(/^@\[([^\|]+)\|([^\]]+)\]$/);
-          if (match) {
-            const [, name, id] = match;
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => router.push(`/employees/${id}`)}
-                className="font-semibold text-blue-600 bg-blue-50 rounded-md px-1 py-0.5 hover:bg-blue-100 transition-colors cursor-pointer"
-              >
-                @{name}
-              </button>
-            );
-          }
-          return <React.Fragment key={i}>{part}</React.Fragment>;
-        })}
-      </>
-    );
-  }
 
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
@@ -711,95 +690,26 @@ export default function FeedPage() {
             return (
               <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
                 <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
-                <div className="px-5 pt-4 pb-4 space-y-3">
-                  <PostHeader
-                    authorId={post.authorId}
-                    authorName={post.author.displayName}
-                    authorAvatarUrl={post.author.avatarUrl}
-                    department={post.author.department?.name}
-                    createdAt={post.createdAt}
-                    isPinned={post.isPinned}
-                    canPin={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
-                    canEdit={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
-                    canDelete={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
-                    onAuthorClick={(id) => router.push(`/employees/${id}`)}
+                <div className="px-5 pt-4 pb-4">
+                  <PostBody
+                    post={post}
+                    dbUser={dbUser}
+                    editingPost={editingPost}
+                    onEditingPostChange={setEditingPost}
+                    savingPostEdit={savingPostEdit}
+                    onSaveEdit={saveEditPost}
+                    onCancelEdit={() => setEditingPost(null)}
+                    autoResize={autoResize}
+                    votingPost={votingPost}
+                    onVote={handleVote}
                     onPin={() => togglePin(post.id)}
                     onEdit={() => startEditPost(post)}
                     onDelete={() => deletePost(post.id)}
-                    editLabel="Edit shoutout"
                   />
-
-                  {/* Divider */}
-                  <div className="flex items-center gap-3">
-                    <div className="h-px flex-1 bg-amber-200" />
-                    <span className="text-xs font-semibold text-amber-600 flex items-center gap-1 shrink-0">
-                      <Sparkles className="w-3.5 h-3.5" /> gave a shoutout to
-                    </span>
-                    <div className="h-px flex-1 bg-amber-200" />
-                  </div>
-
-                  {/* Title + department badge */}
-                  {(post.title || post.department) && (
-                    <div className="flex flex-col items-center gap-1.5">
-                      {post.title && (
-                        <p className="text-sm font-bold text-amber-800 text-center">{post.title}</p>
-                      )}
-                      {post.department && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                          <Building2 className="w-2.5 h-2.5" aria-hidden="true" /> {post.department.name} only
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Recipients + message */}
-                  {editingPost?.id === post.id ? (
-                    <div className="space-y-2">
-                      <textarea
-                        value={editingPost.content}
-                        onChange={(e) => { setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev)); autoResize(e.target); }}
-                        rows={3}
-                        maxLength={500}
-                        className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/30 focus:border-amber-400 placeholder:text-gray-500 transition-all"
-                      />
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => saveEditPost(post)} disabled={savingPostEdit || !editingPost.content.trim()} className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                          <Check className="w-3.5 h-3.5" /> Save
-                        </button>
-                        <button onClick={() => setEditingPost(null)} className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : post.shoutoutRecipients.length === 1 ? (
-                    <div className="flex gap-3 items-start">
-                      <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="shrink-0 hover:opacity-80 transition-opacity">
-                        <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <button type="button" onClick={() => router.push(`/employees/${post.shoutoutRecipients[0].user.id}`)} className="font-bold text-base text-gray-900 hover:underline block">
-                          {post.shoutoutRecipients[0].user.displayName}
-                        </button>
-                        <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-1.5">
-                        {post.shoutoutRecipients.map((r) => (
-                          <button key={r.user.id} type="button" onClick={() => router.push(`/employees/${r.user.id}`)} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-0.5 pr-2.5 py-0.5 hover:bg-amber-100 transition-colors">
-                            <Avatar name={r.user.displayName} url={r.user.avatarUrl} size="sm" />
-                            <span className="text-xs font-semibold text-amber-900">{r.user.displayName}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-600 italic leading-relaxed whitespace-pre-wrap">&ldquo;{renderContent(post.content)}&rdquo;</p>
-                    </div>
-                  )}
                 </div>
 
                 {post.imageUrls?.length > 0 && (
-                  <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ images: post.imageUrls, index })} />
+                  <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ postId: post.id, images: post.imageUrls, index })} />
                 )}
 
                 <div className="px-5 pt-3 pb-4">
@@ -847,83 +757,28 @@ export default function FeedPage() {
           return (
             <div id={`feed-post-${post.id}`} key={post.id} className={`rounded-card border overflow-hidden bg-white transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
               <div className="p-4 sm:p-5">
-                <PostHeader
-                  authorId={post.authorId}
-                  authorName={post.author.displayName}
-                  authorAvatarUrl={post.author.avatarUrl}
-                  department={post.author.department?.name}
-                  createdAt={post.createdAt}
-                  isPinned={post.isPinned}
-                  canPin={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
-                  canEdit={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
-                  canDelete={post.authorId === dbUser?.id || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
-                  onAuthorClick={(id) => router.push(`/employees/${id}`)}
+                <PostBody
+                  post={post}
+                  dbUser={dbUser}
+                  editingPost={editingPost}
+                  onEditingPostChange={setEditingPost}
+                  savingPostEdit={savingPostEdit}
+                  onSaveEdit={saveEditPost}
+                  onCancelEdit={() => setEditingPost(null)}
+                  autoResize={autoResize}
+                  votingPost={votingPost}
+                  onVote={handleVote}
                   onPin={() => togglePin(post.id)}
                   onEdit={() => startEditPost(post)}
                   onDelete={() => deletePost(post.id)}
                 />
-
-                <PostBadges flairId={post.flair} isPoll={post.type === "POLL"} departmentName={post.department?.name} />
-
-                {editingPost?.id === post.id ? (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editingPost.title}
-                      onChange={(e) => setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                      maxLength={120}
-                      placeholder="Title *"
-                      className="w-full text-sm font-semibold bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:font-normal placeholder:text-gray-500 transition-all"
-                    />
-                    <textarea
-                      value={editingPost.content}
-                      onChange={(e) => { setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : prev)); autoResize(e.target); }}
-                      rows={3}
-                      className="w-full resize-none overflow-hidden text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
-                    />
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => saveEditPost(post)}
-                        disabled={savingPostEdit || !editingPost.content.trim() || !editingPost.title.trim()}
-                        className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Check className="w-3.5 h-3.5" /> Save
-                      </button>
-                      <button
-                        onClick={() => setEditingPost(null)}
-                        className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-1">
-                    {post.title && (
-                      <p className="text-base font-bold text-gray-900 leading-snug">{post.title}</p>
-                    )}
-                    <ExpandableText className="text-sm text-gray-700 mt-1 leading-relaxed whitespace-pre-wrap">
-                      {renderContent(post.content)}
-                    </ExpandableText>
-                  </div>
-                )}
-
-                {post.type === "POLL" && post.pollOptions.length > 0 && (
-                  <PollBlock
-                    postId={post.id}
-                    options={post.pollOptions}
-                    myVoteOptionId={post.myVoteOptionId}
-                    voting={votingPost === post.id}
-                    onVote={handleVote}
-                  />
-                )}
               </div>
 
               {post.imageUrls?.length > 0 && (
                 <PostImages
                   urls={post.imageUrls}
                   authorName={post.author.displayName}
-                  onOpen={(index) => setLightbox({ images: post.imageUrls, index })}
+                  onOpen={(index) => setLightbox({ postId: post.id, images: post.imageUrls, index })}
                 />
               )}
 
@@ -986,12 +841,48 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* ── Lightbox (shared component, supports prev/next + keyboard) ── */}
-      <ImageLightbox
-        images={lightbox?.images ?? []}
-        initialIndex={lightbox?.index ?? 0}
+      {/* ── Media viewer: zoomable/pannable image + full post context ── */}
+      <MediaViewer
         open={lightbox !== null}
         onClose={() => setLightbox(null)}
+        post={lightboxPost}
+        images={lightbox?.images ?? []}
+        index={lightbox?.index ?? 0}
+        onIndexChange={(i) => setLightbox((prev) => (prev ? { ...prev, index: i } : prev))}
+        dbUser={dbUser}
+        editingPost={editingPost}
+        onEditingPostChange={setEditingPost}
+        savingPostEdit={savingPostEdit}
+        onSaveEdit={saveEditPost}
+        onCancelEdit={() => setEditingPost(null)}
+        autoResize={autoResize}
+        votingPost={votingPost}
+        onVote={handleVote}
+        onPin={() => lightboxPost && togglePin(lightboxPost.id)}
+        onEdit={() => lightboxPost && startEditPost(lightboxPost)}
+        onDelete={() => lightboxPost && deletePost(lightboxPost.id)}
+        onReact={toggleReaction}
+        onOpenReactions={() => lightboxPost && setReactionsPostId(lightboxPost.id)}
+        comments={lightbox ? commentsCache[lightbox.postId] ?? [] : []}
+        commentsLoading={lightbox ? !!commentsLoading[lightbox.postId] : false}
+        onEnsureCommentsLoaded={(postId) => { if (!commentsCache[postId] && !commentsLoading[postId]) refreshComments(postId); }}
+        replyingTo={replyingTo}
+        replyDraft={replyDraft}
+        replySending={replySending}
+        expandedReplies={expandedReplies}
+        commentDraft={commentDraft}
+        commentSending={commentSending}
+        currentUserName={user?.displayName ?? "?"}
+        currentUserAvatar={user?.photoURL ?? null}
+        dbUserId={dbUser?.id}
+        isModerator={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
+        onSetReplyingTo={setReplyingTo}
+        onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
+        onSubmitReply={submitReply}
+        onToggleExpandedReplies={(commentId) => setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }))}
+        onDeleteComment={deleteComment}
+        onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
+        onSubmitComment={submitComment}
       />
 
       {/* ── Post error toast ── */}

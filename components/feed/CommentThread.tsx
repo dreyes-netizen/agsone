@@ -5,7 +5,37 @@ import { Avatar } from "./Avatar";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 import type { CommentItem } from "@/lib/types/feed";
 
-export function CommentThread({
+type ReplyTarget = { postId: string; commentId: string; displayName: string } | null;
+
+type ListProps = {
+  postId: string;
+  comments: CommentItem[];
+  loading: boolean;
+  replyingTo: ReplyTarget;
+  replyDraft: Record<string, string>;
+  replySending: Record<string, boolean>;
+  expandedReplies: Record<string, boolean>;
+  currentUserName: string;
+  currentUserAvatar: string | null;
+  dbUserId?: string;
+  isModerator: boolean;
+  onSetReplyingTo: (value: ReplyTarget) => void;
+  onReplyDraftChange: (commentId: string, value: string) => void;
+  onSubmitReply: (postId: string, commentId: string) => void;
+  onToggleExpandedReplies: (commentId: string) => void;
+  onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
+  autoResize: (el: HTMLTextAreaElement) => void;
+  className?: string;
+};
+
+/**
+ * Just the comment list (with inline reply UI) — no input row. Split out of
+ * the combined CommentThread so the media viewer sidebar can put this in its
+ * own scrollable region while pinning CommentComposer below it (comment
+ * scrolling: the input should never scroll away). The feed card still gets
+ * the old combined single-block look via the CommentThread wrapper below.
+ */
+export function CommentList({
   postId,
   comments,
   loading,
@@ -13,8 +43,6 @@ export function CommentThread({
   replyDraft,
   replySending,
   expandedReplies,
-  commentDraft,
-  commentSending,
   currentUserName,
   currentUserAvatar,
   dbUserId,
@@ -24,36 +52,11 @@ export function CommentThread({
   onSubmitReply,
   onToggleExpandedReplies,
   onDeleteComment,
-  onCommentDraftChange,
-  onSubmitComment,
   autoResize,
-  wrapperClassName,
-}: {
-  postId: string;
-  comments: CommentItem[];
-  loading: boolean;
-  replyingTo: { postId: string; commentId: string; displayName: string } | null;
-  replyDraft: Record<string, string>;
-  replySending: Record<string, boolean>;
-  expandedReplies: Record<string, boolean>;
-  commentDraft: Record<string, string>;
-  commentSending: Record<string, boolean>;
-  currentUserName: string;
-  currentUserAvatar: string | null;
-  dbUserId?: string;
-  isModerator: boolean;
-  onSetReplyingTo: (value: { postId: string; commentId: string; displayName: string } | null) => void;
-  onReplyDraftChange: (commentId: string, value: string) => void;
-  onSubmitReply: (postId: string, commentId: string) => void;
-  onToggleExpandedReplies: (commentId: string) => void;
-  onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
-  onCommentDraftChange: (postId: string, value: string) => void;
-  onSubmitComment: (postId: string) => void;
-  autoResize: (el: HTMLTextAreaElement) => void;
-  wrapperClassName: string;
-}) {
+  className,
+}: ListProps) {
   return (
-    <div className={wrapperClassName}>
+    <div className={`space-y-4 ${className ?? ""}`}>
       {loading && (
         <div className="space-y-3 animate-pulse">
           {[1, 2].map((i) => (
@@ -165,26 +168,124 @@ export function CommentThread({
           </div>
         </div>
       ))}
-      <div className="flex gap-2.5 items-center pt-1">
-        <Avatar name={currentUserName} url={currentUserAvatar} size="sm" />
-        <div className="flex-1 flex gap-2">
-          <textarea
-            rows={1}
-            placeholder="Write a comment…"
-            value={commentDraft[postId] ?? ""}
-            onChange={(e) => { onCommentDraftChange(postId, e.target.value); autoResize(e.target); }}
-            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-          />
-          <button
-            onClick={() => onSubmitComment(postId)}
-            disabled={commentSending[postId] || !(commentDraft[postId] ?? "").trim()}
-            aria-label="Submit comment"
-            className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
-        </div>
+    </div>
+  );
+}
+
+/**
+ * Just the "write a comment…" row — see CommentList above for why this is
+ * split out (independent pinning in the media viewer sidebar).
+ */
+export function CommentComposer({
+  postId,
+  commentDraft,
+  commentSending,
+  currentUserName,
+  currentUserAvatar,
+  onCommentDraftChange,
+  onSubmitComment,
+  autoResize,
+  className,
+}: {
+  postId: string;
+  commentDraft: Record<string, string>;
+  commentSending: Record<string, boolean>;
+  currentUserName: string;
+  currentUserAvatar: string | null;
+  onCommentDraftChange: (postId: string, value: string) => void;
+  onSubmitComment: (postId: string) => void;
+  autoResize: (el: HTMLTextAreaElement) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`flex gap-2.5 items-center ${className ?? "pt-1"}`}>
+      <Avatar name={currentUserName} url={currentUserAvatar} size="sm" />
+      <div className="flex-1 flex gap-2">
+        <textarea
+          rows={1}
+          placeholder="Write a comment…"
+          value={commentDraft[postId] ?? ""}
+          onChange={(e) => { onCommentDraftChange(postId, e.target.value); autoResize(e.target); }}
+          className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+        />
+        <button
+          onClick={() => onSubmitComment(postId)}
+          disabled={commentSending[postId] || !(commentDraft[postId] ?? "").trim()}
+          aria-label="Submit comment"
+          className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
+        >
+          <Send className="w-3.5 h-3.5" />
+        </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Feed-card usage: list + composer as one combined block (unchanged visual
+ * behavior from before the CommentList/CommentComposer split).
+ */
+export function CommentThread({
+  postId,
+  comments,
+  loading,
+  replyingTo,
+  replyDraft,
+  replySending,
+  expandedReplies,
+  commentDraft,
+  commentSending,
+  currentUserName,
+  currentUserAvatar,
+  dbUserId,
+  isModerator,
+  onSetReplyingTo,
+  onReplyDraftChange,
+  onSubmitReply,
+  onToggleExpandedReplies,
+  onDeleteComment,
+  onCommentDraftChange,
+  onSubmitComment,
+  autoResize,
+  wrapperClassName,
+}: ListProps & {
+  commentDraft: Record<string, string>;
+  commentSending: Record<string, boolean>;
+  onCommentDraftChange: (postId: string, value: string) => void;
+  onSubmitComment: (postId: string) => void;
+  wrapperClassName: string;
+}) {
+  return (
+    <div className={wrapperClassName}>
+      <CommentList
+        postId={postId}
+        comments={comments}
+        loading={loading}
+        replyingTo={replyingTo}
+        replyDraft={replyDraft}
+        replySending={replySending}
+        expandedReplies={expandedReplies}
+        currentUserName={currentUserName}
+        currentUserAvatar={currentUserAvatar}
+        dbUserId={dbUserId}
+        isModerator={isModerator}
+        onSetReplyingTo={onSetReplyingTo}
+        onReplyDraftChange={onReplyDraftChange}
+        onSubmitReply={onSubmitReply}
+        onToggleExpandedReplies={onToggleExpandedReplies}
+        onDeleteComment={onDeleteComment}
+        autoResize={autoResize}
+      />
+      <CommentComposer
+        postId={postId}
+        commentDraft={commentDraft}
+        commentSending={commentSending}
+        currentUserName={currentUserName}
+        currentUserAvatar={currentUserAvatar}
+        onCommentDraftChange={onCommentDraftChange}
+        onSubmitComment={onSubmitComment}
+        autoResize={autoResize}
+      />
     </div>
   );
 }

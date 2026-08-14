@@ -687,9 +687,10 @@ export default function FeedPage() {
       ) : (
         posts.map((post) => {
           if (post.type === "SHOUTOUT" && post.shoutoutRecipients.length > 0) {
+            const isRecognition = !!post.title;
             return (
               <div id={`feed-post-${post.id}`} key={post.id} className={`bg-white rounded-card border overflow-hidden transition-shadow hover:shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 ${post.isPinned ? "border-amber-300 hover:border-amber-400" : "border-table-border hover:border-gray-300"}`}>
-                <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
+                <div className={`h-1.5 bg-gradient-to-r ${isRecognition ? "from-amber-400 to-yellow-300" : "from-orange-400 to-amber-300"}`} />
                 <div className="px-5 pt-4 pb-4">
                   <PostBody
                     post={post}

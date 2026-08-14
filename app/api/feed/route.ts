@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     where: { ...visibilityWhere, ...typeWhere, ...deptWhere },
     include: {
       author: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
-      shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+      shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } } } },
       department: { select: { name: true } },
       // reactions used to be included here as full rows (emoji + userId per
       // reaction) just to build a per-emoji tally and this user's own emojis
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         author: { select: { displayName: true, avatarUrl: true } },
-        shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+        shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } } } },
       },
     });
     // createNotification is async (DB insert + realtime broadcast). Awaiting

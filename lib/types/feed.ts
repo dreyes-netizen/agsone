@@ -15,7 +15,7 @@ export type FeedPost = {
   isPinned: boolean;
   flair: string;
   author: { displayName: string; avatarUrl: string | null; department: { name: string } | null };
-  shoutoutRecipients: { id: string; userId: string; user: { id: string; displayName: string; avatarUrl: string | null } }[];
+  shoutoutRecipients: { id: string; userId: string; user: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null } }[];
   reactions: Record<string, number>;
   myReactions: string[];
   commentCount: number;

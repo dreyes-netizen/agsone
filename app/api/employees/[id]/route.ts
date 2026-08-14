@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
               createdAt: true,
               imageUrls: true,
               author: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
-              shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+              shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } } } },
             },
           },
         },

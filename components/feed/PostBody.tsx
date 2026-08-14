@@ -1,13 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Building2, Check, Sparkles } from "lucide-react";
-import { Avatar } from "@/components/feed/Avatar";
+import { Building2, Check, Sparkles, Trophy } from "lucide-react";
 import { PostHeader } from "@/components/feed/PostHeader";
 import { PostBadges } from "@/components/feed/PostBadges";
 import { PostMentionText } from "@/components/feed/PostMentionText";
 import { ExpandableText } from "@/components/feed/ExpandableText";
 import { PollBlock } from "@/components/feed/PollBlock";
+import { RecipientList } from "@/components/feed/RecipientList";
 import { getPostPermissions } from "@/lib/helpers/postPermissions";
 import type { FeedPost } from "@/lib/types/feed";
 
@@ -56,6 +56,13 @@ export function PostBody({
   const goToProfile = (id: string) => router.push(`/employees/${id}`);
 
   if (post.type === "SHOUTOUT" && post.shoutoutRecipients.length > 0) {
+    // A shoutout post becomes a formal Recognition once it has a title (the
+    // composer's "Recognition title" field) — no separate post type/flair
+    // exists for this, so title presence is the variant signal. See
+    // docs/superpowers/specs for the original single-type shoutout design;
+    // this split is purely presentational.
+    const isRecognition = !!post.title;
+
     return (
       <div className="space-y-3">
         <PostHeader
@@ -72,27 +79,20 @@ export function PostBody({
           onPin={onPin}
           onEdit={onEdit}
           onDelete={onDelete}
-          editLabel="Edit shoutout"
+          editLabel={isRecognition ? "Edit recognition" : "Edit shoutout"}
         />
 
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-amber-200" />
-          <span className="text-xs font-semibold text-amber-600 flex items-center gap-1 shrink-0">
-            <Sparkles className="w-3.5 h-3.5" /> gave a shoutout to
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide ${isRecognition ? "text-amber-600" : "text-orange-600"}`}>
+            {isRecognition ? <Trophy className="w-3.5 h-3.5" aria-hidden="true" /> : <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />}
+            {isRecognition ? "Recognition" : "Shoutout"}
           </span>
-          <div className="h-px flex-1 bg-amber-200" />
+          {post.department && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+              <Building2 className="w-2.5 h-2.5" aria-hidden="true" /> {post.department.name} only
+            </span>
+          )}
         </div>
-
-        {(post.title || post.department) && (
-          <div className="flex flex-col items-center gap-1.5">
-            {post.title && <p className="text-sm font-bold text-amber-800 text-center">{post.title}</p>}
-            {post.department && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                <Building2 className="w-2.5 h-2.5" aria-hidden="true" /> {post.department.name} only
-              </span>
-            )}
-          </div>
-        )}
 
         {isEditing && editingPost ? (
           <div className="space-y-2">
@@ -112,30 +112,21 @@ export function PostBody({
               </button>
             </div>
           </div>
-        ) : post.shoutoutRecipients.length === 1 ? (
-          <div className="flex gap-3 items-start">
-            <button type="button" onClick={() => goToProfile(post.shoutoutRecipients[0].user.id)} className="shrink-0 hover:opacity-80 transition-opacity">
-              <Avatar name={post.shoutoutRecipients[0].user.displayName} url={post.shoutoutRecipients[0].user.avatarUrl} size="md" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <button type="button" onClick={() => goToProfile(post.shoutoutRecipients[0].user.id)} className="font-bold text-base text-gray-900 hover:underline block">
-                {post.shoutoutRecipients[0].user.displayName}
-              </button>
-              <p className="text-sm text-gray-600 italic mt-1 leading-relaxed whitespace-pre-wrap">
-                &ldquo;<PostMentionText content={post.content} onMentionClick={goToProfile} />&rdquo;
-              </p>
+        ) : isRecognition ? (
+          <div className="space-y-3">
+            <p className="text-base font-bold text-gray-900 leading-snug">{post.title}</p>
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recognizing</p>
+              <RecipientList recipients={post.shoutoutRecipients} onOpenProfile={goToProfile} rowSize="md" />
             </div>
+            <ExpandableText className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              <PostMentionText content={post.content} onMentionClick={goToProfile} />
+            </ExpandableText>
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-              {post.shoutoutRecipients.map((r) => (
-                <button key={r.user.id} type="button" onClick={() => goToProfile(r.user.id)} className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full pl-0.5 pr-2.5 py-0.5 hover:bg-amber-100 transition-colors">
-                  <Avatar name={r.user.displayName} url={r.user.avatarUrl} size="sm" />
-                  <span className="text-xs font-semibold text-amber-900">{r.user.displayName}</span>
-                </button>
-              ))}
-            </div>
+            <p className="text-xs font-medium text-gray-500">Shoutout to</p>
+            <RecipientList recipients={post.shoutoutRecipients} onOpenProfile={goToProfile} rowSize="md" />
             <p className="text-sm text-gray-600 italic leading-relaxed whitespace-pre-wrap">
               &ldquo;<PostMentionText content={post.content} onMentionClick={goToProfile} />&rdquo;
             </p>

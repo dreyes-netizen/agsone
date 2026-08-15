@@ -12,12 +12,13 @@ interface CategoryFiltersProps {
 
 // Text-only chips (no icons) — a deliberately more restrained toolbar than
 // Marketplace's icon-per-category filters, in keeping with Medicine's own,
-// less commerce-flavored identity.
+// less commerce-flavored identity. Layout (flex-wrap, no horizontal scroll)
+// mirrors Marketplace's CategoryFilters exactly.
 export function CategoryFilters({ active, counts, total, loading, onChange }: CategoryFiltersProps) {
   const categories: CategoryFilter[] = ["ALL", ...MEDICINE_CATEGORIES];
 
   return (
-    <div role="group" aria-label="Filter by category" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 max-w-full sm:flex-wrap sm:overflow-visible sm:max-w-none">
+    <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-2">
       {categories.map((cat) => {
         const isActive = active === cat;
         const count = cat === "ALL" ? total : (counts[cat] ?? 0);
@@ -28,7 +29,7 @@ export function CategoryFilters({ active, counts, total, loading, onChange }: Ca
             onClick={() => onChange(cat)}
             aria-pressed={isActive}
             disabled={disabled}
-            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
               disabled
                 ? "opacity-40 cursor-not-allowed bg-white border-gray-200 text-gray-500"
                 : isActive

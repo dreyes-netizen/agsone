@@ -86,14 +86,6 @@ enum FeedbackStatus {
   RESOLVED
 }
 
-enum MilestoneType {
-  BIRTHDAY
-  WORK_ANNIVERSARY_1
-  WORK_ANNIVERSARY_3
-  WORK_ANNIVERSARY_5
-  WORK_ANNIVERSARY_10
-}
-
 enum MedicineRequestStatus {
   PENDING
   APPROVED
@@ -181,8 +173,6 @@ model User {
   foodOrders           FoodOrder[]         @relation("FoodOrdersPlaced")
   feedbacks            Feedback[]
   feedbackReplies      FeedbackReply[]
-  milestoneAwards      MilestoneAward[]
-  milestoneConfigs     MilestoneConfig[]
   policyDocuments      PolicyDocument[]
   appSettings          AppSetting[]
   chatSessions         ChatSession[]
@@ -521,31 +511,6 @@ model FeedbackReply {
   @@index([feedbackId])
 }
 
-model MilestoneConfig {
-  id           String        @id @default(uuid())
-  type         MilestoneType
-  pointsReward Int
-  isActive     Boolean       @default(true)
-  updatedAt    DateTime      @updatedAt
-  updatedById  String
-
-  updatedBy User @relation(fields: [updatedById], references: [id])
-
-  @@unique([type])
-}
-
-model MilestoneAward {
-  id        String        @id @default(uuid())
-  userId    String
-  type      MilestoneType
-  year      Int
-  awardedAt DateTime      @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@unique([userId, type, year])
-  @@index([userId, type])
-}
 
 model ChatSession {
   id        String   @id @default(uuid())

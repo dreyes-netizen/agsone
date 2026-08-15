@@ -77,33 +77,6 @@ export function welcomeEmail(displayName: string) {
   };
 }
 
-export function birthdayEmail(displayName: string, points: number | null) {
-  const pointsBlock = points
-    ? `<div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center;">
-         <span style="font-size:40px;font-weight:800;color:${BRAND_COLOR};">+${points}</span>
-         <p style="margin:4px 0 0;font-size:14px;color:#6b7280;">birthday points added</p>
-       </div>`
-    : "";
-  const pointsLine = points
-    ? ` To celebrate, we've added <strong>${points} bonus points</strong> to your account.`
-    : "";
-
-  return {
-    subject: `Happy Birthday from ${APP_NAME}! 🎂`,
-    html: layout(`
-      <h1 style="margin:0 0 8px;font-size:24px;color:#111827;">Happy Birthday, ${displayName}! 🎂</h1>
-      <p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.6;">
-        Wishing you a fantastic day!${pointsLine}
-      </p>
-      ${pointsBlock}
-      <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "#"}/dashboard"
-         style="display:inline-block;background:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">
-        View Dashboard →
-      </a>
-    `),
-  };
-}
-
 export function pointsReceivedEmail(displayName: string, amount: number, fromName: string, note: string, newBalance: number) {
   return {
     subject: `You received ${amount.toLocaleString()} points! 🎉`,

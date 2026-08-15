@@ -48,7 +48,7 @@ export function CompletenessBar({ profile }: { profile: UserProfile }) {
         ))}
       </div>
       <p className="text-xs text-gray-500">
-        Complete your profile to unlock features like milestone rewards and birthday bonuses.
+        A complete profile helps colleagues recognise you and keeps your team feed relevant.
       </p>
     </div>
   );

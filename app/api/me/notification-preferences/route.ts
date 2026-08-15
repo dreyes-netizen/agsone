@@ -5,15 +5,16 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
+// MILESTONE_REWARD dropped along with the milestone feature. Stored prefs on
+// existing users keep the old key harmlessly — PUT merges into the saved object
+// and GET only ever reads keys listed here, so a stale entry is inert.
 const TOGGLEABLE_TYPES = [
   "SHOUTOUT_RECEIVED",
   "MISSION_COMPLETED",
   "POINTS_AWARDED",
-  "MILESTONE_REWARD",
   "SHOUTOUT_RECEIVED_EMAIL",
   "MISSION_COMPLETED_EMAIL",
   "POINTS_AWARDED_EMAIL",
-  "MILESTONE_REWARD_EMAIL",
 ] as const;
 
 type PrefKey = (typeof TOGGLEABLE_TYPES)[number];
@@ -22,11 +23,9 @@ const DEFAULTS: Record<PrefKey, boolean> = {
   SHOUTOUT_RECEIVED: true,
   MISSION_COMPLETED: true,
   POINTS_AWARDED: true,
-  MILESTONE_REWARD: true,
   SHOUTOUT_RECEIVED_EMAIL: false,
   MISSION_COMPLETED_EMAIL: false,
   POINTS_AWARDED_EMAIL: false,
-  MILESTONE_REWARD_EMAIL: false,
 };
 
 export async function GET(req: NextRequest) {

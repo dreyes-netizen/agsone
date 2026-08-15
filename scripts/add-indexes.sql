@@ -15,8 +15,6 @@ CREATE INDEX IF NOT EXISTS idx_game_session_guest ON "GameSession" ("guestId");
 
 CREATE INDEX IF NOT EXISTS idx_feedback_reply_feedback ON "FeedbackReply" ("feedbackId");
 
-CREATE INDEX IF NOT EXISTS idx_milestone_award_user_type ON "MilestoneAward" ("userId", "type");
-
 -- pg_trgm index for fast ILIKE search on document_chunks
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_document_chunks_content_trgm ON document_chunks USING gin (content gin_trgm_ops);

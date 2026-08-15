@@ -9,7 +9,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
  * polls, medicine requests, food listings/orders, minigame sessions/plays,
  * notifications, chat sessions, feedback, audit logs, and the points ledger)
  * while preserving the employee roster (User) and every admin-configured
- * catalog table (Reward, Badge, MedicineItem, Department, MilestoneConfig,
+ * catalog table (Reward, Badge, MedicineItem, Department,
  * Game, AppSetting, PolicyDocument).
  *
  * Dry run by default: prints current row counts and exits. Pass --confirm to
@@ -20,11 +20,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
  * applied via `prisma db push` and have no CREATE TABLE migration in
  * prisma/migrations/ — a migrate reset would silently fail to recreate them.
  */
-
-// Set true to keep MilestoneAward rows, so the milestone cron treats this
-// year's birthday/anniversary payouts as already made instead of re-awarding
-// them from the zeroed balance on its next run.
-const PRESERVE_MILESTONE_AWARDS = false;
 
 const CONFIRM = process.argv.includes("--confirm");
 
@@ -55,7 +50,6 @@ async function readCounts() {
     medicineRequest: await prisma.medicineRequest.count(),
     redemption: await prisma.redemption.count(),
     userBadge: await prisma.userBadge.count(),
-    milestoneAward: await prisma.milestoneAward.count(),
     notification: await prisma.notification.count(),
     auditLog: await prisma.auditLog.count(),
     gameSession: await prisma.gameSession.count(),
@@ -71,7 +65,6 @@ async function readCounts() {
     reward: await prisma.reward.count(),
     badge: await prisma.badge.count(),
     medicineItem: await prisma.medicineItem.count(),
-    milestoneConfig: await prisma.milestoneConfig.count(),
     game: await prisma.game.count(),
     appSetting: await prisma.appSetting.count(),
     policyDocument: await prisma.policyDocument.count(),
@@ -80,11 +73,6 @@ async function readCounts() {
 
 async function main() {
   console.log(`Target database: ${maskDatabaseUrl(process.env.DATABASE_URL)}`);
-  console.log(
-    PRESERVE_MILESTONE_AWARDS
-      ? "MilestoneAward rows will be PRESERVED (this year's milestones are treated as already paid).\n"
-      : "MilestoneAward rows will be DELETED (the milestone cron will re-award this year's birthday/anniversary points from the zeroed balance on its next run).\n"
-  );
 
   const before = await readCounts();
   console.log("Current row counts:");
@@ -131,7 +119,6 @@ async function main() {
       medicineRequest: (await tx.medicineRequest.deleteMany({})).count,
       redemption: (await tx.redemption.deleteMany({})).count,
       userBadge: (await tx.userBadge.deleteMany({})).count,
-      milestoneAward: PRESERVE_MILESTONE_AWARDS ? 0 : (await tx.milestoneAward.deleteMany({})).count,
       notification: (await tx.notification.deleteMany({})).count,
       auditLog: (await tx.auditLog.deleteMany({})).count,
       gameSession: (await tx.gameSession.deleteMany({})).count,

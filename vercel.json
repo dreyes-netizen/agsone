@@ -1,13 +1,3 @@
 {
-  "regions": ["syd1"],
-  "crons": [
-    {
-      "path": "/api/cron/birthdays",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/milestones",
-      "schedule": "0 1 * * *"
-    }
-  ]
+  "regions": ["syd1"]
 }

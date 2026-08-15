@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, verifyToken } from "@/lib/auth/verifyAuth";
+import { PROFILE_SELECT, stripInternal } from "@/lib/auth/profileSelect";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
@@ -16,30 +17,7 @@ export async function GET(req: NextRequest) {
 
   const profile = await prisma.user.findUnique({
     where: { firebaseUid: uid },
-    select: {
-      id: true,
-      displayName: true,
-      email: true,
-      avatarUrl: true,
-      role: true,
-      pointsBalance: true,
-      level: true,
-      onboardingComplete: true,
-      birthday: true,
-      hireDate: true,
-      bio: true,
-      skills: true,
-      isActive: true,
-      department: { select: { id: true, name: true } },
-      userBadges: {
-        orderBy: { awardedAt: "desc" },
-        select: {
-          id: true,
-          awardedAt: true,
-          badge: { select: { name: true, description: true } },
-        },
-      },
-    },
+    select: PROFILE_SELECT,
   });
 
   // Mirrors the isActive gate in verifyAuth() — a deactivated employee's
@@ -48,9 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to omit isActive from the response
-  const { isActive: _isActive, ...data } = profile;
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: stripInternal(profile) });
 }
 
 const patchSchema = z.object({

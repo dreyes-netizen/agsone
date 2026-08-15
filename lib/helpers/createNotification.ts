@@ -12,11 +12,16 @@ type CreateNotificationParams = {
   data?: Prisma.InputJsonValue;
 };
 
+// NOTE: "POINTS_AWARDED" does not match the type any emitter actually sends
+// (they all use "POINTS_RECEIVED"), and "MISSION_COMPLETED" has no emitter at
+// all — both toggles are inert. Left in place here deliberately: fixing them
+// changes which notifications users receive, which belongs with the
+// notification catalog work rather than a CPU-reduction change.
+// "MILESTONE_REWARD" is gone because the milestone feature was removed.
 const TOGGLEABLE_TYPES = [
   "SHOUTOUT_RECEIVED",
   "MISSION_COMPLETED",
   "POINTS_AWARDED",
-  "MILESTONE_REWARD",
 ];
 
 export async function createNotification(params: CreateNotificationParams) {

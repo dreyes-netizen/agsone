@@ -9,7 +9,6 @@ function getNotificationLink(n: Notification): string | null {
   switch (n.type) {
     case "SHOUTOUT_RECEIVED":      return "/feed";
     case "POINTS_AWARDED":         return "/profile";
-    case "MILESTONE_REWARD":       return "/profile";
     case "GAME_INVITE":             return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/minigames";
     case "GAME_WIN":               return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/games";
     case "REDEMPTION_APPROVED":

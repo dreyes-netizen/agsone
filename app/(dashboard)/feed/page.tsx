@@ -42,6 +42,18 @@ function getGreeting() {
   return "Good evening";
 }
 
+// The "award points" default only makes sense for the true empty-feed case
+// (ALL, nothing posted anywhere yet) — for any other filter, zero results
+// just mean nothing of that kind has been posted, not that the feed is empty.
+const EMPTY_FILTER_COPY: Record<string, { title: string; subtitle: string }> = {
+  DEPT_ONLY:    { title: "No department posts yet", subtitle: "Nothing from your department yet — check back soon." },
+  ANNOUNCEMENT: { title: "No announcements yet",     subtitle: "Company announcements will show up here." },
+  SHOUTOUT:     { title: "No shoutouts yet",          subtitle: "Recognize a colleague to get the first one started." },
+  ACHIEVEMENT:  { title: "No achievements yet",       subtitle: "Achievement posts will show up here as they're earned." },
+  CELEBRATION:  { title: "No celebrations yet",       subtitle: "Celebration posts will show up here." },
+  POLL:         { title: "No polls yet",              subtitle: "Add a poll to your next post to get one started." },
+};
+
 export default function FeedPage() {
   const router = useRouter();
   const { user, dbUser, loading: authLoading } = useAuth();
@@ -681,8 +693,8 @@ export default function FeedPage() {
       ) : posts.length === 0 ? (
         <div className="text-center py-16">
           <div className="mb-4 flex items-center justify-center"><Megaphone className="w-10 h-10 text-gray-300" /></div>
-          <p className="text-gray-600 font-medium">No posts yet</p>
-          <p className="text-gray-500 text-sm mt-1">Award points to an employee to generate the first post!</p>
+          <p className="text-gray-600 font-medium">{EMPTY_FILTER_COPY[activeFilter]?.title ?? "No posts yet"}</p>
+          <p className="text-gray-500 text-sm mt-1">{EMPTY_FILTER_COPY[activeFilter]?.subtitle ?? "Award points to an employee to generate the first post!"}</p>
         </div>
       ) : (
         posts.map((post) => {

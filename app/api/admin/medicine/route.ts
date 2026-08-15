@@ -5,12 +5,14 @@ import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { MEDICINE_CATEGORIES } from "@/lib/constants/medicineCategories";
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   caption: z.string().min(1).max(3000),
   imageUrl: z.union([z.string().url(), z.literal("")]),
   stockQuantity: z.number().int().min(0),
+  category: z.enum(MEDICINE_CATEGORIES).default("OTHER"),
 });
 
 export async function GET(req: NextRequest) {
@@ -33,6 +35,7 @@ export async function GET(req: NextRequest) {
         imageUrl: true,
         caption: true,
         stockQuantity: true,
+        category: true,
         isActive: true,
         createdAt: true,
       },
@@ -65,6 +68,7 @@ export async function POST(req: NextRequest) {
       imageUrl: true,
       caption: true,
       stockQuantity: true,
+      category: true,
       isActive: true,
       createdAt: true,
     },

@@ -1,4 +1,5 @@
 import { Loader2, Pencil, Pill, Trash2 } from "lucide-react";
+import { MEDICINE_CATEGORY_LABEL } from "@/lib/constants/medicineCategories";
 import type { Medicine } from "../types";
 
 interface MedicineCatalogGridProps {
@@ -57,6 +58,7 @@ export function MedicineCatalogGrid(props: MedicineCatalogGridProps) {
               </div>
               <div className="p-3 flex flex-col gap-1 flex-1">
                 <p className="font-semibold text-gray-900 text-sm">{med.name}</p>
+                <p className="text-gray-400 text-[11px] font-medium uppercase tracking-wide">{MEDICINE_CATEGORY_LABEL[med.category]}</p>
                 <p className="text-gray-500 text-xs line-clamp-2">{med.caption}</p>
                 <p className={`text-xs font-medium mt-1 ${med.stockQuantity === 0 ? "text-red-500" : "text-emerald-600"}`}>
                   {med.stockQuantity === 0 ? "Out of stock" : `${med.stockQuantity} in stock`}

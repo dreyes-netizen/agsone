@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { MEDICINE_CATEGORIES } from "@/lib/constants/medicineCategories";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   caption: z.string().min(1).max(3000).optional(),
   imageUrl: z.union([z.string().url(), z.literal("")]).optional(),
   stockQuantity: z.number().int().min(0).optional(),
+  category: z.enum(MEDICINE_CATEGORIES).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -34,7 +36,7 @@ export async function PATCH(
   const existing = await prisma.medicineItem.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { name, caption, imageUrl, stockQuantity, isActive } = parsed.data;
+  const { name, caption, imageUrl, stockQuantity, category, isActive } = parsed.data;
 
   const updated = await prisma.medicineItem.update({
     where: { id },
@@ -43,6 +45,7 @@ export async function PATCH(
       ...(caption !== undefined && { caption }),
       ...(imageUrl !== undefined && { imageUrl }),
       ...(stockQuantity !== undefined && { stockQuantity }),
+      ...(category !== undefined && { category }),
       ...(isActive !== undefined && { isActive }),
     },
     select: {
@@ -51,6 +54,7 @@ export async function PATCH(
       imageUrl: true,
       caption: true,
       stockQuantity: true,
+      category: true,
       isActive: true,
     },
   });

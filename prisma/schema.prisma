@@ -100,6 +100,15 @@ enum MedicineRequestStatus {
   REJECTED
 }
 
+enum MedicineCategory {
+  PAIN_RELIEF
+  COUGH_COLD
+  ALLERGY
+  STOMACH
+  VITAMINS
+  OTHER
+}
+
 enum GameSessionStatus {
   WAITING
   ACTIVE
@@ -585,20 +594,22 @@ model PolicyDocument {
 }
 
 model MedicineItem {
-  id            String   @id @default(uuid())
+  id            String            @id @default(uuid())
   name          String
   imageUrl      String
   caption       String
-  stockQuantity Int      @default(0)
-  isActive      Boolean  @default(true)
+  stockQuantity Int               @default(0)
+  category      MedicineCategory  @default(OTHER)
+  isActive      Boolean           @default(true)
   createdById   String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   createdBy User              @relation("MedicineItemsCreated", fields: [createdById], references: [id])
   requests  MedicineRequest[]
 
   @@index([isActive])
+  @@index([category])
 }
 
 model MedicineRequest {

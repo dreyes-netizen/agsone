@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
         imageUrl: true,
         caption: true,
         stockQuantity: true,
+        category: true,
       },
     }),
     prisma.medicineRequest.findMany({

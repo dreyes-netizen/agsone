@@ -1,9 +1,12 @@
+import type { MedicineCategory } from "@/lib/constants/medicineCategories";
+
 export type Medicine = {
   id: string;
   name: string;
   imageUrl: string;
   caption: string;
   stockQuantity: number;
+  category: MedicineCategory;
   isActive: boolean;
 };
 
@@ -23,6 +26,7 @@ export type AddForm = {
   name: string;
   caption: string;
   stockQuantity: string;
+  category: MedicineCategory;
   imageFile: File | null;
   imagePreview: string;
 };
@@ -31,6 +35,7 @@ export type EditForm = {
   name: string;
   caption: string;
   stockQuantity: string;
+  category: MedicineCategory;
   imageUrl: string;
   imageFile: File | null;
   imagePreview: string;

@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
 import { Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { MEDICINE_CATEGORIES, MEDICINE_CATEGORY_LABEL } from "@/lib/constants/medicineCategories";
 import type { Medicine, AddForm } from "../types";
 
 const inputClass =
@@ -20,7 +21,7 @@ export function AddMedicineForm({ onAdded }: AddMedicineFormProps) {
   const { token } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>({
-    name: "", caption: "", stockQuantity: "", imageFile: null, imagePreview: "",
+    name: "", caption: "", stockQuantity: "", category: "OTHER", imageFile: null, imagePreview: "",
   });
   const [addingMed, setAddingMed] = useState(false);
   const addImageRef = useRef<HTMLInputElement>(null);
@@ -39,11 +40,12 @@ export function AddMedicineForm({ onAdded }: AddMedicineFormProps) {
           name: addForm.name.trim(),
           caption: addForm.caption.trim(),
           stockQuantity: parseInt(addForm.stockQuantity, 10),
+          category: addForm.category,
           imageUrl,
         }),
       });
       onAdded(res.data);
-      setAddForm({ name: "", caption: "", stockQuantity: "", imageFile: null, imagePreview: "" });
+      setAddForm({ name: "", caption: "", stockQuantity: "", category: "OTHER", imageFile: null, imagePreview: "" });
       setShowAddForm(false);
       toast.success("Medicine added successfully.");
     } catch (err) {
@@ -89,6 +91,18 @@ export function AddMedicineForm({ onAdded }: AddMedicineFormProps) {
                  className={inputClass}
                  placeholder="0"
                />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+              <select
+                value={addForm.category}
+                onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value as AddForm["category"] }))}
+                className={inputClass}
+              >
+                {MEDICINE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{MEDICINE_CATEGORY_LABEL[c]}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div>

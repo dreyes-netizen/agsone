@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Pill } from "lucide-react";
+import { MEDICINE_CATEGORIES, MEDICINE_CATEGORY_LABEL } from "@/lib/constants/medicineCategories";
 import type { Medicine, EditForm } from "../types";
 
 const inputClass =
@@ -53,6 +54,18 @@ export function EditMedicineDialog(props: EditMedicineDialogProps) {
               onChange={(e) => setForm((f) => ({ ...f, stockQuantity: e.target.value }))}
               className={inputClass}
             />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+            <select
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as EditForm["category"] }))}
+              className={inputClass}
+            >
+              {MEDICINE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{MEDICINE_CATEGORY_LABEL[c]}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Photo <span className="normal-case font-normal text-gray-500">(optional)</span></label>

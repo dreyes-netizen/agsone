@@ -24,7 +24,7 @@ export default function AdminMedicinePage() {
   const [loadingMeds, setLoadingMeds] = useState(true);
   const [editingMed, setEditingMed] = useState<Medicine | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
-    name: "", caption: "", stockQuantity: "", imageUrl: "", imageFile: null, imagePreview: "", isActive: true,
+    name: "", caption: "", stockQuantity: "", category: "OTHER", imageUrl: "", imageFile: null, imagePreview: "", isActive: true,
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const editImageRef = useRef<HTMLInputElement>(null);
@@ -126,6 +126,7 @@ export default function AdminMedicinePage() {
       name: med.name,
       caption: med.caption,
       stockQuantity: String(med.stockQuantity),
+      category: med.category,
       imageUrl: med.imageUrl,
       imageFile: null,
       imagePreview: "",
@@ -147,6 +148,7 @@ export default function AdminMedicinePage() {
           name: editForm.name.trim(),
           caption: editForm.caption.trim(),
           stockQuantity: parseInt(editForm.stockQuantity, 10),
+          category: editForm.category,
           imageUrl,
           isActive: editForm.isActive,
         }),

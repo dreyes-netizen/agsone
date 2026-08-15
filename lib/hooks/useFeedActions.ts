@@ -300,9 +300,15 @@ export function useFeedActions() {
           });
           setPollMode(false); setPollOptions(["", ""]);
         } else {
+          // Only these three flairs double as a feed post `type` (matching the
+          // sidebar's category filters) — every other flair is decorative only
+          // and the post stays type UPDATE, same as it filters under "All".
+          const type = ["ANNOUNCEMENT", "ACHIEVEMENT", "CELEBRATION"].includes(selectedFlair ?? "")
+            ? selectedFlair
+            : "UPDATE";
           await apiFetch("/api/feed", {
             method: "POST",
-            body: JSON.stringify({ title, content, type: "UPDATE", flair: selectedFlair, imageUrls, deptOnly }),
+            body: JSON.stringify({ title, content, type, flair: selectedFlair, imageUrls, deptOnly }),
           });
         }
         setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false);

@@ -3,6 +3,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Disable Android Chrome's automatic text-size "boosting" (font inflation).
+   That heuristic scales text (and, transitively, the whole page look) up
+   inconsistently depending on a block's text density/column width, which is
+   why text-heavy grids like the Medicine catalog could render visibly larger
+   than sparser pages on the same device/zoom level. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 

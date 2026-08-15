@@ -16,16 +16,16 @@ export function OrderFormFields(props: OrderFormFieldsProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500 w-16 shrink-0">Quantity</label>
-        <div className="flex items-center gap-1">
+      <div className="flex items-center gap-3">
+        <label className="text-xs font-medium text-gray-500 w-16 shrink-0">Quantity</label>
+        <div className="flex items-center gap-2">
           <button type="button" aria-label="Decrease quantity" onClick={() => onQtyChange(Math.max(1, qty - 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">−</button>
-          <span className="w-8 text-center text-sm font-semibold" aria-live="polite">{qty}</span>
+          <span className="w-8 text-center text-sm font-semibold tabular-nums" aria-live="polite">{qty}</span>
           <button type="button" aria-label="Increase quantity" onClick={() => onQtyChange(Math.min(99, qty + 1))} className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-emerald-500">+</button>
         </div>
       </div>
       {(addOns?.length ?? 0) > 0 && (
-        <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+        <div className="space-y-1.5 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
           <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Add-ons</p>
           {(addOns ?? []).map((a, i) => {
             const checked = selectedAddOns.some((s) => s.name === a.name);
@@ -46,11 +46,11 @@ export function OrderFormFields(props: OrderFormFieldsProps) {
       <input
         value={note} onChange={(e) => onNoteChange(e.target.value)}
         placeholder="e.g. no onions (optional)"
-        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
       />
-      <div className="flex items-center justify-between text-xs px-0.5">
+      <div className="flex items-center justify-between text-sm px-0.5 pt-1 border-t border-gray-100">
         <span className="text-gray-500">Total</span>
-        <span className="font-bold text-emerald-700 text-sm">₱{total.toFixed(2)}</span>
+        <span className="font-bold text-emerald-700 tabular-nums">₱{total.toFixed(2)}</span>
       </div>
     </>
   );

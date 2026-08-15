@@ -47,3 +47,5 @@ prisma/*.db-journal
 
 # ─── TypeScript build cache ────────────────────────────────────────────────────
 *.tsbuildinfo
+.vercel
+.env*

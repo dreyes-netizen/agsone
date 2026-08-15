@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { UtensilsCrossed } from "lucide-react";
+import { Plus, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -18,10 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { AddOn, MyOrder, OrderRow, Listing, Tab } from "./types";
+import type { AddOn, MyOrder, Listing, Tab } from "./types";
 import { ListingFormPanel } from "./components/ListingFormPanel";
-import { FoodListingCard } from "./components/FoodListingCard";
 import { FoodListingDetailModal } from "./components/FoodListingDetailModal";
+import { AvailableView } from "./components/AvailableView";
+import { MyOrdersView } from "./components/MyOrdersView";
 import { SellingView } from "./components/selling/SellingView";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
@@ -32,6 +33,18 @@ const ImageLightbox = dynamic(
   () => import("@/components/ImageLightbox").then((m) => m.ImageLightbox),
   { ssr: false },
 );
+
+const TABS: [Tab, string][] = [
+  ["AVAILABLE", "Available"],
+  ["MY_ORDERS", "My Orders"],
+  ["MY_LISTINGS", "Selling"],
+];
+
+const TAB_SUBTITLE: Record<Tab, string> = {
+  AVAILABLE: "Order food from your colleagues.",
+  MY_ORDERS: "Track your purchases and upcoming deliveries.",
+  MY_LISTINGS: "Manage your listings and incoming orders.",
+};
 
 export default function FoodPage() {
   const { user, dbUser, token, loading: authLoading } = useAuth();
@@ -49,10 +62,6 @@ export default function FoodPage() {
   const [orderNote, setOrderNote] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<AddOn[]>([]);
   const [submittingOrder, setSubmittingOrder] = useState(false);
-
-  // Expanded seller view
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [sellerOrders, setSellerOrders] = useState<Record<string, OrderRow[]>>({});
 
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -195,7 +204,7 @@ export default function FoodPage() {
         method: "POST",
         body: JSON.stringify({ quantity: qty, note: orderNote || undefined, selectedAddOns }),
       });
-      const newMyOrder = { id: "optimistic", quantity: qty, note: orderNote || null, selectedAddOns, createdAt: new Date().toISOString() };
+      const newMyOrder = { id: "optimistic", quantity: qty, note: orderNote || null, selectedAddOns, paidAt: null, createdAt: new Date().toISOString() };
       setListings((prev) =>
         prev.map((l) =>
           l.id === listing.id
@@ -288,17 +297,6 @@ export default function FoodPage() {
         `/api/food/${listingId}/orders/${orderId}`,
         { method: "PATCH", body: JSON.stringify({ paid }) }
       );
-      // Two places hold a copy of this order: `sellerOrders` (the legacy
-      // expand-on-demand list still used when a seller's own listing shows
-      // up in the Available tab) and `listings[].orders` (the Selling tab's
-      // preloaded dashboard data). Keep both in sync so either view reflects
-      // the change immediately.
-      setSellerOrders((prev) => ({
-        ...prev,
-        [listingId]: (prev[listingId] ?? []).map((o) =>
-          o.id === orderId ? { ...o, paidAt: res.data.paidAt } : o
-        ),
-      }));
       setListings((prev) =>
         prev.map((l) =>
           l.id === listingId
@@ -327,7 +325,7 @@ export default function FoodPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // ── Sell Food CTA (Selling empty state) ──────────────────────────────────────
+  // ── Sell Food CTA (Selling empty state / header) ─────────────────────────────
   function openSellForm() {
     resetForm();
     setShowForm(true);
@@ -371,22 +369,9 @@ export default function FoodPage() {
     }
   }
 
-  // ── Load seller orders ────────────────────────────────────────────────────────
-  async function toggleSellerOrders(listing: Listing) {
-    if (expandedId === listing.id) { setExpandedId(null); return; }
-    setExpandedId(listing.id);
-    if (sellerOrders[listing.id]) return;
-    try {
-      const r = await apiFetch<{ data: OrderRow[] }>(`/api/food/${listing.id}/orders`);
-      setSellerOrders((prev) => ({ ...prev, [listing.id]: r.data }));
-    } catch {
-      toast.error("Failed to load orders");
-    }
-  }
-
   // ── Filter ───────────────────────────────────────────────────────────────────
   const filtered = listings.filter((l) => {
-    if (tab === "AVAILABLE") return l.isActive && new Date(l.cutoffAt) > new Date();
+    if (tab === "AVAILABLE") return l.isActive && new Date(l.cutoffAt) > new Date() && l.createdBy.id !== dbUser?.id;
     if (tab === "MY_ORDERS") return !!l.myOrder;
     if (tab === "MY_LISTINGS") return l.createdBy.id === dbUser?.id;
     return true;
@@ -400,9 +385,7 @@ export default function FoodPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Food Board</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {tab === "MY_LISTINGS" ? "Manage your listings and incoming orders" : "Order food from your colleagues"}
-          </p>
+          <p className="text-gray-500 text-sm mt-1">{TAB_SUBTITLE[tab]}</p>
         </div>
         <button
           onClick={() => {
@@ -415,8 +398,17 @@ export default function FoodPage() {
           }}
            className="flex items-center gap-2 bg-command-black hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
         >
-          <UtensilsCrossed className="w-4 h-4" aria-hidden="true" />
-          Sell Food
+          {tab === "MY_LISTINGS" ? (
+            <>
+              <Plus className="w-4 h-4" aria-hidden="true" />
+              New Listing
+            </>
+          ) : (
+            <>
+              <UtensilsCrossed className="w-4 h-4" aria-hidden="true" />
+              Sell Food
+            </>
+          )}
         </button>
       </div>
 
@@ -454,8 +446,12 @@ export default function FoodPage() {
       )}
 
       {/* Tabs — horizontal scroll on mobile */}
-      <div role="tablist" aria-label="Food board views" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible pb-0.5">
-        {([["AVAILABLE", "Available"], ["MY_ORDERS", "My Orders"], ["MY_LISTINGS", "Selling"]] as [Tab, string][]).map(([t, label]) => (
+      <div
+        role="tablist"
+        aria-label="Food board views"
+        className="inline-flex items-center gap-1 bg-gray-100 p-1 rounded-lg w-full overflow-x-auto scrollbar-hide sm:w-fit"
+      >
+        {TABS.map(([t, label]) => (
           <button
             key={t}
             role="tab"
@@ -463,10 +459,10 @@ export default function FoodPage() {
             aria-controls={`panel-${t}`}
             tabIndex={tab === t ? 0 : -1}
             onClick={() => setTab(t)}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
+            className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
               tab === t
-                ? "bg-command-black text-white border-command-black"
-                : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-800"
             }`}
           >
             {label}
@@ -476,65 +472,40 @@ export default function FoodPage() {
 
       {/* Listings */}
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={tab}>
-      {tab === "MY_LISTINGS" ? (
-        <SellingView
-          listings={filtered}
-          loading={loading}
-          onSellFood={openSellForm}
-          onEdit={handleEdit}
-          onCloseListing={handleClose}
-          onSellAgain={handleSellAgain}
-          onDelete={handleDelete}
-          onTogglePaid={togglePaid}
-          onViewUser={(userId) => router.push(`/employees/${userId}`)}
-        />
-      ) : loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
-              <div className="h-36 bg-gray-100" />
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-gray-100 rounded w-2/3" />
-                <div className="h-3 bg-gray-100 rounded w-full" />
-                <div className="h-8 bg-gray-100 rounded-lg w-full mt-3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-card border border-table-border text-center">
-          <UtensilsCrossed className="w-10 h-10 text-gray-500 mb-4" aria-hidden="true" />
-          <p className="text-gray-600 font-medium">Nothing here</p>
-          <p className="text-gray-500 text-sm mt-1">
-            {tab === "AVAILABLE" ? "No food listings right now — be the first to post!" : "Nothing to show for this tab."}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((listing) => (
-            <FoodListingCard
-              key={listing.id}
-              listing={listing}
-              currentUserId={dbUser?.id}
-              cardImageIndex={cardImageIndices[listing.id] ?? 0}
-              onImageIndexChange={(i) => setCardImageIndices((prev) => ({ ...prev, [listing.id]: i }))}
-              isExpanded={expandedId === listing.id}
-              sellerOrders={sellerOrders[listing.id]}
-              onOpenDetail={openDetail}
-              onOpenOrder={openOrderModal}
-              onOpenEditOrder={openEditOrder}
-              onCancelOrder={handleCancel}
-              onToggleSellerOrders={toggleSellerOrders}
-              onTogglePaid={togglePaid}
-              onEdit={handleEdit}
-              onCloseListing={handleClose}
-              onSellAgain={handleSellAgain}
-              onDelete={handleDelete}
-              onViewUser={(userId) => router.push(`/employees/${userId}`)}
-            />
-          ))}
-        </div>
-      )}
+        {tab === "MY_LISTINGS" ? (
+          <SellingView
+            listings={filtered}
+            loading={loading}
+            onSellFood={openSellForm}
+            onEdit={handleEdit}
+            onCloseListing={handleClose}
+            onSellAgain={handleSellAgain}
+            onDelete={handleDelete}
+            onTogglePaid={togglePaid}
+            onViewUser={(userId) => router.push(`/employees/${userId}`)}
+          />
+        ) : tab === "MY_ORDERS" ? (
+          <MyOrdersView
+            listings={filtered}
+            loading={loading}
+            onOpenOrder={openDetail}
+            onCancelOrder={handleCancel}
+            onBrowseAvailable={() => setTab("AVAILABLE")}
+          />
+        ) : (
+          <AvailableView
+            listings={filtered}
+            loading={loading}
+            currentUserId={dbUser?.id}
+            cardImageIndices={cardImageIndices}
+            onImageIndexChange={(id, i) => setCardImageIndices((prev) => ({ ...prev, [id]: i }))}
+            onOpenDetail={openDetail}
+            onOpenOrder={openOrderModal}
+            onOpenEditOrder={openEditOrder}
+            onCancelOrder={handleCancel}
+            onViewUser={(userId) => router.push(`/employees/${userId}`)}
+          />
+        )}
       </div>
 
       {lightbox && (

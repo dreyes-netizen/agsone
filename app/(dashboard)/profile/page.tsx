@@ -72,6 +72,19 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, authUser, dbUser]);
 
+  // Deep-link support (e.g. "View points history" from the Marketplace) —
+  // read once on mount, client-only, so the SSR pass never touches `window`.
+  // Deferred a microtask so setActiveTab doesn't run synchronously inside the
+  // effect body (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    queueMicrotask(() => {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      if (tab === "points" || tab === "badges" || tab === "notifications") {
+        setActiveTab(tab);
+      }
+    });
+  }, []);
+
   useRealtimeChannel(
     realtimeTopics.feed,
     () => {

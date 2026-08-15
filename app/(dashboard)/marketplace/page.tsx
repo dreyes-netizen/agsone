@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import {
-  ShoppingBag, Coins,
-  ChevronLeft, ChevronRight,
-  Clock, Receipt, AlertTriangle, Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useConfetti } from "@/lib/hooks/useConfetti";
-import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
-import { REDEMPTION_STATUS_LABEL, REDEMPTION_STATUS_BADGE } from "@/lib/constants/redemptionStatus";
-import { REWARD_CATEGORY_CONFIG } from "@/lib/constants/rewardCategories";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
+
+import type { Reward, Redemption, SortOption, MarketplaceView } from "./types";
+import { MarketplaceHeader } from "./components/MarketplaceHeader";
+import { MarketplaceTabs } from "./components/MarketplaceTabs";
+import { MarketplaceToolbar } from "./components/MarketplaceToolbar";
+import { CategoryFilters, type CategoryFilter } from "./components/CategoryFilters";
+import { RewardGrid } from "./components/RewardGrid";
+import { RewardDetailDialog } from "./components/RewardDetailDialog";
+import { MyRequestsView } from "./components/MyRequestsView";
+import { RequestDetailDialog } from "./components/RequestDetailDialog";
+import { filterAndSortRewards } from "./lib/filterRewards";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -25,57 +26,83 @@ const ImageLightbox = dynamic(
   { ssr: false },
 );
 
-type Reward = {
-  id: string;
-  name: string;
-  description: string | null;
-  imageUrls: string[];
-  pointCost: number;
-  stockQuantity: number;
-  category: string;
-};
-
-type Redemption = {
-  id: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "FULFILLED";
-  pointsSpent: number;
-  adminNote: string | null;
-  createdAt: string;
-  reward: { name: string; pointCost: number; category: string };
-};
+function readUrlState() {
+  const sp = new URLSearchParams(window.location.search);
+  const tab = sp.get("tab") === "requests" ? "requests" : "browse";
+  const category = (sp.get("category") ?? "ALL") as CategoryFilter;
+  const q = sp.get("q") ?? "";
+  const sort = (sp.get("sort") ?? "recommended") as SortOption;
+  const available = sp.get("available") === "1";
+  const afford = sp.get("afford") === "1";
+  return { tab: tab as MarketplaceView, category, q, sort, available, afford };
+}
 
 export default function MarketplacePage() {
   const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
+  const { fire: fireConfetti } = useConfetti();
+
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const serverBalance = dbUser?.pointsBalance ?? 0;
-  const [balanceState, setBalanceState] = useState({
-    server: serverBalance,
-    display: serverBalance,
-  });
+  const [balanceState, setBalanceState] = useState({ server: serverBalance, display: serverBalance });
   // Preserve immediate optimistic feedback after a redemption, then adopt the
   // authoritative AuthProvider balance as soon as the points broadcast lands.
   if (balanceState.server !== serverBalance) {
     setBalanceState({ server: serverBalance, display: serverBalance });
   }
   const balance = balanceState.display;
-  const [filter, setFilter] = useState("ALL");
-  const [loading, setLoading] = useState(true);
-  const [redeeming, setRedeeming] = useState<string | null>(null);
-  const { fire: fireConfetti } = useConfetti();
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+
+  const [view, setView] = useState<MarketplaceView>("browse");
+  const [category, setCategory] = useState<CategoryFilter>("ALL");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortOption>("recommended");
+  const [availableOnly, setAvailableOnly] = useState(false);
+  const [affordableOnly, setAffordableOnly] = useState(false);
+
+  // Hydrate from the URL once on mount (client-only — safe from the SSR
+  // pass). Deferred a microtask so these setState calls don't run
+  // synchronously inside the effect body (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    queueMicrotask(() => {
+      const s = readUrlState();
+      setView(s.tab);
+      setCategory(s.category);
+      setSearch(s.q);
+      setSort(s.sort);
+      setAvailableOnly(s.available);
+      setAffordableOnly(s.afford);
+    });
+  }, []);
+
+  // Keep the URL in sync for deep-linking/back-forward, without a Next.js
+  // navigation (no scroll reset, no server round-trip).
+  useEffect(() => {
+    const sp = new URLSearchParams();
+    if (view !== "browse") sp.set("tab", view);
+    if (category !== "ALL") sp.set("category", category);
+    if (search) sp.set("q", search);
+    if (sort !== "recommended") sp.set("sort", sort);
+    if (availableOnly) sp.set("available", "1");
+    if (affordableOnly) sp.set("afford", "1");
+    const qs = sp.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [view, category, search, sort, availableOnly, affordableOnly]);
+
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
-  const [selectedRewardImageIndex, setSelectedRewardImageIndex] = useState(0);
-  const [cardImageIndices, setCardImageIndices] = useState<Record<string, number>>({});
-  const [confirming, setConfirming] = useState(false);
-  const [view, setView] = useState<"browse" | "requests">("browse");
+  const [confirmOnOpen, setConfirmOnOpen] = useState(false);
+  const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [redemptionsLoading, setRedemptionsLoading] = useState(false);
 
   const loadRedemptions = useCallback(async () => {
     setRedemptionsLoading(true);
     try {
-      const r = await apiFetch<{ data: Redemption[] }>("/api/redemptions");
+      const r = await apiFetch<{ data: Redemption[] }>("/api/redemptions?limit=100");
       setRedemptions(r.data);
     } catch {
       // fetch failed — redemptions list stays empty; apiFetch throws with user-facing message if needed
@@ -87,7 +114,7 @@ export default function MarketplacePage() {
 
   async function loadRewards() {
     try {
-      const rewardsRes = await apiFetch<{ data: Reward[] }>("/api/rewards");
+      const rewardsRes = await apiFetch<{ data: Reward[] }>("/api/rewards?limit=100");
       setRewards(rewardsRes.data);
     } catch {
       // Keep the last known catalog if a transient refresh fails.
@@ -116,371 +143,89 @@ export default function MarketplacePage() {
     { debounceMs: 200 },
   );
 
-  function openModal(reward: Reward, startConfirming = false) {
+  function openReward(reward: Reward, startConfirming = false) {
     setSelectedReward(reward);
-    setSelectedRewardImageIndex(cardImageIndices[reward.id] ?? 0);
-    setConfirming(startConfirming);
+    setConfirmOnOpen(startConfirming);
   }
-
-  function closeModal() {
+  function closeReward() {
     setSelectedReward(null);
-    setConfirming(false);
+    setConfirmOnOpen(false);
   }
 
-  async function handleRedeem(reward: Reward) {
-    setRedeeming(reward.id);
-    try {
-      await apiFetch("/api/redemptions", { method: "POST", body: JSON.stringify({ rewardId: reward.id }) });
-      setBalanceState((current) => ({
-        ...current,
-        display: current.display - reward.pointCost,
-      }));
-      closeModal();
-      toast.success(`"${reward.name}" redeemed! Pending HR approval.`);
-      fireConfetti();
-      loadRedemptions();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to redeem");
-      setConfirming(false);
-    } finally {
-      setRedeeming(null);
-    }
+  async function handleSubmitRequest(reward: Reward) {
+    await apiFetch("/api/redemptions", { method: "POST", body: JSON.stringify({ rewardId: reward.id }) });
+    setBalanceState((current) => ({ ...current, display: current.display - reward.pointCost }));
+    fireConfetti();
+    loadRedemptions();
   }
 
-  const categories = ["ALL", "PHYSICAL", "VOUCHER", "PRIVILEGE", "DIGITAL"];
+  const categoryCounts = useMemo(
+    () =>
+      rewards.reduce<Record<string, number>>((acc, r) => {
+        acc[r.category] = (acc[r.category] ?? 0) + 1;
+        return acc;
+      }, {}),
+    [rewards],
+  );
 
-  const categoryCounts = rewards.reduce<Record<string, number>>((acc, r) => {
-    acc[r.category] = (acc[r.category] ?? 0) + 1;
-    return acc;
-  }, {});
+  const hasActiveFilters = search.trim() !== "" || category !== "ALL" || availableOnly || affordableOnly;
 
-  // Filter then sort: out-of-stock sinks to the bottom
-  const sorted = rewards
-    .filter((r) => filter === "ALL" || r.category === filter)
-    .sort((a, b) => (a.stockQuantity === 0 ? 1 : 0) - (b.stockQuantity === 0 ? 1 : 0));
+  function clearFilters() {
+    setSearch("");
+    setCategory("ALL");
+    setAvailableOnly(false);
+    setAffordableOnly(false);
+  }
+
+  const visibleRewards = useMemo(
+    () => filterAndSortRewards(rewards, { category, search, sort, availableOnly, affordableOnly, balance }),
+    [rewards, category, search, sort, availableOnly, affordableOnly, balance],
+  );
 
   return (
     <div className="space-y-5">
+      <MarketplaceHeader balance={balance} />
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Marketplace</h1>
-          <p className="text-gray-500 text-sm mt-1">Spend your points on something nice</p>
-        </div>
-        <div className="flex items-center gap-2 bg-command-black text-white px-3.5 py-2 rounded-lg shadow-sm">
-          <Coins className="w-4 h-4 text-navy-200" />
-          <span className="font-bold text-sm tabular-nums">{balance.toLocaleString()}</span>
-          <span className="text-navy-300 text-xs">pts</span>
-        </div>
-      </div>
+      <MarketplaceTabs view={view} onChange={setView} requestCount={redemptions.length} />
 
-      {/* ── View tabs ── */}
-      <div role="tablist" aria-label="Marketplace views" className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
-        <button
-          role="tab"
-          aria-selected={view === "browse"}
-          aria-controls="panel-browse"
-          onClick={() => setView("browse")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-command-black ${
-            view === "browse" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <ShoppingBag className="w-3.5 h-3.5" />
-          Browse
-        </button>
-        <button
-          role="tab"
-          aria-selected={view === "requests"}
-          aria-controls="panel-requests"
-          onClick={() => setView("requests")}
-          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-command-black ${
-            view === "requests" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Receipt className="w-3.5 h-3.5" />
-          My Requests
-        </button>
-      </div>
-
-      {/* ── Browse view ── */}
       {view === "browse" && (
-        <div id="panel-browse" role="tabpanel">
-          {/* Category filters — wraps on all screen sizes, no overflow */}
-          <div role="group" aria-label="Filter by category" className="flex flex-wrap gap-2 mb-5">
-            {categories.map((cat) => {
-              const config = REWARD_CATEGORY_CONFIG[cat as keyof typeof REWARD_CATEGORY_CONFIG];
-              const active = filter === cat;
-              const count = cat === "ALL" ? rewards.length : (categoryCounts[cat] ?? 0);
-              // Keep empty categories visible but disabled so the UI stays stable
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setFilter(cat)}
-                  aria-pressed={active}
-                  disabled={count === 0 && cat !== "ALL"}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
-                    count === 0 && cat !== "ALL"
-                      ? "opacity-40 cursor-not-allowed bg-white border-gray-200 text-gray-500"
-                      : active
-                      ? "bg-command-black text-white border-command-black"
-                      : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {cat !== "ALL" && <config.icon className={`w-3.5 h-3.5 ${active ? "text-white" : config.iconClass}`} aria-hidden="true" />}
-                  {cat === "ALL" ? "All Rewards" : config.label}
-                  {!loading && (
-                    <span className={`text-xs tabular-nums ${active ? "text-white/70" : "text-gray-500"}`} aria-label={`${count} items`}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <div id="panel-browse" role="tabpanel" aria-labelledby="tab-browse" className="space-y-4">
+          <MarketplaceToolbar
+            search={search}
+            onSearchChange={setSearch}
+            sort={sort}
+            onSortChange={setSort}
+            availableOnly={availableOnly}
+            onAvailableOnlyChange={setAvailableOnly}
+            affordableOnly={affordableOnly}
+            onAffordableOnlyChange={setAffordableOnly}
+          />
 
-          {/* ── Card grid / list ── */}
-          {loading ? (
-            // Skeleton: single column on mobile, grid on sm+
-            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-200 animate-pulse h-[88px] sm:h-64" />
-              ))}
-            </div>
-          ) : sorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-card border border-table-border">
-              <ShoppingBag className="w-10 h-10 text-gray-200 mb-4" />
-              <p className="text-gray-600 font-medium">No rewards here yet</p>
-              <p className="text-gray-500 text-sm mt-1">Ask HR to add items to the marketplace.</p>
-            </div>
-          ) : (
-            // Mobile: single-column horizontal list  |  sm+: grid
-            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
-              {sorted.map((reward) => {
-                const cfg = REWARD_CATEGORY_CONFIG[reward.category as keyof typeof REWARD_CATEGORY_CONFIG] ?? REWARD_CATEGORY_CONFIG.PHYSICAL;
-                const canAfford = balance >= reward.pointCost;
-                const outOfStock = reward.stockQuantity === 0;
-                const lowStock = !outOfStock && reward.stockQuantity > 0 && reward.stockQuantity <= LOW_STOCK_THRESHOLD;
-                const busy = redeeming === reward.id;
-                const images = reward.imageUrls ?? [];
-                const idx = cardImageIndices[reward.id] ?? 0;
-                const setIdx = (i: number) => setCardImageIndices((prev) => ({ ...prev, [reward.id]: i }));
-                const deficit = reward.pointCost - balance;
+          <CategoryFilters
+            active={category}
+            counts={categoryCounts}
+            total={rewards.length}
+            loading={loading}
+            onChange={(c) => setCategory(c as CategoryFilter)}
+          />
 
-                return (
-                  <div
-                    key={reward.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => openModal(reward)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        openModal(reward);
-                      }
-                    }}
-                    className={`bg-white rounded-card border overflow-hidden cursor-pointer hover:shadow-md transition-shadow sm:hover:-translate-y-0.5 sm:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)]
-                      flex flex-row items-center
-                      sm:flex-col sm:items-stretch
-                      ${outOfStock ? "opacity-55 border-gray-200" : !canAfford ? "opacity-70 border-amber-200" : "border-table-border"}`}
-                  >
-                    {/* ── Image / accent ── */}
-                    {images.length > 0 ? (
-                      <div
-                        className="relative group shrink-0
-                          w-[88px] h-[88px]
-                          sm:w-full sm:h-auto"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={images[idx]}
-                          alt={reward.name}
-                          className="w-full h-full object-contain bg-gray-50 sm:aspect-square"
-                        />
-                        {/* Low-stock badge */}
-                        {lowStock && (
-                          <span className="absolute top-1.5 left-1.5 bg-red-500 text-white font-bold rounded-full shadow-sm
-                            text-[10px] px-1.5 py-px
-                            sm:text-xs sm:px-2 sm:py-0.5 sm:top-2 sm:left-2">
-                            Only {reward.stockQuantity} left!
-                          </span>
-                        )}
-                        {/* Mobile image counter */}
-                        {images.length > 1 && (
-                          <span className="sm:hidden absolute bottom-1 right-1 bg-black/50 text-white text-[9px] font-medium px-1 py-px rounded">
-                            {idx + 1}/{images.length}
-                          </span>
-                        )}
-                        {/* Carousel arrows */}
-                        {images.length > 1 && (
-                          <div className="hidden sm:block">
-                            <button
-                              aria-label="Previous image"
-                              onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + images.length) % images.length); }}
-                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            >
-                              <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <button
-                              aria-label="Next image"
-                              onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % images.length); }}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            >
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-                              {images.map((_, i) => (
-                                <button
-                                  key={i}
-                                  aria-label={`Image ${i + 1} of ${images.length}`}
-                                  aria-current={i === idx ? "true" : undefined}
-                                  onClick={(e) => { e.stopPropagation(); setIdx(i); }}
-                                  className={`w-2 h-2 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${i === idx ? "bg-white" : "bg-white/50"}`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      // Mobile: thin left accent stripe  |  Desktop: square gradient placeholder
-                      <>
-                        <div className={`shrink-0 self-stretch w-1.5 bg-gradient-to-b sm:hidden ${cfg.accent}`} />
-                        <div className={`hidden sm:flex sm:w-full sm:aspect-square sm:bg-gradient-to-br sm:items-center sm:justify-center ${cfg.accent}`}>
-                          <cfg.icon className="w-12 h-12 text-white/70" />
-                        </div>
-                      </>
-                    )}
-
-                    {/* ── Content ── */}
-                    <div className="flex flex-col flex-1 min-w-0 p-3 sm:p-5 gap-1.5 sm:gap-3">
-
-                      {/* Desktop only: icon + badge row */}
-                      <div className="hidden sm:flex items-start justify-between">
-                        <cfg.icon className={`w-7 h-7 ${cfg.iconClass}`} />
-                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>
-                          {cfg.label}
-                        </span>
-                      </div>
-
-                      {/* Name row — badge shown inline on mobile */}
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-gray-900 leading-snug line-clamp-2
-                          text-sm
-                          sm:text-base">
-                          {reward.name}
-                        </h3>
-                        <span className={`sm:hidden shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
-                          {cfg.label}
-                        </span>
-                      </div>
-
-                      {/* Description */}
-                      {reward.description && (
-                        <p className="text-gray-500 leading-relaxed line-clamp-1 sm:line-clamp-2
-                          text-xs
-                          sm:text-sm">
-                          {reward.description}
-                        </p>
-                      )}
-
-                      {/* Price + Redeem */}
-                      <div className="flex items-center justify-between border-t border-gray-100 mt-auto
-                        pt-2
-                        sm:pt-3">
-                        <div>
-                          <p className={`font-bold tabular-nums leading-none ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-500"}
-                            text-sm
-                            sm:text-lg`}>
-                            {reward.pointCost.toLocaleString()}
-                            <span className="font-medium ml-1 text-xs sm:text-sm">pts</span>
-                          </p>
-                          {outOfStock ? (
-                            <p className="text-xs text-gray-500 mt-0.5">Out of stock</p>
-                          ) : !canAfford ? (
-                            <p className="text-xs text-red-500 mt-0.5">Need {deficit.toLocaleString()} more</p>
-                          ) : lowStock ? (
-                            <p className="text-xs text-red-500 font-medium mt-0.5 hidden sm:block">
-                              Only {reward.stockQuantity} left!
-                            </p>
-                          ) : (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {reward.stockQuantity === -1 ? "Unlimited" : `${reward.stockQuantity} left`}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          disabled={!canAfford || outOfStock || busy}
-                          aria-label={outOfStock ? `${reward.name} — sold out` : !canAfford ? `${reward.name} — need ${deficit.toLocaleString()} more pts` : `Redeem ${reward.name} for ${reward.pointCost.toLocaleString()} pts`}
-                          onClick={(e) => { e.stopPropagation(); openModal(reward, true); }}
-                          className={`rounded-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black
-                            text-xs px-3 py-1.5
-                            sm:text-sm sm:px-4 sm:py-2
-                            ${outOfStock || !canAfford
-                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                              : "bg-command-black text-white hover:bg-gray-800"
-                            }`}
-                        >
-                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <RewardGrid
+            loading={loading}
+            rewards={visibleRewards}
+            balance={balance}
+            onOpen={(r: Reward) => openReward(r)}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+          />
         </div>
       )}
 
-      {/* ── My Requests view ── */}
       {view === "requests" && (
-        <div id="panel-requests" role="tabpanel" className="space-y-3">
-          {redemptionsLoading ? (
-            <div className="space-y-3" aria-label="Loading requests" aria-busy="true">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-200 h-20 animate-pulse" />
-              ))}
-            </div>
-          ) : redemptions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-card border border-table-border">
-              <Receipt className="w-10 h-10 text-gray-200 mb-4" aria-hidden="true" />
-              <p className="text-gray-600 font-medium">No requests yet</p>
-              <p className="text-gray-500 text-sm mt-1">Redeem a reward and it will appear here.</p>
-            </div>
-          ) : (
-            <ul role="list" className="space-y-3">
-              {redemptions.map((r) => {
-                const cfg = REWARD_CATEGORY_CONFIG[r.reward.category as keyof typeof REWARD_CATEGORY_CONFIG] ?? REWARD_CATEGORY_CONFIG.PHYSICAL;
-                return (
-                  <li key={r.id} className="bg-white rounded-card border border-table-border p-4 flex items-center gap-4">
-                    <cfg.icon className={`w-8 h-8 shrink-0 ${cfg.iconClass}`} aria-hidden="true" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{r.reward.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Clock className="w-3 h-3 text-gray-500" aria-hidden="true" />
-                        <span className="text-xs text-gray-500">
-                          {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        </span>
-                        <span className="text-xs text-gray-500" aria-hidden="true">·</span>
-                        <span className="text-xs font-medium text-gray-500 tabular-nums">{r.pointsSpent.toLocaleString()} pts</span>
-                      </div>
-                      {r.adminNote && r.status === "REJECTED" && (
-                        <p className="text-xs text-red-600 mt-1">Note: {r.adminNote}</p>
-                      )}
-                    </div>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${REDEMPTION_STATUS_BADGE[r.status]}`}>
-                      {REDEMPTION_STATUS_LABEL[r.status]}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+        <div id="panel-requests" role="tabpanel" aria-labelledby="tab-requests" className="space-y-3">
+          <MyRequestsView loading={redemptionsLoading} redemptions={redemptions} onOpenDetail={setSelectedRedemption} />
         </div>
       )}
 
-      {/* ── Lightbox ── */}
       {lightbox && (
         <ImageLightbox
           images={lightbox.images}
@@ -490,162 +235,21 @@ export default function MarketplacePage() {
         />
       )}
 
-      {/* ── Product detail modal ── */}
-      {selectedReward && (() => {
-        const cfg = REWARD_CATEGORY_CONFIG[selectedReward.category as keyof typeof REWARD_CATEGORY_CONFIG] ?? REWARD_CATEGORY_CONFIG.PHYSICAL;
-        const canAfford = balance >= selectedReward.pointCost;
-        const outOfStock = selectedReward.stockQuantity === 0;
-        const lowStock = !outOfStock && selectedReward.stockQuantity > 0 && selectedReward.stockQuantity <= LOW_STOCK_THRESHOLD;
-        const images = selectedReward.imageUrls ?? [];
-        const total = images.length;
-        const deficit = selectedReward.pointCost - balance;
-        const busy = redeeming === selectedReward.id;
+      <RewardDetailDialog
+        key={selectedReward?.id}
+        reward={selectedReward}
+        balance={balance}
+        startConfirming={confirmOnOpen}
+        onClose={closeReward}
+        onZoom={(images, index) => setLightbox({ images, index })}
+        onSubmit={handleSubmitRequest}
+        onViewRequests={() => {
+          closeReward();
+          setView("requests");
+        }}
+      />
 
-        return (
-          <Dialog open={!!selectedReward} onOpenChange={(open) => { if (!open) closeModal(); }}>
-            <DialogContent
-              aria-label={selectedReward.name}
-              className="max-w-md w-full p-0 gap-0 max-h-[85vh] flex flex-col overflow-hidden rounded-2xl"
-            >
-              {/* Scrollable content */}
-              <div className="overflow-y-auto scrollbar-hide flex-1 rounded-2xl">
-                {total > 0 && (
-                  <div className="relative group">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={images[selectedRewardImageIndex]}
-                      alt={selectedReward.name}
-                      className="w-full aspect-square object-contain bg-white rounded-t-2xl cursor-zoom-in"
-                      onClick={() => setLightbox({ images, index: selectedRewardImageIndex })}
-                    />
-                    {lowStock && (
-                      <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">
-                        Only {selectedReward.stockQuantity} left!
-                      </span>
-                    )}
-                    {total > 1 && (
-                      <>
-                        <button
-                          aria-label="Previous image"
-                          onClick={() => setSelectedRewardImageIndex((i) => (i - 1 + total) % total)}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
-                            opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <button
-                          aria-label="Next image"
-                          onClick={() => setSelectedRewardImageIndex((i) => (i + 1) % total)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white
-                            opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
-                        >
-                          <ChevronRight className="w-5 h-5" />
-                        </button>
-                        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-2">
-                          {images.map((_, i) => (
-                            <button
-                              key={i}
-                              aria-label={`Image ${i + 1} of ${total}`}
-                              aria-current={i === selectedRewardImageIndex ? "true" : undefined}
-                              onClick={() => setSelectedRewardImageIndex(i)}
-                              className={`w-2.5 h-2.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${i === selectedRewardImageIndex ? "bg-white" : "bg-white/50 hover:bg-white/75"}`}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                <div className="p-5 space-y-4">
-                  {!confirming && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>{cfg.label}</span>
-                        <span className="text-xs text-gray-500">
-                          {outOfStock ? "Out of stock" : selectedReward.stockQuantity === -1 ? "Unlimited" : `${selectedReward.stockQuantity} left`}
-                        </span>
-                      </div>
-                      <div>
-                        <h2 id="reward-modal-title" className="text-xl font-bold text-gray-900">{selectedReward.name}</h2>
-                        {selectedReward.description && (
-                          <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{selectedReward.description}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                        <div>
-                          <p className={`font-bold text-lg tabular-nums ${canAfford && !outOfStock ? "text-navy-600" : "text-gray-500"}`}>
-                            {selectedReward.pointCost.toLocaleString()} <span className="text-sm font-medium">pts</span>
-                          </p>
-                          {!canAfford && !outOfStock && (
-                            <p className="text-xs text-red-500 mt-0.5">Need {deficit.toLocaleString()} more pts</p>
-                          )}
-                        </div>
-                        <button
-                          disabled={!canAfford || outOfStock}
-                          onClick={() => setConfirming(true)}
-                          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
-                            outOfStock || !canAfford
-                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                              : "bg-command-black text-white hover:bg-gray-800"
-                          }`}
-                        >
-                          {outOfStock ? "Sold Out" : !canAfford ? "Can't Afford" : "Redeem"}
-                        </button>
-                      </div>
-                    </>
-                  )}
-
-                  {confirming && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                        <h3 className="font-bold text-gray-900">Confirm Redemption</h3>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Reward</span>
-                          <span className="font-semibold text-gray-900 text-right max-w-[60%] leading-snug">{selectedReward.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Cost</span>
-                          <span className="font-semibold text-gray-900 tabular-nums">{selectedReward.pointCost.toLocaleString()} pts</span>
-                        </div>
-                        <div className="border-t border-gray-200 my-1" />
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Your balance</span>
-                          <span className="text-gray-700 tabular-nums">{balance.toLocaleString()} pts</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">After redemption</span>
-                          <span className="font-bold text-navy-600 tabular-nums">{(balance - selectedReward.pointCost).toLocaleString()} pts</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 text-center">HR will review your request and confirm delivery.</p>
-                      <div className="flex gap-3 pt-1">
-                        <button
-                          onClick={() => setConfirming(false)}
-                          disabled={busy}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 disabled:opacity-60"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleRedeem(selectedReward)}
-                          disabled={busy}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold bg-command-black text-white hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black disabled:opacity-60 flex items-center justify-center gap-2"
-                        >
-                          {busy ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Redeeming…</span></> : "Confirm"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
+      <RequestDetailDialog redemption={selectedRedemption} onClose={() => setSelectedRedemption(null)} />
     </div>
   );
 }

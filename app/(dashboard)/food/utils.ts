@@ -1,4 +1,4 @@
-import type { AddOn, Listing, OrderRow } from "./types";
+import type { AddOn, Listing, OrderRow, OrderState } from "./types";
 
 export function formatPrice(price: string) {
   return `₱${parseFloat(price).toFixed(2)}`;
@@ -41,10 +41,12 @@ export function computeSellerTotals(listings: Listing[]) {
       const s = computeListingStats(l);
       acc.orderCount += s.orderCount;
       acc.quantity += s.quantity;
+      acc.total += s.total;
+      acc.collected += s.collected;
       acc.outstanding += s.outstanding;
       return acc;
     },
-    { orderCount: 0, quantity: 0, outstanding: 0 }
+    { orderCount: 0, quantity: 0, total: 0, collected: 0, outstanding: 0 }
   );
 }
 
@@ -70,8 +72,26 @@ export function formatCutoff(cutoffAt: string) {
   });
 }
 
+/** Same "Aug 31, 7:00 PM" shape as formatCutoff — used for delivery dates and other datetimes. */
+export function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  });
+}
+
 export function isClosed(listing: Listing) {
   return !listing.isActive || new Date(listing.cutoffAt) <= new Date();
+}
+
+/**
+ * There's no persisted order-lifecycle field — only a listing's own
+ * `deliveryDate`. An order is "completed" once that delivery date has
+ * passed; otherwise it's still active/upcoming. No "cancelled" bucket
+ * exists because cancelling an order deletes the row outright.
+ */
+export function deriveOrderState(listing: Listing): OrderState {
+  if (listing.deliveryDate && new Date(listing.deliveryDate) <= new Date()) return "COMPLETED";
+  return "ACTIVE";
 }
 
 export function getUrgencyLabel(cutoffAt: string): string | null {

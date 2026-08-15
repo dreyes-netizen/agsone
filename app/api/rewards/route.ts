@@ -27,6 +27,9 @@ export async function GET(req: NextRequest) {
       orderBy: { pointCost: "asc" },
       skip,
       take: limit,
+      // Redemption count backs the Marketplace's "Most redeemed" sort with
+      // real data instead of a fabricated popularity signal.
+      include: { _count: { select: { redemptions: true } } },
     }),
     prisma.reward.count({ where }),
   ]);

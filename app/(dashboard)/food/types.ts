@@ -5,6 +5,7 @@ export type MyOrder = {
   quantity: number;
   note: string | null;
   selectedAddOns: AddOn[];
+  paidAt: string | null;
   createdAt: string;
 };
 
@@ -28,7 +29,8 @@ export type Listing = {
   deliveryDate: string | null;
   addOns: AddOn[];
   isActive: boolean;
-  createdBy: { id: string; displayName: string; avatarUrl: string | null };
+  createdAt: string;
+  createdBy: { id: string; displayName: string; avatarUrl: string | null; department: { name: string } | null };
   myOrder: MyOrder | null;
   _count: { orders: number };
   /** Every order on this listing — only populated when the caller owns it (Selling tab). */
@@ -36,3 +38,8 @@ export type Listing = {
 };
 
 export type Tab = "AVAILABLE" | "MY_ORDERS" | "MY_LISTINGS";
+
+/** Derived, not persisted — a buyer's order is "completed" once its listing's delivery has passed. */
+export type OrderState = "ACTIVE" | "COMPLETED";
+
+export type FoodSortOption = "cutoffSoonest" | "newest" | "priceLow" | "priceHigh";

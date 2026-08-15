@@ -36,10 +36,10 @@ export async function GET(req: NextRequest) {
       ],
     },
     include: {
-      createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
+      createdBy: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
       orders: {
         where: { userId: authUser.id },
-        select: { id: true, quantity: true, note: true, createdAt: true, selectedAddOns: true },
+        select: { id: true, quantity: true, note: true, createdAt: true, selectedAddOns: true, paidAt: true },
       },
       _count: { select: { orders: true } },
     },

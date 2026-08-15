@@ -85,12 +85,15 @@ export default function MinigameSessionPage() {
   // channel isn't exempted via keepAliveWhenHidden.
   useRealtimeChannel(session ? `game:${id}` : null, fetchSession);
 
-  // Slow fallback poll — only catches the rare dropped Realtime message.
+  // Slow fallback poll — only catches a Realtime message dropped while the
+  // socket stayed up (reconnects are already resynced by useRealtimeChannel).
   // Stops once the game is over, and paused while the tab is hidden.
+  //
+  // Kept tighter than the lobby's 5 minutes because a stalled turn is the one
+  // place staleness is actually felt, but 30s was paying for that four times
+  // over — moves arrive via Realtime in the normal case.
   const gameInProgress = !!session && session.status !== "FINISHED" && session.status !== "CANCELLED";
-  // Moves arrive through Realtime. Keep a slower visible-tab fallback so a
-  // dropped broadcast self-heals without invoking Vercel every ten seconds.
-  useVisibleInterval(fetchSession, 30_000, gameInProgress);
+  useVisibleInterval(fetchSession, 120_000, gameInProgress, { resumeHandledByRealtime: true });
 
   useEffect(() => {
     if (!session || !dbUser) return;

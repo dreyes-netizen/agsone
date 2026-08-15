@@ -66,11 +66,13 @@ export default function MinigamesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Slow fallback poll — Realtime handles the common case; this only catches
-  // a rare dropped message. Paused while the tab is hidden.
-  // Realtime is the primary delivery path; this visible-tab poll is only the
-  // fallback for a dropped broadcast or socket outage.
-  useVisibleInterval(load, 60_000);
+  // Slow fallback poll. Realtime above is the primary path and already resyncs
+  // on reconnect, so this only has to catch a broadcast that was dropped while
+  // the socket stayed healthy — `broadcast()` no-ops on failure, so that is a
+  // real but rare case. It does not need to be checked every minute: at 5
+  // minutes it catches exactly the same failures for a fifth of the
+  // invocations. Paused while the tab is hidden.
+  useVisibleInterval(load, 300_000, true, { resumeHandledByRealtime: true });
 
   async function createChallenge() {
     setCreating(true);

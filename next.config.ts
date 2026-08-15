@@ -87,6 +87,46 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "*.supabase.co" },
     ],
+    // Every distinct (src, width, quality) combination is a separately billed
+    // Image Optimization transformation on Vercel — a different meter from
+    // Active CPU, with its own Hobby cap. Avatars, reward art and food photos
+    // are effectively immutable once uploaded (Cloudinary gives new uploads a
+    // new URL), so a long TTL costs nothing in staleness. Narrowing the width
+    // matrix from Next's defaults cuts how many variants can be generated per
+    // source image.
+    minimumCacheTTL: 2678400, // 31 days
+    formats: ["image/webp"],
+    deviceSizes: [640, 828, 1080, 1920],
+    imageSizes: [32, 64, 96, 128, 256],
+  },
+  async redirects() {
+    // Both of these used to be server components whose entire job was to call
+    // redirect() — a function invocation each, on the two most-hit entry points
+    // in the app. Redirects in next.config are evaluated in the routing layer
+    // (step 2, ahead of Proxy at step 3), so these now cost no function and no
+    // middleware at all.
+    //
+    // permanent: false is deliberate. These depend on auth state; a 308 would
+    // be cached by the browser indefinitely and strand users on the wrong page.
+    return [
+      {
+        source: "/dashboard",
+        destination: "/feed",
+        permanent: false,
+      },
+      {
+        source: "/",
+        has: [{ type: "cookie", key: "firebase-token" }],
+        destination: "/feed",
+        permanent: false,
+      },
+      {
+        source: "/",
+        missing: [{ type: "cookie", key: "firebase-token" }],
+        destination: "/login",
+        permanent: false,
+      },
+    ];
   },
   async headers() {
     return [

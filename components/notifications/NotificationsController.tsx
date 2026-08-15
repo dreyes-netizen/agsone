@@ -26,7 +26,9 @@ export function NotificationsController() {
   // only backstops a rare dropped message. Five minutes avoids spending a
   // function invocation every minute while the websocket is healthy. It is
   // still paused while hidden, and the Realtime lifecycle resyncs on wake.
-  useVisibleInterval(load, 300_000, !authLoading && !!user);
+  useVisibleInterval(load, 300_000, !authLoading && !!user, {
+    resumeHandledByRealtime: true,
+  });
 
   // Real-time: refresh the bell the moment a notification (invite, win, etc.)
   // is created for this user.

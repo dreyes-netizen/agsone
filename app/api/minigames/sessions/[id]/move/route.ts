@@ -9,6 +9,8 @@ import { applyDnBMove, checkDnBResult } from "@/lib/minigames/dotsandboxes";
 import { applyBSMove, checkBSResult, maskBSState, type BSState } from "@/lib/minigames/battleship";
 import { applyMemoryMove, checkMemoryResult, maskMemoryState, type MemoryState } from "@/lib/minigames/memory";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { gameLabel } from "@/lib/constants/gameLabels";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 import { broadcastMany } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
@@ -220,24 +222,44 @@ export async function POST(
     }
   }
 
+  const label = gameLabel(session.gameType);
+
   if (didFinish && session.guestId) {
     const opponentId = isHost ? session.guestId : session.hostId;
-    const gameLabel: Record<string, string> = {
-      TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",
-      RPS: "Rock Paper Scissors", DOTS_AND_BOXES: "Dots & Boxes",
-      BATTLESHIP: "Battleship", MEMORY: "Memory",
-    };
-    const label = gameLabel[session.gameType] ?? "Minigame";
+    // Each outcome now carries its own type. All three used to be sent as
+    // GAME_WIN, including "You lost" and "Draw", so the type string could not
+    // be trusted and users had no way to mute losses while keeping wins.
     if (isDraw) {
       await Promise.all([
-        createNotification({ userId: session.hostId, type: "GAME_WIN", title: `${label} — Draw!`, body: "It's a tie. Well played!", data: { sessionId: id } }),
-        createNotification({ userId: session.guestId!, type: "GAME_WIN", title: `${label} — Draw!`, body: "It's a tie. Well played!", data: { sessionId: id } }),
+        createNotification({ userId: session.hostId, type: "GAME_DRAW", title: `${label} — Draw!`, body: "It's a tie. Well played!", data: { sessionId: id } }),
+        createNotification({ userId: session.guestId!, type: "GAME_DRAW", title: `${label} — Draw!`, body: "It's a tie. Well played!", data: { sessionId: id } }),
       ]);
     } else if (winnerId) {
       await Promise.all([
         createNotification({ userId: winnerId, type: "GAME_WIN", title: `${label} — You won! 🎉`, body: session.pointsWager > 0 ? `+${session.pointsWager * 2} pts` : "Good game!", data: { sessionId: id } }),
-        createNotification({ userId: opponentId, type: "GAME_WIN", title: `${label} — You lost`, body: "Better luck next time!", data: { sessionId: id } }),
+        createNotification({ userId: opponentId, type: "GAME_LOST", title: `${label} — You lost`, body: "Better luck next time!", data: { sessionId: id } }),
       ]);
+    }
+  } else if (session.guestId && nextTurn && nextTurn !== authUser.id) {
+    // nextTurn can legitimately be the same player again — Dots & Boxes grants
+    // an extra turn on closing a box, Memory on a matched pair — so this must
+    // not fire "your turn" at the person who just moved.
+    // Not finished and the turn has passed to the opponent. Turn-based games
+    // previously relied entirely on Realtime for this, so a player who had
+    // navigated away simply never learned it was their move and the game
+    // stalled indefinitely — there is no abandoned-game timeout.
+    //
+    // Throttled per session so a fast back-and-forth doesn't fire on every
+    // move, and grouped by session in the catalog as a second line of defence.
+    const turnLimit = await checkRateLimit(`turn:${id}:${nextTurn}`, "notify");
+    if (turnLimit.allowed) {
+      void createNotification({
+        userId: nextTurn,
+        type: "GAME_YOUR_TURN",
+        title: `${label} — your turn`,
+        body: `${authUser.displayName} has played. It's your move.`,
+        data: { sessionId: id },
+      }).catch((err) => console.error("your-turn notification failed", err));
     }
   }
 

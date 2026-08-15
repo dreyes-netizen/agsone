@@ -394,10 +394,19 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime  @default(now())
 
+  // Collapses repeat events onto one row — "3 people reacted to your post"
+  // rather than three notifications. The bell shows only the 30 most recent
+  // with no pagination, so an ungrouped high-volume type (reactions, comments)
+  // would push everything else out of a user's window. Null = always insert.
+  // Only *unread* rows are merged into; see lib/helpers/createNotification.ts.
+  groupKey  String?
+  count     Int       @default(1)
+
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@index([userId, groupKey, readAt])
 }
 
 model AuditLog {

@@ -2,17 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { gameLabel } from "@/lib/constants/gameLabels";
 import { broadcastMany } from "@/lib/realtime/broadcast";
 import { initState, type GameType } from "@/lib/minigames/initState";
 
-const GAME_LABELS: Record<string, string> = {
-  TIC_TAC_TOE: "Tic-Tac-Toe",
-  CONNECT_FOUR: "Connect Four",
-  RPS: "Rock Paper Scissors",
-  DOTS_AND_BOXES: "Dots & Boxes",
-  BATTLESHIP: "Battleship",
-  MEMORY: "Memory",
-};
 
 const sessionSelect = {
   id: true,
@@ -87,7 +80,7 @@ export async function POST(
     data: { state: JSON.parse(JSON.stringify({ ...oldState, rematchSessionId: created.id, rematchHostId: authUser.id })) },
   });
 
-  const label = GAME_LABELS[old.gameType] ?? "Minigame";
+  const label = gameLabel(old.gameType);
   // If the host requested, use the name already loaded via `old.host`; otherwise
   // it's the guest requesting, whose name verifyAuth already returned — no
   // extra query needed either way.

@@ -2,16 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { gameLabel } from "@/lib/constants/gameLabels";
 import { z } from "zod";
 
 const schema = z.object({ userId: z.string().uuid() });
-
-const GAME_LABELS: Record<string, string> = {
-  TIC_TAC_TOE: "Tic-Tac-Toe",
-  CONNECT_FOUR: "Connect Four",
-  RPS: "Rock Paper Scissors",
-  DOTS_AND_BOXES: "Dots & Boxes",
-};
 
 export async function POST(
   req: NextRequest,
@@ -34,7 +28,7 @@ export async function POST(
   if (session.status !== "WAITING") return NextResponse.json({ error: "Game not open" }, { status: 409 });
   if (parsed.data.userId === authUser.id) return NextResponse.json({ error: "Cannot invite yourself" }, { status: 400 });
 
-  const label = GAME_LABELS[session.gameType] ?? "Minigame";
+  const label = gameLabel(session.gameType);
 
   await createNotification({
     userId: parsed.data.userId,

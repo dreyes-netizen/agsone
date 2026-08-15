@@ -5,6 +5,7 @@ import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { notifyRole, ADMIN_ROLES } from "@/lib/helpers/notifyRole";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -108,6 +109,17 @@ export async function POST(req: NextRequest) {
     }
     throw err;
   }
+
+  // The employee's points are already gone at this point — they were deducted
+  // inside the transaction above, not on approval. So a redemption sitting
+  // unnoticed in the queue is someone who has paid and is waiting. The queue
+  // was previously pull-only, discoverable only by opening /admin/redemptions.
+  void notifyRole([...ADMIN_ROLES], {
+    type: "REDEMPTION_REQUESTED",
+    title: "Reward redemption waiting",
+    body: `${user.displayName} redeemed ${reward.name} for ${reward.pointCost} pts.`,
+    data: { redemptionId: redemption.id, rewardId: reward.id },
+  });
 
   scheduleBroadcast([
     { topic: realtimeTopics.profile(user.id) },

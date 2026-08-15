@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { gameLabel } from "@/lib/constants/gameLabels";
 import { broadcastMany } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
@@ -51,15 +52,14 @@ export async function POST(
     ]);
   }
 
-  const gameLabel: Record<string, string> = {
-    TIC_TAC_TOE: "Tic-Tac-Toe", CONNECT_FOUR: "Connect Four",
-    RPS: "Rock Paper Scissors", DOTS_AND_BOXES: "Dots & Boxes",
-  };
-  const label = gameLabel[session.gameType] ?? "Minigame";
+  const label = gameLabel(session.gameType);
 
   await Promise.all([
     createNotification({ userId: winnerId, type: "GAME_WIN", title: `${label} — Opponent forfeited!`, body: session.pointsWager > 0 ? `+${session.pointsWager * 2} pts awarded` : "You win!", data: { sessionId: id } }),
-    createNotification({ userId: authUser.id, type: "GAME_WIN", title: `${label} — You forfeited`, body: "Better luck next time.", data: { sessionId: id } }),
+    // The forfeiter lost, so this is GAME_LOST. It used to be sent as GAME_WIN
+    // with a "You forfeited" title — the type contradicted the message, which
+    // made the outcome impossible to filter or toggle on.
+    createNotification({ userId: authUser.id, type: "GAME_LOST", title: `${label} — You forfeited`, body: "Better luck next time.", data: { sessionId: id } }),
   ]);
 
   // Wake the opponent's board (game over) and refresh lobbies.

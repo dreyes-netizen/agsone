@@ -3,6 +3,8 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { broadcastMany } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { createNotification } from "@/lib/helpers/createNotification";
+import { gameLabel } from "@/lib/constants/gameLabels";
 
 export async function POST(
   req: NextRequest,
@@ -96,6 +98,21 @@ export async function POST(
       guest: { select: { id: true, displayName: true, avatarUrl: true } },
     },
   });
+
+  // Tell the host their game has started. This was Realtime-only, which meant
+  // a host who had navigated away learned nothing — despite their wager having
+  // just been debited and `currentTurn` being set to them. The game then sat
+  // stalled on a player who had no idea it was their move, and there is no
+  // abandoned-game timeout to recover it.
+  void createNotification({
+    userId: session.hostId,
+    type: "GAME_JOINED",
+    title: `${gameLabel(session.gameType)} — your challenge was accepted`,
+    body: session.pointsWager > 0
+      ? `${authUser.displayName} joined. ${session.pointsWager} pts staked each — it's your move.`
+      : `${authUser.displayName} joined. It's your move.`,
+    data: { sessionId: id },
+  }).catch((err) => console.error("game joined notification failed", err));
 
   // Game is now active: wake the host's board, and drop it from open lobbies.
   await broadcastMany([

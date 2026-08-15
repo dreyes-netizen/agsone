@@ -12,6 +12,13 @@ const SCOPE_CONFIG = {
   // uploads): loose enough for legitimate rapid admin work, tight enough to
   // blunt scripted abuse from a valid-but-malicious account.
   write: { limit: 30, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
+  // Throttles notifications that fire on a high-frequency action rather than a
+  // user request — currently "your turn" in turn-based minigames, where a fast
+  // exchange would otherwise notify on every single move. Keyed per session per
+  // recipient, not per user, so two concurrent games don't starve each other.
+  // Deliberately not a hard cap on anything the user can see: exceeding it
+  // silently drops the notification, and Realtime still updates the open board.
+  notify: { limit: 2, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
 } satisfies Record<string, { limit: number; window: `${number} ${"s" | "m" | "h" | "d"}`; windowMs: number }>;
 
 export type RateLimitScope = keyof typeof SCOPE_CONFIG;
@@ -41,10 +48,13 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
 // Resets on cold start — only used locally. Do not rely on in production.
 
 type Window = { count: number; windowStart: number };
-const stores = {
-  assistant: new Map<string, Window>(),
-  write: new Map<string, Window>(),
-} satisfies Record<RateLimitScope, Map<string, Window>>;
+
+// Derived from SCOPE_CONFIG rather than listed by hand, so adding a scope above
+// cannot leave this map missing an entry (which it silently did until the
+// compiler caught it).
+const stores = Object.fromEntries(
+  (Object.keys(SCOPE_CONFIG) as RateLimitScope[]).map((scope) => [scope, new Map<string, Window>()]),
+) as Record<RateLimitScope, Map<string, Window>>;
 
 function inMemoryCheck(scope: RateLimitScope, userId: string): { allowed: boolean; remaining: number } {
   const cfg = SCOPE_CONFIG[scope];

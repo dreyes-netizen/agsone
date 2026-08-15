@@ -7,6 +7,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { FLAIR_IDS } from "@/lib/flairs";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
+import { resolveMentionRecipients } from "@/lib/helpers/parseMentions";
 
 const PAGE_SIZE = 15;
 
@@ -222,6 +223,32 @@ export async function POST(req: NextRequest) {
     },
     include: { author: { select: { displayName: true, avatarUrl: true } } },
   });
+
+  // Notify anyone @mentioned in the body. The composer has written
+  // `@[Name|uuid]` tokens into content for a while, but nothing server-side
+  // ever read them — so mentions rendered as links and notified nobody.
+  // resolveMentionRecipients validates each id against a real active user and
+  // drops anyone who cannot see this post, because the ids arrive from the
+  // client and are otherwise forgeable.
+  void resolveMentionRecipients({
+    content: post.content,
+    postDepartmentId: post.departmentId,
+    authorId: user.id,
+  })
+    .then((recipients) =>
+      Promise.allSettled(
+        recipients.map((r) =>
+          createNotification({
+            userId: r.id,
+            type: "MENTION",
+            title: `${user.displayName} mentioned you`,
+            body: post.title?.trim() || post.content.slice(0, 140),
+            data: { postId: post.id },
+          }),
+        ),
+      ),
+    )
+    .catch((err) => console.error("mention notifications failed", err));
 
   scheduleBroadcast([{ topic: realtimeTopics.feed }]);
   return NextResponse.json({ data: { ...post, pollOptions: [], myVoteOptionId: null } }, { status: 201 });

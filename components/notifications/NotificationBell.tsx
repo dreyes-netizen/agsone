@@ -4,21 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useNotificationsStore, type Notification } from "@/lib/stores/notifications";
+import { getNotificationEntry } from "@/lib/constants/notificationTypes";
 
+// Deep links come from the notification catalog, not a switch maintained here.
+// The switch this replaces had drifted badly: it routed two types nothing ever
+// emitted (POINTS_AWARDED, FEEDBACK_REPLY, REDEMPTION_PENDING) while every real
+// FEEDBACK_* type and REDEMPTION_FULFILLED fell through to null and rendered
+// unclickable. Sharing one source with the prefs UI means they cannot disagree.
 function getNotificationLink(n: Notification): string | null {
-  switch (n.type) {
-    case "SHOUTOUT_RECEIVED":      return "/feed";
-    case "POINTS_AWARDED":         return "/profile";
-    case "GAME_INVITE":             return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/minigames";
-    case "GAME_WIN":               return n.data?.sessionId ? `/minigames/${n.data.sessionId}` : "/games";
-    case "REDEMPTION_APPROVED":
-    case "REDEMPTION_REJECTED":
-    case "REDEMPTION_PENDING":     return "/marketplace";
-    case "LEVEL_UP":
-    case "BADGE_EARNED":           return "/profile";
-    case "FEEDBACK_REPLY":         return "/feedback";
-    default:                       return null;
-  }
+  return getNotificationEntry(n.type)?.href(n.data ?? null) ?? null;
 }
 
 export function NotificationBell() {
@@ -95,7 +89,14 @@ export function NotificationBell() {
                     <div className="flex items-start gap-2">
                       {!n.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-navy-500 shrink-0" />}
                       <div className={!n.readAt ? "" : "ml-4"}>
-                        <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {n.title}
+                          {n.count > 1 && (
+                            <span className="ml-1.5 inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 align-middle">
+                              ×{n.count}
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
                         <p className="text-[10px] text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
                         {link && <p className="text-[10px] text-navy-500 mt-0.5">Tap to view →</p>}

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { createNotification } from "@/lib/helpers/createNotification";
 
 const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().min(0) });
 
@@ -81,6 +82,17 @@ export async function POST(
         selectedAddOns: addOns.value,
       },
     });
+    // Tell the seller. The `food` realtime topic is global and payload-free, so
+    // before this a seller only learned about an order by having the page open.
+    // No self-check needed — ordering your own listing is already a 403 above.
+    void createNotification({
+      userId: listing.createdById,
+      type: "FOOD_ORDER_PLACED",
+      title: "New order on your listing",
+      body: `${authUser.displayName} ordered ${parsed.data.quantity}× "${listing.title}".`,
+      data: { listingId: id, orderId: order.id },
+    }).catch((err) => console.error("food order notification failed", err));
+
     scheduleBroadcast([{ topic: realtimeTopics.food }]);
     return NextResponse.json({ data: order }, { status: 201 });
   } catch (err) {
@@ -145,7 +157,9 @@ export async function DELETE(
 
   const order = await prisma.foodOrder.findUnique({
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
-    include: { listing: { select: { cutoffAt: true, isActive: true } } },
+    include: {
+      listing: { select: { cutoffAt: true, isActive: true, title: true, createdById: true } },
+    },
   });
   if (!order) return NextResponse.json({ error: "No order found" }, { status: 404 });
   if (!order.listing.isActive || order.listing.cutoffAt <= new Date()) {
@@ -155,6 +169,15 @@ export async function DELETE(
   await prisma.foodOrder.delete({
     where: { listingId_userId: { listingId: id, userId: authUser.id } },
   });
+
+  // The seller is cooking to an order count, so a cancellation matters to them.
+  void createNotification({
+    userId: order.listing.createdById,
+    type: "FOOD_ORDER_CANCELLED",
+    title: "An order was cancelled",
+    body: `${authUser.displayName} cancelled their order on "${order.listing.title}".`,
+    data: { listingId: id },
+  }).catch((err) => console.error("food cancel notification failed", err));
 
   scheduleBroadcast([{ topic: realtimeTopics.food }]);
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { createNotification } from "@/lib/helpers/createNotification";
 
 const schema = z.object({ paid: z.boolean() });
 
@@ -27,6 +28,19 @@ export async function PATCH(
     where: { id: orderId, listingId: id },
     data: { paidAt: parsed.data.paid ? new Date() : null },
   });
+
+  // Only on marking paid. This flag is reversible, but un-marking is a seller
+  // correcting their own bookkeeping — telling the buyer "your payment was
+  // un-confirmed" would alarm more than it informs.
+  if (parsed.data.paid && updated.userId !== authUser.id) {
+    void createNotification({
+      userId: updated.userId,
+      type: "FOOD_ORDER_PAID",
+      title: "Payment confirmed",
+      body: `${authUser.displayName} confirmed your payment for "${listing.title}".`,
+      data: { listingId: id, orderId },
+    }).catch((err) => console.error("food paid notification failed", err));
+  }
 
   scheduleBroadcast([{ topic: realtimeTopics.food }]);
 

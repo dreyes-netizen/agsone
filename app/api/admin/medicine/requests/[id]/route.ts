@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { createNotification } from "@/lib/helpers/createNotification";
 
 const schema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -27,7 +28,17 @@ export async function PATCH(
 
   const request = await prisma.medicineRequest.findUnique({
     where: { id },
-    select: { id: true, status: true, medicineId: true, quantity: true, userId: true },
+    // medicine.name is selected for the notification body — "Paracetamol"
+    // is the whole point of the message, and pulling it here avoids a second
+    // round trip after the transaction.
+    select: {
+      id: true,
+      status: true,
+      medicineId: true,
+      quantity: true,
+      userId: true,
+      medicine: { select: { name: true } },
+    },
   });
   if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (request.status !== "PENDING") {
@@ -72,6 +83,18 @@ export async function PATCH(
       throw err;
     }
 
+    // Tell the requester. Until now the outcome of a decision made about a
+    // named person was discoverable only by reopening /medicine and re-reading
+    // their own list. Fire-and-forget: a failed notification must not undo an
+    // approval that has already decremented stock.
+    void createNotification({
+      userId: request.userId,
+      type: "MEDICINE_APPROVED",
+      title: "Medicine request approved",
+      body: `Your request for ${request.medicine.name} (x${request.quantity}) is approved — you can collect it from HR.`,
+      data: { requestId: request.id, medicineId: request.medicineId },
+    }).catch((err) => console.error("medicine approve notification failed", err));
+
     scheduleBroadcast([
       { topic: realtimeTopics.medicine },
       { topic: realtimeTopics.medicineRequests },
@@ -93,6 +116,14 @@ export async function PATCH(
     where: { id },
     select: { id: true, status: true, approvedAt: true, approvedById: true },
   });
+
+  void createNotification({
+    userId: request.userId,
+    type: "MEDICINE_REJECTED",
+    title: "Medicine request declined",
+    body: `Your request for ${request.medicine.name} (x${request.quantity}) was declined. Speak to HR if you need more detail.`,
+    data: { requestId: request.id, medicineId: request.medicineId },
+  }).catch((err) => console.error("medicine reject notification failed", err));
 
   scheduleBroadcast([
     { topic: realtimeTopics.medicineRequests },

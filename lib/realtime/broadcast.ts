@@ -19,7 +19,13 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // A hung Realtime endpoint must not stall a caller that awaits broadcast()
 // directly — bound the request instead of relying on every call site
 // remembering to fire-and-forget it.
-const BROADCAST_TIMEOUT_MS = 3000;
+//
+// Kept deliberately tight: `scheduleBroadcast` runs this inside `after()`
+// (Vercel waitUntil), and waitUntil time is billed as Active CPU. At 3s a slow
+// Supabase could add three billed seconds to *every* mutation route. 1s is well
+// past the normal round trip, and overshooting it costs nothing real — a missed
+// ping is already a handled case, recovered by the client's fallback poll.
+const BROADCAST_TIMEOUT_MS = 1000;
 
 type BroadcastMessage = {
   topic: string;

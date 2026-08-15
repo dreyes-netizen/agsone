@@ -17,7 +17,7 @@ export function CategoryFilters({ active, counts, total, loading, onChange }: Ca
   const categories: CategoryFilter[] = ["ALL", ...MEDICINE_CATEGORIES];
 
   return (
-    <div role="group" aria-label="Filter by category" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 sm:flex-wrap sm:overflow-visible">
+    <div role="group" aria-label="Filter by category" className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 max-w-full sm:flex-wrap sm:overflow-visible sm:max-w-none">
       {categories.map((cat) => {
         const isActive = active === cat;
         const count = cat === "ALL" ? total : (counts[cat] ?? 0);

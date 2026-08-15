@@ -33,7 +33,7 @@ export function MedicineCard({ medicine, requesting, pending, onOpen, onRequest 
       }}
       aria-label={`View ${medicine.name}`}
       className={`group bg-white rounded-card border overflow-hidden cursor-pointer transition-shadow sm:hover:shadow-md sm:hover:-translate-y-0.5 sm:motion-safe:transition-transform sm:[transition-timing-function:cubic-bezier(0.25,1,0.5,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black
-        flex flex-row items-center
+        flex flex-row items-center w-full min-w-0
         sm:flex-col sm:items-stretch
         ${stock.outOfStock ? "border-gray-200" : "border-table-border"}`}
     >
@@ -54,13 +54,13 @@ export function MedicineCard({ medicine, requesting, pending, onOpen, onRequest 
       </div>
 
       <div className="flex flex-col flex-1 min-w-0 p-3 sm:p-3.5 gap-1 sm:gap-1.5">
-        <h3 className="font-bold text-gray-900 leading-snug line-clamp-2 text-sm">{medicine.name}</h3>
+        <h3 className="font-bold text-gray-900 leading-snug line-clamp-2 text-sm min-w-0 break-words">{medicine.name}</h3>
         {medicine.caption && (
-          <p className="text-gray-500 leading-snug line-clamp-1 sm:line-clamp-2 text-xs">{medicine.caption}</p>
+          <p className="text-gray-500 leading-snug line-clamp-1 sm:line-clamp-2 text-xs min-w-0 break-words">{medicine.caption}</p>
         )}
 
         <div className="flex items-center justify-between gap-2 border-t border-gray-100 mt-auto pt-1.5 sm:pt-2">
-          <p className={`text-xs ${stockLine.className}`}>{stockLine.text}</p>
+          <p className={`text-xs min-w-0 truncate ${stockLine.className}`}>{stockLine.text}</p>
           <button
             onClick={(e) => {
               e.stopPropagation();

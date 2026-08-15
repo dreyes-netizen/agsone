@@ -82,9 +82,9 @@ export function MedicineDetailDialog({ medicine, pending, startConfirming, onClo
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{medicine.name}</h2>
+                  <h2 className="text-xl font-bold text-gray-900 break-words">{medicine.name}</h2>
                   {medicine.caption && (
-                    <DialogDescription className="text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">
+                    <DialogDescription className="text-sm text-gray-600 mt-2 whitespace-pre-wrap break-words leading-relaxed">
                       {medicine.caption}
                     </DialogDescription>
                   )}

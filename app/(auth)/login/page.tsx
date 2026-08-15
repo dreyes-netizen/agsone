@@ -50,35 +50,38 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
 
-      const syncRes = await fetch("/api/auth/sync", {
+      // Links the account, mints the HttpOnly session cookie, and returns the
+      // profile in one call. The cookie has to exist BEFORE navigating or the
+      // proxy — which gates pages on it — bounces the first request straight
+      // back here.
+      const res = await fetch("/api/auth/bootstrap", {
         method: "POST",
         headers: { Authorization: `Bearer ${idToken}` },
       });
 
-      if (syncRes.status === 403) {
+      if (res.status === 403) {
+        const reason = await res.json().catch(() => ({ error: "" }));
         await signOut(auth);
-        setError("Your email is not registered in the system. Please contact HR to be added.");
+        setError(
+          reason.error === "account_deactivated"
+            ? "Your account has been deactivated. Please contact HR."
+            : "Your email is not registered in the system. Please contact HR to be added.",
+        );
         return;
       }
 
       // fetch() doesn't throw on HTTP errors, so a 500/502/network blip would
-      // otherwise fall through to the dashboard with a Firebase session but no
-      // synced DB user — breaking every /api/me-backed page. Fail closed.
-      if (!syncRes.ok) {
+      // otherwise fall through to the app with a Firebase session but no
+      // synced DB user — breaking every profile-backed page. Fail closed.
+      if (!res.ok) {
         await signOut(auth);
         setError("Something went wrong while signing you in. Please try again.");
         return;
       }
 
-      // Establish the HttpOnly session cookie BEFORE navigating, so the proxy
-      // (which gates pages on this cookie) doesn't bounce the first /dashboard
-      // request back to /login. AuthProvider also refreshes it on token change.
-      await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
-
-      router.push("/dashboard");
+      // Straight to /feed rather than /dashboard — the latter is now a
+      // routing-layer redirect here anyway, so going via it just costs a hop.
+      router.push("/feed");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Sign-in failed";
       setError(message);

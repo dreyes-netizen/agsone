@@ -73,7 +73,6 @@ export function NotificationsTab() {
           {[
             { type: "SHOUTOUT_RECEIVED", label: "Shoutout received", description: "When a colleague shouts you out" },
             { type: "POINTS_AWARDED",    label: "Points awarded",   description: "When an admin manually awards you points" },
-            { type: "MILESTONE_REWARD",  label: "Milestone reward", description: "On your birthday or work anniversary" },
           ].map(({ type, label, description }) => {
             const enabled = notifPrefs[type] !== false;
             return (

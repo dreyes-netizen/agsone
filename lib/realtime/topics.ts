@@ -19,7 +19,6 @@ export const realtimeTopics = {
   medicineRequests: "medicine:requests",
   settings: "settings",
   documents: "documents",
-  milestones: "milestones",
   adminAnalytics: "admin:analytics",
   adminAudit: "admin:audit",
   minigameStats: "minigames:stats",

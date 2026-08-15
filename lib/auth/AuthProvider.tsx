@@ -50,29 +50,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(firebaseUser);
           setToken(idToken);
 
-          // Set the HttpOnly session cookie server-side (replaces the old
-          // JS-readable document.cookie write). Kept fresh on each token change.
-          fetch("/api/auth/session", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${idToken}` },
-          }).catch((err) => console.error("session cookie set failed", err));
-
-          const syncRes = await fetch("/api/auth/sync", {
+          // One call sets the HttpOnly session cookie, links a first-time
+          // Firebase UID onto the HR-created account, and returns the profile.
+          // This handler also runs on Firebase's ~hourly silent token refresh,
+          // so what used to be three requests per tab per hour is now one.
+          const res = await fetch("/api/auth/bootstrap", {
             method: "POST",
             headers: { Authorization: `Bearer ${idToken}` },
           });
 
-          if (syncRes.status === 403) {
+          // 403 is terminal: either the email isn't in the directory, or the
+          // account has been deactivated. Both mean this session shouldn't
+          // continue, so drop it rather than leaving the app running with a
+          // null profile.
+          if (res.status === 403) {
             await signOut(auth);
             return;
           }
 
-          const meRes = await fetch("/api/me", {
-            headers: { Authorization: `Bearer ${idToken}` },
-          });
-          if (meRes.ok) {
-            const meJson = await meRes.json();
-            setDbUser(meJson.data as DbProfile);
+          if (res.ok) {
+            const json = await res.json();
+            setDbUser(json.data as DbProfile);
           }
         } else {
           setUser(null);

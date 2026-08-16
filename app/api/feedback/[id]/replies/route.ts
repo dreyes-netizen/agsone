@@ -3,6 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { notifyRole, ADMIN_ROLES } from "@/lib/helpers/notifyRole";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
@@ -23,7 +24,11 @@ export async function POST(
   const feedback = await prisma.feedback.findUnique({ where: { id } });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (feedback.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  if (feedback.isAnonymous) return NextResponse.json({ error: "Cannot reply to anonymous feedback" }, { status: 400 });
+
+  // Anonymous threads are repliable from this side too. The reporter stays
+  // anonymous to HR: the admin thread GET strips the author from any reply
+  // whose authorId matches the (hidden) reporter, so this only ever appears to
+  // HR as "Reporter".
 
   const body = await req.json();
   const parsed = replySchema.safeParse(body);
@@ -38,19 +43,33 @@ export async function POST(
 
   await prisma.feedback.update({ where: { id }, data: { updatedAt: new Date() } });
 
-  // Notify the HR admin who last replied, if any
-  const lastHrReply = await prisma.feedbackReply.findFirst({
-    where: { feedbackId: id, id: { not: reply.id }, author: { role: "HR_ADMIN" } },
+  // Notify the admin who last replied. Previously filtered on HR_ADMIN alone,
+  // so a thread handled entirely by a SUPER_ADMIN notified nobody and the
+  // reporter's reply went unseen. Falls back to the whole approver group when
+  // no one has replied yet — which is now reachable, since HR can be the second
+  // participant rather than always the first.
+  const lastAdminReply = await prisma.feedbackReply.findFirst({
+    where: {
+      feedbackId: id,
+      id: { not: reply.id },
+      author: { role: { in: ["HR_ADMIN", "SUPER_ADMIN"] } },
+    },
     orderBy: { createdAt: "desc" },
     select: { authorId: true },
   });
-  if (lastHrReply) {
-    createNotification({
-      userId: lastHrReply.authorId,
-      type: "FEEDBACK_EMPLOYEE_REPLIED",
-      title: "Employee replied to feedback",
-      body: "A reply was added to a feedback thread you responded to.",
-    });
+
+  const replyNotification = {
+    type: "FEEDBACK_EMPLOYEE_REPLIED",
+    title: "Reporter replied",
+    body: "A new reply was added to a confidential report.",
+    data: { feedbackId: id },
+  };
+
+  if (lastAdminReply) {
+    void createNotification({ ...replyNotification, userId: lastAdminReply.authorId })
+      .catch((err) => console.error("feedback reply notification failed", err));
+  } else {
+    void notifyRole([...ADMIN_ROLES], replyNotification, { excludeUserId: user.id });
   }
 
   scheduleBroadcast([

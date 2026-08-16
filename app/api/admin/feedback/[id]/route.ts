@@ -35,8 +35,26 @@ export async function GET(
 
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Anonymity has to hold across the whole thread, not just the opening report.
+  // Replies previously returned their full author unconditionally, so the moment
+  // an anonymous reporter answered HR they would have unmasked themselves — the
+  // reason replies used to be blocked outright on anonymous threads.
+  //
+  // HR-authored replies keep their identity (HR is never anonymous here); only
+  // replies written by the reporter are stripped, and flagged so the UI can
+  // still label them as coming from the reporter.
+  const replies = feedback.replies.map((r) =>
+    feedback.isAnonymous && r.authorId === feedback.authorId
+      ? { ...r, authorId: null, author: null, isReporter: true }
+      : { ...r, isReporter: false },
+  );
+
   return NextResponse.json({
-    data: { ...feedback, author: feedback.isAnonymous ? null : feedback.author },
+    data: {
+      ...feedback,
+      author: feedback.isAnonymous ? null : feedback.author,
+      replies,
+    },
     realtimeTopic: confidentialRealtimeTopic("feedback-thread", id),
   });
 }

@@ -27,7 +27,16 @@ export async function POST(
     include: { author: { select: { email: true, displayName: true } } },
   });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (feedback.isAnonymous) return NextResponse.json({ error: "Cannot reply to anonymous feedback" }, { status: 400 });
+
+  // Anonymous threads are repliable. `isAnonymous` defaults to true in the
+  // submit schema, so blocking replies here meant the *default* whistleblower
+  // report could never be answered — HR's only possible action was a status
+  // change, and the reporter never heard anything back.
+  //
+  // Replying is safe because the reporter's identity is never exposed to HR:
+  // the thread GET nulls the author on the report and on any reply the reporter
+  // wrote. The notification and email below go outward to the reporter, who
+  // obviously already knows who they are.
 
   const body = await req.json();
   const parsed = replySchema.safeParse(body);

@@ -415,6 +415,42 @@ export const TOGGLEABLE_TYPES = (
   Object.keys(NOTIFICATION_TYPES) as NotificationType[]
 ).filter((t) => NOTIFICATION_TYPES[t].toggleable);
 
+/** Whether a type is relevant to someone holding this role. */
+export function isAudienceMatch(audience: NotificationAudience, role: string): boolean {
+  if (audience === "everyone") return true;
+  if (audience === "admin") return role === "HR_ADMIN" || role === "SUPER_ADMIN";
+  // Budget notifications only reach managers — HR_ADMIN and SUPER_ADMIN are
+  // exempt from the monthly cap entirely, so the rows would never fire for them.
+  if (audience === "manager") return role === "MANAGER";
+  return false;
+}
+
+/**
+ * The preference rows to show a given role, bucketed by group in catalog order.
+ *
+ * Drives the profile preferences tab. Previously that tab hardcoded two rows —
+ * one of which (`POINTS_AWARDED`) matched no emitter — so most notifications
+ * had no visible switch at all and one of the two that did was inert.
+ */
+export function preferenceGroupsForRole(
+  role: string,
+): { group: NotificationGroup; types: NotificationType[] }[] {
+  const buckets = new Map<NotificationGroup, NotificationType[]>();
+
+  for (const type of TOGGLEABLE_TYPES) {
+    const entry = NOTIFICATION_TYPES[type];
+    if (!isAudienceMatch(entry.audience, role)) continue;
+    const list = buckets.get(entry.group) ?? [];
+    list.push(type);
+    buckets.set(entry.group, list);
+  }
+
+  return NOTIFICATION_GROUPS.filter((g) => buckets.has(g)).map((group) => ({
+    group,
+    types: buckets.get(group)!,
+  }));
+}
+
 /**
  * Renamed pref keys. The stored JSON on existing users still carries the old
  * key, so a read-time alias keeps someone who opted out of "Points" opted out

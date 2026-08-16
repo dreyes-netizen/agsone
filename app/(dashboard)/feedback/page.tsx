@@ -557,7 +557,7 @@ export default function FeedbackPage() {
 
                   {/* Replies */}
                   <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4" aria-label="Thread replies">
-                    {thread.replies.length === 0 && !thread.isAnonymous && (
+                    {thread.replies.length === 0 && (
                       <p className="text-xs text-gray-500 text-center py-4">
                         No replies yet. HR will respond here.
                       </p>
@@ -616,16 +616,18 @@ export default function FeedbackPage() {
 
                   {/* Reply input */}
                   <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex-shrink-0">
-                    {thread.isAnonymous ? (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                        <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-800">
+                    {thread.isAnonymous && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 mb-2">
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
                           <EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> Anonymous submission
                         </p>
                         <p className="text-xs text-amber-600 mt-0.5">
-                          HR cannot reply to anonymous feedback. Your identity is protected.
+                          You can reply here and HR can reply back. Your identity stays hidden
+                          from them throughout.
                         </p>
                       </div>
-                    ) : (
+                    )}
+                    {(
                       <div className="flex flex-col gap-1 flex-1">
                         <div className="flex gap-3 items-end">
                           <label htmlFor="reply-input" className="sr-only">Reply to HR</label>

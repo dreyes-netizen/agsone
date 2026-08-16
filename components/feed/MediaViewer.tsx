@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { MediaCanvas, type MediaCanvasHandle } from "@/components/feed/MediaCanvas";
 import { PostViewerSidebar } from "@/components/feed/PostViewerSidebar";
+import type { GifResult } from "@/lib/giphy/client";
 import type { CommentItem, FeedPost } from "@/lib/types/feed";
 
 type ReplyTarget = { postId: string; commentId: string; displayName: string } | null;
@@ -60,6 +61,8 @@ export function MediaViewer({
   onDeleteComment,
   onCommentDraftChange,
   onSubmitComment,
+  employees = [],
+  onNeedEmployees,
 }: {
   open: boolean;
   onClose: () => void;
@@ -100,7 +103,9 @@ export function MediaViewer({
   onToggleExpandedReplies: (commentId: string) => void;
   onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
   onCommentDraftChange: (postId: string, value: string) => void;
-  onSubmitComment: (postId: string) => void;
+  onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
+  employees?: { id: string; displayName: string }[];
+  onNeedEmployees?: () => void;
 }) {
   const canvasRef = useRef<MediaCanvasHandle>(null);
   const postId = post?.id ?? null;
@@ -204,6 +209,8 @@ export function MediaViewer({
               onDeleteComment={onDeleteComment}
               onCommentDraftChange={onCommentDraftChange}
               onSubmitComment={onSubmitComment}
+              employees={employees}
+              onNeedEmployees={onNeedEmployees}
             />
           </div>
         </DialogPrimitive.Popup>

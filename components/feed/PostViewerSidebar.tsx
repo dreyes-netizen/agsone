@@ -4,6 +4,7 @@ import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { CommentList, CommentComposer } from "@/components/feed/CommentThread";
 import type { CommentItem, FeedPost } from "@/lib/types/feed";
+import type { GifResult } from "@/lib/giphy/client";
 
 type ReplyTarget = { postId: string; commentId: string; displayName: string } | null;
 type EditingPost = { id: string; title: string; content: string };
@@ -51,6 +52,8 @@ export function PostViewerSidebar({
   onDeleteComment,
   onCommentDraftChange,
   onSubmitComment,
+  employees = [],
+  onNeedEmployees,
 }: {
   post: FeedPost;
   dbUser: { id: string; role: string } | null | undefined;
@@ -85,7 +88,10 @@ export function PostViewerSidebar({
   onToggleExpandedReplies: (commentId: string) => void;
   onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
   onCommentDraftChange: (postId: string, value: string) => void;
-  onSubmitComment: (postId: string) => void;
+  onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
+  /** Mention candidates for the comment/reply composers. */
+  employees?: { id: string; displayName: string }[];
+  onNeedEmployees?: () => void;
 }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-white">
@@ -139,6 +145,8 @@ export function PostViewerSidebar({
           onToggleExpandedReplies={onToggleExpandedReplies}
           onDeleteComment={onDeleteComment}
           autoResize={autoResize}
+          employees={employees}
+          onNeedEmployees={onNeedEmployees}
         />
       </div>
 
@@ -152,6 +160,8 @@ export function PostViewerSidebar({
           onCommentDraftChange={onCommentDraftChange}
           onSubmitComment={onSubmitComment}
           autoResize={autoResize}
+          employees={employees}
+          onNeedEmployees={onNeedEmployees}
           className=""
         />
       </div>

@@ -4,29 +4,57 @@ import { prisma } from "@/lib/prisma/client";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import {
+  NOTIFICATION_TYPES,
+  TOGGLEABLE_TYPES,
+  PREF_KEY_ALIASES,
+} from "@/lib/constants/notificationTypes";
 
-// MILESTONE_REWARD dropped along with the milestone feature. Stored prefs on
-// existing users keep the old key harmlessly — PUT merges into the saved object
-// and GET only ever reads keys listed here, so a stale entry is inert.
-const TOGGLEABLE_TYPES = [
-  "SHOUTOUT_RECEIVED",
-  "MISSION_COMPLETED",
-  "POINTS_AWARDED",
-  "SHOUTOUT_RECEIVED_EMAIL",
-  "MISSION_COMPLETED_EMAIL",
-  "POINTS_AWARDED_EMAIL",
-] as const;
+/**
+ * Preference keys are derived from the catalog rather than hand-listed here.
+ * The previous hardcoded arrays had drifted: two of the four keys they exposed
+ * matched no emitter, so the UI rendered switches that did nothing.
+ *
+ * Each toggleable type yields two keys: `TYPE` (in-app) and `TYPE_PUSH`
+ * (defaults to the catalog's push value). Push is a separate axis on purpose:
+ * wanting something in the bell but not on your phone is entirely reasonable.
+ *
+ * There is no `_EMAIL` key. That channel was opt-in and defaulted to off for
+ * every type, so it was dead UI; push replaced it. Any `_EMAIL` value still
+ * stored on a user is inert — PUT rejects unknown keys and GET only reads the
+ * keys listed here. Transactional emails (redemption outcomes, HR replies,
+ * whistleblower alerts) are sent directly by their routes and are unaffected.
+ */
+const PREF_KEYS: string[] = TOGGLEABLE_TYPES.flatMap((t) => [t, `${t}_PUSH`]);
+const PREF_KEY_SET = new Set(PREF_KEYS);
 
-type PrefKey = (typeof TOGGLEABLE_TYPES)[number];
+function defaults(): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const type of TOGGLEABLE_TYPES) {
+    out[type] = NOTIFICATION_TYPES[type].defaults.inApp;
+    out[`${type}_PUSH`] = NOTIFICATION_TYPES[type].defaults.push;
+  }
+  return out;
+}
 
-const DEFAULTS: Record<PrefKey, boolean> = {
-  SHOUTOUT_RECEIVED: true,
-  MISSION_COMPLETED: true,
-  POINTS_AWARDED: true,
-  SHOUTOUT_RECEIVED_EMAIL: false,
-  MISSION_COMPLETED_EMAIL: false,
-  POINTS_AWARDED_EMAIL: false,
-};
+/**
+ * Merge stored values over the catalog defaults, resolving retired keys.
+ * A user who opted out under an old key stays opted out.
+ */
+function resolve(stored: Record<string, boolean>): Record<string, boolean> {
+  const merged = defaults();
+
+  for (const [oldKey, newType] of Object.entries(PREF_KEY_ALIASES)) {
+    if (oldKey in stored) merged[newType] = stored[oldKey];
+    if (`${oldKey}_PUSH` in stored) merged[`${newType}_PUSH`] = stored[`${oldKey}_PUSH`];
+  }
+
+  // Current keys win over any aliased value.
+  for (const key of PREF_KEYS) {
+    if (key in stored) merged[key] = stored[key];
+  }
+  return merged;
+}
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -36,34 +64,29 @@ export async function GET(req: NextRequest) {
     where: { id: user.id },
     select: { notificationPrefs: true },
   });
-  const stored = (dbUser?.notificationPrefs ?? {}) as Record<string, boolean>;
-  const merged: Record<PrefKey, boolean> = { ...DEFAULTS };
-  for (const key of TOGGLEABLE_TYPES) {
-    if (key in stored) merged[key] = stored[key];
-  }
 
-  return NextResponse.json({ data: merged });
+  return NextResponse.json({
+    data: resolve((dbUser?.notificationPrefs ?? {}) as Record<string, boolean>),
+  });
 }
 
 export async function PUT(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json() as Record<string, unknown>;
+  const body = (await req.json()) as Record<string, unknown>;
 
-  const invalidKeys = Object.keys(body).filter(
-    (k) => !(TOGGLEABLE_TYPES as readonly string[]).includes(k)
-  );
+  const invalidKeys = Object.keys(body).filter((k) => !PREF_KEY_SET.has(k));
   if (invalidKeys.length > 0) {
     return NextResponse.json(
       { error: `Invalid preference keys: ${invalidKeys.join(", ")}` },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const invalidValues = Object.entries(body).filter(([, v]) => typeof v !== 'boolean');
+  const invalidValues = Object.entries(body).filter(([, v]) => typeof v !== "boolean");
   if (invalidValues.length > 0) {
-    return NextResponse.json({ error: 'Preference values must be boolean' }, { status: 400 });
+    return NextResponse.json({ error: "Preference values must be boolean" }, { status: 400 });
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -78,12 +101,7 @@ export async function PUT(req: NextRequest) {
     data: { notificationPrefs: updated as Prisma.InputJsonValue },
   });
 
-  const merged: Record<PrefKey, boolean> = { ...DEFAULTS };
-  for (const key of TOGGLEABLE_TYPES) {
-    if (key in updated) merged[key] = (updated as Record<string, boolean>)[key];
-  }
-
   scheduleBroadcast([{ topic: realtimeTopics.notificationPreferences(user.id) }]);
 
-  return NextResponse.json({ data: merged });
+  return NextResponse.json({ data: resolve(updated) });
 }

@@ -11,6 +11,8 @@ export type Notification = {
   readAt: string | null;
   createdAt: string;
   data: Record<string, unknown> | null;
+  /** How many events collapsed into this row; 1 for ungrouped notifications. */
+  count: number;
 };
 
 type NotificationsState = {

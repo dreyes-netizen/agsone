@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 import { Avatar } from "./Avatar";
+import { MentionDropdown } from "./MentionDropdown";
+import { PostMentionText } from "./PostMentionText";
+import { useMentionInput, hasMentionTrigger, type MentionEmployee, type MentionInput } from "@/lib/hooks/useMentionInput";
 import { GifButton } from "./GifButton";
 import { GifPicker } from "./GifPicker";
 import { GifCommentMedia } from "./GifCommentMedia";
@@ -27,12 +31,51 @@ type ListProps = {
   isModerator: boolean;
   onSetReplyingTo: (value: ReplyTarget) => void;
   onReplyDraftChange: (commentId: string, value: string) => void;
-  onSubmitReply: (postId: string, commentId: string, gif?: GifResult) => void;
+  onSubmitReply: (postId: string, commentId: string, gif?: GifResult, encodedContent?: string) => void;
+  /** Mention candidates. Omit to disable @mentions in replies. */
+  employees?: MentionEmployee[];
+  /** Called the first time an @ is typed, so the roster can load on demand. */
+  onNeedEmployees?: () => void;
   onToggleExpandedReplies: (commentId: string) => void;
   onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
   autoResize: (el: HTMLTextAreaElement) => void;
   className?: string;
 };
+
+/**
+ * Arrow/Enter/Escape handling for an open mention dropdown, shared by the
+ * comment and reply composers.
+ *
+ * Returns without touching the event when the list is closed, so Enter still
+ * behaves normally in a textarea. Only intercepts while the list is showing.
+ */
+function handleMentionKeyDown(
+  e: React.KeyboardEvent<HTMLTextAreaElement>,
+  mention: MentionInput,
+  onPick: (emp: MentionEmployee) => void,
+) {
+  if (!mention.open) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    mention.setActiveIndex((mention.activeIndex + 1) % mention.results.length);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    mention.setActiveIndex((mention.activeIndex - 1 + mention.results.length) % mention.results.length);
+  } else if (e.key === "Enter" || e.key === "Tab") {
+    const chosen = mention.results[mention.activeIndex];
+    if (chosen) {
+      e.preventDefault();
+      onPick(chosen);
+    }
+  } else if (e.key === "Escape") {
+    // Swallow it so the reply composer's own Escape-to-cancel doesn't also
+    // fire and throw away a draft the user was only dismissing a list from.
+    e.preventDefault();
+    e.stopPropagation();
+    mention.close();
+  }
+}
 
 function gifIdsOf(comments: CommentItem[]): string[] {
   const ids: string[] = [];
@@ -65,10 +108,23 @@ function AttachedGifPreview({ gif, onRemove }: { gif: GifResult; onRemove: () =>
 }
 
 function CommentBody({ item, resolvedGif }: { item: CommentItem | ReplyItem; resolvedGif: GifMapEntry }) {
+  const router = useRouter();
   return (
     <>
       {item.content && (
-        <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{item.content}</p>
+        // Rendered through PostMentionText so @[Name|id] tokens become links
+        // rather than printing literally — comments previously used a plain
+        // {item.content} and had no mention support at all.
+        //
+        // Navigates directly instead of taking an onMentionClick prop: unlike
+        // the post body, which needs the page to close its lightbox first, a
+        // comment mention has nothing to tear down.
+        <p className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap">
+          <PostMentionText
+            content={item.content}
+            onMentionClick={(userId) => router.push(`/employees/${userId}`)}
+          />
+        </p>
       )}
       {item.commentType === "GIF" && item.gifId && <GifCommentMedia gif={resolvedGif} />}
     </>
@@ -101,9 +157,15 @@ export function CommentList({
   onDeleteComment,
   autoResize,
   className,
+  employees = [],
+  onNeedEmployees,
 }: ListProps) {
   const [replyGif, setReplyGif] = useState<GifResult | null>(null);
   const [replyPickerOpenFor, setReplyPickerOpenFor] = useState<string | null>(null);
+  const replyRef = useRef<HTMLTextAreaElement>(null);
+  // One instance is enough: only a single reply box is open at a time
+  // (replyingTo is a single target, not a set).
+  const replyMention = useMentionInput(employees);
   // Batch-resolve every GIF referenced anywhere in this list in one call,
   // rather than one GIPHY round trip per comment.
   const gifIds = useMemo(() => gifIdsOf(comments), [comments]);
@@ -115,8 +177,17 @@ export function CommentList({
     setReplyPickerOpenFor(null);
   }
 
+  function pickReplyMention(commentId: string, emp: MentionEmployee) {
+    const el = replyRef.current;
+    const draft = replyDraft[commentId] ?? "";
+    const cursor = el?.selectionStart ?? draft.length;
+    onReplyDraftChange(commentId, replyMention.select(draft, cursor, emp));
+    setTimeout(() => el?.focus(), 0);
+  }
+
   function submitReply(commentId: string) {
-    onSubmitReply(postId, commentId, replyGif ?? undefined);
+    onSubmitReply(postId, commentId, replyGif ?? undefined, replyMention.encode(replyDraft[commentId] ?? ""));
+    replyMention.reset();
     setReplyGif(null);
   }
 
@@ -185,17 +256,35 @@ export function CommentList({
                   <div className="flex gap-2">
                     <Avatar name={currentUserName} url={currentUserAvatar} size="sm" />
                     <div className="flex-1 flex gap-2">
-                      <textarea
-                        autoFocus
-                        rows={1}
-                        placeholder={`Reply to ${c.author.displayName}…`}
-                        value={replyDraft[c.id] ?? ""}
-                        onChange={(e) => { onReplyDraftChange(c.id, e.target.value); autoResize(e.target); }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") startReply(null);
-                        }}
-                        className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-                      />
+                      <div className="relative flex-1">
+                        <MentionDropdown
+                          mention={replyMention}
+                          onSelect={(emp) => pickReplyMention(c.id, emp)}
+                        />
+                        <textarea
+                          ref={replyRef}
+                          autoFocus
+                          rows={1}
+                          placeholder={`Reply to ${c.author.displayName}…`}
+                          value={replyDraft[c.id] ?? ""}
+                          onChange={(e) => {
+                            onReplyDraftChange(c.id, e.target.value);
+                            const cur = e.target.selectionStart ?? e.target.value.length;
+                            if (hasMentionTrigger(e.target.value, cur)) onNeedEmployees?.();
+                            replyMention.detect(e.target.value, cur);
+                            autoResize(e.target);
+                          }}
+                          onKeyDown={(e) => {
+                            // The mention handler swallows Escape while its list
+                            // is open, so dismissing the list doesn't also
+                            // discard the reply draft.
+                            handleMentionKeyDown(e, replyMention, (emp) => pickReplyMention(c.id, emp));
+                            if (!e.defaultPrevented && e.key === "Escape") startReply(null);
+                          }}
+                          onBlur={replyMention.close}
+                          className="w-full text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+                        />
+                      </div>
                       <GifButton onClick={() => setReplyPickerOpenFor(c.id)} />
                       <button
                         onClick={() => submitReply(c.id)}
@@ -258,6 +347,8 @@ export function CommentComposer({
   commentSending,
   currentUserName,
   currentUserAvatar,
+  employees = [],
+  onNeedEmployees,
   onCommentDraftChange,
   onSubmitComment,
   autoResize,
@@ -268,16 +359,35 @@ export function CommentComposer({
   commentSending: Record<string, boolean>;
   currentUserName: string;
   currentUserAvatar: string | null;
+  /** Mention candidates. Omit to disable @mentions for this composer. */
+  employees?: MentionEmployee[];
+  /** Called the first time an @ is typed, so the roster can load on demand. */
+  onNeedEmployees?: () => void;
   onCommentDraftChange: (postId: string, value: string) => void;
-  onSubmitComment: (postId: string, gif?: GifResult) => void;
+  onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
   autoResize: (el: HTMLTextAreaElement) => void;
   className?: string;
 }) {
   const [gif, setGif] = useState<GifResult | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mention = useMentionInput(employees);
+
+  const draft = commentDraft[postId] ?? "";
+
+  function pick(emp: MentionEmployee) {
+    const el = textareaRef.current;
+    const cursor = el?.selectionStart ?? draft.length;
+    onCommentDraftChange(postId, mention.select(draft, cursor, emp));
+    setTimeout(() => el?.focus(), 0);
+  }
 
   function submit() {
-    onSubmitComment(postId, gif ?? undefined);
+    // Encode picked names into @[Name|id] tokens at send time. The parent owns
+    // the draft string, so the encoded text is handed over rather than written
+    // back into state first — a setState round trip would race the submit.
+    onSubmitComment(postId, gif ?? undefined, mention.encode(draft));
+    mention.reset();
     setGif(null);
   }
 
@@ -287,17 +397,29 @@ export function CommentComposer({
       <div className="flex gap-2.5 items-center">
         <Avatar name={currentUserName} url={currentUserAvatar} size="sm" />
         <div className="flex-1 flex gap-2">
-          <textarea
-            rows={1}
-            placeholder="Write a comment…"
-            value={commentDraft[postId] ?? ""}
-            onChange={(e) => { onCommentDraftChange(postId, e.target.value); autoResize(e.target); }}
-            className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
-          />
+          <div className="relative flex-1">
+            <MentionDropdown mention={mention} onSelect={pick} />
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              placeholder="Write a comment…"
+              value={draft}
+              onChange={(e) => {
+                onCommentDraftChange(postId, e.target.value);
+                const cur = e.target.selectionStart ?? e.target.value.length;
+                if (hasMentionTrigger(e.target.value, cur)) onNeedEmployees?.();
+                mention.detect(e.target.value, cur);
+                autoResize(e.target);
+              }}
+              onKeyDown={(e) => handleMentionKeyDown(e, mention, pick)}
+              onBlur={mention.close}
+              className="w-full text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
+            />
+          </div>
           <GifButton onClick={() => setPickerOpen(true)} />
           <button
             onClick={submit}
-            disabled={commentSending[postId] || (!(commentDraft[postId] ?? "").trim() && !gif)}
+            disabled={commentSending[postId] || (!draft.trim() && !gif)}
             aria-label="Submit comment"
             className="flex items-center justify-center w-8 h-8 bg-command-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 shrink-0"
           >
@@ -337,11 +459,13 @@ export function CommentThread({
   onSubmitComment,
   autoResize,
   wrapperClassName,
+  employees = [],
+  onNeedEmployees,
 }: ListProps & {
   commentDraft: Record<string, string>;
   commentSending: Record<string, boolean>;
   onCommentDraftChange: (postId: string, value: string) => void;
-  onSubmitComment: (postId: string, gif?: GifResult) => void;
+  onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
   wrapperClassName: string;
 }) {
   return (
@@ -364,6 +488,8 @@ export function CommentThread({
         onToggleExpandedReplies={onToggleExpandedReplies}
         onDeleteComment={onDeleteComment}
         autoResize={autoResize}
+        employees={employees}
+        onNeedEmployees={onNeedEmployees}
       />
       <CommentComposer
         postId={postId}
@@ -374,6 +500,8 @@ export function CommentThread({
         onCommentDraftChange={onCommentDraftChange}
         onSubmitComment={onSubmitComment}
         autoResize={autoResize}
+        employees={employees}
+        onNeedEmployees={onNeedEmployees}
       />
     </div>
   );

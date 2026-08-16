@@ -9,6 +9,22 @@ export type BudgetStatus = {
   total: number;
 };
 
+/** Warn once the manager has spent this share of their monthly allowance. */
+export const BUDGET_LOW_THRESHOLD = 0.8;
+
+/**
+ * Stable key for the current budget month, e.g. "2026-08".
+ *
+ * Used to scope budget notifications so a manager gets one low-budget warning
+ * per month rather than one per award, and so the warning naturally reappears
+ * after the reset. Mirrors the server-local month boundary the aggregate below
+ * uses — there is no cron to fire a "budget reset" event, so the period key is
+ * how the reset becomes observable at all.
+ */
+export function budgetPeriodKey(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 /**
  * Manual §3: each manager gets 500 recognition points per month; unused points
  * do not roll over. HR_ADMIN is exempt. Only MANUAL_AWARD transactions count —

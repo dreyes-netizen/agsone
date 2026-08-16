@@ -5,6 +5,9 @@ import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { GIF_PROVIDERS, GIF_ID_PATTERN } from "@/lib/constants/gif";
+import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
+import { createNotification } from "@/lib/helpers/createNotification";
+import { resolveMentionRecipients } from "@/lib/helpers/parseMentions";
 
 const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
@@ -96,10 +99,25 @@ export async function POST(
 
   // Both lookups are independent — run them concurrently, then apply the
   // same checks (post-not-found first, then invalid-parent) as before.
+  //
+  // The post lookup is department-scoped, matching GET /api/feed and the react
+  // route. Without it any authenticated employee who knew a post id could
+  // comment on a post they cannot see — and now that commenting notifies the
+  // author, an unscoped lookup would also leak a department-only post's
+  // existence through the notification it generates.
+  //
+  // Author ids are selected here because the notification fan-out below needs
+  // them; keeping it in these two queries avoids a third round trip.
   const [post, parent] = await Promise.all([
-    prisma.socialPost.findUnique({ where: { id }, select: { id: true } }),
+    prisma.socialPost.findFirst({
+      where: { id, ...postVisibilityWhere(user) },
+      select: { id: true, authorId: true, departmentId: true },
+    }),
     parentId
-      ? prisma.socialComment.findUnique({ where: { id: parentId }, select: { postId: true } })
+      ? prisma.socialComment.findUnique({
+          where: { id: parentId },
+          select: { postId: true, authorId: true },
+        })
       : Promise.resolve(null),
   ]);
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -119,6 +137,56 @@ export async function POST(
     },
     include: { author: { select: authorSelect } },
   });
+
+  // Notify the parent comment's author on a reply, otherwise the post's author.
+  // Both are skipped when it is your own — replying to yourself or commenting
+  // on your own post should be silent. When someone replies to a comment on
+  // someone else's post, only the comment author is told: the post author gets
+  // the top-level comment notification and does not need every sub-reply too.
+  const preview = comment.content?.slice(0, 140) ?? "Sent a GIF";
+  const recipientId = parent ? parent.authorId : post.authorId;
+
+  // Anyone @mentioned in the comment body. Same validated path as post
+  // mentions: ids come from the client inside `@[Name|uuid]` tokens, so each is
+  // checked against a real active user and filtered by who can see this post.
+  // Mentioned users are notified even if they are not the post or comment
+  // author — being named is the point.
+  void resolveMentionRecipients({
+    content: comment.content,
+    postDepartmentId: post.departmentId,
+    authorId: user.id,
+  })
+    .then((mentioned) =>
+      Promise.allSettled(
+        mentioned
+          // Skip anyone already getting the comment/reply notification below —
+          // one message about the same comment is enough.
+          .filter((m) => m.id !== recipientId)
+          .map((m) =>
+            createNotification({
+              userId: m.id,
+              type: "MENTION",
+              title: `${user.displayName} mentioned you in a comment`,
+              body: preview,
+              data: { postId: id, commentId: comment.id },
+            }),
+          ),
+      ),
+    )
+    .catch((err) => console.error("comment mention notifications failed", err));
+
+  if (recipientId !== user.id) {
+    void createNotification({
+      userId: recipientId,
+      type: parent ? "REPLY_TO_COMMENT" : "COMMENT_ON_POST",
+      title: parent
+        ? `${user.displayName} replied to your comment`
+        : `${user.displayName} commented on your post`,
+      body: preview,
+      // postId drives the deep link; commentId keys the reply grouping.
+      data: { postId: id, commentId: parentId ?? comment.id },
+    }).catch((err) => console.error("comment notification failed", err));
+  }
 
   scheduleBroadcast([{ topic: realtimeTopics.feed }]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
@@ -140,13 +140,29 @@ export function useFeedActions() {
     }
   }, { debounceMs: 250 });
 
-  useEffect(() => {
-    if (authLoading || !user || !composeExpanded || employees.length > 0) return;
+  // Loads the roster once, on demand. Called when the post composer expands and
+  // when someone first types "@" in a comment or reply — a comment-only user
+  // used to get an empty mention dropdown because this was gated purely on the
+  // post composer. Guarded so it stays a single /api/employees call per session
+  // rather than one per page load.
+  const employeesLoading = useRef(false);
+  const ensureEmployeesLoaded = useCallback(() => {
+    if (authLoading || !user || employees.length > 0 || employeesLoading.current) return;
+    employeesLoading.current = true;
     apiFetch<{ data: { id: string; displayName: string; avatarUrl: string | null }[] }>("/api/employees")
       .then((res) => setEmployees(res.data))
-      .catch((err) => console.error("employees fetch failed", err));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, composeExpanded]);
+      .catch((err) => {
+        employeesLoading.current = false;
+        console.error("employees fetch failed", err);
+      });
+    // apiFetch is a stable module-level import; listed only to satisfy the
+    // exhaustive-deps rule without an eslint-disable.
+  }, [authLoading, user, employees.length, apiFetch]);
+
+  useEffect(() => {
+    if (!composeExpanded) return;
+    ensureEmployeesLoaded();
+  }, [composeExpanded, ensureEmployeesLoaded]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -397,8 +413,10 @@ export function useFeedActions() {
     }
   }
 
-  async function submitComment(postId: string, gif?: GifResult) {
-    const content = (commentDraft[postId] ?? "").trim();
+  async function submitComment(postId: string, gif?: GifResult, encodedContent?: string) {
+    // encodedContent carries @[Name|id] tokens resolved by the composer's
+    // mention picker; fall back to the raw draft when there are no mentions.
+    const content = (encodedContent ?? commentDraft[postId] ?? "").trim();
     if (!content && !gif) return;
     setCommentSending((prev) => ({ ...prev, [postId]: true }));
     const optimisticId = `opt-${Date.now()}`;
@@ -443,8 +461,8 @@ export function useFeedActions() {
     }
   }
 
-  async function submitReply(postId: string, parentId: string, gif?: GifResult) {
-    const content = (replyDraft[parentId] ?? "").trim();
+  async function submitReply(postId: string, parentId: string, gif?: GifResult, encodedContent?: string) {
+    const content = (encodedContent ?? replyDraft[parentId] ?? "").trim();
     if (!content && !gif) return;
     setReplySending((prev) => ({ ...prev, [parentId]: true }));
     const optimisticId = `opt-reply-${Date.now()}`;
@@ -760,6 +778,7 @@ export function useFeedActions() {
     commentDeleteTarget, setCommentDeleteTarget,
     postDeleteTarget, setPostDeleteTarget,
     employees,
+    ensureEmployeesLoaded,
     profile,
     leaderboard,
     birthdays,

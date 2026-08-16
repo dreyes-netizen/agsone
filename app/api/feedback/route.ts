@@ -7,7 +7,11 @@ import { newWhistleblowerEmail } from "@/lib/email/templates";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
+import { notifyRole, ADMIN_ROLES } from "@/lib/helpers/notifyRole";
 
+// Static distribution list, kept as a belt-and-braces channel alongside the
+// in-app notification below. It does not track who holds HR_ADMIN, so it should
+// not be the only delivery path — see the notifyRole call in POST.
 const HR_EMAILS = "hr.ags@allianceglobalsolutions.com, hr@allianceglobalsolutions.com";
 
 const createSchema = z.object({
@@ -72,6 +76,22 @@ export async function POST(req: NextRequest) {
     to: HR_EMAILS,
     ...newWhistleblowerEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
   }).catch((err) => console.error("whistleblower notify email failed", err));
+
+  // In-app alert to whoever actually holds an approver role right now. The
+  // email above goes to a hardcoded address list that does not track the role —
+  // granting someone HR_ADMIN never added them to it — and it is
+  // fire-and-forget, so an SMTP failure meant the report reached nobody at all.
+  //
+  // Deliberately content-free: no title, no category, no body, no reporter.
+  // The notification says only that something is waiting, mirroring the
+  // discipline already applied to Realtime above. Anyone entitled to the detail
+  // gets it behind auth on /admin/feedback.
+  void notifyRole([...ADMIN_ROLES], {
+    type: "FEEDBACK_SUBMITTED",
+    title: "New confidential report",
+    body: "A new report has been filed and is waiting for review.",
+    data: { feedbackId: feedback.id },
+  });
 
   // Empty invalidations only: confidential report fields never enter Realtime.
   scheduleBroadcast([

@@ -38,8 +38,11 @@ describe("getVisibleReactionTabs", () => {
   });
 
   it("preserves the app's fixed emoji display order, not insertion/count order", () => {
-    // REACTIONS order is 👍 ❤️ 🔥 👏 🎉 💪 — counts given out of order here
+    // REACTIONS order is 👍 ❤️ 👏 🎉 🔥 😂 💡 💪 — counts given out of order here.
+    // The comment and expectation previously described the old six-emoji set
+    // (where 🔥 came third); the workplace-reaction set moved it behind 🎉 and
+    // the assertion was never updated, leaving this the only red test.
     const tabs = getVisibleReactionTabs({ "🎉": 1, "👍": 1, "🔥": 1 });
-    expect(tabs.map((t) => t.emoji)).toEqual(["👍", "🔥", "🎉"]);
+    expect(tabs.map((t) => t.emoji)).toEqual(["👍", "🎉", "🔥"]);
   });
 });

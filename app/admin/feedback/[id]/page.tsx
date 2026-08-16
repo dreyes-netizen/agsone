@@ -14,7 +14,10 @@ type Reply = {
   id: string;
   body: string;
   createdAt: string;
-  author: { id: string; displayName: string; avatarUrl: string | null; role: string };
+  // null when an anonymous reporter wrote the reply — the API strips their
+  // identity so replying does not unmask them to HR.
+  author: { id: string; displayName: string; avatarUrl: string | null; role: string } | null;
+  isReporter?: boolean;
 };
 
 type FeedbackThread = {
@@ -179,17 +182,21 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
       {thread.replies.length > 0 && (
         <div className="space-y-3">
           {thread.replies.map((reply) => {
-            const isHr = isHrRole(reply.author.role);
+            // A stripped author means the anonymous reporter wrote it; show a
+            // neutral label rather than a name, and keep it on the employee
+            // side of the conversation.
+            const isHr = isHrRole(reply.author?.role ?? "");
+            const authorName = reply.author?.displayName ?? "Anonymous Employee";
             return (
               <div key={reply.id} className={`flex gap-3 ${isHr ? "flex-row-reverse" : ""}`}>
                 <div className="w-8 h-8 rounded-full bg-gray-200 shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 overflow-hidden">
-                  {reply.author.avatarUrl
+                  {reply.author?.avatarUrl
                     ? <img src={reply.author.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    : reply.author.displayName.charAt(0).toUpperCase()}
+                    : authorName.charAt(0).toUpperCase()}
                 </div>
                 <div className={`max-w-[75%] space-y-1`}>
                   <div className={`flex items-center gap-2 ${isHr ? "flex-row-reverse" : ""}`}>
-                    <span className="text-xs font-semibold text-gray-700">{reply.author.displayName}</span>
+                    <span className="text-xs font-semibold text-gray-700">{authorName}</span>
                     <span className="text-[10px] text-gray-500">{new Date(reply.createdAt).toLocaleString()}</span>
                   </div>
                   <div className={`px-4 py-3 rounded-2xl text-sm text-gray-800 whitespace-pre-wrap ${isHr ? "bg-command-black text-white rounded-tr-none" : "bg-gray-100 rounded-tl-none"}`}>
@@ -202,12 +209,18 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {/* Reply input */}
-      {thread.isAnonymous ? (
-        <p className="text-xs text-gray-500 text-center py-2 bg-gray-50 rounded-xl border border-gray-100">
-          Cannot reply to anonymous feedback
-        </p>
-      ) : (
+      {/* Reply input — available on anonymous threads too. The reporter stays
+          anonymous: their identity is stripped from the report and from any
+          reply they write, so a conversation is possible without unmasking
+          them. Previously this was blocked, which meant the default report
+          type (isAnonymous defaults to true) could never be answered. */}
+      <>
+        {thread.isAnonymous && (
+          <p className="text-xs text-gray-500 py-2 px-3 bg-gray-50 rounded-xl border border-gray-100">
+            This reporter is anonymous. They will receive your reply, but their
+            identity stays hidden from you.
+          </p>
+        )}
         <div className="bg-white rounded-card border border-table-border p-4 flex gap-3 items-end">
           <textarea
             rows={2}
@@ -225,7 +238,7 @@ export default function AdminFeedbackThreadPage({ params }: { params: Promise<{ 
             <Send className="w-4 h-4" />
           </button>
         </div>
-      )}
+      </>
     </div>
   );
 }

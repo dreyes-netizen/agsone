@@ -168,6 +168,7 @@ model User {
   comments             SocialComment[]
   pollVotes            PollVote[]
   notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
   auditLogs            AuditLog[]
   foodListings         FoodListing[]       @relation("FoodListingsCreated")
   foodOrders           FoodOrder[]         @relation("FoodOrdersPlaced")
@@ -384,6 +385,29 @@ model SocialComment {
   @@index([createdAt])
 }
 
+/// One row per DEVICE, not per user — someone with a phone and a laptop has two.
+/// `endpoint` is the per-device URL issued by the browser's push service (FCM
+/// for Chrome/Android, Mozilla autopush, Apple for Safari), and is the natural
+/// unique key: re-subscribing the same device returns the same endpoint.
+///
+/// Rows are pruned automatically when a push service answers 404/410 — see
+/// lib/push/send.ts. Without that the table fills with dead endpoints and every
+/// send gets slower.
+model PushSubscription {
+  id         String   @id @default(uuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String // client public key, used to encrypt the payload
+  auth       String // client auth secret
+  userAgent  String? // for a "your devices" list later
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model Notification {
   id        String    @id @default(uuid())
   userId    String
@@ -394,10 +418,19 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime  @default(now())
 
+  // Collapses repeat events onto one row — "3 people reacted to your post"
+  // rather than three notifications. The bell shows only the 30 most recent
+  // with no pagination, so an ungrouped high-volume type (reactions, comments)
+  // would push everything else out of a user's window. Null = always insert.
+  // Only *unread* rows are merged into; see lib/helpers/createNotification.ts.
+  groupKey  String?
+  count     Int       @default(1)
+
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@index([userId, groupKey, readAt])
 }
 
 model AuditLog {

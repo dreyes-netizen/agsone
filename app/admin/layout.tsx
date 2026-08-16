@@ -9,6 +9,8 @@ import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotificationsController } from "@/components/notifications/NotificationsController";
 import { useEffect, useState } from "react";
 
 const overviewItem = { href: "/admin", label: "Overview", icon: LayoutDashboard };
@@ -81,6 +83,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/*
+        Owns the notification fetch/poll/subscribe for the admin panel. This is a
+        separate route group from app/(dashboard), so its own controller mounts
+        here and the two can never both be live — an admin working in /admin/*
+        previously had no notification surface at all.
+      */}
+      <NotificationsController />
+
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -99,9 +109,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm shrink-0">
               <Image src="/agslogo.png" alt="AGS One" width={28} height={28} unoptimized className="w-full h-full object-contain p-0.5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-white font-semibold text-[13px] leading-tight">AGS One</p>
               <p className="text-white/50 text-[10px] leading-tight">Admin Panel</p>
+            </div>
+            {/* Bell is already styled for a dark surface, matching this header. */}
+            <div className="ml-auto shrink-0">
+              <NotificationBell />
             </div>
           </div>
         </div>
@@ -149,11 +163,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm shrink-0">
             <Image src="/agslogo.png" alt="AGS One" width={24} height={24} unoptimized className="w-full h-full object-contain p-0.5" />
           </div>
-          <p className="text-white font-semibold text-[13px]">AGS One Admin</p>
+          <p className="text-white font-semibold text-[13px] truncate">AGS One Admin</p>
+        </div>
+        <div className="ml-auto shrink-0">
+          <NotificationBell />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { REACTION_EMOJIS } from "@/lib/constants/reactions";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
+import { createNotification } from "@/lib/helpers/createNotification";
 
 const schema = z.object({ emoji: z.enum(REACTION_EMOJIS) });
 
@@ -28,7 +29,7 @@ export async function POST(
   // can't otherwise see.
   const post = await prisma.socialPost.findFirst({
     where: { id, ...postVisibilityWhere(user) },
-    select: { id: true },
+    select: { id: true, authorId: true },
   });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -66,6 +67,25 @@ export async function POST(
     }
     throw err;
   }
+
+  // Only a first-time reaction notifies. Toggling off obviously shouldn't, and
+  // neither should swapping emoji — the author was already told, and a second
+  // notification for the same person changing their mind is noise.
+  //
+  // Grouped by post in the catalog, so a popular post produces one "N people
+  // reacted" row rather than N rows. That matters: the bell holds 30
+  // notifications with no pagination, so ungrouped reactions would push
+  // everything else out of the window.
+  if (post.authorId !== user.id) {
+    void createNotification({
+      userId: post.authorId,
+      type: "REACTION",
+      title: `${user.displayName} reacted to your post`,
+      body: `Reacted ${emoji}`,
+      data: { postId: id },
+    }).catch((err) => console.error("reaction notification failed", err));
+  }
+
   scheduleBroadcast([{ topic: realtimeTopics.feed }]);
   return NextResponse.json({ action: "added", emoji });
 }

@@ -102,6 +102,7 @@ export default function FeedPage() {
     commentDeleteTarget, setCommentDeleteTarget,
     postDeleteTarget, setPostDeleteTarget,
     employees,
+    ensureEmployeesLoaded,
     profile,
     leaderboard,
     birthdays,
@@ -758,6 +759,8 @@ export default function FeedPage() {
                       onDeleteComment={deleteComment}
                       onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
                       onSubmitComment={submitComment}
+                      employees={employees}
+                      onNeedEmployees={ensureEmployeesLoaded}
                       autoResize={autoResize}
                       wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                     />
@@ -829,6 +832,8 @@ export default function FeedPage() {
                     onDeleteComment={deleteComment}
                     onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
                     onSubmitComment={submitComment}
+                    employees={employees}
+                    onNeedEmployees={ensureEmployeesLoaded}
                     autoResize={autoResize}
                     wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                   />

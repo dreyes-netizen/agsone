@@ -3,6 +3,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { notifyRole, ADMIN_ROLES } from "@/lib/helpers/notifyRole";
 
 export async function POST(
   req: NextRequest,
@@ -25,7 +26,8 @@ export async function POST(
   const [medicine, existing] = await Promise.all([
     prisma.medicineItem.findUnique({
       where: { id },
-      select: { id: true, isActive: true, stockQuantity: true },
+      // name is used in the admin queue notification below.
+      select: { id: true, name: true, isActive: true, stockQuantity: true },
     }),
     prisma.medicineRequest.findFirst({
       where: { medicineId: id, userId: user.id, status: "PENDING" },
@@ -51,6 +53,17 @@ export async function POST(
   const request = await prisma.medicineRequest.create({
     data: { medicineId: id, userId: user.id, quantity },
     select: { id: true, medicineId: true, quantity: true, status: true, createdAt: true },
+  });
+
+  // Push the queue arrival to whoever currently holds an approver role. The
+  // medicine queue was previously pull-only: a request sat PENDING until an
+  // admin happened to open /admin/medicine. Grouped by the catalog, so a burst
+  // of requests collapses into one "N requests waiting" row rather than N.
+  void notifyRole([...ADMIN_ROLES], {
+    type: "MEDICINE_REQUESTED",
+    title: "Medicine request waiting",
+    body: `${user.displayName} requested ${medicine.name} (x${quantity}).`,
+    data: { requestId: request.id, medicineId: medicine.id },
   });
 
   scheduleBroadcast([

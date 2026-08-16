@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { isIOSDevice, isStandaloneDisplay } from "@/lib/helpers/platform";
 
 /**
  * Registers the service worker and manages this device's push subscription.
@@ -38,17 +39,6 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-const isIOS = () =>
-  typeof navigator !== "undefined" &&
-  /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-  !("MSStream" in window);
-
-const isStandalone = () =>
-  typeof window !== "undefined" &&
-  (window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS predates display-mode and uses a non-standard flag.
-    (navigator as unknown as { standalone?: boolean }).standalone === true);
-
 export function usePushSubscription() {
   const { apiFetch } = useApiClient();
   const [status, setStatus] = useState<PushStatus>("loading");
@@ -61,10 +51,10 @@ export function usePushSubscription() {
     const hasApis = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     if (!hasApis) {
       // On iOS this is the pre-16.4 case, or Safari outside a home-screen app.
-      setStatus(isIOS() && !isStandalone() ? "ios-needs-install" : "unsupported");
+      setStatus(isIOSDevice() && !isStandaloneDisplay() ? "ios-needs-install" : "unsupported");
       return;
     }
-    if (isIOS() && !isStandalone()) {
+    if (isIOSDevice() && !isStandaloneDisplay()) {
       setStatus("ios-needs-install");
       return;
     }

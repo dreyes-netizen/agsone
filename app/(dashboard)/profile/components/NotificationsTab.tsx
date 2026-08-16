@@ -13,24 +13,18 @@ import {
   type NotificationType,
 } from "@/lib/constants/notificationTypes";
 
-/** Shared switch styling — the in-app row is the larger of the two. */
+/** Shared switch styling for the In-App and Push columns. */
 function Toggle({
   checked,
   disabled,
   label,
-  size,
   onChange,
 }: {
   checked: boolean;
   disabled: boolean;
   label: string;
-  size: "lg" | "sm";
   onChange: () => void;
 }) {
-  const track = size === "lg" ? "h-5 w-9" : "h-4 w-7";
-  const knob = size === "lg" ? "h-4 w-4" : "h-3 w-3";
-  const shift = checked ? (size === "lg" ? "translate-x-4" : "translate-x-3") : "translate-x-0";
-
   return (
     <button
       role="switch"
@@ -38,12 +32,14 @@ function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex ${track} shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
         checked ? "bg-navy-500" : "bg-gray-200"
       }`}
     >
       <span
-        className={`pointer-events-none inline-block ${knob} transform rounded-full bg-white shadow ring-0 transition duration-200 ${shift}`}
+        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+          checked ? "translate-x-4" : "translate-x-0"
+        }`}
       />
     </button>
   );
@@ -181,12 +177,10 @@ export function NotificationsTab() {
 
   function renderRow(type: NotificationType) {
     const entry = NOTIFICATION_TYPES[type];
-    const emailKey = `${type}_EMAIL`;
     const pushKey = `${type}_PUSH`;
-    // In-app defaults on unless explicitly disabled; email is strictly opt-in;
-    // push follows the catalog default but only matters once subscribed.
+    // In-app defaults on unless explicitly disabled; push follows the catalog
+    // default but only takes effect once this device is subscribed.
     const enabled = notifPrefs?.[type] ?? entry.defaults.inApp;
-    const emailEnabled = notifPrefs?.[emailKey] === true;
     const pushEnabled = notifPrefs?.[pushKey] ?? entry.defaults.push;
 
     return (
@@ -199,7 +193,6 @@ export function NotificationsTab() {
           checked={enabled}
           disabled={notifSaving === type}
           label={`${entry.label} in-app notifications`}
-          size="lg"
           onChange={() => handleNotifToggle(type, !enabled)}
         />
         <Toggle
@@ -208,15 +201,7 @@ export function NotificationsTab() {
           // meaningless otherwise, and showing it live would imply push is on.
           disabled={notifSaving === pushKey || push.status !== "subscribed"}
           label={`${entry.label} push notifications`}
-          size="lg"
           onChange={() => handleNotifToggle(pushKey, !pushEnabled)}
-        />
-        <Toggle
-          checked={emailEnabled}
-          disabled={notifSaving === emailKey}
-          label={`${entry.label} email notifications`}
-          size="sm"
-          onChange={() => handleNotifToggle(emailKey, !emailEnabled)}
         />
       </li>
     );
@@ -229,7 +214,6 @@ export function NotificationsTab() {
         <h2 className="text-sm font-bold text-gray-800 flex-1">Notification Preferences</h2>
         <span className="text-xs text-gray-500 w-9 text-center">In-App</span>
         <span className="text-xs text-gray-500 w-9 text-center">Push</span>
-        <span className="text-xs text-gray-500 w-7 text-center">Email</span>
       </div>
 
       {notifLoading ? (

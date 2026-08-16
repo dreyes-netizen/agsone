@@ -1,7 +1,5 @@
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { sendMail } from "@/lib/email/mailer";
-import { notificationEmail } from "@/lib/email/templates";
 import { after } from "next/server";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { sendPushToUser } from "@/lib/push/send";
@@ -22,10 +20,10 @@ type CreateNotificationParams = {
 /**
  * Resolve the stored preference for a type, honouring renamed keys.
  *
- * Preferences are opt-out for in-app (absent = on) and opt-in for email
- * (absent = off). `PREF_KEY_ALIASES` maps a retired key onto its replacement so
- * a user who switched something off before the rename stays switched off
- * instead of being silently re-subscribed.
+ * Preferences are opt-out for in-app (absent = on); the `_PUSH` suffix reads
+ * the per-type push switch. `PREF_KEY_ALIASES` maps a retired key onto its
+ * replacement so a user who switched something off before a rename stays
+ * switched off instead of being silently re-subscribed.
  */
 function readPref(
   prefs: Record<string, boolean>,
@@ -60,21 +58,13 @@ export async function createNotification(params: CreateNotificationParams) {
     try {
       const user = await prisma.user.findUnique({
         where: { id: params.userId },
-        select: { notificationPrefs: true, email: true, displayName: true },
+        select: { notificationPrefs: true },
       });
       const prefs = (user?.notificationPrefs ?? {}) as Record<string, boolean>;
 
       // In-app: explicit false wins, otherwise the catalog default.
       const inApp = readPref(prefs, params.type) ?? entry.defaults.inApp;
       if (inApp === false) return null;
-
-      // Email stays strictly opt-in.
-      if (readPref(prefs, params.type, "_EMAIL") === true && user?.email && user?.displayName) {
-        const { subject, html } = notificationEmail(user.displayName, params.title, params.body);
-        sendMail({ to: user.email, subject, html }).catch((err) =>
-          console.error("notification email send failed", err),
-        );
-      }
     } catch (err) {
       // Fail open — a pref lookup failure must not swallow the notification.
       console.error("notification preference check failed", err);

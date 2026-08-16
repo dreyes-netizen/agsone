@@ -15,19 +15,23 @@ import {
  * The previous hardcoded arrays had drifted: two of the four keys they exposed
  * matched no emitter, so the UI rendered switches that did nothing.
  *
- * Each toggleable type yields three keys: `TYPE` (in-app), `TYPE_EMAIL`
- * (always default off — email stays opt-in) and `TYPE_PUSH` (defaults to the
- * catalog's push value). Push is a separate axis on purpose: wanting something
- * in the bell but not on your phone is an entirely reasonable preference.
+ * Each toggleable type yields two keys: `TYPE` (in-app) and `TYPE_PUSH`
+ * (defaults to the catalog's push value). Push is a separate axis on purpose:
+ * wanting something in the bell but not on your phone is entirely reasonable.
+ *
+ * There is no `_EMAIL` key. That channel was opt-in and defaulted to off for
+ * every type, so it was dead UI; push replaced it. Any `_EMAIL` value still
+ * stored on a user is inert — PUT rejects unknown keys and GET only reads the
+ * keys listed here. Transactional emails (redemption outcomes, HR replies,
+ * whistleblower alerts) are sent directly by their routes and are unaffected.
  */
-const PREF_KEYS: string[] = TOGGLEABLE_TYPES.flatMap((t) => [t, `${t}_EMAIL`, `${t}_PUSH`]);
+const PREF_KEYS: string[] = TOGGLEABLE_TYPES.flatMap((t) => [t, `${t}_PUSH`]);
 const PREF_KEY_SET = new Set(PREF_KEYS);
 
 function defaults(): Record<string, boolean> {
   const out: Record<string, boolean> = {};
   for (const type of TOGGLEABLE_TYPES) {
     out[type] = NOTIFICATION_TYPES[type].defaults.inApp;
-    out[`${type}_EMAIL`] = false;
     out[`${type}_PUSH`] = NOTIFICATION_TYPES[type].defaults.push;
   }
   return out;
@@ -42,7 +46,6 @@ function resolve(stored: Record<string, boolean>): Record<string, boolean> {
 
   for (const [oldKey, newType] of Object.entries(PREF_KEY_ALIASES)) {
     if (oldKey in stored) merged[newType] = stored[oldKey];
-    if (`${oldKey}_EMAIL` in stored) merged[`${newType}_EMAIL`] = stored[`${oldKey}_EMAIL`];
     if (`${oldKey}_PUSH` in stored) merged[`${newType}_PUSH`] = stored[`${oldKey}_PUSH`];
   }
 

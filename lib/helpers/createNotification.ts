@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { sendMail } from "@/lib/email/mailer";
 import { notificationEmail } from "@/lib/email/templates";
+import { after } from "next/server";
 import { broadcast } from "@/lib/realtime/broadcast";
+import { sendPushToUser } from "@/lib/push/send";
 import {
   getNotificationEntry,
   PREF_KEY_ALIASES,
@@ -84,10 +86,57 @@ export async function createNotification(params: CreateNotificationParams) {
     ? await upsertGrouped(params, groupKey)
     : await prisma.notification.create({ data: params });
 
+  // Third channel: Web Push, for anyone who has installed the app and opted in.
+  //
+  // This is the only channel that reaches someone who is not looking at a tab.
+  // The realtime socket is torn down after 2 minutes hidden
+  // (REALTIME_IDLE_GRACE_MS) and the fallback poll pauses with it, so an
+  // in-app notification structurally cannot reach a closed app.
+  //
+  // Deferred via after() so the push round trip never delays the mutation that
+  // triggered it, and wrapped so a push failure can never fail the request.
+  if (entry) {
+    const pushAllowed =
+      !entry.toggleable || (await isPushEnabled(params.userId, params.type, entry.defaults.push));
+
+    if (pushAllowed && entry.defaults.push) {
+      const url = entry.href(params.data as NotificationData) ?? "/feed";
+      after(() =>
+        sendPushToUser(params.userId, {
+          title: params.title,
+          body: params.body,
+          url,
+          // Reuse the in-app grouping key so the OS collapses the same repeats
+          // the bell does, instead of stacking one banner per event.
+          tag: groupKey ?? undefined,
+        }),
+      );
+    }
+  }
+
   // Ping the recipient's channel so their notification bell re-fetches instantly.
   await broadcast(`user:${params.userId}`);
 
   return notification;
+}
+
+/**
+ * Push is opt-out per type once the user has a subscription, defaulting to the
+ * catalog value. Read separately from the in-app check because a user can
+ * reasonably want a notification in the bell but not on their phone.
+ */
+async function isPushEnabled(userId: string, type: string, fallback: boolean): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationPrefs: true },
+    });
+    const prefs = (user?.notificationPrefs ?? {}) as Record<string, boolean>;
+    return readPref(prefs, type, "_PUSH") ?? fallback;
+  } catch (err) {
+    console.error("push preference check failed", err);
+    return fallback;
+  }
 }
 
 /**

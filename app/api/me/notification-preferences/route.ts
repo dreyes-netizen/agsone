@@ -15,10 +15,12 @@ import {
  * The previous hardcoded arrays had drifted: two of the four keys they exposed
  * matched no emitter, so the UI rendered switches that did nothing.
  *
- * Each toggleable type yields two keys: `TYPE` (in-app, default from the
- * catalog) and `TYPE_EMAIL` (always default off — email stays opt-in).
+ * Each toggleable type yields three keys: `TYPE` (in-app), `TYPE_EMAIL`
+ * (always default off — email stays opt-in) and `TYPE_PUSH` (defaults to the
+ * catalog's push value). Push is a separate axis on purpose: wanting something
+ * in the bell but not on your phone is an entirely reasonable preference.
  */
-const PREF_KEYS: string[] = TOGGLEABLE_TYPES.flatMap((t) => [t, `${t}_EMAIL`]);
+const PREF_KEYS: string[] = TOGGLEABLE_TYPES.flatMap((t) => [t, `${t}_EMAIL`, `${t}_PUSH`]);
 const PREF_KEY_SET = new Set(PREF_KEYS);
 
 function defaults(): Record<string, boolean> {
@@ -26,6 +28,7 @@ function defaults(): Record<string, boolean> {
   for (const type of TOGGLEABLE_TYPES) {
     out[type] = NOTIFICATION_TYPES[type].defaults.inApp;
     out[`${type}_EMAIL`] = false;
+    out[`${type}_PUSH`] = NOTIFICATION_TYPES[type].defaults.push;
   }
   return out;
 }
@@ -40,6 +43,7 @@ function resolve(stored: Record<string, boolean>): Record<string, boolean> {
   for (const [oldKey, newType] of Object.entries(PREF_KEY_ALIASES)) {
     if (oldKey in stored) merged[newType] = stored[oldKey];
     if (`${oldKey}_EMAIL` in stored) merged[`${newType}_EMAIL`] = stored[`${oldKey}_EMAIL`];
+    if (`${oldKey}_PUSH` in stored) merged[`${newType}_PUSH`] = stored[`${oldKey}_PUSH`];
   }
 
   // Current keys win over any aliased value.

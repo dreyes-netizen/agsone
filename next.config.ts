@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
-  serverExternalPackages: ["firebase-admin", "exceljs"],
+  serverExternalPackages: ["firebase-admin", "exceljs", "web-push"],
   devIndicators: false,
   allowedDevOrigins: ["jinx-delicious-jawline.ngrok-free.dev", "*.ngrok-free.dev"],
   images: {
@@ -133,6 +133,16 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        // The service worker must never be served stale: a cached copy would
+        // pin users to an old push handler indefinitely. Browsers also refuse
+        // to register a worker whose Content-Type is not JavaScript.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
       },
     ];
   },

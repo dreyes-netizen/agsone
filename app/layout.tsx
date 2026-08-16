@@ -19,11 +19,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AGS One",
   description: "Earn points. Redeem rewards. Have fun at work.",
+  // Next serves the manifest from app/manifest.ts, but only links it when the
+  // metadata object opts in.
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    // iOS reads these rather than the manifest. Without `capable`, an
+    // added-to-home-screen AGS One opens inside Safari chrome instead of
+    // standalone — and standalone is precisely what unlocks Web Push on
+    // iOS 16.4+.
+    capable: true,
+    title: "AGS One",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Paints the browser and OS chrome to match the app shell.
+  themeColor: "#111827",
 };
 
 export default function RootLayout({

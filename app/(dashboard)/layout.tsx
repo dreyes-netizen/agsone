@@ -15,6 +15,7 @@ import { auth } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationsController } from "@/components/notifications/NotificationsController";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 // AllyWidget statically pulls in react-markdown + remark-gfm (~163 KB) but
 // renders nothing until the user opens it — load it lazily, client-only, so
@@ -190,6 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-gray-50">
       <NotificationsController />
+      <InstallPrompt />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-[216px] bg-command-black flex-col fixed h-full z-10 border-r border-white/[0.05]">

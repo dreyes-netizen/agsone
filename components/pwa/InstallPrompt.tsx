@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, Share, X } from "lucide-react";
+import { isIOSDevice, isStandaloneDisplay } from "@/lib/helpers/platform";
 
 /**
  * A dismissible nudge to install AGS One to the home screen.
@@ -32,14 +33,10 @@ export function InstallPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as unknown as { standalone?: boolean }).standalone === true;
-
     // Already installed, or the user has said no once — don't nag.
-    if (standalone || localStorage.getItem(DISMISS_KEY) === "1") return;
+    if (isStandaloneDisplay() || localStorage.getItem(DISMISS_KEY) === "1") return;
 
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window);
+    const ios = isIOSDevice();
     // Deferred out of the effect body: setting state synchronously there
     // triggers a cascading render. iOS has nothing to wait for; Chromium waits
     // for beforeinstallprompt so the banner only appears when an install is

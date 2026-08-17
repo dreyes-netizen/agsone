@@ -318,6 +318,7 @@ model SocialPost {
   imageUrls   String[]
   isPinned    Boolean  @default(false)
   flair       String   @default("CASUAL")
+  isAnonymous Boolean  @default(false) // POLL only — hides voter identity even from the author
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

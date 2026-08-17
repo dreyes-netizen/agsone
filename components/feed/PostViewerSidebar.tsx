@@ -33,6 +33,7 @@ export function PostViewerSidebar({
   onDelete,
   onReact,
   onOpenReactions,
+  onOpenVoters,
   comments,
   commentsLoading,
   replyingTo,
@@ -70,6 +71,7 @@ export function PostViewerSidebar({
   onDelete: () => void;
   onReact: (postId: string, emoji: string) => void;
   onOpenReactions: () => void;
+  onOpenVoters: (optionId: string | null) => void;
   comments: CommentItem[];
   commentsLoading: boolean;
   replyingTo: ReplyTarget;
@@ -107,6 +109,7 @@ export function PostViewerSidebar({
           autoResize={autoResize}
           votingPost={votingPost}
           onVote={onVote}
+          onOpenVoters={onOpenVoters}
           onPin={onPin}
           onEdit={onEdit}
           onDelete={onDelete}

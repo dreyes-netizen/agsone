@@ -126,6 +126,7 @@ const postSchema = z.discriminatedUnion("type", [
     options: z.array(z.string().min(1).max(200)).min(2).max(4),
     imageUrls: z.array(z.string().url()).max(4).optional(),
     deptOnly: z.boolean().optional(),
+    isAnonymous: z.boolean().optional().default(false),
   }),
   z.object({
     type: z.literal("SHOUTOUT"),
@@ -155,6 +156,7 @@ export async function POST(req: NextRequest) {
         flair: parsed.data.flair,
         imageUrls: parsed.data.imageUrls ?? [],
         departmentId: parsed.data.deptOnly ? user.departmentId : null,
+        isAnonymous: parsed.data.isAnonymous,
         pollOptions: {
           create: parsed.data.options.map((text) => ({ text })),
         },

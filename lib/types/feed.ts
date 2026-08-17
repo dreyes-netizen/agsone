@@ -21,6 +21,7 @@ export type FeedPost = {
   commentCount: number;
   pollOptions: PollOption[];
   myVoteOptionId: string | null;
+  isAnonymous: boolean;
   departmentId: string | null;
   department: { name: string } | null;
 };
@@ -28,6 +29,15 @@ export type FeedPost = {
 export type ReactorItem = {
   id: string;
   emoji: string;
+  createdAt: string;
+  isCurrentUser: boolean;
+  user: { id: string; displayName: string; avatarUrl: string | null; department: string | null };
+};
+
+export type VoterItem = {
+  id: string;
+  optionId: string;
+  optionText: string;
   createdAt: string;
   isCurrentUser: boolean;
   user: { id: string; displayName: string; avatarUrl: string | null; department: string | null };

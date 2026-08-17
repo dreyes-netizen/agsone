@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Send, ImagePlus, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2 } from "lucide-react";
+import { Send, ImagePlus, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2, EyeOff } from "lucide-react";
 import { FLAIRS } from "@/lib/flairs";
 import { PostImages, imageGridClasses } from "@/components/feed/PostImages";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
@@ -14,6 +14,7 @@ import { CommentThread } from "@/components/feed/CommentThread";
 import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
+import { PollVotersDialog } from "@/components/feed/PollVotersDialog";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
   AlertDialog,
@@ -72,6 +73,7 @@ export default function FeedPage() {
     posting,
     pollMode, setPollMode,
     pollOptions, setPollOptions,
+    pollAnonymous, setPollAnonymous,
     shoutoutMode, setShoutoutMode,
     shoutoutTitle, setShoutoutTitle,
     shoutoutDeptOnly, setShoutoutDeptOnly,
@@ -142,6 +144,11 @@ export default function FeedPage() {
   // dialog is mounted, unlike the reaction data itself which lives on `posts`.
   const [reactionsPostId, setReactionsPostId] = React.useState<string | null>(null);
   const reactionsPost = posts.find((p) => p.id === reactionsPostId) ?? null;
+
+  // Which post's (and optionally, which option's) "who voted" modal is open,
+  // if any — same transient-UI-only treatment as reactionsPostId above.
+  const [pollVotersQuery, setPollVotersQuery] = React.useState<{ postId: string; optionId: string | null } | null>(null);
+  const pollVotersPost = posts.find((p) => p.id === pollVotersQuery?.postId) ?? null;
   // Reads from the same `posts` array the feed card renders from, so a
   // reaction/comment made inside the viewer is the same state update the
   // card sees — no separate store, no refetch needed to stay in sync.
@@ -570,7 +577,7 @@ export default function FeedPage() {
                 const next = !pollMode;
                 setPollMode(next);
                 if (next) { setShoutoutMode(false); setRecipients([]); setRecipientSearch(""); }
-                if (!next) setPollOptions(["", ""]);
+                if (!next) { setPollOptions(["", ""]); setPollAnonymous(false); }
               }}
               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
                 pollMode
@@ -585,7 +592,7 @@ export default function FeedPage() {
               onClick={() => {
                 const next = !shoutoutMode;
                 setShoutoutMode(next);
-                if (next) { setPollMode(false); setPollOptions(["", ""]); }
+                if (next) { setPollMode(false); setPollOptions(["", ""]); setPollAnonymous(false); }
                 else { setRecipients([]); setRecipientSearch(""); setShoutoutTitle(""); setShoutoutDeptOnly(false); }
               }}
               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
@@ -632,6 +639,36 @@ export default function FeedPage() {
                   + Add option
                 </button>
               )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-gray-500 font-medium shrink-0">Voting:</span>
+                <div className="flex items-center gap-1 p-0.5 bg-gray-100 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setPollAnonymous(false)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                      !pollAnonymous ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    Visible
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPollAnonymous(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                      pollAnonymous ? "bg-white text-navy-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <EyeOff className="w-3 h-3" aria-hidden="true" />
+                    Anonymous
+                  </button>
+                </div>
+              </div>
+              {pollAnonymous && (
+                <p className="text-xs text-gray-500 pl-1">
+                  Voter identities won&apos;t be shown to anyone, including you.
+                </p>
+              )}
             </div>
           )}
 
@@ -656,7 +693,7 @@ export default function FeedPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setShowAllFlairs(false); clearImages(); }}
+                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setPollAnonymous(false); setShowAllFlairs(false); clearImages(); }}
                   className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 transition-colors"
                 >
                   Cancel
@@ -716,6 +753,7 @@ export default function FeedPage() {
                     autoResize={autoResize}
                     votingPost={votingPost}
                     onVote={handleVote}
+                    onOpenVoters={(optionId) => setPollVotersQuery({ postId: post.id, optionId })}
                     onPin={() => togglePin(post.id)}
                     onEdit={() => startEditPost(post)}
                     onDelete={() => deletePost(post.id)}
@@ -784,6 +822,7 @@ export default function FeedPage() {
                   autoResize={autoResize}
                   votingPost={votingPost}
                   onVote={handleVote}
+                  onOpenVoters={(optionId) => setPollVotersQuery({ postId: post.id, optionId })}
                   onPin={() => togglePin(post.id)}
                   onEdit={() => startEditPost(post)}
                   onDelete={() => deletePost(post.id)}
@@ -881,6 +920,7 @@ export default function FeedPage() {
         onDelete={() => lightboxPost && deletePost(lightboxPost.id)}
         onReact={toggleReaction}
         onOpenReactions={() => lightboxPost && setReactionsPostId(lightboxPost.id)}
+        onOpenVoters={(optionId) => lightboxPost && setPollVotersQuery({ postId: lightboxPost.id, optionId })}
         comments={lightbox ? commentsCache[lightbox.postId] ?? [] : []}
         commentsLoading={lightbox ? !!commentsLoading[lightbox.postId] : false}
         onEnsureCommentsLoaded={(postId) => { if (!commentsCache[postId] && !commentsLoading[postId]) refreshComments(postId); }}
@@ -949,6 +989,16 @@ export default function FeedPage() {
         myEmoji={reactionsPost?.myReactions[0] ?? null}
         currentUser={currentUserMeta}
         onOpenProfile={(id) => { setReactionsPostId(null); router.push(`/employees/${id}`); }}
+      />
+
+      <PollVotersDialog
+        postId={pollVotersQuery?.postId ?? null}
+        options={pollVotersPost?.pollOptions ?? []}
+        initialOptionId={pollVotersQuery?.optionId ?? null}
+        onClose={() => setPollVotersQuery(null)}
+        myOptionId={pollVotersPost?.myVoteOptionId ?? null}
+        currentUser={currentUserMeta}
+        onOpenProfile={(id) => { setPollVotersQuery(null); router.push(`/employees/${id}`); }}
       />
     </div>
   );

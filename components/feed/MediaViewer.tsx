@@ -41,6 +41,7 @@ export function MediaViewer({
   onDelete,
   onReact,
   onOpenReactions,
+  onOpenVoters,
   comments,
   commentsLoading,
   onEnsureCommentsLoaded,
@@ -84,6 +85,7 @@ export function MediaViewer({
   onDelete: () => void;
   onReact: (postId: string, emoji: string) => void;
   onOpenReactions: () => void;
+  onOpenVoters: (optionId: string | null) => void;
   comments: CommentItem[];
   commentsLoading: boolean;
   onEnsureCommentsLoaded: (postId: string) => void;
@@ -190,6 +192,7 @@ export function MediaViewer({
               onDelete={onDelete}
               onReact={onReact}
               onOpenReactions={onOpenReactions}
+              onOpenVoters={onOpenVoters}
               comments={comments}
               commentsLoading={commentsLoading}
               replyingTo={replyingTo}

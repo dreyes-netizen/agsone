@@ -63,6 +63,7 @@ export function useFeedActions() {
   const [posting, setPosting] = useState(false);
   const [pollMode, setPollMode] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [pollAnonymous, setPollAnonymous] = useState(false);
   const [shoutoutMode, setShoutoutMode] = useState(false);
   const [shoutoutTitle, setShoutoutTitle] = useState("");
   const [shoutoutDeptOnly, setShoutoutDeptOnly] = useState(false);
@@ -312,9 +313,9 @@ export function useFeedActions() {
           const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
           await apiFetch("/api/feed", {
             method: "POST",
-            body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls, deptOnly }),
+            body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls, deptOnly, isAnonymous: pollAnonymous }),
           });
-          setPollMode(false); setPollOptions(["", ""]);
+          setPollMode(false); setPollOptions(["", ""]); setPollAnonymous(false);
         } else {
           // Only these three flairs double as a feed post `type` (matching the
           // sidebar's category filters) — every other flair is decorative only
@@ -748,6 +749,7 @@ export function useFeedActions() {
     posting,
     pollMode, setPollMode,
     pollOptions, setPollOptions,
+    pollAnonymous, setPollAnonymous,
     shoutoutMode, setShoutoutMode,
     shoutoutTitle, setShoutoutTitle,
     shoutoutDeptOnly, setShoutoutDeptOnly,

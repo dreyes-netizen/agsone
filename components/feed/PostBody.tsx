@@ -32,6 +32,7 @@ export function PostBody({
   autoResize,
   votingPost,
   onVote,
+  onOpenVoters,
   onPin,
   onEdit,
   onDelete,
@@ -46,6 +47,7 @@ export function PostBody({
   autoResize: (el: HTMLTextAreaElement) => void;
   votingPost: string | null;
   onVote: (postId: string, optionId: string) => void;
+  onOpenVoters: (optionId: string | null) => void;
   onPin: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -154,7 +156,12 @@ export function PostBody({
         onDelete={onDelete}
       />
 
-      <PostBadges flairId={post.flair} isPoll={post.type === "POLL"} departmentName={post.department?.name} />
+      <PostBadges
+        flairId={post.flair}
+        isPoll={post.type === "POLL"}
+        isAnonymousPoll={post.type === "POLL" && post.isAnonymous}
+        departmentName={post.department?.name}
+      />
 
       {isEditing && editingPost ? (
         <div className="space-y-2">
@@ -200,7 +207,9 @@ export function PostBody({
           options={post.pollOptions}
           myVoteOptionId={post.myVoteOptionId}
           voting={votingPost === post.id}
+          isAnonymous={post.isAnonymous}
           onVote={onVote}
+          onOpenVoters={onOpenVoters}
         />
       )}
     </div>

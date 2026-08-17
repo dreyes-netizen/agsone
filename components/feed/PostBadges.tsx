@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, BarChart2 } from "lucide-react";
+import { Building2, BarChart2, EyeOff } from "lucide-react";
 import { flairById } from "@/lib/flairs";
 
 /**
@@ -13,10 +13,12 @@ import { flairById } from "@/lib/flairs";
 export function PostBadges({
   flairId,
   isPoll,
+  isAnonymousPoll,
   departmentName,
 }: {
   flairId?: string | null;
   isPoll?: boolean;
+  isAnonymousPoll?: boolean;
   departmentName?: string | null;
 }) {
   const flair = flairById[flairId ?? "CASUAL"] ?? flairById.CASUAL;
@@ -28,9 +30,15 @@ export function PostBadges({
         {flair.label}
       </span>
       {isPoll && (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-          <BarChart2 className="w-3 h-3" aria-hidden="true" /> Poll
-        </span>
+        isAnonymousPoll ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+            <EyeOff className="w-3 h-3" aria-hidden="true" /> Anonymous Poll
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+            <BarChart2 className="w-3 h-3" aria-hidden="true" /> Poll
+          </span>
+        )
       )}
       {departmentName && (
         <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">

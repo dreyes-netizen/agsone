@@ -11,6 +11,8 @@ import { resolveMentionRecipients } from "@/lib/helpers/parseMentions";
 
 const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
+const COMMENT_PAGE_SIZE = 20;
+
 // A GIF comment carries only the provider's id (never a media URL — the
 // client resolves current media live from the provider by id, see
 // lib/giphy/client.ts) plus optional caption text. A text comment requires
@@ -40,14 +42,24 @@ export async function GET(
 
   const { id } = await params;
 
-  // The client renders this whole list with no "load more" affordance, so a
-  // tight page size would silently hide real comments — these are generous
-  // ceilings against a pathological case (a post with thousands of
-  // comments), not real pagination.
-  const comments = await prisma.socialComment.findMany({
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor") ?? undefined;
+  // Guard against NaN / negative limits, same as GET /api/feed.
+  const parsedLimit = parseInt(searchParams.get("limit") ?? String(COMMENT_PAGE_SIZE), 10);
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), COMMENT_PAGE_SIZE) : COMMENT_PAGE_SIZE;
+
+  // Top-level comments are fetched newest-first with a cursor so the default
+  // view is always "the most recent page" — a "View earlier comments" button
+  // pages backward through older cursors. Reversed back to chronological
+  // (oldest-of-this-page first) below so the thread still reads top-to-bottom.
+  // Replies stay a flat, generous cap (a reply thread this deep is
+  // pathological, not a real pagination case) behind the existing
+  // collapse-by-default "View replies" toggle.
+  const rows = await prisma.socialComment.findMany({
     where: { postId: id, parentId: null },
-    orderBy: { createdAt: "asc" },
-    take: 500,
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     include: {
       author: { select: authorSelect },
       replies: {
@@ -57,6 +69,11 @@ export async function GET(
       },
     },
   });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore ? page[page.length - 1].id : null;
+  const comments = page.reverse();
 
   const data = comments.map((c) => ({
     id: c.id,
@@ -80,7 +97,7 @@ export async function GET(
     })),
   }));
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data, nextCursor });
 }
 
 export async function POST(

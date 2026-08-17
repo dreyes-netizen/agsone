@@ -84,6 +84,8 @@ export default function FeedPage() {
     openComments,
     commentsCache,
     commentsLoading,
+    commentsCursor,
+    commentsLoadingMore,
     commentDraft, setCommentDraft,
     commentSending,
     replyingTo, setReplyingTo,
@@ -123,6 +125,7 @@ export default function FeedPage() {
     handleVote,
     toggleComments,
     refreshComments,
+    loadMoreComments,
     submitComment,
     submitReply,
     deleteComment,
@@ -793,6 +796,9 @@ export default function FeedPage() {
                       onSetReplyingTo={setReplyingTo}
                       onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
                       onSubmitReply={submitReply}
+                      hasMoreComments={!!commentsCursor[post.id]}
+                      loadingMoreComments={!!commentsLoadingMore[post.id]}
+                      onLoadMoreComments={loadMoreComments}
                       onToggleExpandedReplies={(commentId) => setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }))}
                       onDeleteComment={deleteComment}
                       onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
@@ -867,6 +873,9 @@ export default function FeedPage() {
                     onSetReplyingTo={setReplyingTo}
                     onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
                     onSubmitReply={submitReply}
+                    hasMoreComments={!!commentsCursor[post.id]}
+                    loadingMoreComments={!!commentsLoadingMore[post.id]}
+                    onLoadMoreComments={loadMoreComments}
                     onToggleExpandedReplies={(commentId) => setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }))}
                     onDeleteComment={deleteComment}
                     onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
@@ -923,6 +932,9 @@ export default function FeedPage() {
         onOpenVoters={(optionId) => lightboxPost && setPollVotersQuery({ postId: lightboxPost.id, optionId })}
         comments={lightbox ? commentsCache[lightbox.postId] ?? [] : []}
         commentsLoading={lightbox ? !!commentsLoading[lightbox.postId] : false}
+        hasMoreComments={lightbox ? !!commentsCursor[lightbox.postId] : false}
+        loadingMoreComments={lightbox ? !!commentsLoadingMore[lightbox.postId] : false}
+        onLoadMoreComments={loadMoreComments}
         onEnsureCommentsLoaded={(postId) => { if (!commentsCache[postId] && !commentsLoading[postId]) refreshComments(postId); }}
         replyingTo={replyingTo}
         replyDraft={replyDraft}

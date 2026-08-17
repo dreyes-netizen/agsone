@@ -36,6 +36,9 @@ export function PostViewerSidebar({
   onOpenVoters,
   comments,
   commentsLoading,
+  hasMoreComments,
+  loadingMoreComments,
+  onLoadMoreComments,
   replyingTo,
   replyDraft,
   replySending,
@@ -74,6 +77,9 @@ export function PostViewerSidebar({
   onOpenVoters: (optionId: string | null) => void;
   comments: CommentItem[];
   commentsLoading: boolean;
+  hasMoreComments: boolean;
+  loadingMoreComments: boolean;
+  onLoadMoreComments: (postId: string) => void;
   replyingTo: ReplyTarget;
   replyDraft: Record<string, string>;
   replySending: Record<string, boolean>;
@@ -134,6 +140,9 @@ export function PostViewerSidebar({
           postId={post.id}
           comments={comments}
           loading={commentsLoading}
+          hasMoreComments={hasMoreComments}
+          loadingMoreComments={loadingMoreComments}
+          onLoadMoreComments={onLoadMoreComments}
           replyingTo={replyingTo}
           replyDraft={replyDraft}
           replySending={replySending}

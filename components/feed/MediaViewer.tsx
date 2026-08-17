@@ -44,6 +44,9 @@ export function MediaViewer({
   onOpenVoters,
   comments,
   commentsLoading,
+  hasMoreComments,
+  loadingMoreComments,
+  onLoadMoreComments,
   onEnsureCommentsLoaded,
   replyingTo,
   replyDraft,
@@ -88,6 +91,9 @@ export function MediaViewer({
   onOpenVoters: (optionId: string | null) => void;
   comments: CommentItem[];
   commentsLoading: boolean;
+  hasMoreComments: boolean;
+  loadingMoreComments: boolean;
+  onLoadMoreComments: (postId: string) => void;
   onEnsureCommentsLoaded: (postId: string) => void;
   replyingTo: ReplyTarget;
   replyDraft: Record<string, string>;
@@ -195,6 +201,9 @@ export function MediaViewer({
               onOpenVoters={onOpenVoters}
               comments={comments}
               commentsLoading={commentsLoading}
+              hasMoreComments={hasMoreComments}
+              loadingMoreComments={loadingMoreComments}
+              onLoadMoreComments={onLoadMoreComments}
               replyingTo={replyingTo}
               replyDraft={replyDraft}
               replySending={replySending}

@@ -74,6 +74,8 @@ export function useFeedActions() {
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentsCache, setCommentsCache] = useState<Record<string, CommentItem[]>>({});
   const [commentsLoading, setCommentsLoading] = useState<Record<string, boolean>>({});
+  const [commentsCursor, setCommentsCursor] = useState<Record<string, string | null>>({});
+  const [commentsLoadingMore, setCommentsLoadingMore] = useState<Record<string, boolean>>({});
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [commentSending, setCommentSending] = useState<Record<string, boolean>>({});
   const [replyingTo, setReplyingTo] = useState<{ postId: string; commentId: string; displayName: string } | null>(null);
@@ -392,8 +394,23 @@ export function useFeedActions() {
   async function refreshComments(postId: string, showLoading = true) {
     if (showLoading) setCommentsLoading((prev) => ({ ...prev, [postId]: true }));
     try {
-      const res = await apiFetch<{ data: CommentItem[] }>(`/api/feed/${postId}/comments`);
-      setCommentsCache((prev) => ({ ...prev, [postId]: res.data }));
+      const res = await apiFetch<{ data: CommentItem[]; nextCursor: string | null }>(`/api/feed/${postId}/comments`);
+      setCommentsCache((prev) => {
+        if (showLoading || !prev[postId]) return { ...prev, [postId]: res.data };
+        // Silent background refresh (realtime sync) of an already-open thread:
+        // upsert the latest page's rows without discarding older pages
+        // already pulled in via "View earlier comments".
+        const existing = prev[postId];
+        const byId = new Map(existing.map((c) => [c.id, c]));
+        for (const c of res.data) byId.set(c.id, c);
+        const merged = existing.map((c) => byId.get(c.id)!);
+        for (const c of res.data) if (!existing.some((e) => e.id === c.id)) merged.push(c);
+        return { ...prev, [postId]: merged };
+      });
+      // Only a fresh open resets the cursor — a silent background refresh only
+      // ever re-fetches the latest page, so it must not clobber a cursor that
+      // "View earlier comments" has already paged further back than that.
+      if (showLoading) setCommentsCursor((prev) => ({ ...prev, [postId]: res.nextCursor }));
     } catch (err) {
       // Leave the cache empty on failure rather than throwing — an uncaught
       // rejection here previously let a transient backend error retry forever
@@ -403,6 +420,25 @@ export function useFeedActions() {
       console.error("comments refresh failed", err);
     } finally {
       if (showLoading) setCommentsLoading((prev) => ({ ...prev, [postId]: false }));
+    }
+  }
+
+  async function loadMoreComments(postId: string) {
+    const cursor = commentsCursor[postId];
+    if (!cursor || commentsLoadingMore[postId]) return;
+    setCommentsLoadingMore((prev) => ({ ...prev, [postId]: true }));
+    try {
+      const res = await apiFetch<{ data: CommentItem[]; nextCursor: string | null }>(
+        `/api/feed/${postId}/comments?cursor=${encodeURIComponent(cursor)}`
+      );
+      // Older page is prepended: the API returns comments oldest-first within
+      // the post, and "earlier" means further up the thread.
+      setCommentsCache((prev) => ({ ...prev, [postId]: [...res.data, ...(prev[postId] ?? [])] }));
+      setCommentsCursor((prev) => ({ ...prev, [postId]: res.nextCursor }));
+    } catch (err) {
+      console.error("load more comments failed", err);
+    } finally {
+      setCommentsLoadingMore((prev) => ({ ...prev, [postId]: false }));
     }
   }
 
@@ -760,6 +796,8 @@ export function useFeedActions() {
     openComments,
     commentsCache,
     commentsLoading,
+    commentsCursor,
+    commentsLoadingMore,
     commentDraft, setCommentDraft,
     commentSending,
     replyingTo, setReplyingTo,
@@ -803,6 +841,7 @@ export function useFeedActions() {
     handleVote,
     toggleComments,
     refreshComments,
+    loadMoreComments,
     submitComment,
     submitReply,
     deleteComment,

@@ -32,6 +32,11 @@ type ListProps = {
   onSetReplyingTo: (value: ReplyTarget) => void;
   onReplyDraftChange: (commentId: string, value: string) => void;
   onSubmitReply: (postId: string, commentId: string, gif?: GifResult, encodedContent?: string) => void;
+  /** Whether an older page of top-level comments exists behind a cursor. */
+  hasMoreComments: boolean;
+  /** Whether that older page is currently being fetched. */
+  loadingMoreComments: boolean;
+  onLoadMoreComments: (postId: string) => void;
   /** Mention candidates. Omit to disable @mentions in replies. */
   employees?: MentionEmployee[];
   /** Called the first time an @ is typed, so the roster can load on demand. */
@@ -153,6 +158,9 @@ export function CommentList({
   onSetReplyingTo,
   onReplyDraftChange,
   onSubmitReply,
+  hasMoreComments,
+  loadingMoreComments,
+  onLoadMoreComments,
   onToggleExpandedReplies,
   onDeleteComment,
   autoResize,
@@ -204,6 +212,18 @@ export function CommentList({
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {!loading && hasMoreComments && (
+        <div className="flex justify-center pb-1">
+          <button
+            type="button"
+            onClick={() => onLoadMoreComments(postId)}
+            disabled={loadingMoreComments}
+            className="text-[11px] font-semibold text-navy-500 hover:text-navy-700 transition-colors disabled:opacity-50"
+          >
+            {loadingMoreComments ? "Loading…" : "View earlier comments"}
+          </button>
         </div>
       )}
       {!loading && comments.map((c) => (
@@ -453,6 +473,9 @@ export function CommentThread({
   onSetReplyingTo,
   onReplyDraftChange,
   onSubmitReply,
+  hasMoreComments,
+  loadingMoreComments,
+  onLoadMoreComments,
   onToggleExpandedReplies,
   onDeleteComment,
   onCommentDraftChange,
@@ -485,6 +508,9 @@ export function CommentThread({
         onSetReplyingTo={onSetReplyingTo}
         onReplyDraftChange={onReplyDraftChange}
         onSubmitReply={onSubmitReply}
+        hasMoreComments={hasMoreComments}
+        loadingMoreComments={loadingMoreComments}
+        onLoadMoreComments={onLoadMoreComments}
         onToggleExpandedReplies={onToggleExpandedReplies}
         onDeleteComment={onDeleteComment}
         autoResize={autoResize}

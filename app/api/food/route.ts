@@ -7,15 +7,20 @@ import { realtimeTopics } from "@/lib/realtime/topics";
 
 const addOnSchema = z.object({ name: z.string().min(1).max(100), price: z.number().min(0) });
 
-const createSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  price: z.number().positive().transform((v) => Math.round(v * 100) / 100),
-  imageUrls: z.array(z.string().url()).max(3).default([]),
-  cutoffAt: z.string().datetime(),
-  deliveryDate: z.string().datetime().optional(),
-  addOns: z.array(addOnSchema).max(10).default([]),
-});
+const createSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    description: z.string().max(2000).optional(),
+    price: z.number().positive().transform((v) => Math.round(v * 100) / 100),
+    imageUrls: z.array(z.string().url()).max(3).default([]),
+    cutoffAt: z.string().datetime(),
+    deliveryDate: z.string().datetime(),
+    addOns: z.array(addOnSchema).max(10).default([]),
+  })
+  .refine((data) => new Date(data.deliveryDate) > new Date(data.cutoffAt), {
+    message: "Delivery date must be after the order cutoff",
+    path: ["deliveryDate"],
+  });
 
 export async function GET(req: NextRequest) {
   const authUser = await verifyAuth(req);

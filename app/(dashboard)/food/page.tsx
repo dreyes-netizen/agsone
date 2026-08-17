@@ -169,6 +169,10 @@ export default function FoodPage() {
   // ── Create / update listing ──────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (new Date(newDeliveryDate) <= new Date(newCutoff)) {
+      toast.error("Delivery date & time must be after the order cutoff");
+      return;
+    }
     setCreating(true);
     try {
       const uploadedUrls = await Promise.all(newImages.map((f) => uploadToCloudinary(f, token!)));
@@ -179,7 +183,7 @@ export default function FoodPage() {
         price: parseFloat(newPrice),
         imageUrls,
         cutoffAt: new Date(newCutoff).toISOString(),
-        ...(newDeliveryDate && { deliveryDate: new Date(newDeliveryDate).toISOString() }),
+        deliveryDate: new Date(newDeliveryDate).toISOString(),
         addOns: newAddOns,
       };
       if (editingId) {

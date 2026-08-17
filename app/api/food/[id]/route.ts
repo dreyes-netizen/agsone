@@ -66,7 +66,7 @@ const updateSchema = z.object({
   price: z.number().positive().transform((v) => Math.round(v * 100) / 100).optional(),
   imageUrls: z.array(z.string().url()).max(3).optional(),
   cutoffAt: z.string().datetime().optional(),
-  deliveryDate: z.string().datetime().nullable().optional(),
+  deliveryDate: z.string().datetime().optional(),
   addOns: z.array(addOnSchema).max(10).optional(),
 });
 
@@ -92,6 +92,12 @@ export async function PATCH(
   }
 
   const { isActive, title, description, price, imageUrls, cutoffAt, deliveryDate, addOns } = parsed.data;
+
+  const effectiveCutoff = cutoffAt ? new Date(cutoffAt) : listing.cutoffAt;
+  const effectiveDelivery = deliveryDate ? new Date(deliveryDate) : listing.deliveryDate;
+  if (effectiveDelivery && effectiveDelivery <= effectiveCutoff) {
+    return NextResponse.json({ error: "Delivery date must be after the order cutoff" }, { status: 400 });
+  }
 
   const updated = await prisma.foodListing.update({
     where: { id },

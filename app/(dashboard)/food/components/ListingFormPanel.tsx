@@ -45,6 +45,10 @@ export function ListingFormPanel(props: ListingFormPanelProps) {
   // Calculate minimum cutoff time (1 minute from now)
   // eslint-disable-next-line react-hooks/purity
   const minCutoffTime = new Date(Date.now() + 60_000).toISOString().slice(0, 16);
+  // Delivery must be strictly after the cutoff, so its floor is 1 minute past whichever cutoff is chosen.
+  const minDeliveryTime = newCutoff
+    ? new Date(new Date(newCutoff).getTime() + 60_000).toISOString().slice(0, 16)
+    : minCutoffTime;
 
   return (
     <div className="bg-white rounded-card border border-table-border p-5 space-y-4">
@@ -87,10 +91,10 @@ export function ListingFormPanel(props: ListingFormPanelProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Delivery date & time <span className="text-gray-500 font-normal">(optional)</span></label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Delivery date & time</label>
             <input
-              type="datetime-local" value={newDeliveryDate} onChange={(e) => onDeliveryDateChange(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
+              required type="datetime-local" value={newDeliveryDate} onChange={(e) => onDeliveryDateChange(e.target.value)}
+              min={minDeliveryTime}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500"
             />
           </div>

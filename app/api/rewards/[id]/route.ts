@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -31,7 +32,10 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const existing = await prisma.reward.findUnique({ where: { id }, select: { id: true } });
+  const existing = await prisma.reward.findUnique({
+    where: { id },
+    select: { id: true, name: true, pointCost: true, stockQuantity: true, isActive: true },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -41,9 +45,34 @@ export async function PATCH(
     data: parsed.data,
   });
 
+  // Only the fields an admin actually disputes over — cosmetic edits (name,
+  // description, images, category) aren't worth a row. See auditActions.ts
+  // for the full "log vs skip" rationale.
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  if (parsed.data.pointCost !== undefined && parsed.data.pointCost !== existing.pointCost) {
+    changes.pointCost = { from: existing.pointCost, to: parsed.data.pointCost };
+  }
+  if (parsed.data.stockQuantity !== undefined && parsed.data.stockQuantity !== existing.stockQuantity) {
+    changes.stockQuantity = { from: existing.stockQuantity, to: parsed.data.stockQuantity };
+  }
+  if (parsed.data.isActive !== undefined && parsed.data.isActive !== existing.isActive) {
+    changes.isActive = { from: existing.isActive, to: parsed.data.isActive };
+  }
+
+  if (Object.keys(changes).length > 0) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "UPDATE_REWARD",
+      entityType: "Reward",
+      entityId: id,
+      after: { name: reward.name, changes },
+    });
+  }
+
   scheduleBroadcast([
     { topic: realtimeTopics.rewards },
     { topic: realtimeTopics.adminAnalytics },
+    ...(Object.keys(changes).length > 0 ? [{ topic: realtimeTopics.adminAudit }] : []),
   ]);
 
   return NextResponse.json({ data: reward });
@@ -85,9 +114,17 @@ export async function DELETE(
     // Soft-delete: rewards are never hard-deleted by default so redemption history stays intact.
     // Admins can restore a hidden reward by toggling isActive back to true.
     await prisma.reward.update({ where: { id }, data: { isActive: false } });
+    await writeAuditLog({
+      actorId: user.id,
+      action: "DELETE_REWARD",
+      entityType: "Reward",
+      entityId: id,
+      after: { name: existing.name },
+    });
     scheduleBroadcast([
       { topic: realtimeTopics.rewards },
       { topic: realtimeTopics.adminAnalytics },
+      { topic: realtimeTopics.adminAudit },
     ]);
     return NextResponse.json({ success: true });
   }
@@ -106,22 +143,20 @@ export async function DELETE(
 
   await prisma.reward.delete({ where: { id } });
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: user.id,
-      action: "HARD_DELETE_REWARD",
-      entityType: "Reward",
-      entityId: id,
-      beforeState: {
-        name: existing.name,
-        description: existing.description,
-        imageUrls: existing.imageUrls,
-        pointCost: existing.pointCost,
-        stockQuantity: existing.stockQuantity,
-        category: existing.category,
-        isActive: existing.isActive,
-        createdById: existing.createdById,
-      },
+  await writeAuditLog({
+    actorId: user.id,
+    action: "HARD_DELETE_REWARD",
+    entityType: "Reward",
+    entityId: id,
+    before: {
+      name: existing.name,
+      description: existing.description,
+      imageUrls: existing.imageUrls,
+      pointCost: existing.pointCost,
+      stockQuantity: existing.stockQuantity,
+      category: existing.category,
+      isActive: existing.isActive,
+      createdById: existing.createdById,
     },
   });
 

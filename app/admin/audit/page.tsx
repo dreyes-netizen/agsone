@@ -8,6 +8,7 @@ import { ACTION_LABELS, ALL_ACTIONS } from "@/lib/constants/auditActions";
 import { ActionBadge } from "@/components/admin/ActionBadge";
 import { ROLE_LABEL } from "@/lib/constants/roles";
 import { VIOLATION_TYPES } from "@/lib/constants/awardActivities";
+import { auditSummary, type AuditEntryLike } from "@/lib/helpers/auditSummary";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
@@ -16,16 +17,37 @@ function violationLabel(violationType: string): string {
     ?? violationType.replace(/_/g, " ");
 }
 
-type AuditEntry = {
+type AuditEntry = AuditEntryLike & {
   id: string;
-  action: string;
-  entityType: string;
   entityId: string;
-  beforeState: Record<string, unknown> | null;
-  afterState: Record<string, unknown> | null;
   createdAt: string;
   actor: { id: string; displayName: string; avatarUrl: string | null; role: string };
 };
+
+const TONE_CLASS: Record<string, string> = {
+  positive: "font-medium text-emerald-600",
+  negative: "font-medium text-red-600",
+};
+
+function targetName(after: Record<string, unknown>): string | null {
+  const name = after.targetUserName ?? after.toUserName;
+  return name ? String(name) : null;
+}
+
+// Renders a { field: { from, to } } diff (UPDATE_USER, UPDATE_REWARD) as one
+// row per changed field — "Role: Employee → Manager" instead of a raw
+// stringified object, which is what a naive fallback would otherwise show.
+function changeRows(changes: unknown): { label: string; value: string }[] {
+  if (!changes || typeof changes !== "object") return [];
+  const rows: { label: string; value: string }[] = [];
+  for (const [field, diff] of Object.entries(changes as Record<string, { from: unknown; to: unknown }>)) {
+    const label = field.replace(/([A-Z])/g, " $1").replace(/^\w/, (c) => c.toUpperCase()).trim();
+    const from = field === "role" ? (ROLE_LABEL[String(diff.from)] ?? String(diff.from)) : String(diff.from ?? "—");
+    const to = field === "role" ? (ROLE_LABEL[String(diff.to)] ?? String(diff.to)) : String(diff.to ?? "—");
+    rows.push({ label, value: `${from} → ${to}` });
+  }
+  return rows;
+}
 
 function AuditDetails({ action, afterState, beforeState }: {
   action: string;
@@ -38,7 +60,8 @@ function AuditDetails({ action, afterState, beforeState }: {
   const rows: { label: string; value: string }[] = [];
 
   if (action === "AWARD_POINTS") {
-    if (after.toUserName) rows.push({ label: "Recipient", value: String(after.toUserName) });
+    const name = targetName(after);
+    if (name) rows.push({ label: "Recipient", value: name });
     if (after.amount) rows.push({ label: "Points Awarded", value: `${Number(after.amount).toLocaleString()} pts` });
     if (after.note) rows.push({ label: "Note", value: String(after.note) });
   } else if (action === "BULK_AWARD_POINTS") {
@@ -54,25 +77,76 @@ function AuditDetails({ action, afterState, beforeState }: {
       const d = new Date(String(after.attendanceMonth));
       rows.push({ label: "Period", value: d.toLocaleString("en-US", { month: "long", year: "numeric" }) });
     }
+    if (Array.isArray(after.recipientNames) && after.recipientNames.length > 0) {
+      rows.push({ label: "Employees", value: (after.recipientNames as string[]).join(", ") });
+    }
     if (Array.isArray(after.notFound) && after.notFound.length > 0) {
       rows.push({ label: "Not Found IDs", value: (after.notFound as string[]).join(", ") });
     }
   } else if (action === "DEDUCT_POINTS") {
-    if (after.toUserName) rows.push({ label: "Employee", value: String(after.toUserName) });
+    const name = targetName(after);
+    if (name) rows.push({ label: "Employee", value: name });
     if (after.deducted) rows.push({ label: "Points Deducted", value: `${Number(after.deducted).toLocaleString()} pts` });
     if (after.violationType) rows.push({ label: "Violation", value: violationLabel(String(after.violationType)) });
     if (after.reason) rows.push({ label: "Reason", value: String(after.reason) });
     if (after.newBalance !== undefined) rows.push({ label: "New Balance", value: `${Number(after.newBalance).toLocaleString()} pts` });
   } else if (action === "UPDATE_ROLE") {
+    const name = targetName(after);
+    if (name) rows.push({ label: "Employee", value: name });
+    if (before.role) rows.push({ label: "Previous Role", value: ROLE_LABEL[String(before.role)] ?? String(before.role).replace(/_/g, " ") });
     if (after.role) rows.push({ label: "New Role", value: ROLE_LABEL[String(after.role)] ?? String(after.role).replace(/_/g, " ") });
+  } else if (action === "UPDATE_USER" || action === "UPDATE_REWARD") {
+    const name = targetName(after) ?? (after.name ? String(after.name) : null);
+    if (name) rows.push({ label: action === "UPDATE_USER" ? "Employee" : "Reward", value: name });
+    rows.push(...changeRows(after.changes));
+  } else if (action === "CREATE_USER") {
+    const name = targetName(after);
+    if (name) rows.push({ label: "Employee", value: name });
+    if (after.role) rows.push({ label: "Role", value: ROLE_LABEL[String(after.role)] ?? String(after.role).replace(/_/g, " ") });
+  } else if (action === "CREATE_REWARD" || action === "DELETE_REWARD") {
+    if (after.name) rows.push({ label: "Reward", value: String(after.name) });
+    if (after.pointCost) rows.push({ label: "Point Cost", value: `${Number(after.pointCost).toLocaleString()} pts` });
+  } else if (action === "REDEMPTION_STATUS") {
+    const name = targetName(after);
+    if (name) rows.push({ label: "Employee", value: name });
+    if (after.rewardName) rows.push({ label: "Reward", value: String(after.rewardName) });
+    if (after.fromStatus) rows.push({ label: "Previous Status", value: String(after.fromStatus).replace(/_/g, " ") });
+    if (after.toStatus) rows.push({ label: "New Status", value: String(after.toStatus).replace(/_/g, " ") });
+    if (after.refunded) rows.push({ label: "Refunded", value: `${Number(after.refunded).toLocaleString()} pts` });
+  } else if (action === "MEDICINE_REQUEST_STATUS") {
+    const name = targetName(after);
+    if (name) rows.push({ label: "Employee", value: name });
+    if (after.medicineName) rows.push({ label: "Medicine", value: `${String(after.medicineName)}${after.quantity ? ` ×${after.quantity}` : ""}` });
+    if (after.fromStatus) rows.push({ label: "Previous Status", value: String(after.fromStatus).replace(/_/g, " ") });
+    if (after.toStatus) rows.push({ label: "New Status", value: String(after.toStatus).replace(/_/g, " ") });
+  } else if (action === "UPDATE_FEEDBACK_STATUS") {
+    // Whistleblower surface — deliberately never shows the reporter or content here.
+    if (after.category) rows.push({ label: "Category", value: String(after.category).replace(/_/g, " ") });
+    if (after.fromStatus) rows.push({ label: "Previous Status", value: String(after.fromStatus).replace(/_/g, " ") });
+    if (after.toStatus) rows.push({ label: "New Status", value: String(after.toStatus).replace(/_/g, " ") });
+  } else if (action === "SYNC_EMPLOYEES") {
+    if (after.activeInFile !== undefined) rows.push({ label: "Active in File", value: String(after.activeInFile) });
+    if (after.imported) rows.push({ label: "Imported", value: String(after.imported) });
+    if (after.deactivated) rows.push({ label: "Deactivated", value: String(after.deactivated) });
+    if (after.reactivated) rows.push({ label: "Reactivated", value: String(after.reactivated) });
+    if (after.failedImports) rows.push({ label: "Failed", value: String(after.failedImports) });
+  } else if (action === "UPDATE_SETTING") {
+    if (before.allyEnabled !== undefined) rows.push({ label: "Previous", value: before.allyEnabled ? "Enabled" : "Disabled" });
+    if (after.allyEnabled !== undefined) rows.push({ label: "New Value", value: after.allyEnabled ? "Enabled" : "Disabled" });
+  } else if (action === "HARD_DELETE_REWARD") {
+    if (before.name) rows.push({ label: "Reward", value: String(before.name) });
+    if (before.pointCost) rows.push({ label: "Point Cost", value: `${Number(before.pointCost).toLocaleString()} pts` });
+    if (before.stockQuantity !== undefined) rows.push({ label: "Stock", value: String(before.stockQuantity) });
   } else if (action === "DELETE_POST" || action === "DELETE_COMMENT") {
     if (before.content) rows.push({ label: "Content", value: String(before.content) });
-    if (before.authorId) rows.push({ label: "Author ID", value: String(before.authorId).slice(0, 8) + "…" });
+    const authorName = before.authorName;
+    rows.push({ label: "Author", value: authorName ? String(authorName) : `${String(before.authorId ?? "").slice(0, 8)}…` });
     if (before.type) rows.push({ label: "Post Type", value: String(before.type) });
   } else {
-    // Fallback: show all non-null after/before fields
-    for (const [k, v] of Object.entries(after)) {
-      if (v !== null && v !== undefined && k !== "toUserId" && k !== "recipientIds") {
+    // Fallback for any action without an explicit branch above — show every
+    // non-null before/after field rather than silently rendering nothing.
+    for (const [k, v] of Object.entries({ ...before, ...after })) {
+      if (v !== null && v !== undefined && k !== "toUserId" && k !== "targetUserId" && k !== "recipientIds" && k !== "changes") {
         rows.push({ label: k.replace(/([A-Z])/g, " $1").trim(), value: String(v) });
       }
     }
@@ -189,29 +263,13 @@ export default function AuditLogPage() {
                         </span>
                       </div>
 
-                      {/* Summary line */}
+                      {/* Summary line — same formatter as the Overview panel (lib/helpers/auditSummary.ts) */}
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {!!entry.afterState?.toUserName && (
-                          <>To <span className="font-medium text-gray-700">{String(entry.afterState.toUserName)}</span> · </>
-                        )}
-                        {!!entry.afterState?.amount && (
-                          <span className="font-medium text-emerald-600">{entry.action.includes("DEDUCT") ? "−" : "+"}{Number(entry.afterState.amount).toLocaleString()} pts</span>
-                        )}
-                        {!!entry.afterState?.count && !entry.afterState?.amount && (
-                          <>{String(entry.afterState.count)} employees</>
-                        )}
-                        {!!entry.afterState?.count && !!entry.afterState?.amount && (
-                          <> · {String(entry.afterState.count)} employees</>
-                        )}
-                        {!!entry.afterState?.role && (
-                          <> · Role → <span className="font-medium text-gray-700">{ROLE_LABEL[String(entry.afterState.role)] ?? String(entry.afterState.role).replace(/_/g, " ")}</span></>
-                        )}
-                        {!!entry.beforeState?.content && (
-                          <> · &quot;{String(entry.beforeState.content).slice(0, 50)}{String(entry.beforeState.content).length > 50 ? "…" : ""}&quot;</>
-                        )}
-                        {!entry.afterState?.toUserName && !entry.afterState?.amount && !entry.afterState?.count && !entry.afterState?.role && !entry.beforeState?.content && (
-                          <span className="text-gray-500">{entry.entityType}</span>
-                        )}
+                        {auditSummary(entry).map((s, i) => (
+                          <span key={i} className={s.emphasis ? "font-medium text-gray-700" : s.tone ? TONE_CLASS[s.tone] : undefined}>
+                            {s.text}
+                          </span>
+                        ))}
                       </p>
 
                       {/* Expand/collapse */}

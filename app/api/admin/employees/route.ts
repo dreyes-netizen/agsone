@@ -5,6 +5,7 @@ import { parsePaginationParams, paginatedResponse } from "@/lib/api/pagination";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -154,10 +155,20 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "CREATE_USER",
+    entityType: "User",
+    entityId: employee.id,
+    target: { userId: employee.id, userName: employee.displayName },
+    after: { role: employee.role },
+  });
+
   scheduleBroadcast([
     { topic: realtimeTopics.employees },
     { topic: realtimeTopics.departments },
     { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
   ]);
 
   return NextResponse.json({ data: employee }, { status: 201 });

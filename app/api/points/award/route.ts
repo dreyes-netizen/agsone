@@ -15,6 +15,7 @@ import {
   BUDGET_LOW_THRESHOLD,
 } from "@/lib/helpers/checkManagerBudget";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 import { z } from "zod";
 
 const schema = z.object({
@@ -158,14 +159,13 @@ export async function POST(req: NextRequest) {
     .catch((err) => console.error("checkAndAwardBadges failed", err));
   checkLevelUp(toUserId, newBalance).catch((err) => console.error("checkLevelUp failed", err));
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: actor.id,
-      action: "AWARD_POINTS",
-      entityType: "PointTransaction",
-      entityId: transaction.id,
-      afterState: { toUserId, toUserName: recipient.displayName, amount, note },
-    },
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "AWARD_POINTS",
+    entityType: "PointTransaction",
+    entityId: transaction.id,
+    target: { userId: toUserId, userName: recipient.displayName },
+    after: { amount, note },
   });
 
   scheduleBroadcast([

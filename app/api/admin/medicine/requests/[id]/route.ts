@@ -5,6 +5,7 @@ import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { createNotification } from "@/lib/helpers/createNotification";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const schema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -38,6 +39,7 @@ export async function PATCH(
       quantity: true,
       userId: true,
       medicine: { select: { name: true } },
+      user: { select: { displayName: true } },
     },
   });
   if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -95,11 +97,21 @@ export async function PATCH(
       data: { requestId: request.id, medicineId: request.medicineId },
     }).catch((err) => console.error("medicine approve notification failed", err));
 
+    await writeAuditLog({
+      actorId: user.id,
+      action: "MEDICINE_REQUEST_STATUS",
+      entityType: "MedicineRequest",
+      entityId: id,
+      target: { userId: request.userId, userName: request.user.displayName },
+      after: { medicineName: request.medicine.name, quantity: request.quantity, fromStatus: "PENDING", toStatus: "APPROVED" },
+    });
+
     scheduleBroadcast([
       { topic: realtimeTopics.medicine },
       { topic: realtimeTopics.medicineRequests },
       { topic: realtimeTopics.medicineUser(request.userId) },
       { topic: realtimeTopics.adminAnalytics },
+      { topic: realtimeTopics.adminAudit },
     ]);
     return NextResponse.json({ data: updatedRequest });
   }
@@ -125,10 +137,20 @@ export async function PATCH(
     data: { requestId: request.id, medicineId: request.medicineId },
   }).catch((err) => console.error("medicine reject notification failed", err));
 
+  await writeAuditLog({
+    actorId: user.id,
+    action: "MEDICINE_REQUEST_STATUS",
+    entityType: "MedicineRequest",
+    entityId: id,
+    target: { userId: request.userId, userName: request.user.displayName },
+    after: { medicineName: request.medicine.name, quantity: request.quantity, fromStatus: "PENDING", toStatus: "REJECTED" },
+  });
+
   scheduleBroadcast([
     { topic: realtimeTopics.medicineRequests },
     { topic: realtimeTopics.medicineUser(request.userId) },
     { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
   ]);
 
   return NextResponse.json({ data: updatedRequest });

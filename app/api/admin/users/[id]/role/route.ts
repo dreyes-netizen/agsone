@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const schema = z.object({
   role: z.enum(["EMPLOYEE", "MANAGER", "HR_ADMIN", "SUPER_ADMIN"]),
@@ -48,14 +49,14 @@ export async function PATCH(
     select: { id: true, displayName: true, role: true },
   });
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: user.id,
-      action: "UPDATE_ROLE",
-      entityType: "User",
-      entityId: id,
-      afterState: { role: parsed.data.role },
-    },
+  await writeAuditLog({
+    actorId: user.id,
+    action: "UPDATE_ROLE",
+    entityType: "User",
+    entityId: id,
+    target: { userId: id, userName: updated.displayName },
+    before: { role: target.role },
+    after: { role: parsed.data.role },
   });
 
   scheduleBroadcast([

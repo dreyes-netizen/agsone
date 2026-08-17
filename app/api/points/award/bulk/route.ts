@@ -11,6 +11,7 @@ import { realtimeTopics } from "@/lib/realtime/topics";
 import { findActivity, AWARD_CATEGORIES } from "@/lib/constants/awardActivities";
 import { checkManagerBudget } from "@/lib/helpers/checkManagerBudget";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 import { z } from "zod";
 
 const schema = z.object({
@@ -122,16 +123,21 @@ export async function POST(req: NextRequest) {
     },
   }).catch((err) => console.error("bulk award celebration post failed", err));
 
-  // Single audit log
-  prisma.auditLog.create({
-    data: {
-      actorId: actor.id,
-      action: "BULK_AWARD_POINTS",
-      entityType: "PointTransaction",
-      entityId: actor.id,
-      afterState: { count: recipients.length, amount, note, recipientNames: recipients.map((r) => r.displayName) },
+  // Single audit log. Awaited (not fire-and-forget) — a silently missing
+  // audit row for a bulk award is worse than the extra latency here.
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "BULK_AWARD_POINTS",
+    entityType: "PointTransaction",
+    entityId: actor.id,
+    after: {
+      count: recipients.length,
+      amount,
+      note,
+      recipientIds,
+      recipientNames: recipients.map((r) => r.displayName),
     },
-  }).catch((err) => console.error("bulk award audit log write failed", err));
+  });
 
   // Badge-checking needs each recipient's lifetime points earned — one
   // groupBy across all recipients instead of one aggregate() per recipient

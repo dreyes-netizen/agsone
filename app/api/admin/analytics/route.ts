@@ -3,6 +3,7 @@ import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
 import { LOW_STOCK_THRESHOLD } from "@/lib/constants/stock";
 import { CATEGORY_LABELS } from "@/lib/constants/feedbackCategories";
+import { resolveAuditNames } from "@/lib/helpers/resolveAuditNames";
 
 export async function GET(req: NextRequest) {
   const actor = await verifyAuth(req);
@@ -230,32 +231,8 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => a.stockQuantity - b.stockQuantity)
     .slice(0, 10);
 
-  // ── Recent Admin Activity — resolve unnamed toUserId refs, same as /api/admin/audit ──
-  const unresolvedIds = recentAudit
-    .map((l) => (l.afterState as Record<string, unknown> | null)?.toUserId as string | undefined)
-    .filter((id, idx): id is string => {
-      if (!id) return false;
-      const entry = recentAudit[idx];
-      return !(entry.afterState as Record<string, unknown> | null)?.toUserName;
-    });
-
-  const uniqueIds = [...new Set(unresolvedIds)];
-  let nameMap: Record<string, string> = {};
-  if (uniqueIds.length > 0) {
-    const users = await prisma.user.findMany({
-      where: { id: { in: uniqueIds } },
-      select: { id: true, displayName: true },
-    });
-    nameMap = Object.fromEntries(users.map((u) => [u.id, u.displayName]));
-  }
-
-  const recentActivity = recentAudit.map((log) => {
-    const after = log.afterState as Record<string, unknown> | null;
-    if (after?.toUserId && !after?.toUserName && nameMap[after.toUserId as string]) {
-      return { ...log, afterState: { ...after, toUserName: nameMap[after.toUserId as string] } };
-    }
-    return log;
-  });
+  // ── Recent Admin Activity — resolve rows missing the affected person's name ──
+  const recentActivity = await resolveAuditNames(recentAudit);
 
   return NextResponse.json({
     data: {

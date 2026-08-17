@@ -6,6 +6,7 @@ import { createNotification } from "@/lib/helpers/createNotification";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const patchSchema = z.object({
   status: z.enum(["OPEN", "IN_REVIEW", "RESOLVED"]),
@@ -89,10 +90,24 @@ export async function PATCH(
     }).catch((err) => console.error("feedback resolved notification failed", err));
   }
 
+  // Whistleblower surface — the audit row (visible to every HR_ADMIN) never
+  // carries the reporter's identity or the report's content, only the
+  // status transition and category.
+  if (parsed.data.status !== feedback.status) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "UPDATE_FEEDBACK_STATUS",
+      entityType: "Feedback",
+      entityId: id,
+      after: { category: feedback.category, fromStatus: feedback.status, toStatus: parsed.data.status },
+    });
+  }
+
   scheduleBroadcast([
     { topic: confidentialRealtimeTopic("feedback-admin") },
     { topic: confidentialRealtimeTopic("feedback-thread", id) },
     { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
     ...(feedback.authorId ? [{ topic: confidentialRealtimeTopic("feedback-user", feedback.authorId) }] : []),
   ]);
 

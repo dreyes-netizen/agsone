@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { timingSafeCompare } from "@/lib/auth/timingSafeCompare";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 // One-time route: promotes the calling user to HR_ADMIN
 // Disabled automatically once any HR_ADMIN exists
@@ -17,9 +18,10 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Block if an HR_ADMIN already exists
-  const existingAdmin = await prisma.user.findFirst({
-    where: { role: "HR_ADMIN" },
-  });
+  const [existingAdmin, before] = await Promise.all([
+    prisma.user.findFirst({ where: { role: "HR_ADMIN" } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { role: true } }),
+  ]);
 
   if (existingAdmin) {
     return NextResponse.json(
@@ -34,10 +36,24 @@ export async function POST(req: NextRequest) {
     select: { displayName: true, email: true, role: true },
   });
 
+  // This is a self-promotion gated only by a shared secret header, not a
+  // reviewed admin action — worth its own audit row even though actor and
+  // target are the same person.
+  await writeAuditLog({
+    actorId: user.id,
+    action: "UPDATE_ROLE",
+    entityType: "User",
+    entityId: user.id,
+    target: { userId: user.id, userName: updated.displayName },
+    before: { role: before?.role ?? "EMPLOYEE" },
+    after: { role: "HR_ADMIN" },
+  });
+
   scheduleBroadcast([
     { topic: realtimeTopics.profile(user.id) },
     { topic: realtimeTopics.employees },
     { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
   ]);
 
   return NextResponse.json({

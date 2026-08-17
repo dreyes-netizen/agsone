@@ -6,6 +6,7 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import { sheetToRows } from "@/lib/excel/sheetToRows";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 /*
  * EMPLOYEE SYNC — EXCEL FILE REQUIREMENTS
@@ -314,11 +315,28 @@ export async function POST(req: NextRequest) {
       return { imported, failedEmails, birthdaysUpdated, deactivateResult, reactivateResult, removedResult };
     }, { timeout: 30_000, maxWait: 10_000 });
 
+    // One summary row for the whole upload, not one per affected employee —
+    // a several-hundred-row Sprout export shouldn't flood the audit trail.
+    await writeAuditLog({
+      actorId: user.id,
+      action: "SYNC_EMPLOYEES",
+      entityType: "User",
+      entityId: user.id,
+      after: {
+        activeInFile: activeRows.length,
+        imported,
+        deactivated: deactivateResult.count + removedResult.count,
+        reactivated: reactivateResult.count,
+        failedImports: failedEmails.length,
+      },
+    });
+
     scheduleBroadcast([
       { topic: realtimeTopics.employees },
       { topic: realtimeTopics.departments },
       { topic: realtimeTopics.leaderboard },
       { topic: realtimeTopics.adminAnalytics },
+      { topic: realtimeTopics.adminAudit },
     ]);
 
     return NextResponse.json({

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const schema = z.object({
   departmentId: z.string().uuid().nullable(),
@@ -39,6 +40,14 @@ export async function PATCH(
     }
   }
 
+  const before = await prisma.user.findUnique({
+    where: { id },
+    select: { displayName: true, department: { select: { name: true } } },
+  });
+  if (!before) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
   const updated = await prisma.user.update({
     where: { id },
     data: { departmentId },
@@ -49,12 +58,28 @@ export async function PATCH(
     },
   });
 
+  if (updated.department?.name !== before.department?.name) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "UPDATE_USER",
+      entityType: "User",
+      entityId: id,
+      target: { userId: id, userName: updated.displayName },
+      after: {
+        changes: {
+          departmentName: { from: before.department?.name ?? null, to: updated.department?.name ?? null },
+        },
+      },
+    });
+  }
+
   scheduleBroadcast([
     { topic: realtimeTopics.employees },
     { topic: realtimeTopics.departments },
     { topic: realtimeTopics.leaderboard },
     { topic: realtimeTopics.profile(id) },
     { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
   ]);
 
   return NextResponse.json({ data: updated });

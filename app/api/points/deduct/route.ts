@@ -8,6 +8,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { VIOLATION_TYPES } from "@/lib/constants/awardActivities";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 import { z } from "zod";
 
 const violationKeys = VIOLATION_TYPES.map((v) => v.key) as [string, ...string[]];
@@ -116,14 +117,13 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("points-deducted email failed", err));
   }
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: actor.id,
-      action: "DEDUCT_POINTS",
-      entityType: "PointTransaction",
-      entityId: toUserId,
-      afterState: { toUserId, toUserName: result.toUserName, violationType, deducted: result.deducted, reason, newBalance: result.newBalance },
-    },
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "DEDUCT_POINTS",
+    entityType: "PointTransaction",
+    entityId: toUserId,
+    target: result.toUserName ? { userId: toUserId, userName: result.toUserName } : undefined,
+    after: { violationType, deducted: result.deducted, reason, newBalance: result.newBalance },
   });
 
   scheduleBroadcast([

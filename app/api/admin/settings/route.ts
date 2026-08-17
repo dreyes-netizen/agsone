@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
-import { prisma } from "@/lib/prisma/client";
 import { getAllyEnabled, setAllyEnabled } from "@/lib/settings/appSettings";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const schema = z.object({
   allyEnabled: z.boolean(),
@@ -34,16 +34,16 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
+  const previouslyEnabled = await getAllyEnabled();
   await setAllyEnabled(parsed.data.allyEnabled, user.id);
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: user.id,
-      action: "UPDATE_SETTING",
-      entityType: "AppSetting",
-      entityId: "ally_enabled",
-      afterState: { allyEnabled: parsed.data.allyEnabled },
-    },
+  await writeAuditLog({
+    actorId: user.id,
+    action: "UPDATE_SETTING",
+    entityType: "AppSetting",
+    entityId: "ally_enabled",
+    before: { allyEnabled: previouslyEnabled },
+    after: { allyEnabled: parsed.data.allyEnabled },
   });
 
   scheduleBroadcast([

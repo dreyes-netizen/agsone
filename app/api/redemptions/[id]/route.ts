@@ -7,6 +7,7 @@ import { redemptionStatusEmail } from "@/lib/email/templates";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const schema = z.object({
   status: z.enum(["APPROVED", "REJECTED", "FULFILLED"]),
@@ -97,10 +98,28 @@ export async function PATCH(
     ]);
   }
 
+  // Written after the transaction resolves rather than inside it — the
+  // refund on rejection already committed by this point, so there's no
+  // durability gain to holding the row lock any longer for this insert.
+  await writeAuditLog({
+    actorId: user.id,
+    action: "REDEMPTION_STATUS",
+    entityType: "Redemption",
+    entityId: id,
+    target: employee ? { userId: redemption.userId, userName: employee.displayName } : undefined,
+    after: {
+      rewardName,
+      fromStatus: redemption.status,
+      toStatus: status,
+      ...(status === "REJECTED" ? { refunded: redemption.pointsSpent } : {}),
+    },
+  });
+
   scheduleBroadcast([
     { topic: realtimeTopics.redemptionsUser(redemption.userId) },
     { topic: realtimeTopics.redemptionsAdmin },
     { topic: realtimeTopics.adminAnalytics },
+    { topic: realtimeTopics.adminAudit },
     ...(status === "REJECTED"
       ? [
           { topic: realtimeTopics.profile(redemption.userId) },

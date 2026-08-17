@@ -5,6 +5,7 @@ import type { Role } from "@/lib/generated/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const ELEVATED_ROLES: Role[] = ["HR_ADMIN", "SUPER_ADMIN"];
 
@@ -43,15 +44,24 @@ export async function PATCH(
     return NextResponse.json({ error: "Only Super Admin can assign elevated roles" }, { status: 403 });
   }
 
-  // The check above only guards PROMOTION into HR_ADMIN. It never inspects
-  // the target's CURRENT role, so an HR_ADMIN could still demote, deactivate,
-  // or change the email of an existing HR_ADMIN/SUPER_ADMIN. Only a
-  // SUPER_ADMIN may modify an already-elevated account through this route.
-  if (user.role !== "SUPER_ADMIN") {
-    const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
-    if (target && ELEVATED_ROLES.includes(target.role)) {
-      return NextResponse.json({ error: "Only Super Admin can modify an elevated account" }, { status: 403 });
-    }
+  // Fetched unconditionally now (previously only for the elevated-role guard
+  // below) so there's a before-state to diff against for the audit row —
+  // this route used to change role/isActive/department with zero trace.
+  const before = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true, displayName: true, email: true, isActive: true, department: { select: { name: true } } },
+  });
+  if (!before) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // The elevated-role guard above only guards PROMOTION into HR_ADMIN. It
+  // never inspects the target's CURRENT role, so an HR_ADMIN could still
+  // demote, deactivate, or change the email of an existing HR_ADMIN/
+  // SUPER_ADMIN. Only a SUPER_ADMIN may modify an already-elevated account
+  // through this route.
+  if (user.role !== "SUPER_ADMIN" && ELEVATED_ROLES.includes(before.role)) {
+    return NextResponse.json({ error: "Only Super Admin can modify an elevated account" }, { status: 403 });
   }
 
   const updated = await prisma.user.update({
@@ -77,12 +87,59 @@ export async function PATCH(
     },
   });
 
+  // Only fields that actually changed go into the audit row — a PATCH that
+  // only touched hireDate/birthday isn't worth a row, but role/isActive/
+  // department changes always are.
+  //
+  // A role change gets its OWN row, in the same flat { role } shape
+  // /api/admin/users/[id]/role writes — not nested under `changes` — so
+  // both role-change paths render identically and the audit page's filter
+  // shows them together. This route used to be the unaudited one.
+  const roleChanged = role !== undefined && role !== before.role;
+
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  if (isActive !== undefined && isActive !== before.isActive) changes.isActive = { from: before.isActive, to: isActive };
+  if (departmentId !== undefined && updated.department?.name !== before.department?.name) {
+    changes.departmentName = { from: before.department?.name ?? null, to: updated.department?.name ?? null };
+  }
+  if (displayName !== undefined && displayName !== before.displayName) {
+    changes.displayName = { from: before.displayName, to: displayName };
+  }
+  // Value is masked in the audit row — an email address is itself PII, and
+  // "email updated" is all the summary line needs to render.
+  if (email !== undefined && email !== before.email) changes.email = { from: "***", to: "***" };
+
+  const loggedSomething = roleChanged || Object.keys(changes).length > 0;
+
+  if (roleChanged) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "UPDATE_ROLE",
+      entityType: "User",
+      entityId: id,
+      target: { userId: id, userName: updated.displayName },
+      before: { role: before.role },
+      after: { role },
+    });
+  }
+  if (Object.keys(changes).length > 0) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "UPDATE_USER",
+      entityType: "User",
+      entityId: id,
+      target: { userId: id, userName: updated.displayName },
+      after: { changes },
+    });
+  }
+
   scheduleBroadcast([
     { topic: realtimeTopics.employees },
     { topic: realtimeTopics.departments },
     { topic: realtimeTopics.leaderboard },
     { topic: realtimeTopics.profile(id) },
     { topic: realtimeTopics.adminAnalytics },
+    ...(loggedSomething ? [{ topic: realtimeTopics.adminAudit }] : []),
   ]);
 
   return NextResponse.json({ data: updated });

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 type Params = { params: Promise<{ id: string; commentId: string }> };
 
@@ -44,7 +45,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   const comment = await prisma.socialComment.findUnique({
     where: { id: commentId },
-    select: { authorId: true, content: true, postId: true },
+    select: { authorId: true, content: true, postId: true, author: { select: { displayName: true } } },
   });
   if (!comment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -56,13 +57,16 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   await prisma.socialComment.delete({ where: { id: commentId } });
 
   if (isAdmin && comment.authorId !== user.id) {
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: "DELETE_COMMENT",
-        entityType: "SocialComment",
-        entityId: commentId,
-        beforeState: { authorId: comment.authorId, postId: comment.postId, content: comment.content?.slice(0, 500) ?? null },
+    await writeAuditLog({
+      actorId: user.id,
+      action: "DELETE_COMMENT",
+      entityType: "SocialComment",
+      entityId: commentId,
+      before: {
+        authorId: comment.authorId,
+        authorName: comment.author.displayName,
+        postId: comment.postId,
+        content: comment.content?.slice(0, 500) ?? null,
       },
     });
   }

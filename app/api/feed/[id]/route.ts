@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const editSchema = z.object({
   title: z.string().max(120).nullable().optional(),
@@ -85,7 +86,7 @@ export async function DELETE(
 
   const post = await prisma.socialPost.findUnique({
     where: { id },
-    select: { authorId: true, content: true, type: true },
+    select: { authorId: true, content: true, type: true, author: { select: { displayName: true } } },
   });
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -97,14 +98,12 @@ export async function DELETE(
   await prisma.socialPost.delete({ where: { id } });
 
   if (isAdmin && post.authorId !== user.id) {
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id,
-        action: "DELETE_POST",
-        entityType: "SocialPost",
-        entityId: id,
-        beforeState: { authorId: post.authorId, type: post.type, content: post.content.slice(0, 500) },
-      },
+    await writeAuditLog({
+      actorId: user.id,
+      action: "DELETE_POST",
+      entityType: "SocialPost",
+      entityId: id,
+      before: { authorId: post.authorId, authorName: post.author.displayName, type: post.type, content: post.content.slice(0, 500) },
     });
   }
 

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { ActionQueue, type ActionItem } from "@/components/admin/ActionQueue";
 import { StockAlerts, type StockItem } from "@/components/admin/StockAlerts";
-import { RecentActivity } from "@/components/admin/RecentActivity";
+import { RecentActivity, type AuditEntry } from "@/components/admin/RecentActivity";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
@@ -29,16 +29,6 @@ type UpcomingBirthday = {
   department: string | null;
   birthdayMonthDay: string; // MM-DD
   daysUntil: number;
-};
-
-type AuditEntry = {
-  id: string;
-  action: string;
-  entityType: string;
-  createdAt: string;
-  afterState: Record<string, unknown> | null;
-  beforeState: Record<string, unknown> | null;
-  actor: { id: string; displayName: string; avatarUrl: string | null; role: string };
 };
 
 type Analytics = {

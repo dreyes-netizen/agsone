@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth, requireRole } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { resolveAuditNames } from "@/lib/helpers/resolveAuditNames";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -33,30 +34,9 @@ export async function GET(req: NextRequest) {
     prisma.auditLog.count({ where: action ? { action } : undefined }),
   ]);
 
-  // Resolve any toUserId references that older entries stored without a name
-  const unresolvedIds = logs
-    .map((l) => (l.afterState as Record<string, unknown>)?.toUserId as string | undefined)
-    .filter((id): id is string => !!id && !((l: typeof logs[number]) =>
-      (l.afterState as Record<string, unknown>)?.toUserName)(logs.find((x) => (x.afterState as Record<string, unknown>)?.toUserId === id)!));
-
-  const uniqueIds = [...new Set(unresolvedIds)];
-  let nameMap: Record<string, string> = {};
-  if (uniqueIds.length > 0) {
-    const users = await prisma.user.findMany({
-      where: { id: { in: uniqueIds } },
-      select: { id: true, displayName: true },
-    });
-    nameMap = Object.fromEntries(users.map((u) => [u.id, u.displayName]));
-  }
-
-  // Inject resolved names into afterState for older entries
-  const enriched = logs.map((log) => {
-    const after = log.afterState as Record<string, unknown> | null;
-    if (after?.toUserId && !after?.toUserName && nameMap[after.toUserId as string]) {
-      return { ...log, afterState: { ...after, toUserName: nameMap[after.toUserId as string] } };
-    }
-    return log;
-  });
+  // Backfill affected-person names for rows that predate writeAuditLog(), or
+  // whose entity IS the user (e.g. UPDATE_ROLE) — see resolveAuditNames.ts.
+  const enriched = await resolveAuditNames(logs);
 
   return NextResponse.json({ data: enriched, total, page, pages: Math.ceil(total / limit) });
 }

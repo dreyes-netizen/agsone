@@ -11,6 +11,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { findActivity } from "@/lib/constants/awardActivities";
 import { sheetToRows } from "@/lib/excel/sheetToRows";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 export async function POST(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -169,15 +170,22 @@ export async function POST(req: NextRequest) {
     checkAndAwardBadges({ userId: u.id, totalEarned: earnedMap.get(u.id) ?? 0 }).catch((err) => console.error("checkAndAwardBadges failed", err));
   }
 
-  prisma.auditLog.create({
-    data: {
-      actorId: user.id,
-      action: "ATTENDANCE_AWARD",
-      entityType: "PointTransaction",
-      entityId: user.id,
-      afterState: { attendanceMonth, recipientIds, amount, count: recipientIds.length, notFound },
+  // Awaited (not fire-and-forget) — a silently missing audit row for a
+  // mass award is worse than the extra latency here.
+  await writeAuditLog({
+    actorId: user.id,
+    action: "ATTENDANCE_AWARD",
+    entityType: "PointTransaction",
+    entityId: user.id,
+    after: {
+      attendanceMonth,
+      recipientIds,
+      recipientNames: toAward.map((u) => u.displayName),
+      amount,
+      count: recipientIds.length,
+      notFound,
     },
-  }).catch((err) => console.error("attendance award audit log write failed", err));
+  });
 
   scheduleBroadcast([
     ...toAward.map((u) => ({ topic: realtimeTopics.profile(u.id) })),

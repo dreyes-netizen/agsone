@@ -8,12 +8,15 @@ export async function GET(req: NextRequest) {
 
   const today = new Date();
 
-  // Build the next 14 days as (month, day) pairs
+  // Birthdays are stored as UTC-midnight date-only values, so the lookahead
+  // window must be built in UTC too — otherwise comparing against a
+  // local-time "today" shifts the window by a day depending on the server's
+  // timezone offset.
   const window: { month: number; day: number; daysUntil: number }[] = [];
   for (let i = 0; i < 14; i++) {
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    window.push({ month: d.getMonth(), day: d.getDate(), daysUntil: i });
+    d.setUTCDate(today.getUTCDate() + i);
+    window.push({ month: d.getUTCMonth(), day: d.getUTCDate(), daysUntil: i });
   }
 
   const users = await prisma.user.findMany({
@@ -30,7 +33,7 @@ export async function GET(req: NextRequest) {
   const results = users
     .flatMap((u) => {
       const match = window.find(
-        (w) => w.month === u.birthday!.getMonth() && w.day === u.birthday!.getDate()
+        (w) => w.month === u.birthday!.getUTCMonth() && w.day === u.birthday!.getUTCDate()
       );
       if (!match) return [];
       return [{
@@ -39,7 +42,7 @@ export async function GET(req: NextRequest) {
         avatarUrl: u.avatarUrl,
         department: u.department?.name ?? null,
         // Never expose the birth year — month/day + daysUntil is enough
-        birthdayMonthDay: `${String(u.birthday!.getMonth() + 1).padStart(2, "0")}-${String(u.birthday!.getDate()).padStart(2, "0")}`,
+        birthdayMonthDay: `${String(u.birthday!.getUTCMonth() + 1).padStart(2, "0")}-${String(u.birthday!.getUTCDate()).padStart(2, "0")}`,
         daysUntil: match.daysUntil,
       }];
     })

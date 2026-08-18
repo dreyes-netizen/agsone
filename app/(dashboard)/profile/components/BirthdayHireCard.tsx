@@ -16,7 +16,7 @@ export function BirthdayHireCard({ profile }: BirthdayHireCardProps) {
           <p className="text-xs text-gray-500 font-medium">Birthday</p>
           <p className="text-sm font-semibold text-gray-800">
             {profile.birthday
-              ? new Date(profile.birthday).toLocaleDateString(undefined, { month: "long", day: "numeric" })
+              ? new Date(profile.birthday).toLocaleDateString(undefined, { month: "long", day: "numeric", timeZone: "UTC" })
               : "Not set"}
           </p>
         </div>
@@ -28,7 +28,7 @@ export function BirthdayHireCard({ profile }: BirthdayHireCardProps) {
             <div>
               <p className="text-xs text-gray-500 font-medium">Hire Date</p>
               <p className="text-sm font-semibold text-gray-800">
-                {new Date(profile.hireDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+                {new Date(profile.hireDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}
               </p>
             </div>
           </div>

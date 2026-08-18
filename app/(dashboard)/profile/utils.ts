@@ -2,7 +2,7 @@ export function getDaysUntil(isoDate: string): number {
   const now = new Date();
   const d = new Date(isoDate);
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+  const next = new Date(now.getFullYear(), d.getUTCMonth(), d.getUTCDate());
   if (next.getTime() < todayMidnight.getTime()) next.setFullYear(now.getFullYear() + 1);
   return Math.round((next.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
 }
@@ -11,10 +11,10 @@ export function getAnniversaryYear(hireDate: string): number {
   const now = new Date();
   const hire = new Date(hireDate);
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const thisYearDate = new Date(now.getFullYear(), hire.getMonth(), hire.getDate());
+  const thisYearDate = new Date(now.getFullYear(), hire.getUTCMonth(), hire.getUTCDate());
   return thisYearDate.getTime() < todayMidnight.getTime()
-    ? now.getFullYear() + 1 - hire.getFullYear()
-    : now.getFullYear() - hire.getFullYear();
+    ? now.getFullYear() + 1 - hire.getUTCFullYear()
+    : now.getFullYear() - hire.getUTCFullYear();
 }
 
 export function ordinal(n: number): string {

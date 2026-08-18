@@ -19,6 +19,6 @@ export const selectClass =
 
 export function formatDate(value: string | null) {
   return value
-    ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
     : null;
 }

@@ -85,7 +85,7 @@ function getTenure(hireDate: string | null): string | null {
 
 function formatDate(val: string | null) {
   if (!val) return null;
-  return new Date(val).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return new Date(val).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 function fullSizeAvatar(url: string | null) {
@@ -578,7 +578,7 @@ export default function EmployeeProfilePage() {
               <Cake className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span className="text-gray-500">Birthday</span>
               <span className="ml-auto font-medium text-gray-900">
-                {new Date(employee.birthday).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
+                {new Date(employee.birthday).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })}
               </span>
             </div>
           )}

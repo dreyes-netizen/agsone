@@ -47,3 +47,36 @@ export async function uploadToCloudinary(file: File, token: string): Promise<str
   const data = await res.json() as { secure_url: string };
   return withDeliveryTransform(data.secure_url);
 }
+
+// For non-image files (PDFs, docs) — posts to Cloudinary's `raw` endpoint
+// instead of `image`, and skips the image delivery transform above, which
+// would otherwise try to rasterize the file. Returns the URL to the original
+// file as uploaded.
+export async function uploadRawToCloudinary(file: File, token: string): Promise<string> {
+  const signRes = await fetch("/api/upload/sign", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!signRes.ok) throw new Error("Failed to get upload signature");
+  const { timestamp, signature, apiKey, cloudName } = await signRes.json() as {
+    timestamp: number;
+    signature: string;
+    apiKey: string;
+    cloudName: string;
+  };
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("api_key", apiKey);
+  form.append("timestamp", String(timestamp));
+  form.append("signature", signature);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) throw new Error("Upload failed");
+  const data = await res.json() as { secure_url: string };
+  return data.secure_url;
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, FileText, Pill, Menu, ShieldAlert } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, FileText, Pill, Menu, ShieldAlert, Network, IdCard, BookText } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
@@ -38,6 +38,15 @@ const navGroups = [
       { href: "/admin/documents",   label: "Documents",    icon: FileText },
       { href: "/admin/medicine",    label: "Medicine",     icon: Pill },
       { href: "/admin/audit",       label: "Audit Log",    icon: ShieldAlert },
+    ],
+  },
+  {
+    label: "Company Info",
+    items: [
+      { href: "/admin/org-chart",          label: "Org Chart",         icon: Network },
+      { href: "/admin/points-of-contact",  label: "Points of Contact", icon: IdCard },
+      { href: "/admin/code-of-conduct",    label: "Code of Conduct",   icon: BookText },
+      { href: "/admin/hr-documents",       label: "HR Documents",      icon: FileText },
     ],
   },
 ];

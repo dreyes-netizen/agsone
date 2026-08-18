@@ -17,6 +17,10 @@ const schema = z.object({
   isActive: z.boolean().optional(),
   hireDate: z.string().optional().nullable(),
   birthday: z.string().optional().nullable(),
+  position: z.string().max(200).nullable().optional(),
+  managerId: z.string().uuid().nullable().optional(),
+  orgChartHighlight: z.enum(["gold", "teal"]).nullable().optional(),
+  orgChartDashed: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -35,7 +39,11 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { displayName, email, departmentId, role, isActive, hireDate, birthday } = parsed.data;
+  const { displayName, email, departmentId, role, isActive, hireDate, birthday, position, managerId, orgChartHighlight, orgChartDashed } = parsed.data;
+
+  if (managerId === id) {
+    return NextResponse.json({ error: "An employee cannot be their own manager" }, { status: 400 });
+  }
 
   // Mirror the elevated-role guard in /api/admin/users/[id]/role — only
   // SUPER_ADMIN may grant HR_ADMIN. Without this, any HR_ADMIN could mint
@@ -74,6 +82,10 @@ export async function PATCH(
       ...(isActive !== undefined ? { isActive } : {}),
       ...(hireDate !== undefined ? { hireDate: hireDate ? new Date(hireDate) : null } : {}),
       ...(birthday !== undefined ? { birthday: birthday ? new Date(birthday) : null } : {}),
+      ...(position !== undefined ? { position } : {}),
+      ...(managerId !== undefined ? { managerId } : {}),
+      ...(orgChartHighlight !== undefined ? { orgChartHighlight } : {}),
+      ...(orgChartDashed !== undefined ? { orgChartDashed } : {}),
     },
     select: {
       id: true,
@@ -83,9 +95,16 @@ export async function PATCH(
       isActive: true,
       hireDate: true,
       birthday: true,
+      position: true,
+      managerId: true,
+      orgChartHighlight: true,
+      orgChartDashed: true,
       department: { select: { id: true, name: true } },
     },
   });
+
+  const orgChartFieldsTouched =
+    position !== undefined || managerId !== undefined || orgChartHighlight !== undefined || orgChartDashed !== undefined;
 
   // Only fields that actually changed go into the audit row — a PATCH that
   // only touched hireDate/birthday isn't worth a row, but role/isActive/
@@ -140,6 +159,7 @@ export async function PATCH(
     { topic: realtimeTopics.profile(id) },
     { topic: realtimeTopics.adminAnalytics },
     ...(loggedSomething ? [{ topic: realtimeTopics.adminAudit }] : []),
+    ...(orgChartFieldsTouched ? [{ topic: realtimeTopics.orgChart }] : []),
   ]);
 
   return NextResponse.json({ data: updated });

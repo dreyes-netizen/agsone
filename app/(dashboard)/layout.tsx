@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import {
   ShoppingBag, Star, User, ShieldCheck, LogOut,
   Rss, Menu, UtensilsCrossed, Search, Pill, Puzzle,
+  Network, Users, ShieldAlert, FileText, Mail, Building2, ChevronDown,
 } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { signOut } from "firebase/auth";
@@ -51,6 +52,14 @@ const bottomNavItems = [
   { href: "/leaderboard", label: "Leaderboard", icon: Star },
 ];
 
+const employeePortalNav = [
+  { href: "/org-chart",       label: "Org Chart",         icon: Network },
+  { href: "/contacts",        label: "Points of Contact", icon: Users },
+  { href: "/code-of-conduct", label: "Code of Conduct",   icon: ShieldAlert },
+  { href: "/documents",       label: "Documents",         icon: FileText },
+  { href: "/email-hr",        label: "Email HR",          icon: Mail },
+];
+
 function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ElementType; active: boolean }) {
   return (
     <Link
@@ -64,6 +73,37 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
       <Icon className="w-4 h-4 shrink-0" />
       {label}
     </Link>
+  );
+}
+
+// Collapses the 5 Employee Portal pages behind one sidebar entry instead of
+// listing them all as top-level links. `sidebarContent` (below) renders
+// identically in both the desktop sidebar and the mobile drawer, so this one
+// component covers both surfaces.
+function NavGroup({ label, icon: Icon, items, pathname }: { label: string; icon: React.ElementType; items: typeof employeePortalNav; pathname: string }) {
+  const hasActiveChild = items.some((item) => pathname === item.href);
+  const [open, setOpen] = useState(hasActiveChild);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+          hasActiveChild ? "text-white font-semibold" : "text-white/80 hover:text-white hover:bg-white/[0.10]"
+        }`}
+      >
+        <Icon className="w-4 h-4 shrink-0" />
+        <span className="flex-1 text-left">{label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-0.5 ml-3.5 pl-3 border-l border-white/10 space-y-0.5">
+          {items.map((item) => (
+            <NavLink key={item.href} {...item} active={pathname === item.href} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -135,6 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {mainNav.map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} active={pathname === href} />
         ))}
+        <NavGroup label="Employee Portal" icon={Building2} items={employeePortalNav} pathname={pathname} />
 
         {(dbUser?.role === "MANAGER" || dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN") && (
           <>

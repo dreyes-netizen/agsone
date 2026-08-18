@@ -13,6 +13,7 @@ export const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   CREATE_USER:               { label: "Add Employee",        color: "bg-navy-50 text-navy-700" },
   UPDATE_USER:                { label: "Edit Employee",       color: "bg-gray-100 text-gray-700" },
   SYNC_EMPLOYEES:            { label: "Employee Sync",       color: "bg-blue-100 text-blue-700" },
+  ORG_CHART_REPLACE:         { label: "Org Chart Replacement", color: "bg-navy-100 text-navy-700" },
 
   // Points
   AWARD_POINTS:              { label: "Award Points",        color: "bg-emerald-100 text-emerald-700" },

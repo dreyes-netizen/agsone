@@ -125,6 +125,20 @@ model Department {
   posts SocialPost[]
 }
 
+model PointOfContact {
+  id          String   @id @default(uuid())
+  userId      String
+  position    String
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([sortOrder])
+}
+
 model User {
   id                 String    @id @default(uuid())
   firebaseUid        String?   @unique
@@ -145,6 +159,9 @@ model User {
   skills             String[]
   employeeId         String?   @unique
   isActive           Boolean   @default(true)
+  position           String? // manually set by HR — also doubles as "is this person in the org chart"
+  orgChartHighlight  String? // "gold" | "teal" | null — decorative color coding on the org chart
+  orgChartDashed     Boolean   @default(false) // dotted/support reporting line on the org chart
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -176,6 +193,8 @@ model User {
   feedbackReplies      FeedbackReply[]
   policyDocuments      PolicyDocument[]
   appSettings          AppSetting[]
+  pointsOfContact      PointOfContact[]
+  hrDocumentsUploaded  HrDocument[]
   chatSessions         ChatSession[]
   medicineItems        MedicineItem[]      @relation("MedicineItemsCreated")
   medicineRequests     MedicineRequest[]   @relation("MedicineRequestsMade")
@@ -586,6 +605,24 @@ model PolicyDocument {
   isActive     Boolean  @default(true)
   uploadedAt   DateTime @default(now())
   uploadedById String
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([isActive])
+}
+
+model HrDocument {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  category     String
+  version      String?
+  fileUrl      String
+  fileName     String
+  isActive     Boolean  @default(true)
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   uploadedBy User @relation(fields: [uploadedById], references: [id])
 

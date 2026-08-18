@@ -162,6 +162,7 @@ model User {
   position           String? // manually set by HR — also doubles as "is this person in the org chart"
   orgChartHighlight  String? // "gold" | "teal" | null — decorative color coding on the org chart
   orgChartDashed     Boolean   @default(false) // dotted/support reporting line on the org chart
+  orgChartSortOrder  Int       @default(0) // display order among siblings sharing the same managerId (or among roots, when managerId is null) — NOT a coordinate; layout.ts still computes actual x/y
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -205,6 +206,7 @@ model User {
 
   @@index([pointsBalance])
   @@index([role, isActive])
+  @@index([managerId, orgChartSortOrder])
 }
 
 model PointTransaction {

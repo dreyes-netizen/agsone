@@ -18,9 +18,14 @@ export async function GET(req: NextRequest) {
       managerId: true,
       orgChartHighlight: true,
       orgChartDashed: true,
+      orgChartSortOrder: true,
+      departmentId: true,
+      department: { select: { name: true } },
     },
     orderBy: { displayName: "asc" },
   });
 
-  return NextResponse.json({ data: nodes });
+  const data = nodes.map(({ department, ...n }) => ({ ...n, departmentName: department?.name ?? null }));
+
+  return NextResponse.json({ data });
 }

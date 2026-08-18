@@ -6,6 +6,7 @@ import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
+import { wouldCreateCycle } from "@/lib/orgChart/cycles";
 
 const ELEVATED_ROLES: Role[] = ["HR_ADMIN", "SUPER_ADMIN"];
 
@@ -57,7 +58,7 @@ export async function PATCH(
   // this route used to change role/isActive/department with zero trace.
   const before = await prisma.user.findUnique({
     where: { id },
-    select: { role: true, displayName: true, email: true, isActive: true, department: { select: { name: true } } },
+    select: { role: true, displayName: true, email: true, isActive: true, managerId: true, department: { select: { name: true } } },
   });
   if (!before) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -72,35 +73,70 @@ export async function PATCH(
     return NextResponse.json({ error: "Only Super Admin can modify an elevated account" }, { status: 403 });
   }
 
-  const updated = await prisma.user.update({
-    where: { id },
-    data: {
-      ...(displayName !== undefined ? { displayName } : {}),
-      ...(email !== undefined ? { email } : {}),
-      ...(departmentId !== undefined ? { departmentId } : {}),
-      ...(role !== undefined ? { role } : {}),
-      ...(isActive !== undefined ? { isActive } : {}),
-      ...(hireDate !== undefined ? { hireDate: hireDate ? new Date(hireDate) : null } : {}),
-      ...(birthday !== undefined ? { birthday: birthday ? new Date(birthday) : null } : {}),
-      ...(position !== undefined ? { position } : {}),
-      ...(managerId !== undefined ? { managerId } : {}),
-      ...(orgChartHighlight !== undefined ? { orgChartHighlight } : {}),
-      ...(orgChartDashed !== undefined ? { orgChartDashed } : {}),
-    },
-    select: {
-      id: true,
-      displayName: true,
-      email: true,
-      role: true,
-      isActive: true,
-      hireDate: true,
-      birthday: true,
-      position: true,
-      managerId: true,
-      orgChartHighlight: true,
-      orgChartDashed: true,
-      department: { select: { id: true, name: true } },
-    },
+  const managerChanging = managerId !== undefined && managerId !== before.managerId;
+
+  // The `managerId === id` check above only catches a direct self-report.
+  // An employee could still be reassigned under one of their own reports
+  // (or a deeper descendant), which creates a cycle the layout/tree code
+  // can't recover from. Walk the proposed new manager's chain looking for
+  // this employee before committing.
+  if (managerChanging && managerId) {
+    const getManagerId = async (userId: string) => {
+      const row = await prisma.user.findUnique({ where: { id: userId }, select: { managerId: true } });
+      return row?.managerId ?? null;
+    };
+    if (await wouldCreateCycle(id, managerId, getManagerId)) {
+      return NextResponse.json({ error: "This would create a circular reporting relationship." }, { status: 400 });
+    }
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    // New manager (including null, i.e. top-of-chart) means this employee
+    // joins a different sibling group — append them to the end of it rather
+    // than leaving them at whatever orgChartSortOrder they had under the old
+    // manager. Reordering WITHIN a group is exclusively the reorder
+    // endpoint's job; this route never accepts a client-supplied sort order.
+    let sortOrderData = {};
+    if (managerChanging) {
+      const { _max } = await tx.user.aggregate({
+        where: { managerId },
+        _max: { orgChartSortOrder: true },
+      });
+      sortOrderData = { orgChartSortOrder: (_max.orgChartSortOrder ?? -1) + 1 };
+    }
+
+    return tx.user.update({
+      where: { id },
+      data: {
+        ...(displayName !== undefined ? { displayName } : {}),
+        ...(email !== undefined ? { email } : {}),
+        ...(departmentId !== undefined ? { departmentId } : {}),
+        ...(role !== undefined ? { role } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+        ...(hireDate !== undefined ? { hireDate: hireDate ? new Date(hireDate) : null } : {}),
+        ...(birthday !== undefined ? { birthday: birthday ? new Date(birthday) : null } : {}),
+        ...(position !== undefined ? { position } : {}),
+        ...(managerId !== undefined ? { managerId } : {}),
+        ...(orgChartHighlight !== undefined ? { orgChartHighlight } : {}),
+        ...(orgChartDashed !== undefined ? { orgChartDashed } : {}),
+        ...sortOrderData,
+      },
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        role: true,
+        isActive: true,
+        hireDate: true,
+        birthday: true,
+        position: true,
+        managerId: true,
+        orgChartHighlight: true,
+        orgChartDashed: true,
+        orgChartSortOrder: true,
+        department: { select: { id: true, name: true } },
+      },
+    });
   });
 
   const orgChartFieldsTouched =

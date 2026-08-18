@@ -6,6 +6,9 @@ export type OrgChartUser = {
   managerId: string | null;
   orgChartHighlight: string | null;
   orgChartDashed: boolean;
+  orgChartSortOrder: number;
+  departmentId: string | null;
+  departmentName: string | null;
 };
 
 export type OrgChartTreeEntry = {
@@ -21,20 +24,39 @@ export function buildOrgChartTree(nodes: OrgChartUser[]): OrgChartTreeEntry[] {
   const childrenByParent = new Map<string, OrgChartUser[]>();
 
   for (const n of nodes) {
-    if (n.managerId && byId.has(n.managerId)) {
+    if (n.managerId && n.managerId !== n.id && byId.has(n.managerId)) {
       const siblings = childrenByParent.get(n.managerId) ?? [];
       siblings.push(n);
       childrenByParent.set(n.managerId, siblings);
     }
   }
 
-  const byName = (a: OrgChartUser, b: OrgChartUser) => a.displayName.localeCompare(b.displayName);
+  // Admin-controlled display order (see components/org-chart admin edit mode)
+  // takes priority; displayName is only a tiebreaker for equal/default (0)
+  // sort orders, keeping unordered groups deterministic.
+  const bySortOrder = (a: OrgChartUser, b: OrgChartUser) =>
+    a.orgChartSortOrder - b.orgChartSortOrder || a.displayName.localeCompare(b.displayName);
+
+  // A malformed managerId chain (e.g. A reports to B, B reports to A) would
+  // otherwise recurse forever. `built` guards each node from being expanded
+  // more than once across the whole forest; a node hit a second time (via a
+  // cycle, or bad data pointing two managers at the same report) is stubbed
+  // as a leaf instead of recursing again.
+  const built = new Set<string>();
 
   function build(n: OrgChartUser): OrgChartTreeEntry {
-    const children = (childrenByParent.get(n.id) ?? []).sort(byName).map(build);
+    if (built.has(n.id)) {
+      console.error(`buildOrgChartTree: cycle or duplicate parentage detected at user ${n.id}`);
+      return { node: n, children: [] };
+    }
+    built.add(n.id);
+    const children = (childrenByParent.get(n.id) ?? []).sort(bySortOrder).map(build);
     return { node: n, children };
   }
 
-  const roots = nodes.filter((n) => !n.managerId || !byId.has(n.managerId));
-  return roots.sort(byName).map(build);
+  // A self-referencing record (managerId === own id) would otherwise pass
+  // the `byId.has(n.managerId)` check and be treated as its own child,
+  // vanishing from every root's build() walk instead of rendering anywhere.
+  const roots = nodes.filter((n) => !n.managerId || n.managerId === n.id || !byId.has(n.managerId));
+  return roots.sort(bySortOrder).map(build);
 }

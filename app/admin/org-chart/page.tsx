@@ -1,26 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Network } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Network, Maximize, Pencil, Check, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRealtimeChannels } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
-import { buildOrgChartTree, type OrgChartUser } from "@/lib/orgChart/buildTree";
-import { OrgChartTree } from "@/components/org-chart/OrgChartTree";
+import type { OrgChartUser } from "@/lib/orgChart/buildTree";
+import { OrgChartCanvas, type OrgChartCanvasApi } from "@/components/org-chart/OrgChartCanvas";
+import { OrgChartSearch } from "@/components/org-chart/OrgChartSearch";
+import { OrgChartLevelSelector } from "@/components/org-chart/OrgChartLevelSelector";
+import type { ComboboxOption } from "@/components/org-chart/EmployeeCombobox";
+import type { EmployeeNodeAdminActions } from "@/components/org-chart/EmployeeNode";
+import { AddEmployeeDialog, type AddEmployeePayload } from "@/components/org-chart/admin/AddEmployeeDialog";
+import { EditChartEntryDialog, type EditChartEntryPayload } from "@/components/org-chart/admin/EditChartEntryDialog";
+import { ReplaceDialog } from "@/components/org-chart/admin/ReplaceDialog";
+import { ChangeManagerDialog } from "@/components/org-chart/admin/ChangeManagerDialog";
+import { ReorderSiblingsDialog } from "@/components/org-chart/admin/ReorderSiblingsDialog";
+import { RemoveFromChartDialog } from "@/components/org-chart/admin/RemoveFromChartDialog";
 
 type RosterEntry = { id: string; displayName: string; email: string; avatarUrl: string | null; position: string | null };
 
-type NodeFormState = {
-  userId: string;
-  position: string;
-  managerId: string;
-  orgChartHighlight: "" | "gold" | "teal";
-  orgChartDashed: boolean;
-};
+const bySortOrder = (a: OrgChartUser, b: OrgChartUser) =>
+  a.orgChartSortOrder - b.orgChartSortOrder || a.displayName.localeCompare(b.displayName);
 
-const EMPTY_FORM: NodeFormState = { userId: "", position: "", managerId: "", orgChartHighlight: "", orgChartDashed: false };
+function rosterOption(r: RosterEntry): ComboboxOption {
+  return { id: r.id, label: r.displayName, secondaryLine: r.position ?? r.email };
+}
+
+function managerOption(n: OrgChartUser): ComboboxOption {
+  return { id: n.id, label: n.displayName, secondaryLine: [n.position, n.departmentName].filter(Boolean).join(" · ") };
+}
+
+// Every id transitively under `rootId` (via managerId) — used to stop an
+// employee from being reassigned under their own report (a cycle the server
+// also rejects, but excluding it from the picker avoids a pointless round
+// trip and a confusing error).
+function collectDescendantIds(allNodes: OrgChartUser[], rootId: string): Set<string> {
+  const childrenByParent = new Map<string, string[]>();
+  for (const n of allNodes) {
+    if (!n.managerId) continue;
+    const arr = childrenByParent.get(n.managerId) ?? [];
+    arr.push(n.id);
+    childrenByParent.set(n.managerId, arr);
+  }
+  const result = new Set<string>();
+  const queue = [...(childrenByParent.get(rootId) ?? [])];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (result.has(id)) continue;
+    result.add(id);
+    queue.push(...(childrenByParent.get(id) ?? []));
+  }
+  return result;
+}
 
 export default function AdminOrgChartPage() {
   const { apiFetch } = useApiClient();
@@ -28,14 +62,25 @@ export default function AdminOrgChartPage() {
   const [nodes, setNodes] = useState<OrgChartUser[]>([]);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const canvasApiRef = useRef<OrgChartCanvasApi | null>(null);
 
-  const [mode, setMode] = useState<"none" | "add" | "edit">("none");
-  const [form, setForm] = useState<NodeFormState>(EMPTY_FORM);
-
-  const [replacingUser, setReplacingUser] = useState<OrgChartUser | null>(null);
-  const [replacementId, setReplacementId] = useState("");
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+  const [addReportManager, setAddReportManager] = useState<OrgChartUser | null>(null);
+  const [editingNode, setEditingNode] = useState<OrgChartUser | null>(null);
+  const [replacingNode, setReplacingNode] = useState<OrgChartUser | null>(null);
+  const [removingNode, setRemovingNode] = useState<OrgChartUser | null>(null);
+  const [changeManagerNode, setChangeManagerNode] = useState<OrgChartUser | null>(null);
+  const [changeManagerPreset, setChangeManagerPreset] = useState<string | null>(null);
+  const [reorderContext, setReorderContext] = useState<{ managerId: string | null; managerLabel: string; siblings: OrgChartUser[] } | null>(null);
+  // Bumped on every dialog-opening action so `key={openNonce}` forces each
+  // dialog to remount fresh (rather than resetting its form state via a
+  // useEffect keyed on `open`, which the project's lint rules flag as an
+  // anti-pattern — see https://react.dev/learn/you-might-not-need-an-effect).
+  const [openNonce, setOpenNonce] = useState(0);
+  function bumpOpenNonce() {
+    setOpenNonce((n) => n + 1);
+  }
 
   async function load() {
     try {
@@ -60,240 +105,192 @@ export default function AdminOrgChartPage() {
 
   useRealtimeChannels([realtimeTopics.orgChart, realtimeTopics.employees], load, { debounceMs: 200 });
 
-  const chartIds = new Set(nodes.map((n) => n.id));
-  const rosterNotInChart = roster.filter((r) => !chartIds.has(r.id));
-  const roots = buildOrgChartTree(nodes);
+  const nodesById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  const chartIds = useMemo(() => new Set(nodes.map((n) => n.id)), [nodes]);
+  const rosterNotInChart = useMemo(() => roster.filter((r) => !chartIds.has(r.id)), [roster, chartIds]);
+  const employeeOptions = useMemo(() => rosterNotInChart.map(rosterOption), [rosterNotInChart]);
+  const managerOptions = useMemo(() => nodes.map(managerOption), [nodes]);
+  const roots = useMemo(() => nodes.filter((n) => !n.managerId || !chartIds.has(n.managerId)).sort(bySortOrder), [nodes, chartIds]);
 
-  function openAdd() {
-    setForm(EMPTY_FORM);
-    setError("");
-    setMode("add");
+  function directReportsOf(managerId: string): OrgChartUser[] {
+    return nodes.filter((n) => n.managerId === managerId).sort(bySortOrder);
   }
 
-  function openEdit(node: OrgChartUser) {
-    setForm({
-      userId: node.id,
-      position: node.position ?? "",
-      managerId: node.managerId ?? "",
-      orgChartHighlight: (node.orgChartHighlight as "gold" | "teal") ?? "",
-      orgChartDashed: node.orgChartDashed,
+  async function patchEmployee(id: string, body: Record<string, unknown>) {
+    await apiFetch(`/api/admin/employees/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  }
+
+  async function handleAddEmployee(payload: AddEmployeePayload) {
+    await patchEmployee(payload.userId, {
+      position: payload.position,
+      managerId: payload.managerId,
+      orgChartHighlight: payload.orgChartHighlight || null,
+      orgChartDashed: payload.orgChartDashed,
     });
-    setError("");
-    setMode("edit");
+    toast.success(addReportManager ? "Direct report added." : "Employee added to org chart.");
+    load();
   }
 
-  function closeForm() {
-    setMode("none");
-    setForm(EMPTY_FORM);
-    setError("");
+  async function handleEditEntry(node: OrgChartUser, payload: EditChartEntryPayload) {
+    await patchEmployee(node.id, {
+      position: payload.position,
+      managerId: payload.managerId,
+      orgChartHighlight: payload.orgChartHighlight || null,
+      orgChartDashed: payload.orgChartDashed,
+    });
+    toast.success("Org chart entry updated.");
+    load();
   }
 
-  async function submitForm() {
-    if (!form.userId) {
-      setError("Choose an employee");
-      return;
-    }
-    if (!form.position.trim()) {
-      setError("Position is required");
-      return;
-    }
-    setSaving(true);
-    setError("");
+  async function handleReplace(outgoing: OrgChartUser, replacementId: string) {
+    await apiFetch("/api/admin/org-chart/replace", {
+      method: "POST",
+      body: JSON.stringify({ oldUserId: outgoing.id, newUserId: replacementId }),
+    });
+    toast.success("Employee replaced in the org chart.");
+    load();
+  }
+
+  async function handleRemove(node: OrgChartUser) {
+    await patchEmployee(node.id, { position: null, orgChartHighlight: null, orgChartDashed: false });
+    toast.success(`Removed ${node.displayName} from the org chart.`);
+    load();
+  }
+
+  async function handleChangeManager(employee: OrgChartUser, newManagerId: string | null) {
+    await patchEmployee(employee.id, { managerId: newManagerId });
+    toast.success("Reporting manager updated.");
+    load();
+  }
+
+  async function handleReorderSiblings(managerId: string | null, orderedUserIds: string[]) {
     try {
-      await apiFetch(`/api/admin/employees/${form.userId}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          position: form.position.trim(),
-          managerId: form.managerId || null,
-          orgChartHighlight: form.orgChartHighlight || null,
-          orgChartDashed: form.orgChartDashed,
-        }),
-      });
-      toast.success(mode === "add" ? "Added to org chart." : "Org chart entry updated.");
-      closeForm();
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removeFromChart(node: OrgChartUser) {
-    setSaving(true);
-    try {
-      await apiFetch(`/api/admin/employees/${node.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ position: null, orgChartHighlight: null, orgChartDashed: false }),
-      });
-      toast.success(`Removed ${node.displayName} from the org chart.`);
-      closeForm();
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function submitReplace() {
-    if (!replacingUser || !replacementId) return;
-    setSaving(true);
-    try {
-      await apiFetch("/api/admin/org-chart/replace", {
+      await apiFetch("/api/admin/org-chart/reorder", {
         method: "POST",
-        body: JSON.stringify({ oldUserId: replacingUser.id, newUserId: replacementId }),
+        body: JSON.stringify({ managerId, orderedUserIds }),
       });
-      toast.success("Employee replaced in the org chart.");
-      setReplacingUser(null);
-      setReplacementId("");
+      toast.success("Employee order updated.");
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to replace");
-    } finally {
-      setSaving(false);
+      toast.error(err instanceof Error ? err.message : "Failed to update order");
     }
   }
+
+  // Canvas drag → reparent is always a confirmation, never an immediate
+  // save: pre-fill Change Manager with the drop target already selected and
+  // jump straight to its confirmation step.
+  function handleRequestReparent(employeeId: string, newManagerId: string) {
+    const employee = nodesById.get(employeeId);
+    if (!employee) return;
+    bumpOpenNonce();
+    setChangeManagerNode(employee);
+    setChangeManagerPreset(newManagerId);
+  }
+
+  const adminActions: EmployeeNodeAdminActions = useMemo(
+    () => ({
+      onAddReport: (id) => {
+        const manager = nodesById.get(id);
+        if (manager) {
+          bumpOpenNonce();
+          setAddReportManager(manager);
+        }
+      },
+      onEditEntry: (id) => {
+        const node = nodesById.get(id);
+        if (node) {
+          bumpOpenNonce();
+          setEditingNode(node);
+        }
+      },
+      onChangeManager: (id) => {
+        const node = nodesById.get(id);
+        if (node) {
+          bumpOpenNonce();
+          setChangeManagerNode(node);
+          setChangeManagerPreset(null);
+        }
+      },
+      onReorderSiblings: (id) => {
+        const manager = nodesById.get(id);
+        if (!manager) return;
+        bumpOpenNonce();
+        setReorderContext({ managerId: manager.id, managerLabel: manager.displayName, siblings: directReportsOf(manager.id) });
+      },
+      onReplace: (id) => {
+        const node = nodesById.get(id);
+        if (node) {
+          bumpOpenNonce();
+          setReplacingNode(node);
+        }
+      },
+      onRemove: (id) => {
+        const node = nodesById.get(id);
+        if (node) setRemovingNode(node);
+      },
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodesById, nodes],
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Org Chart</h1>
-          <p className="text-gray-500 text-sm mt-1">Add, edit, or replace people in the org chart.</p>
+          <p className="text-gray-500 text-sm mt-1">Manage your organization&apos;s reporting structure.</p>
         </div>
-        {mode === "none" && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={openAdd}
+            type="button"
+            onClick={() => { bumpOpenNonce(); setAddReportManager(null); setAddEmployeeOpen(true); }}
             className="bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
           >
-            Add to Org Chart
+            + Add Employee
           </button>
-        )}
+          <button
+            type="button"
+            onClick={() => setEditMode((v) => !v)}
+            aria-pressed={editMode}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black ${
+              editMode ? "bg-navy-600 text-white hover:bg-navy-700" : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {editMode ? <Check className="w-4 h-4" aria-hidden="true" /> : <Pencil className="w-4 h-4" aria-hidden="true" />}
+            {editMode ? "Done" : "Edit Organization"}
+          </button>
+        </div>
       </div>
 
-      {mode !== "none" && (
-        <div className="bg-white rounded-card border border-table-border p-6 space-y-4">
-          <h2 className="text-base font-semibold text-gray-800">{mode === "add" ? "Add to Org Chart" : "Edit Org Chart Entry"}</h2>
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
-              {mode === "add" ? (
-                <select
-                  value={form.userId}
-                  onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400"
-                >
-                  <option value="">Select employee…</option>
-                  {rosterNotInChart.map((r) => (
-                    <option key={r.id} value={r.id}>{r.displayName} ({r.email})</option>
-                  ))}
-                </select>
-              ) : (
-                <input disabled value={roster.find((r) => r.id === form.userId)?.displayName ?? ""} className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-500" />
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-              <input
-                type="text"
-                value={form.position}
-                onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400"
-                placeholder="e.g. Site Director"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reports to</label>
-              <select
-                value={form.managerId}
-                onChange={(e) => setForm((f) => ({ ...f, managerId: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400"
-              >
-                <option value="">— Top of chart —</option>
-                {nodes.filter((n) => n.id !== form.userId).map((n) => (
-                  <option key={n.id} value={n.id}>{n.displayName} — {n.position}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Highlight color</label>
-              <select
-                value={form.orgChartHighlight}
-                onChange={(e) => setForm((f) => ({ ...f, orgChartHighlight: e.target.value as "" | "gold" | "teal" }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400"
-              >
-                <option value="">None</option>
-                <option value="gold">Gold — HR & Compliance</option>
-                <option value="teal">Teal — Quality & Training</option>
-              </select>
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.orgChartDashed}
-              onChange={(e) => setForm((f) => ({ ...f, orgChartDashed: e.target.checked }))}
-              className="rounded border-gray-300"
-            />
-            Dotted-line / support reporting relationship
-          </label>
-          <div className="flex gap-2">
-            <button
-              onClick={submitForm}
-              disabled={saving}
-              className="bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-            <button
-              onClick={closeForm}
-              className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
-            >
-              Cancel
-            </button>
-            {mode === "edit" && (
-              <button
-                onClick={() => removeFromChart(nodes.find((n) => n.id === form.userId)!)}
-                disabled={saving}
-                className="ml-auto text-red-500 hover:text-red-700 text-sm font-medium disabled:opacity-50"
-              >
-                Remove from chart
-              </button>
-            )}
-          </div>
-        </div>
+      {editMode && (
+        <p className="text-xs text-navy-700 bg-navy-50 border border-navy-100 rounded-lg px-3 py-2">
+          Editing Organization — drag a card onto a sibling to reorder, or onto another manager to reparent (with confirmation).
+        </p>
       )}
 
-      {replacingUser && (
-        <div className="bg-white rounded-card border border-table-border p-6 space-y-4">
-          <h2 className="text-base font-semibold text-gray-800">Replace {replacingUser.displayName}</h2>
-          <p className="text-sm text-gray-500">The replacement inherits their position, manager, and reports.</p>
-          <select
-            value={replacementId}
-            onChange={(e) => setReplacementId(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy-400"
-          >
-            <option value="">Select replacement…</option>
-            {roster.filter((r) => r.id !== replacingUser.id).map((r) => (
-              <option key={r.id} value={r.id}>{r.displayName} ({r.email})</option>
-            ))}
-          </select>
-          <div className="flex gap-2">
+      {!loading && nodes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <OrgChartSearch nodes={nodes} onSelect={(id) => canvasApiRef.current?.focusNode(id)} />
+          <div className="flex items-center gap-2">
+            <OrgChartLevelSelector onSelectLevel={(level) => canvasApiRef.current?.setCollapseLevel(level)} />
             <button
-              onClick={submitReplace}
-              disabled={saving || !replacementId}
-              className="bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+              type="button"
+              onClick={() => canvasApiRef.current?.fitAll()}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
             >
-              {saving ? "Replacing…" : "Confirm Replacement"}
+              <Maximize className="w-4 h-4" aria-hidden="true" />
+              Fit
             </button>
-            <button
-              onClick={() => { setReplacingUser(null); setReplacementId(""); }}
-              className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
-            >
-              Cancel
-            </button>
+            {editMode && roots.length > 1 && (
+              <button
+                type="button"
+                onClick={() => { bumpOpenNonce(); setReorderContext({ managerId: null, managerLabel: "Top of chart", siblings: roots }); }}
+                className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-command-black"
+              >
+                <ListOrdered className="w-4 h-4" aria-hidden="true" />
+                Reorder Top Level
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -303,24 +300,81 @@ export default function AdminOrgChartPage() {
           <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-16 text-gray-500 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…
           </div>
-        ) : roots.length === 0 ? (
+        ) : nodes.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 p-12">
             <Network className="w-8 h-8 text-gray-300" aria-hidden="true" />
-            <p className="text-sm text-gray-500">Nobody is in the org chart yet.</p>
+            <p className="text-sm text-gray-500">The org chart hasn&apos;t been set up yet.</p>
           </div>
         ) : (
-          <OrgChartTree
-            roots={roots}
+          <OrgChartCanvas
+            nodes={nodes}
+            onReady={(api) => (canvasApiRef.current = api)}
             linkToProfile={false}
-            renderExtra={(node) => (
-              <div className="flex gap-2 text-xs">
-                <button onClick={() => openEdit(node)} className="text-navy-600 hover:text-navy-800 font-medium">Edit</button>
-                <button onClick={() => { setReplacingUser(node); setReplacementId(""); }} className="text-gray-500 hover:text-gray-700 font-medium">Replace</button>
-              </div>
-            )}
+            editMode={editMode}
+            adminActions={adminActions}
+            onReorderSiblings={handleReorderSiblings}
+            onRequestReparent={handleRequestReparent}
           />
         )}
       </div>
+
+      <AddEmployeeDialog
+        key={`add-${openNonce}`}
+        open={addEmployeeOpen || !!addReportManager}
+        onOpenChange={(open) => { if (!open) { setAddEmployeeOpen(false); setAddReportManager(null); } }}
+        employeeOptions={employeeOptions}
+        managerOptions={managerOptions}
+        presetManager={addReportManager ? { id: addReportManager.id, label: addReportManager.displayName } : null}
+        onSubmit={handleAddEmployee}
+      />
+
+      <EditChartEntryDialog
+        key={`edit-${openNonce}`}
+        open={!!editingNode}
+        onOpenChange={(open) => { if (!open) setEditingNode(null); }}
+        node={editingNode}
+        managerOptions={managerOptions}
+        onSubmit={(payload) => handleEditEntry(editingNode!, payload)}
+        onRequestRemove={() => { if (editingNode) setRemovingNode(editingNode); }}
+      />
+
+      <ReplaceDialog
+        key={`replace-${openNonce}`}
+        open={!!replacingNode}
+        onOpenChange={(open) => { if (!open) setReplacingNode(null); }}
+        outgoing={replacingNode}
+        employeeOptions={roster.filter((r) => r.id !== replacingNode?.id).map(rosterOption)}
+        onSubmit={(replacementId) => handleReplace(replacingNode!, replacementId)}
+      />
+
+      <ChangeManagerDialog
+        key={`manager-${openNonce}`}
+        open={!!changeManagerNode}
+        onOpenChange={(open) => { if (!open) { setChangeManagerNode(null); setChangeManagerPreset(null); } }}
+        employee={changeManagerNode}
+        currentManagerLabel={changeManagerNode?.managerId ? (nodesById.get(changeManagerNode.managerId)?.displayName ?? "—") : "Top of chart"}
+        managerOptions={managerOptions}
+        excludeIds={changeManagerNode ? new Set([changeManagerNode.id, ...collectDescendantIds(nodes, changeManagerNode.id)]) : new Set()}
+        initialNewManagerId={changeManagerPreset}
+        onSubmit={(newManagerId) => handleChangeManager(changeManagerNode!, newManagerId)}
+      />
+
+      <ReorderSiblingsDialog
+        key={`reorder-${openNonce}`}
+        open={!!reorderContext}
+        onOpenChange={(open) => { if (!open) setReorderContext(null); }}
+        managerLabel={reorderContext?.managerLabel ?? ""}
+        siblings={reorderContext?.siblings ?? []}
+        onSubmit={(orderedIds) => handleReorderSiblings(reorderContext!.managerId, orderedIds)}
+      />
+
+      <RemoveFromChartDialog
+        open={!!removingNode}
+        onOpenChange={(open) => { if (!open) setRemovingNode(null); }}
+        node={removingNode}
+        directReportCount={removingNode ? nodes.filter((n) => n.managerId === removingNode.id).length : 0}
+        onConfirm={() => handleRemove(removingNode!)}
+      />
     </div>
   );
 }

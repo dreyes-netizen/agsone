@@ -1,32 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown, Loader2, ShieldAlert } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, SearchX, TriangleAlert } from "lucide-react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import type { CodeOfConduct } from "@/lib/settings/codeOfConduct";
-
-const TIER_COLOR: Record<string, string> = {
-  A: "border-amber-300 bg-amber-50",
-  B: "border-orange-300 bg-orange-50",
-  C: "border-red-300 bg-red-50",
-};
+import { OffenseSearch } from "./components/OffenseSearch";
+import { OffenseTypeOverview } from "./components/OffenseTypeOverview";
+import { TierAccordion } from "./components/TierAccordion";
+import { PromotionEffects } from "./components/PromotionEffects";
+import { tierMatchesQuery } from "./components/searchMatch";
 
 export default function CodeOfConductPage() {
   const { apiFetch } = useApiClient();
   const { user, loading: authLoading } = useAuth();
   const [coc, setCoc] = useState<CodeOfConduct | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [search, setSearch] = useState("");
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const hasAppliedHash = useRef(false);
 
   async function load() {
+    setError(false);
     try {
-      const res = await apiFetch<{ data: CodeOfConduct }>("/api/code-of-conduct");
+      const res = await apiFetch<{ data: CodeOfConduct; updatedAt: string | null }>("/api/code-of-conduct");
       setCoc(res.data);
+      setUpdatedAt(res.updatedAt);
     } catch (err) {
       console.error(err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -40,70 +47,113 @@ export default function CodeOfConductPage() {
 
   useRealtimeChannel(realtimeTopics.codeOfConduct, load, { debounceMs: 200 });
 
+  const query = search.trim();
+  const isSearching = query.length > 0;
+
+  const visibleTiers = useMemo(
+    () => (coc ? coc.tiers.filter((t) => tierMatchesQuery(t, query)) : []),
+    [coc, query]
+  );
+
+  // While searching, which tiers are open is fully derived from the query —
+  // no need to sync it into state. Manual expand/collapse only applies once
+  // the search is cleared again.
+  const effectiveExpandedKeys = isSearching ? new Set(visibleTiers.map((t) => t.key)) : expandedKeys;
+
+  // Deep-link support: /code-of-conduct#type-b opens and scrolls to Type B.
+  // Deferred a microtask so the setState calls don't run synchronously
+  // inside the effect body (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    if (!coc || hasAppliedHash.current) return;
+    hasAppliedHash.current = true;
+    const hash = window.location.hash.replace("#type-", "").toUpperCase();
+    const match = coc.tiers.find((t) => t.key.toUpperCase() === hash);
+    if (!match) return;
+    queueMicrotask(() => {
+      setExpandedKeys((prev) => new Set(prev).add(match.key));
+      sectionRefs.current.get(match.key)?.scrollIntoView({ block: "start" });
+    });
+  }, [coc]);
+
+  function toggleTier(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function goToTier(key: string) {
+    setExpandedKeys((prev) => new Set(prev).add(key));
+    sectionRefs.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  const lastUpdatedLabel = updatedAt
+    ? new Date(updatedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : null;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Code of Conduct</h1>
-        <p className="text-gray-500 text-sm mt-1">Offense tiers, disciplinary steps, and cleansing periods.</p>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl font-bold text-gray-900">Code of Conduct</h1>
+          {lastUpdatedLabel && <p className="text-xs text-gray-500">Last updated: {lastUpdatedLabel}</p>}
+        </div>
+        <p className="text-gray-500 text-sm mt-1">
+          Understand offense classifications, disciplinary actions, and cleansing periods.
+        </p>
       </div>
 
-      {loading || !coc ? (
+      {loading ? (
         <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-16 text-gray-500 text-sm">
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…
         </div>
+      ) : error || !coc ? (
+        <div className="flex flex-col items-center justify-center gap-2 p-12 bg-white rounded-card border border-table-border text-center">
+          <TriangleAlert className="w-8 h-8 text-gray-300" aria-hidden="true" />
+          <p className="text-sm text-gray-500">Couldn&apos;t load the Code of Conduct.</p>
+          <button onClick={load} className="text-sm font-medium text-navy-600 hover:text-navy-800">
+            Try again
+          </button>
+        </div>
       ) : (
         <>
-          <div className="space-y-3">
-            {coc.tiers.map((tier) => {
-              const isOpen = expanded === tier.key;
-              return (
-                <div key={tier.key} className={`rounded-card border-2 ${TIER_COLOR[tier.key] ?? "border-gray-200 bg-white"} overflow-hidden`}>
-                  <button
-                    onClick={() => setExpanded(isOpen ? null : tier.key)}
-                    className="w-full flex items-center justify-between px-5 py-4 text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <ShieldAlert className="w-5 h-5 text-gray-500" aria-hidden="true" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Type {tier.key} — {tier.label}</p>
-                        <p className="text-xs text-gray-500">Cleansing period: {tier.cleansingPeriodMonths} month{tier.cleansingPeriodMonths !== 1 ? "s" : ""}</p>
-                      </div>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-                  </button>
-                  {isOpen && (
-                    <div className="px-5 pb-5 pt-1 grid sm:grid-cols-2 gap-4 border-t border-black/5">
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Disciplinary Steps</p>
-                        <ol className="space-y-1 text-sm text-gray-700 list-decimal list-inside">
-                          {tier.steps.sort((a, b) => a.order - b.order).map((s) => <li key={s.order}>{s.description}</li>)}
-                        </ol>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Example Offenses</p>
-                        <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
-                          {tier.examples.map((ex) => <li key={ex}>{ex}</li>)}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <OffenseSearch value={search} onChange={setSearch} />
 
-          <div className="bg-white rounded-card border border-table-border p-5">
-            <h2 className="font-semibold text-gray-900 mb-1">Effects on Promotion</h2>
-            <p className="text-xs text-gray-500 mb-4">Active warnings can defer eligibility for promotion.</p>
-            <div className="grid sm:grid-cols-2 gap-2">
-              {coc.promotionEffects.map((e) => (
-                <div key={e.warningType} className="flex items-center justify-between text-sm border-b border-gray-100 py-1.5">
-                  <span className="text-gray-700">{e.warningType}</span>
-                  <span className="text-gray-500">{e.deferralMonths}</span>
-                </div>
-              ))}
+          <OffenseTypeOverview tiers={coc.tiers} onSelect={goToTier} />
+
+          {isSearching && visibleTiers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-12 bg-white rounded-card border border-table-border text-center">
+              <SearchX className="w-8 h-8 text-gray-300" aria-hidden="true" />
+              <p className="text-sm text-gray-500">No offenses found for &ldquo;{query}&rdquo;.</p>
+              <button onClick={() => setSearch("")} className="text-sm font-medium text-navy-600 hover:text-navy-800">
+                Clear search
+              </button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {coc.tiers.map((tier, i) => {
+                if (!visibleTiers.includes(tier)) return null;
+                return (
+                  <TierAccordion
+                    key={tier.key}
+                    tier={tier}
+                    index={i}
+                    isOpen={effectiveExpandedKeys.has(tier.key)}
+                    onToggle={() => toggleTier(tier.key)}
+                    query={query}
+                    sectionRef={(el) => {
+                      if (el) sectionRefs.current.set(tier.key, el);
+                      else sectionRefs.current.delete(tier.key);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          <PromotionEffects effects={coc.promotionEffects} />
         </>
       )}
     </div>

@@ -115,6 +115,20 @@ export async function getCodeOfConduct(): Promise<CodeOfConduct> {
   return parsed.success ? parsed.data : DEFAULT_CODE_OF_CONDUCT;
 }
 
+// Same lookup, plus the row's updatedAt — so the employee-facing page can
+// show a "Last updated" date backed by a real value instead of a fabricated
+// one. Kept separate from getCodeOfConduct() so callers that don't need the
+// timestamp (e.g. the admin editor) aren't forced to thread it through.
+export async function getCodeOfConductWithMeta(): Promise<{ data: CodeOfConduct; updatedAt: string | null }> {
+  const row = await prisma.appSetting.findUnique({ where: { key: CODE_OF_CONDUCT_KEY } });
+  if (!row) return { data: DEFAULT_CODE_OF_CONDUCT, updatedAt: null };
+  const parsed = codeOfConductSchema.safeParse(row.value);
+  return {
+    data: parsed.success ? parsed.data : DEFAULT_CODE_OF_CONDUCT,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 export async function setCodeOfConduct(value: CodeOfConduct, userId: string): Promise<void> {
   await prisma.appSetting.upsert({
     where: { key: CODE_OF_CONDUCT_KEY },

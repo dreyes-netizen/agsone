@@ -12,6 +12,8 @@ function user(overrides: Partial<OrgChartUser> & { id: string }): OrgChartUser {
     orgChartSortOrder: 0,
     departmentId: null,
     departmentName: null,
+    orgChartPhotoUrl: null,
+    additionalManagers: [],
     ...overrides,
   };
 }

@@ -15,6 +15,9 @@ export const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   SYNC_EMPLOYEES:            { label: "Employee Sync",       color: "bg-blue-100 text-blue-700" },
   ORG_CHART_REPLACE:         { label: "Org Chart Replacement", color: "bg-navy-100 text-navy-700" },
   REORDER_ORG_CHART:         { label: "Org Chart Reorder",     color: "bg-navy-50 text-navy-700" },
+  ORG_CHART_ADDITIONAL_REPORT_ADD:    { label: "Org Chart Relationship Added",   color: "bg-navy-50 text-navy-700" },
+  ORG_CHART_ADDITIONAL_REPORT_REMOVE: { label: "Org Chart Relationship Removed", color: "bg-navy-50 text-navy-700" },
+  ORG_CHART_PHOTO_UPDATE:             { label: "Org Chart Photo Updated",        color: "bg-navy-50 text-navy-700" },
 
   // Points
   AWARD_POINTS:              { label: "Award Points",        color: "bg-emerald-100 text-emerald-700" },

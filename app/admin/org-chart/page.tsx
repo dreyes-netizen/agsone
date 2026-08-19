@@ -7,6 +7,8 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRealtimeChannels } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { uploadOrgChartPhoto } from "@/lib/cloudinary/upload";
+import type { OrgChartRelationshipType } from "@/lib/constants/orgChartRelationshipTypes";
 import type { OrgChartUser } from "@/lib/orgChart/buildTree";
 import { OrgChartCanvas, type OrgChartCanvasApi } from "@/components/org-chart/OrgChartCanvas";
 import { OrgChartSearch } from "@/components/org-chart/OrgChartSearch";
@@ -58,7 +60,7 @@ function collectDescendantIds(allNodes: OrgChartUser[], rootId: string): Set<str
 
 export default function AdminOrgChartPage() {
   const { apiFetch } = useApiClient();
-  const { user, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const [nodes, setNodes] = useState<OrgChartUser[]>([]);
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,8 +92,10 @@ export default function AdminOrgChartPage() {
       ]);
       setNodes(chartRes.data);
       setRoster(rosterRes.data);
+      return chartRes.data;
     } catch (err) {
       console.error(err);
+      return undefined;
     } finally {
       setLoading(false);
     }
@@ -174,6 +178,46 @@ export default function AdminOrgChartPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update order");
     }
+  }
+
+  // Additional (secondary) reporting relationships and the photo override
+  // are each their own immediate action rather than part of the dialog's
+  // single Save — reload afterward and refresh `editingNode` in place so the
+  // still-open Edit dialog reflects the change instead of closing.
+  async function refreshEditingNode(userId: string) {
+    const updated = await load();
+    setEditingNode(updated?.find((n) => n.id === userId) ?? null);
+  }
+
+  async function handleAddAdditionalManager(userId: string, managerId: string, relationshipType: OrgChartRelationshipType) {
+    await apiFetch("/api/admin/org-chart/additional-reports", {
+      method: "POST",
+      body: JSON.stringify({ userId, managerId, relationshipType }),
+    });
+    await refreshEditingNode(userId);
+    toast.success("Additional reporting relationship added.");
+  }
+
+  async function handleRemoveAdditionalManager(userId: string, managerId: string) {
+    await apiFetch("/api/admin/org-chart/additional-reports", {
+      method: "DELETE",
+      body: JSON.stringify({ userId, managerId }),
+    });
+    await refreshEditingNode(userId);
+    toast.success("Additional reporting relationship removed.");
+  }
+
+  async function handleUploadOrgChartPhoto(userId: string, file: File) {
+    const { publicId } = await uploadOrgChartPhoto(file, token!);
+    await apiFetch("/api/admin/org-chart/photo", { method: "PATCH", body: JSON.stringify({ userId, publicId }) });
+    await refreshEditingNode(userId);
+    toast.success("Org chart photo updated.");
+  }
+
+  async function handleClearOrgChartPhoto(userId: string) {
+    await apiFetch("/api/admin/org-chart/photo", { method: "PATCH", body: JSON.stringify({ userId, publicId: null }) });
+    await refreshEditingNode(userId);
+    toast.success("Org chart photo override removed.");
   }
 
   // Canvas drag → reparent is always a confirmation, never an immediate
@@ -336,6 +380,10 @@ export default function AdminOrgChartPage() {
         managerOptions={managerOptions}
         onSubmit={(payload) => handleEditEntry(editingNode!, payload)}
         onRequestRemove={() => { if (editingNode) setRemovingNode(editingNode); }}
+        onAddAdditionalManager={(managerId, relationshipType) => handleAddAdditionalManager(editingNode!.id, managerId, relationshipType)}
+        onRemoveAdditionalManager={(managerId) => handleRemoveAdditionalManager(editingNode!.id, managerId)}
+        onUploadPhoto={(file) => handleUploadOrgChartPhoto(editingNode!.id, file)}
+        onClearPhoto={() => handleClearOrgChartPhoto(editingNode!.id)}
       />
 
       <ReplaceDialog

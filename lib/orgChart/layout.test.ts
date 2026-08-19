@@ -15,6 +15,8 @@ function stubUser(id: string): OrgChartUser {
     orgChartSortOrder: 0,
     departmentId: null,
     departmentName: null,
+    orgChartPhotoUrl: null,
+    additionalManagers: [],
   };
 }
 
@@ -28,9 +30,9 @@ const nodes: FlowNodeData[] = [
   { id: "eng", user: stubUser("eng"), parentId: "vp1", depth: 2, descendantCount: 0 },
 ];
 const edges: FlowEdgeData[] = [
-  { id: "ceo->vp1", source: "ceo", target: "vp1", dashed: false },
-  { id: "ceo->vp2", source: "ceo", target: "vp2", dashed: false },
-  { id: "vp1->eng", source: "vp1", target: "eng", dashed: false },
+  { id: "ceo->vp1", source: "ceo", target: "vp1", dashed: false, secondary: false },
+  { id: "ceo->vp2", source: "ceo", target: "vp2", dashed: false, secondary: false },
+  { id: "vp1->eng", source: "vp1", target: "eng", dashed: false, secondary: false },
 ];
 
 describe("layoutFlowGraph", () => {
@@ -82,8 +84,8 @@ describe("layoutFlowGraph", () => {
       })),
     ];
     const wideEdges: FlowEdgeData[] = [
-      ...["A", "B", "C", "D", "E", "F"].map((id) => ({ id: `ceo->${id}`, source: "ceo", target: id, dashed: false })),
-      ...["F1", "F2", "F3"].map((id) => ({ id: `F->${id}`, source: "F", target: id, dashed: false })),
+      ...["A", "B", "C", "D", "E", "F"].map((id) => ({ id: `ceo->${id}`, source: "ceo", target: id, dashed: false, secondary: false })),
+      ...["F1", "F2", "F3"].map((id) => ({ id: `F->${id}`, source: "F", target: id, dashed: false, secondary: false })),
     ];
     const visibleIds = new Set(wideNodes.map((n) => n.id));
 
@@ -121,8 +123,8 @@ describe("layoutFlowGraph", () => {
       })),
     ];
     const wideEdges: FlowEdgeData[] = [
-      ...["F", "A", "B", "C", "D", "E"].map((id) => ({ id: `ceo->${id}`, source: "ceo", target: id, dashed: false })),
-      ...["F1", "F2", "F3"].map((id) => ({ id: `F->${id}`, source: "F", target: id, dashed: false })),
+      ...["F", "A", "B", "C", "D", "E"].map((id) => ({ id: `ceo->${id}`, source: "ceo", target: id, dashed: false, secondary: false })),
+      ...["F1", "F2", "F3"].map((id) => ({ id: `F->${id}`, source: "F", target: id, dashed: false, secondary: false })),
     ];
     const visibleIds = new Set(wideNodes.map((n) => n.id));
 
@@ -151,9 +153,9 @@ describe("layoutFlowGraph", () => {
       ...smallTeam.map((id) => ({ id, user: stubUser(id), parentId: "manager3", depth: 2, descendantCount: 0 })),
     ];
     const wideEdges: FlowEdgeData[] = [
-      ...["manager1", "manager2", "manager3"].map((id) => ({ id: `ceo->${id}`, source: "ceo", target: id, dashed: false })),
-      ...bigTeam.map((id) => ({ id: `manager1->${id}`, source: "manager1", target: id, dashed: false })),
-      ...smallTeam.map((id) => ({ id: `manager3->${id}`, source: "manager3", target: id, dashed: false })),
+      ...["manager1", "manager2", "manager3"].map((id) => ({ id: `ceo->${id}`, source: "ceo", target: id, dashed: false, secondary: false })),
+      ...bigTeam.map((id) => ({ id: `manager1->${id}`, source: "manager1", target: id, dashed: false, secondary: false })),
+      ...smallTeam.map((id) => ({ id: `manager3->${id}`, source: "manager3", target: id, dashed: false, secondary: false })),
     ];
     const visibleIds = new Set(wideNodes.map((n) => n.id));
 

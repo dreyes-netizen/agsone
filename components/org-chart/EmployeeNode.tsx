@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { ChevronDown, Plus, MoreHorizontal } from "lucide-react";
+import { ChevronDown, Plus, MoreHorizontal, Link2 } from "lucide-react";
 import { Avatar } from "@/components/feed/Avatar";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { OrgChartUser } from "@/lib/orgChart/buildTree";
+import { ORG_CHART_RELATIONSHIP_TYPE_LABEL, type OrgChartRelationshipType } from "@/lib/constants/orgChartRelationshipTypes";
 
 const HIGHLIGHT_CLASS: Record<string, string> = {
   gold: "border-amber-400 bg-amber-50",
@@ -27,6 +28,8 @@ export type EmployeeNodeAdminActions = {
   onRemove: (id: string) => void;
 };
 
+export type AdditionalManagerDisplay = { name: string; relationshipType: string };
+
 export type EmployeeNodeData = {
   user: OrgChartUser;
   descendantCount: number;
@@ -38,20 +41,26 @@ export type EmployeeNodeData = {
   linkToProfile: boolean;
   /** Only set (and only rendered) while the admin chart is in Edit Organization mode — keeps the read-only chart free of admin chrome. */
   adminActions?: EmployeeNodeAdminActions;
+  /** Resolved display names for user.additionalManagers, so the card's indicator can show who without the node needing a full roster lookup of its own. */
+  additionalManagerNames: AdditionalManagerDisplay[];
 };
 
 export type EmployeeFlowNode = Node<EmployeeNodeData, "employee">;
 
 export function EmployeeNode({ id, data }: NodeProps<EmployeeFlowNode>) {
-  const { user, descendantCount, hasChildren, collapsed, hasParent, linkToProfile, adminActions } = data;
+  const { user, descendantCount, hasChildren, collapsed, linkToProfile, adminActions, additionalManagerNames } = data;
   const highlightClass = (user.orgChartHighlight && HIGHLIGHT_CLASS[user.orgChartHighlight]) || "border-gray-200 bg-white";
   const reportsLabel = `${descendantCount} report${descendantCount === 1 ? "" : "s"}`;
+  // Precedence: chart-specific photo override -> account profile photo ->
+  // initials (handled inside Avatar itself when url is null). Never the
+  // reverse — see lib/orgChart/resolveAvatar.ts, which computes orgChartPhotoUrl.
+  const avatarUrl = user.orgChartPhotoUrl ?? user.avatarUrl;
 
   const cardClassName = `flex flex-col items-center gap-1 px-3 py-2.5 w-full h-full rounded-xl border-2 ${highlightClass} shadow-sm hover:shadow-md transition-shadow`;
   const cardContent = (
     <>
-      <Avatar name={user.displayName} url={user.avatarUrl} size="md" />
-      <p className="text-sm font-semibold text-gray-900 text-center leading-tight line-clamp-1 w-full" title={user.displayName}>
+      <Avatar name={user.displayName} url={avatarUrl} size="md" />
+      <p className="text-sm font-semibold text-gray-900 text-center leading-tight line-clamp-2 w-full break-words" title={user.displayName}>
         {user.displayName}
       </p>
       {user.position && (
@@ -67,10 +76,17 @@ export function EmployeeNode({ id, data }: NodeProps<EmployeeFlowNode>) {
     </>
   );
 
+  const additionalRelationshipsLabel =
+    additionalManagerNames.length > 0
+      ? `Also reports to ${additionalManagerNames
+          .map((m) => `${m.name} (${ORG_CHART_RELATIONSHIP_TYPE_LABEL[m.relationshipType as OrgChartRelationshipType] ?? m.relationshipType})`)
+          .join(", ")}`
+      : "";
+
   return (
     <div
       role="group"
-      aria-label={`${user.displayName}, ${user.position ?? "No title"}, ${reportsLabel}`}
+      aria-label={`${user.displayName}, ${user.position ?? "No title"}, ${reportsLabel}${additionalRelationshipsLabel ? `, ${additionalRelationshipsLabel}` : ""}`}
       // React Flow sets `pointer-events: none` on `.react-flow__node` itself
       // whenever nodesDraggable/nodesConnectable/elementsSelectable are all
       // false (our case outside edit mode) — it expects nodes' own
@@ -79,7 +95,21 @@ export function EmployeeNode({ id, data }: NodeProps<EmployeeFlowNode>) {
       // pane underneath instead of reaching them.
       className="relative w-full h-full pointer-events-auto"
     >
-      {hasParent && <Handle type="target" position={Position.Top} isConnectable={false} className="!w-0 !h-0 !min-w-0 !min-h-0 !border-0 !bg-transparent" />}
+      {/* Always present (even with no primary parent/children) so a secondary
+          relationship edge — whose source/target don't necessarily line up
+          with this node's own primary-tree role — always has an anchor to
+          route to. Invisible and non-connectable either way. */}
+      <Handle type="target" position={Position.Top} isConnectable={false} className="!w-0 !h-0 !min-w-0 !min-h-0 !border-0 !bg-transparent" />
+      <Handle type="source" position={Position.Bottom} isConnectable={false} className="!w-0 !h-0 !min-w-0 !min-h-0 !border-0 !bg-transparent" />
+
+      {additionalManagerNames.length > 0 && (
+        <div
+          className="nodrag absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-violet-100 border border-violet-300 text-violet-700"
+          title={additionalRelationshipsLabel}
+        >
+          <Link2 className="w-3 h-3" aria-hidden="true" />
+        </div>
+      )}
 
       {linkToProfile ? (
         <Link href={`/employees/${user.id}`} className={`${cardClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-400`}>
@@ -143,10 +173,6 @@ export function EmployeeNode({ id, data }: NodeProps<EmployeeFlowNode>) {
             </>
           )}
         </div>
-      )}
-
-      {hasChildren && !collapsed && (
-        <Handle type="source" position={Position.Bottom} isConnectable={false} className="!w-0 !h-0 !min-w-0 !min-h-0 !border-0 !bg-transparent" />
       )}
     </div>
   );

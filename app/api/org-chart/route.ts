@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { withOrgChartPhotoUrl } from "@/lib/orgChart/resolveAvatar";
 
 // A user is "in the org chart" once HR gives them a position — no separate
-// membership table. Hierarchy comes from the existing User.managerId chain.
+// membership table. Primary hierarchy comes from the existing User.managerId
+// chain; additionalReportsAsUser is the secondary/support overlay (see
+// lib/orgChart/toFlow.ts), never used for tree placement.
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,11 +24,17 @@ export async function GET(req: NextRequest) {
       orgChartSortOrder: true,
       departmentId: true,
       department: { select: { name: true } },
+      orgChartPhotoPublicId: true,
+      additionalReportsAsUser: { select: { managerId: true, relationshipType: true } },
     },
     orderBy: { displayName: "asc" },
   });
 
-  const data = nodes.map(({ department, ...n }) => ({ ...n, departmentName: department?.name ?? null }));
+  const data = nodes.map(({ department, additionalReportsAsUser, ...n }) => ({
+    ...withOrgChartPhotoUrl(n),
+    departmentName: department?.name ?? null,
+    additionalManagers: additionalReportsAsUser,
+  }));
 
   return NextResponse.json({ data });
 }

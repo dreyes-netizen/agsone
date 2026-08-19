@@ -3,12 +3,14 @@
 // drift apart. Mobile drops the department line, so it gets a shorter card.
 //
 // These must fit the tallest real content EmployeeNode renders: a 48px
-// avatar + up to 3 single-line text rows (name/position/department, desktop
-// only) + the flex gaps between them + the card's own padding and border.
-// Getting this too small clips the text instead of ellipsizing it.
+// avatar + up to a 2-line name + up to 2 more single-line rows
+// (position/department, desktop only) + the flex gaps between them + the
+// card's own padding and border. Getting this too small clips the text
+// instead of ellipsizing it. Width is deliberately unchanged — a long name
+// wraps to a second line rather than growing the card sideways.
 export const CARD_WIDTH = 200;
-export const CARD_HEIGHT_DESKTOP = 136;
-export const CARD_HEIGHT_MOBILE = 116;
+export const CARD_HEIGHT_DESKTOP = 152;
+export const CARD_HEIGHT_MOBILE = 130;
 export const MOBILE_BREAKPOINT_PX = 640; // Tailwind `sm`
 
 // Above this many chart members, start with depth-1 managers collapsed so

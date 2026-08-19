@@ -36,6 +36,7 @@ export function layoutFlowGraph(
     depthById.set(n.id, n.depth);
   }
   for (const e of edges) {
+    if (e.secondary) continue; // non-structural overlay edge — never feeds Dagre's rank/position math
     if (!visibleIds.has(e.source) || !visibleIds.has(e.target)) continue;
     g.setEdge(e.source, e.target);
     // `edges` lists a parent's children in persisted admin order (each

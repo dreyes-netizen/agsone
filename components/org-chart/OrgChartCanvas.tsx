@@ -189,10 +189,16 @@ function OrgChartCanvasInner({
               onToggleCollapse: toggleCollapse,
               linkToProfile,
               adminActions: editMode ? adminActions : undefined,
+              additionalManagerNames: n.user.additionalManagers
+                .map((m) => {
+                  const manager = flowNodesById.get(m.managerId);
+                  return manager ? { name: manager.user.displayName, relationshipType: m.relationshipType } : null;
+                })
+                .filter((m): m is { name: string; relationshipType: string } => m !== null),
             },
           };
         }),
-    [flowGraph, visibleNodeIds, layout, dimensions, collapsedNodeIds, toggleCollapse, linkToProfile, editMode, adminActions],
+    [flowGraph, visibleNodeIds, layout, dimensions, collapsedNodeIds, toggleCollapse, linkToProfile, editMode, adminActions, flowNodesById],
   );
 
   // Kept in sync after every render so onNodeDragStop can force an
@@ -272,7 +278,16 @@ function OrgChartCanvasInner({
           source: e.source,
           target: e.target,
           type: "smoothstep",
-          style: e.dashed ? { strokeDasharray: "6 4", stroke: "#9ca3af" } : { stroke: "#cbd5e0" },
+          // Secondary (additional-relationship) edges get a distinct violet
+          // dash so they're never confused with a dashed PRIMARY line (the
+          // existing "support" case on the sole managerId edge) — both would
+          // otherwise render identically gray-dashed.
+          style: e.secondary
+            ? { strokeDasharray: "4 4", stroke: "#a78bfa", strokeWidth: 1.5 }
+            : e.dashed
+              ? { strokeDasharray: "6 4", stroke: "#9ca3af" }
+              : { stroke: "#cbd5e0" },
+          zIndex: e.secondary ? 0 : 1,
         })),
     [flowGraph, visibleNodeIds],
   );

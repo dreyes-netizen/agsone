@@ -7,6 +7,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 import { wouldCreateCycle } from "@/lib/orgChart/cycles";
+import { destroyCloudinaryAsset } from "@/lib/cloudinary/destroy";
 
 const ELEVATED_ROLES: Role[] = ["HR_ADMIN", "SUPER_ADMIN"];
 
@@ -58,7 +59,16 @@ export async function PATCH(
   // this route used to change role/isActive/department with zero trace.
   const before = await prisma.user.findUnique({
     where: { id },
-    select: { role: true, displayName: true, email: true, isActive: true, managerId: true, department: { select: { name: true } } },
+    select: {
+      role: true,
+      displayName: true,
+      email: true,
+      isActive: true,
+      managerId: true,
+      position: true,
+      orgChartPhotoPublicId: true,
+      department: { select: { name: true } },
+    },
   });
   if (!before) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -90,6 +100,15 @@ export async function PATCH(
     }
   }
 
+  // Leaving the chart entirely (position explicitly nulled) also drops its
+  // two chart-only extras — otherwise the photo override's Cloudinary asset
+  // would never get cleaned up, and stale additional-relationship rows would
+  // sit there referencing someone no longer on the chart. Rows where this
+  // person is the *target* of someone else's additional relationship are
+  // left alone, same tolerance the app already has for a departed primary
+  // manager (reports just fall back to root).
+  const removingFromChart = position === null && before.position !== null;
+
   const updated = await prisma.$transaction(async (tx) => {
     // New manager (including null, i.e. top-of-chart) means this employee
     // joins a different sibling group — append them to the end of it rather
@@ -103,6 +122,10 @@ export async function PATCH(
         _max: { orgChartSortOrder: true },
       });
       sortOrderData = { orgChartSortOrder: (_max.orgChartSortOrder ?? -1) + 1 };
+    }
+
+    if (removingFromChart) {
+      await tx.orgChartAdditionalReport.deleteMany({ where: { userId: id } });
     }
 
     return tx.user.update({
@@ -119,6 +142,7 @@ export async function PATCH(
         ...(managerId !== undefined ? { managerId } : {}),
         ...(orgChartHighlight !== undefined ? { orgChartHighlight } : {}),
         ...(orgChartDashed !== undefined ? { orgChartDashed } : {}),
+        ...(removingFromChart ? { orgChartPhotoPublicId: null } : {}),
         ...sortOrderData,
       },
       select: {
@@ -138,6 +162,10 @@ export async function PATCH(
       },
     });
   });
+
+  if (removingFromChart && before.orgChartPhotoPublicId) {
+    destroyCloudinaryAsset(before.orgChartPhotoPublicId).catch(() => {});
+  }
 
   const orgChartFieldsTouched =
     position !== undefined || managerId !== undefined || orgChartHighlight !== undefined || orgChartDashed !== undefined;

@@ -1,3 +1,8 @@
+export type OrgChartAdditionalManager = {
+  managerId: string;
+  relationshipType: string;
+};
+
 export type OrgChartUser = {
   id: string;
   displayName: string;
@@ -9,6 +14,8 @@ export type OrgChartUser = {
   orgChartSortOrder: number;
   departmentId: string | null;
   departmentName: string | null;
+  orgChartPhotoUrl: string | null;
+  additionalManagers: OrgChartAdditionalManager[];
 };
 
 export type OrgChartTreeEntry = {

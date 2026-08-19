@@ -140,35 +140,38 @@ model PointOfContact {
 }
 
 model User {
-  id                 String    @id @default(uuid())
-  firebaseUid        String?   @unique
-  email              String    @unique
-  displayName        String
-  avatarUrl          String?
-  bannerUrl          String?
-  role               Role      @default(EMPLOYEE)
-  departmentId       String?
-  managerId          String?
-  pointsBalance      Int       @default(0)
-  level              Int       @default(1)
-  birthday           DateTime?
-  hireDate           DateTime?
-  onboardingComplete Boolean   @default(false)
-  notificationPrefs  Json?
-  bio                String?
-  skills             String[]
-  employeeId         String?   @unique
-  isActive           Boolean   @default(true)
-  position           String? // manually set by HR — also doubles as "is this person in the org chart"
-  orgChartHighlight  String? // "gold" | "teal" | null — decorative color coding on the org chart
-  orgChartDashed     Boolean   @default(false) // dotted/support reporting line on the org chart
-  orgChartSortOrder  Int       @default(0) // display order among siblings sharing the same managerId (or among roots, when managerId is null) — NOT a coordinate; layout.ts still computes actual x/y
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                    String    @id @default(uuid())
+  firebaseUid           String?   @unique
+  email                 String    @unique
+  displayName           String
+  avatarUrl             String?
+  bannerUrl             String?
+  role                  Role      @default(EMPLOYEE)
+  departmentId          String?
+  managerId             String?
+  pointsBalance         Int       @default(0)
+  level                 Int       @default(1)
+  birthday              DateTime?
+  hireDate              DateTime?
+  onboardingComplete    Boolean   @default(false)
+  notificationPrefs     Json?
+  bio                   String?
+  skills                String[]
+  employeeId            String?   @unique
+  isActive              Boolean   @default(true)
+  position              String? // manually set by HR — also doubles as "is this person in the org chart"
+  orgChartHighlight     String? // "gold" | "teal" | null — decorative color coding on the org chart
+  orgChartDashed        Boolean   @default(false) // dotted/support reporting line on the org chart
+  orgChartSortOrder     Int       @default(0) // display order among siblings sharing the same managerId (or among roots, when managerId is null) — NOT a coordinate; layout.ts still computes actual x/y
+  orgChartPhotoPublicId String? // Cloudinary public_id for an org-chart-only headshot override — null falls back to avatarUrl (see lib/orgChart/resolveAvatar.ts). Never mutated by anything that touches the account-wide avatarUrl.
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  department Department? @relation(fields: [departmentId], references: [id])
-  manager    User?       @relation("ManagerReports", fields: [managerId], references: [id])
-  reports    User[]      @relation("ManagerReports")
+  department                 Department?                @relation(fields: [departmentId], references: [id])
+  manager                    User?                      @relation("ManagerReports", fields: [managerId], references: [id])
+  reports                    User[]                     @relation("ManagerReports")
+  additionalReportsAsUser    OrgChartAdditionalReport[] @relation("AdditionalReportUser")
+  additionalReportsAsManager OrgChartAdditionalReport[] @relation("AdditionalReportManager")
 
   pointsReceived       PointTransaction[]  @relation("PointsReceived")
   pointsGiven          PointTransaction[]  @relation("PointsGiven")
@@ -207,6 +210,25 @@ model User {
   @@index([pointsBalance])
   @@index([role, isActive])
   @@index([managerId, orgChartSortOrder])
+}
+
+// Secondary/support reporting line on the org chart. `User.managerId` alone
+// still drives the chart's tree placement (layout, sibling order, collapse) —
+// this table only adds non-structural overlay edges (see lib/orgChart/toFlow.ts
+// and lib/orgChart/layout.ts, which excludes these from Dagre's rank math).
+model OrgChartAdditionalReport {
+  id               String   @id @default(uuid())
+  userId           String
+  managerId        String
+  relationshipType String // see lib/constants/orgChartRelationshipTypes.ts
+  createdAt        DateTime @default(now())
+
+  user    User @relation("AdditionalReportUser", fields: [userId], references: [id], onDelete: Cascade)
+  manager User @relation("AdditionalReportManager", fields: [managerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, managerId])
+  @@index([userId])
+  @@index([managerId])
 }
 
 model PointTransaction {
@@ -445,8 +467,8 @@ model Notification {
   // with no pagination, so an ungrouped high-volume type (reactions, comments)
   // would push everything else out of a user's window. Null = always insert.
   // Only *unread* rows are merged into; see lib/helpers/createNotification.ts.
-  groupKey  String?
-  count     Int       @default(1)
+  groupKey String?
+  count    Int     @default(1)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -566,7 +588,6 @@ model FeedbackReply {
   @@index([feedbackId])
 }
 
-
 model ChatSession {
   id        String   @id @default(uuid())
   userId    String
@@ -632,16 +653,16 @@ model HrDocument {
 }
 
 model MedicineItem {
-  id            String            @id @default(uuid())
+  id            String           @id @default(uuid())
   name          String
   imageUrl      String
   caption       String
-  stockQuantity Int               @default(0)
-  category      MedicineCategory  @default(OTHER)
-  isActive      Boolean           @default(true)
+  stockQuantity Int              @default(0)
+  category      MedicineCategory @default(OTHER)
+  isActive      Boolean          @default(true)
   createdById   String
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   createdBy User              @relation("MedicineItemsCreated", fields: [createdById], references: [id])
   requests  MedicineRequest[]

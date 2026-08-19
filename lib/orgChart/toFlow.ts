@@ -23,6 +23,14 @@ export type FlowEdgeData = {
   target: string;
   /** Support/dotted-line reporting relationship — derived from the child's `orgChartDashed` flag. */
   dashed: boolean;
+  /**
+   * True for a secondary/support relationship from OrgChartAdditionalReport —
+   * a non-structural overlay edge that never participates in tree placement
+   * (excluded from Dagre in lib/orgChart/layout.ts) or descendant/depth math
+   * below. False for the primary managerId edge.
+   */
+  secondary: boolean;
+  relationshipType?: string;
 };
 
 export type FlowGraph = {
@@ -53,13 +61,32 @@ export function buildFlowGraph(roots: OrgChartTreeEntry[]): FlowGraph {
     nodes.push({ id, user: entry.node, parentId, depth, descendantCount });
 
     if (parentId) {
-      edges.push({ id: `${parentId}->${id}`, source: parentId, target: id, dashed: entry.node.orgChartDashed });
+      edges.push({ id: `${parentId}->${id}`, source: parentId, target: id, dashed: entry.node.orgChartDashed, secondary: false });
     }
 
     for (const child of entry.children) visit(child, id, depth + 1);
   }
 
   for (const root of roots) visit(root, null, 0);
+
+  // Secondary/support overlay edges (OrgChartAdditionalReport) — added after
+  // the primary walk above, once every node's id is known, so an additional
+  // relationship pointing at someone who's since left the chart is silently
+  // dropped rather than producing an edge to a node that doesn't exist.
+  const knownIds = new Set(nodes.map((n) => n.id));
+  for (const n of nodes) {
+    for (const { managerId, relationshipType } of n.user.additionalManagers) {
+      if (!knownIds.has(managerId)) continue;
+      edges.push({
+        id: `secondary:${managerId}->${n.id}`,
+        source: managerId,
+        target: n.id,
+        dashed: true,
+        secondary: true,
+        relationshipType,
+      });
+    }
+  }
 
   return { nodes, edges, depthById, descendantCountById };
 }

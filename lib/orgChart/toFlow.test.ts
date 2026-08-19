@@ -1,73 +1,76 @@
 import { describe, it, expect } from "vitest";
+import { buildOrgChartTree, type OrgChartUser } from "./buildTree";
 import { buildFlowGraph } from "./toFlow";
-import type { OrgChartTreeEntry, OrgChartUser } from "./buildTree";
 
-function user(overrides: Partial<OrgChartUser> & { id: string }): OrgChartUser {
+function makeUser(overrides: Partial<OrgChartUser> & { id: string }): OrgChartUser {
   return {
     displayName: overrides.id,
     avatarUrl: null,
-    position: "Role",
+    position: "Some Position",
     managerId: null,
     orgChartHighlight: null,
     orgChartDashed: false,
     orgChartSortOrder: 0,
     departmentId: null,
     departmentName: null,
+    orgChartPhotoUrl: null,
+    additionalManagers: [],
     ...overrides,
   };
 }
 
-// ceo -> vp -> [eng (dashed), designer]
-function fixture(): OrgChartTreeEntry[] {
-  const eng = user({ id: "eng", managerId: "vp", orgChartDashed: true });
-  const designer = user({ id: "designer", managerId: "vp" });
-  const vp = user({ id: "vp", managerId: "ceo" });
-  const ceo = user({ id: "ceo" });
+describe("buildFlowGraph — secondary (additional reporting) edges", () => {
+  it("is unchanged when additionalManagers is empty (primary-only chart)", () => {
+    const darrell = makeUser({ id: "darrell" });
+    const carl = makeUser({ id: "carl", managerId: "darrell" });
+    const graph = buildFlowGraph(buildOrgChartTree([darrell, carl]));
 
-  return [
-    {
-      node: ceo,
-      children: [
-        {
-          node: vp,
-          children: [
-            { node: eng, children: [] },
-            { node: designer, children: [] },
-          ],
-        },
-      ],
-    },
-  ];
-}
-
-describe("buildFlowGraph", () => {
-  it("flattens the forest into nodes with correct depth and descendant counts", () => {
-    const { nodes, depthById, descendantCountById } = buildFlowGraph(fixture());
-
-    expect(nodes).toHaveLength(4);
-    expect(depthById.get("ceo")).toBe(0);
-    expect(depthById.get("vp")).toBe(1);
-    expect(depthById.get("eng")).toBe(2);
-    expect(descendantCountById.get("ceo")).toBe(3);
-    expect(descendantCountById.get("vp")).toBe(2);
-    expect(descendantCountById.get("eng")).toBe(0);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.edges[0]).toMatchObject({ source: "darrell", target: "carl", secondary: false });
   });
 
-  it("derives edge `dashed` from the child's orgChartDashed flag, not the parent's", () => {
-    const { edges } = buildFlowGraph(fixture());
+  it("adds a non-structural secondary edge for each additional relationship", () => {
+    const darrell = makeUser({ id: "darrell" });
+    const iza = makeUser({ id: "iza" });
+    const carl = makeUser({
+      id: "carl",
+      managerId: "darrell",
+      additionalManagers: [{ managerId: "iza", relationshipType: "dotted-line" }],
+    });
+    const graph = buildFlowGraph(buildOrgChartTree([darrell, iza, carl]));
 
-    const engEdge = edges.find((e) => e.target === "eng");
-    const designerEdge = edges.find((e) => e.target === "designer");
+    const secondaryEdges = graph.edges.filter((e) => e.secondary);
+    expect(secondaryEdges).toHaveLength(1);
+    expect(secondaryEdges[0]).toMatchObject({ source: "iza", target: "carl", dashed: true, relationshipType: "dotted-line" });
 
-    expect(engEdge?.dashed).toBe(true);
-    expect(designerEdge?.dashed).toBe(false);
+    // The primary edge (darrell -> carl) is untouched by the secondary one.
+    const primaryEdges = graph.edges.filter((e) => !e.secondary);
+    expect(primaryEdges).toHaveLength(1);
+    expect(primaryEdges[0]).toMatchObject({ source: "darrell", target: "carl" });
   });
 
-  it("sets parentId null and depth 0 for roots, and produces no edge for them", () => {
-    const { nodes, edges } = buildFlowGraph(fixture());
+  it("excludes secondary relationships from descendant counts and depth", () => {
+    const darrell = makeUser({ id: "darrell" });
+    const iza = makeUser({ id: "iza" }); // no primary reports of her own
+    const carl = makeUser({
+      id: "carl",
+      managerId: "darrell",
+      additionalManagers: [{ managerId: "iza", relationshipType: "support" }],
+    });
+    const graph = buildFlowGraph(buildOrgChartTree([darrell, iza, carl]));
 
-    const ceoNode = nodes.find((n) => n.id === "ceo");
-    expect(ceoNode?.parentId).toBeNull();
-    expect(edges.some((e) => e.target === "ceo")).toBe(false);
+    expect(graph.descendantCountById.get("iza")).toBe(0); // carl is NOT counted as iza's descendant
+    expect(graph.descendantCountById.get("darrell")).toBe(1); // carl still counts under his primary manager
+    expect(graph.depthById.get("carl")).toBe(1); // driven by primary parent only
+  });
+
+  it("drops a dangling additional relationship pointing at someone no longer in the chart", () => {
+    const carl = makeUser({
+      id: "carl",
+      additionalManagers: [{ managerId: "someone-who-left", relationshipType: "matrix" }],
+    });
+    const graph = buildFlowGraph(buildOrgChartTree([carl]));
+
+    expect(graph.edges).toHaveLength(0);
   });
 });

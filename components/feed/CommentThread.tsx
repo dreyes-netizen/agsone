@@ -168,6 +168,8 @@ export function CommentList({
   employees = [],
   onNeedEmployees,
 }: ListProps) {
+  const router = useRouter();
+  const goToProfile = (id: string) => router.push(`/employees/${id}`);
   const [replyGif, setReplyGif] = useState<GifResult | null>(null);
   const [replyPickerOpenFor, setReplyPickerOpenFor] = useState<string | null>(null);
   const replyRef = useRef<HTMLTextAreaElement>(null);
@@ -229,10 +231,23 @@ export function CommentList({
       {!loading && comments.map((c) => (
         <div key={c.id}>
           <div className="flex gap-2.5">
-            <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
+            <button
+              type="button"
+              onClick={() => goToProfile(c.authorId)}
+              className="shrink-0 hover:opacity-80 transition-opacity"
+              aria-label={`View ${c.author.displayName}'s profile`}
+            >
+              <Avatar name={c.author.displayName} url={c.author.avatarUrl} size="sm" />
+            </button>
             <div className="flex-1 min-w-0">
               <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                <span className="text-xs font-semibold text-gray-900">{c.author.displayName}</span>
+                <button
+                  type="button"
+                  onClick={() => goToProfile(c.authorId)}
+                  className="text-xs font-semibold text-gray-900 hover:underline transition-colors"
+                >
+                  {c.author.displayName}
+                </button>
                 <CommentBody item={c} resolvedGif={c.gifId ? gifMap[c.gifId] : undefined} />
               </div>
               <div className="flex items-center gap-3 mt-1 pl-1">
@@ -327,10 +342,23 @@ export function CommentList({
                 <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
                   {c.replies.map((r) => (
                     <div key={r.id} className="flex gap-2">
-                      <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="sm" />
+                      <button
+                        type="button"
+                        onClick={() => goToProfile(r.authorId)}
+                        className="shrink-0 hover:opacity-80 transition-opacity"
+                        aria-label={`View ${r.author.displayName}'s profile`}
+                      >
+                        <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="sm" />
+                      </button>
                       <div className="flex-1 min-w-0">
                         <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                          <span className="text-xs font-semibold text-gray-900">{r.author.displayName}</span>
+                          <button
+                            type="button"
+                            onClick={() => goToProfile(r.authorId)}
+                            className="text-xs font-semibold text-gray-900 hover:underline transition-colors"
+                          >
+                            {r.author.displayName}
+                          </button>
                           <CommentBody item={r} resolvedGif={r.gifId ? gifMap[r.gifId] : undefined} />
                         </div>
                         <div className="flex items-center gap-3 mt-1 pl-1">

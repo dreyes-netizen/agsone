@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { USER_PHOTO_SELECT, withOrgChartPhotoUrl } from "@/lib/orgChart/resolveAvatar";
 
 const createSchema = z.object({
   userId: z.string().uuid(),
@@ -25,11 +26,13 @@ export async function GET(req: NextRequest) {
       position: true,
       description: true,
       sortOrder: true,
-      user: { select: { id: true, displayName: true, email: true, avatarUrl: true } },
+      user: { select: { id: true, displayName: true, email: true, ...USER_PHOTO_SELECT } },
     },
   });
 
-  return NextResponse.json({ data: contacts });
+  const data = contacts.map((c) => ({ ...c, user: withOrgChartPhotoUrl(c.user) }));
+
+  return NextResponse.json({ data });
 }
 
 export async function POST(req: NextRequest) {
@@ -61,11 +64,11 @@ export async function POST(req: NextRequest) {
       position: true,
       description: true,
       sortOrder: true,
-      user: { select: { id: true, displayName: true, email: true, avatarUrl: true } },
+      user: { select: { id: true, displayName: true, email: true, ...USER_PHOTO_SELECT } },
     },
   });
 
   scheduleBroadcast([{ topic: realtimeTopics.pointsOfContact }]);
 
-  return NextResponse.json({ data: contact }, { status: 201 });
+  return NextResponse.json({ data: { ...contact, user: withOrgChartPhotoUrl(contact.user) } }, { status: 201 });
 }

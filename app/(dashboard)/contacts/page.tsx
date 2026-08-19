@@ -14,7 +14,7 @@ type Contact = {
   id: string;
   position: string;
   description: string | null;
-  user: { id: string; displayName: string; email: string; avatarUrl: string | null };
+  user: { id: string; displayName: string; email: string; avatarUrl: string | null; orgChartPhotoUrl: string | null };
 };
 
 export default function ContactsPage() {
@@ -84,7 +84,7 @@ export default function ContactsPage() {
           {filtered.map((c) => (
             <div key={c.id} className="bg-white rounded-card border border-table-border p-5 flex flex-col gap-3">
               <div className="flex items-center gap-3">
-                <Avatar name={c.user.displayName} url={c.user.avatarUrl} size="md" />
+                <Avatar name={c.user.displayName} url={c.user.orgChartPhotoUrl ?? c.user.avatarUrl} size="md" />
                 <div className="min-w-0">
                   <Link href={`/employees/${c.user.id}`} className="font-semibold text-gray-900 hover:text-navy-700 truncate block">
                     {c.user.displayName}

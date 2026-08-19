@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { USER_PHOTO_SELECT, withOrgChartPhotoUrl } from "@/lib/orgChart/resolveAvatar";
 
 const updateSchema = z.object({
   userId: z.string().uuid().optional(),
@@ -48,13 +49,13 @@ export async function PATCH(
       position: true,
       description: true,
       sortOrder: true,
-      user: { select: { id: true, displayName: true, email: true, avatarUrl: true } },
+      user: { select: { id: true, displayName: true, email: true, ...USER_PHOTO_SELECT } },
     },
   });
 
   scheduleBroadcast([{ topic: realtimeTopics.pointsOfContact }]);
 
-  return NextResponse.json({ data: contact });
+  return NextResponse.json({ data: { ...contact, user: withOrgChartPhotoUrl(contact.user) } });
 }
 
 export async function DELETE(

@@ -14,7 +14,7 @@ type Contact = {
   position: string;
   description: string | null;
   sortOrder: number;
-  user: { id: string; displayName: string; email: string; avatarUrl: string | null };
+  user: { id: string; displayName: string; email: string; avatarUrl: string | null; orgChartPhotoUrl: string | null };
 };
 
 type RosterEntry = { id: string; displayName: string; email: string; position: string | null };
@@ -244,7 +244,7 @@ export default function AdminPointsOfContactPage() {
                   <tr key={c.id} className={`border-b border-row-border transition-colors hover:bg-row-hover ${i % 2 === 1 ? "bg-row-alt" : ""}`}>
                     <td className="px-3.5 py-[11px] text-[13px] first:pl-5 last:pr-5">
                       <div className="flex items-center gap-2">
-                        <Avatar name={c.user.displayName} url={c.user.avatarUrl} size="sm" />
+                        <Avatar name={c.user.displayName} url={c.user.orgChartPhotoUrl ?? c.user.avatarUrl} size="sm" />
                         <span className="font-medium text-gray-900">{c.user.displayName}</span>
                       </div>
                     </td>

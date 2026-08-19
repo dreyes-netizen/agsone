@@ -63,6 +63,8 @@ const securityHeaders = [
         `https://ags-one-82a7b.firebaseapp.com`,
         "https://accounts.google.com",
         "https://*.google.com",
+        // Embedded PDF preview in the Documents viewer (app/(dashboard)/documents)
+        "https://res.cloudinary.com",
       ].join(" "),
       "object-src 'none'",
       "base-uri 'self'",

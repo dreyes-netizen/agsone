@@ -12,4 +12,15 @@ export default defineConfig({
   datasource: {
     url: process.env["DIRECT_URL"], // direct URL required for migrations (pgbouncer bypassed)
   },
+  experimental: {
+    externalTables: true,
+  },
+  tables: {
+    // document_chunks (lib/rag/search.ts, scripts/setup-rag.sql) is queried
+    // via raw SQL, not a Prisma model — it uses a pgvector column type Prisma
+    // schema doesn't support. Marking it external stops `migrate dev` from
+    // treating its absence from schema.prisma as drift and proposing to drop
+    // it (it has real rows) on every run.
+    external: ["public.document_chunks"],
+  },
 });

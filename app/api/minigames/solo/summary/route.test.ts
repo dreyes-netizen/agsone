@@ -5,6 +5,7 @@ const routeDoubles = vi.hoisted(() => ({
   getSoloSummary: vi.fn(),
   getManilaRankKeys: vi.fn(),
   count: vi.fn(),
+  finalizePreviousWeekIfNeeded: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/verifyAuth", () => ({ verifyAuth: routeDoubles.verifyAuth }));
@@ -12,6 +13,9 @@ vi.mock("@/lib/minigames/solo/leaderboard", () => ({
   getSoloSummary: routeDoubles.getSoloSummary,
 }));
 vi.mock("@/lib/minigames/solo/time", () => ({ getManilaRankKeys: routeDoubles.getManilaRankKeys }));
+vi.mock("@/lib/minigames/solo/champions", () => ({
+  finalizePreviousWeekIfNeeded: routeDoubles.finalizePreviousWeekIfNeeded,
+}));
 vi.mock("@/lib/prisma/client", () => ({
   prisma: { soloGameAttempt: { count: routeDoubles.count } },
 }));
@@ -30,6 +34,7 @@ describe("solo summary route", () => {
     routeDoubles.getManilaRankKeys.mockReturnValue({ rankDate: "2026-08-21", weekStart: "2026-08-17" });
     routeDoubles.getSoloSummary.mockResolvedValue(null);
     routeDoubles.count.mockResolvedValue(0);
+    routeDoubles.finalizePreviousWeekIfNeeded.mockResolvedValue(0);
   });
 
   it("rejects unauthenticated and malformed summary requests", async () => {
@@ -111,5 +116,12 @@ describe("solo summary route", () => {
         },
       }),
     });
+  });
+
+  it("starts idempotent previous-week finalization lazily after an authenticated valid read", async () => {
+    routeDoubles.verifyAuth.mockResolvedValue(user);
+
+    expect((await GET(request("?gameType=TYPING") as never)).status).toBe(200);
+    expect(routeDoubles.finalizePreviousWeekIfNeeded).toHaveBeenCalledWith(expect.any(Date));
   });
 });

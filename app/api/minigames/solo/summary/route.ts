@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { getSoloSummary } from "@/lib/minigames/solo/leaderboard";
+import { finalizePreviousWeekIfNeeded } from "@/lib/minigames/solo/champions";
 import { getManilaRankKeys } from "@/lib/minigames/solo/time";
 import { prisma } from "@/lib/prisma/client";
 
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
   const parsed = parseQuery(request, querySchema);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  finalizeChampionsInBackground(new Date());
   const rankKeys = getManilaRankKeys(new Date());
   const weekStart = dateOnly(rankKeys.weekStart);
   const rankDate = dateOnly(rankKeys.rankDate);
@@ -86,4 +88,10 @@ function parseQuery<T extends z.ZodType>(request: Request, schema: T) {
 
 function dateOnly(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
+}
+
+function finalizeChampionsInBackground(now: Date) {
+  void finalizePreviousWeekIfNeeded(now).catch((error: unknown) => {
+    console.error("[solo champion finalization]", error);
+  });
 }

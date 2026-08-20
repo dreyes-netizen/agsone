@@ -4,6 +4,7 @@ const routeDoubles = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
   getSoloLeaderboard: vi.fn(),
   getManilaRankKeys: vi.fn(),
+  finalizePreviousWeekIfNeeded: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/verifyAuth", () => ({ verifyAuth: routeDoubles.verifyAuth }));
@@ -11,6 +12,9 @@ vi.mock("@/lib/minigames/solo/leaderboard", () => ({
   getSoloLeaderboard: routeDoubles.getSoloLeaderboard,
 }));
 vi.mock("@/lib/minigames/solo/time", () => ({ getManilaRankKeys: routeDoubles.getManilaRankKeys }));
+vi.mock("@/lib/minigames/solo/champions", () => ({
+  finalizePreviousWeekIfNeeded: routeDoubles.finalizePreviousWeekIfNeeded,
+}));
 
 import { GET } from "./route";
 
@@ -24,6 +28,7 @@ describe("solo leaderboard route", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     routeDoubles.getManilaRankKeys.mockReturnValue({ rankDate: "2026-08-21", weekStart: "2026-08-17" });
+    routeDoubles.finalizePreviousWeekIfNeeded.mockResolvedValue(0);
   });
 
   it("rejects unauthenticated requests before parsing or querying", async () => {
@@ -75,5 +80,13 @@ describe("solo leaderboard route", () => {
       departmentId: "department-authenticated",
       currentUserId: "user-1",
     });
+  });
+
+  it("starts idempotent previous-week finalization lazily after an authenticated valid read", async () => {
+    routeDoubles.verifyAuth.mockResolvedValue(user);
+    routeDoubles.getSoloLeaderboard.mockResolvedValue([]);
+
+    expect((await GET(request("?gameType=TYPING&period=week&scope=company") as never)).status).toBe(200);
+    expect(routeDoubles.finalizePreviousWeekIfNeeded).toHaveBeenCalledWith(expect.any(Date));
   });
 });

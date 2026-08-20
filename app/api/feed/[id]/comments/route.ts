@@ -56,7 +56,7 @@ export async function GET(
   // pathological, not a real pagination case) behind the existing
   // collapse-by-default "View replies" toggle.
   const rows = await prisma.socialComment.findMany({
-    where: { postId: id, parentId: null },
+    where: { postId: id, parentId: null, post: postVisibilityWhere(user) },
     orderBy: { createdAt: "desc" },
     take: limit + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),

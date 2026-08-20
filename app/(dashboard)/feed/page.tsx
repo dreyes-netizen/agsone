@@ -168,7 +168,7 @@ export default function FeedPage() {
       : findCommentById(commentsCache[reactionsTarget.postId] ?? [], reactionsTarget.commentId)?.myReactions[0] ?? null;
 
   // Which post's (and optionally, which option's) "who voted" modal is open,
-  // if any — same transient-UI-only treatment as reactionsPostId above.
+  // if any — same transient-UI-only treatment as reactionsTarget above.
   const [pollVotersQuery, setPollVotersQuery] = React.useState<{ postId: string; optionId: string | null } | null>(null);
   const pollVotersPost = posts.find((p) => p.id === pollVotersQuery?.postId) ?? null;
   // Reads from the same `posts` array the feed card renders from, so a

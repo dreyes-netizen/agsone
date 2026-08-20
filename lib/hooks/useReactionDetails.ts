@@ -6,6 +6,14 @@ import type { ReactorItem } from "@/lib/types/feed";
 
 export const ALL_TAB = "ALL";
 
+/**
+ * Identifies which reactions endpoint is open. `key` is whatever uniquely
+ * identifies the target (a post id, or `postId:commentId` for a comment) —
+ * used only to detect "the open target changed" so cached tabs reset. `url`
+ * is the full reactions endpoint to fetch.
+ */
+export type ReactionTarget = { key: string; url: string } | null;
+
 type TabCache = {
   items: ReactorItem[];
   nextCursor: string | null;
@@ -21,25 +29,25 @@ type CurrentUserMeta = {
 
 /**
  * Backs the reaction-details modal: fetches per-emoji counts + a
- * cursor-paginated reactor list from GET /api/feed/[id]/reactions, one page
- * per active filter tab (cached so switching tabs back and forth doesn't
- * re-fetch). Lives outside useFeedActions — the feed page is already the
- * largest file in the repo and this state is only relevant while the modal
- * is open, so it doesn't belong threaded through the main feed hook.
+ * cursor-paginated reactor list from `target.url`, one page per active
+ * filter tab (cached so switching tabs back and forth doesn't re-fetch).
+ * Generalized over `target` rather than a bare post id so the same modal
+ * backs both GET /api/feed/[id]/reactions (posts) and
+ * GET /api/feed/[id]/comments/[commentId]/reactions (comments).
  *
  * `syncCurrentUserReaction` lets the caller keep an already-open modal in
  * sync when the user changes their reaction via the main ReactionBar button
  * (outside the modal) — it patches every cached tab in place instead of
  * re-fetching, matching the optimistic-UI pattern used elsewhere in the feed.
  */
-export function useReactionDetails(postId: string | null) {
+export function useReactionDetails(target: ReactionTarget) {
   const { apiFetch } = useApiClient();
 
-  // Resetting local state when `postId` changes is done during render
+  // Resetting local state when the target changes is done during render
   // (React's documented pattern for "adjusting state when a prop changes")
-  // rather than in an effect, so opening a different post's modal starts
+  // rather than in an effect, so opening a different target's modal starts
   // clean without an extra render or a synchronous setState-in-effect.
-  const [trackedPostId, setTrackedPostId] = useState(postId);
+  const [trackedKey, setTrackedKey] = useState(target?.key ?? null);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState(0);
   const [activeTab, setActiveTab] = useState<string>(ALL_TAB);
@@ -49,8 +57,8 @@ export function useReactionDetails(postId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const requestSeq = useRef(0);
 
-  if (postId !== trackedPostId) {
-    setTrackedPostId(postId);
+  if ((target?.key ?? null) !== trackedKey) {
+    setTrackedKey(target?.key ?? null);
     setCache({});
     setActiveTab(ALL_TAB);
     setCounts({});
@@ -58,7 +66,7 @@ export function useReactionDetails(postId: string | null) {
     setError(null);
   }
 
-  const fetchTab = useCallback(async (forPostId: string, tab: string, cursor?: string, opts: { more?: boolean } = {}) => {
+  const fetchTab = useCallback(async (url: string, tab: string, cursor?: string, opts: { more?: boolean } = {}) => {
     const seq = ++requestSeq.current;
     if (opts.more) setLoadingMore(true); else setLoading(true);
     setError(null);
@@ -67,9 +75,9 @@ export function useReactionDetails(postId: string | null) {
       if (tab !== ALL_TAB) params.set("emoji", tab);
       if (cursor) params.set("cursor", cursor);
       const res = await apiFetch<{ data: { counts: Record<string, number>; total: number; reactors: ReactorItem[] }; nextCursor: string | null }>(
-        `/api/feed/${forPostId}/reactions?${params.toString()}`
+        `${url}?${params.toString()}`
       );
-      if (seq !== requestSeq.current) return; // stale response (tab/post switched again mid-flight)
+      if (seq !== requestSeq.current) return; // stale response (tab/target switched again mid-flight)
       setCounts(res.data.counts);
       setTotal(res.data.total);
       setCache((prev) => {
@@ -83,31 +91,29 @@ export function useReactionDetails(postId: string | null) {
     }
   }, [apiFetch]);
 
-  // Fetch whenever the active tab isn't cached yet — covers both the initial
-  // "All" load when a post's modal opens and switching to an unseen tab. The
-  // actual fetch is kicked off from inside a .then() callback rather than
-  // called directly: fetchTab's very first lines set loading/error state,
-  // and calling it synchronously from the effect body itself is exactly what
-  // react-hooks/set-state-in-effect flags. Deferring into a promise
-  // continuation is a one-microtask, imperceptible delay.
+  // Fetch whenever the active tab isn't cached yet. Depends on target?.key
+  // and target?.url (primitives), NOT `target` itself — the caller
+  // reconstructs a fresh `{key,url}` object literal every render, and
+  // depending on that object's identity would re-run this effect (and
+  // re-fetch) on every unrelated re-render of the feed page.
   useEffect(() => {
-    if (!postId) return;
+    if (!target) return;
     if (cache[activeTab]?.loaded) return;
     let cancelled = false;
-    Promise.resolve().then(() => { if (!cancelled) fetchTab(postId, activeTab); });
+    Promise.resolve().then(() => { if (!cancelled) fetchTab(target.url, activeTab); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId, activeTab, fetchTab]);
+  }, [target?.key, target?.url, activeTab, fetchTab]);
 
   function selectTab(tab: string) {
     setActiveTab(tab);
   }
 
   function loadMore() {
-    if (!postId || loadingMore) return;
+    if (!target || loadingMore) return;
     const tab = cache[activeTab];
     if (!tab?.nextCursor) return;
-    fetchTab(postId, activeTab, tab.nextCursor, { more: true });
+    fetchTab(target.url, activeTab, tab.nextCursor, { more: true });
   }
 
   // Patch every already-loaded tab in place: drop the user's row from

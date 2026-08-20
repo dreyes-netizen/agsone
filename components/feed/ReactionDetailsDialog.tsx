@@ -5,50 +5,52 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ReactionFilterTabs } from "@/components/feed/ReactionFilterTabs";
 import { ReactionUserRow } from "@/components/feed/ReactionUserRow";
-import { useReactionDetails, ALL_TAB } from "@/lib/hooks/useReactionDetails";
+import { useReactionDetails, ALL_TAB, type ReactionTarget } from "@/lib/hooks/useReactionDetails";
 
 /**
- * The "who reacted, and how" popup opened by tapping the reaction summary
- * line under a post. Self-contained: owns its own Dialog wiring and data
- * fetching (useReactionDetails) — the feed page only needs to pass which
- * post is open and forward the current user's live reaction so this stays
+ * The "who reacted, and how" popup opened by tapping a reaction summary line
+ * — shared by posts and comments. `target` identifies which reactions
+ * endpoint to hit (see useReactionDetails). Self-contained: owns its own
+ * Dialog wiring and data fetching — the feed page only needs to pass which
+ * target is open and forward the current user's live reaction so this stays
  * in sync if it changes from the ReactionBar button while the modal is open.
  */
 export function ReactionDetailsDialog({
-  postId,
+  target,
   onClose,
   myEmoji,
   currentUser,
   onOpenProfile,
 }: {
-  postId: string | null;
-  onClose: () => void;
-  /** The current user's active reaction on this post, right now (or null). */
+  target: ReactionTarget;
+  /** The current user's active reaction on this target, right now (or null). */
   myEmoji: string | null;
+  onClose: () => void;
   currentUser: { id: string; displayName: string; avatarUrl: string | null; department: string | null } | null;
   onOpenProfile: (userId: string) => void;
 }) {
   const { counts, total, activeTab, selectTab, items, loading, loadingMore, hasMore, loadMore, error, syncCurrentUserReaction } =
-    useReactionDetails(postId);
+    useReactionDetails(target);
 
   // Keep an already-open modal in sync when the user changes their reaction
   // via the main ReactionBar button (outside the modal). Done during render
   // (React's "adjusting state when a prop changes" pattern) rather than in
-  // an effect: when `postId` itself changes we just re-baseline against the
-  // newly-opened post without patching anything (its cache was just reset by
-  // useReactionDetails); only a same-post reaction change triggers a patch.
-  const [trackedPostId, setTrackedPostId] = useState(postId);
+  // an effect: when `target` itself changes we just re-baseline against the
+  // newly-opened target without patching anything (its cache was just reset
+  // by useReactionDetails); only a same-target reaction change triggers a
+  // patch.
+  const [trackedKey, setTrackedKey] = useState(target?.key ?? null);
   const [syncedEmoji, setSyncedEmoji] = useState(myEmoji);
-  if (postId !== trackedPostId) {
-    setTrackedPostId(postId);
+  if ((target?.key ?? null) !== trackedKey) {
+    setTrackedKey(target?.key ?? null);
     setSyncedEmoji(myEmoji);
-  } else if (postId && currentUser && myEmoji !== syncedEmoji) {
+  } else if (target && currentUser && myEmoji !== syncedEmoji) {
     syncCurrentUserReaction(syncedEmoji, myEmoji, currentUser);
     setSyncedEmoji(myEmoji);
   }
 
   return (
-    <Dialog open={postId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={target !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-md p-0 gap-0 max-h-[80vh] flex flex-col">
         <DialogHeader className="p-4 pb-3 border-b border-gray-100">
           <DialogTitle>Reactions</DialogTitle>

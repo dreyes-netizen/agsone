@@ -4,6 +4,8 @@ import {
   type RankedAttempt,
   type RankedAttemptRepository,
 } from "./attempts";
+import { createSequenceMemoryChallenge } from "./sequenceMemory";
+import { createVisualMemoryBoard } from "./visualMemory";
 
 const NOW = new Date("2026-08-21T04:00:00.000Z");
 const TOMORROW = new Date("2026-08-22T04:00:00.000Z");
@@ -134,6 +136,54 @@ describe("ranked solo attempt service", () => {
 
     expect(first).toMatchObject({ kind: "completed", result: { primaryScore: 260, isValid: true }, attemptsRemaining: 2 });
     expect(duplicate).toEqual(first);
+  });
+
+  it("reports remaining starts from all occupied slots after out-of-order finish and duplicate retry", async () => {
+    const { service } = serviceFor();
+    const first = await service.startRankedAttempt("user-1", "REACTION", NOW, null);
+    await service.startRankedAttempt("user-1", "REACTION", NOW, null);
+    await service.startRankedAttempt("user-1", "REACTION", NOW, null);
+    if (first.kind !== "started") throw new Error("expected a started attempt");
+    const evidence = { reactionMs: [220, 240, 260, 280, 300], falseStartTrials: [], clientElapsedMs: 5_000 };
+
+    const completed = await service.finishRankedAttempt("user-1", first.attemptId, evidence, NOW);
+    const duplicate = await service.finishRankedAttempt("user-1", first.attemptId, evidence, NOW);
+
+    expect(completed).toMatchObject({ kind: "completed", attemptsRemaining: 0 });
+    expect(duplicate).toMatchObject({ kind: "completed", attemptsRemaining: 0 });
+  });
+
+  it("dispatches every game scorer for valid evidence", async () => {
+    const { repository, service } = serviceFor();
+    const typing = await service.startRankedAttempt("user-1", "TYPING", NOW, null);
+    const reaction = await service.startRankedAttempt("user-1", "REACTION", NOW, null);
+    const visual = await service.startRankedAttempt("user-1", "VISUAL_MEMORY", NOW, null);
+    const sequence = await service.startRankedAttempt("user-1", "SEQUENCE_MEMORY", NOW, null);
+    if (typing.kind !== "started" || reaction.kind !== "started" || visual.kind !== "started" || sequence.kind !== "started") throw new Error("expected starts");
+    const typingText = typing.challenge.text;
+    const visualSeed = repository.attempts.find((attempt) => attempt.id === visual.attemptId)!.challenge.seed;
+    const sequenceSeed = repository.attempts.find((attempt) => attempt.id === sequence.attemptId)!.challenge.seed;
+    const visualBoard = createVisualMemoryBoard(visualSeed, 1);
+    const sequenceChallenge = createSequenceMemoryChallenge(sequenceSeed);
+
+    expect(await service.finishRankedAttempt("user-1", typing.attemptId, { typedText: typingText, clientElapsedMs: 60_000 }, new Date(NOW.getTime() + 60_000))).toMatchObject({ kind: "completed", result: { isValid: true } });
+    expect(await service.finishRankedAttempt("user-1", reaction.attemptId, { reactionMs: [220, 240, 260, 280, 300], falseStartTrials: [], clientElapsedMs: 5_000 }, NOW)).toMatchObject({ kind: "completed", result: { isValid: true } });
+    expect(await service.finishRankedAttempt("user-1", visual.attemptId, { answers: [{ level: 1, selectedIndexes: visualBoard.highlightedIndexes }], claimedCompletedLevel: 1, clientElapsedMs: 5_000 }, NOW)).toMatchObject({ kind: "completed", result: { isValid: true } });
+    expect(await service.finishRankedAttempt("user-1", sequence.attemptId, { responses: [{ level: 1, inputs: sequenceChallenge.sequence.slice(0, 1) }], claimedCompletedLevel: 1, clientElapsedMs: 5_000 }, NOW)).toMatchObject({ kind: "completed", result: { isValid: true } });
+  });
+
+  it("dispatches malformed and oversized visual and sequence evidence to their authoritative scorers", async () => {
+    const { service } = serviceFor();
+    const visual = await service.startRankedAttempt("user-1", "VISUAL_MEMORY", NOW, null);
+    const sequence = await service.startRankedAttempt("user-1", "SEQUENCE_MEMORY", NOW, null);
+    if (visual.kind !== "started" || sequence.kind !== "started") throw new Error("expected starts");
+
+    expect(await service.finishRankedAttempt("user-1", visual.attemptId, { answers: [], claimedCompletedLevel: 0, clientElapsedMs: 0 }, NOW)).toMatchObject({ kind: "completed", result: { isValid: false, validationReason: "INVALID_EVIDENCE" } });
+    expect(await service.finishRankedAttempt("user-1", sequence.attemptId, {
+      responses: Array.from({ length: 10 }, (_, index) => ({ level: index + 1, inputs: Array.from({ length: 10 }, () => 0) })),
+      claimedCompletedLevel: 0,
+      clientElapsedMs: 0,
+    }, NOW)).toMatchObject({ kind: "completed", result: { isValid: false, validationReason: "TOO_MANY_BUTTON_INPUTS" } });
   });
 
   it("does not leak another user's attempt and expires started attempts atomically", async () => {

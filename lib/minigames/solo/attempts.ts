@@ -132,8 +132,7 @@ export function createRankedAttemptService({ repository, randomInt = cryptoRando
     }
 
     // Retrying three collisions is sufficient because the only legal slots are
-    // 1..3. This final re-read preserves the result contract under contention.
-    await repository.findAttemptNumbers(userId, gameType, rankDate);
+    // 1..3; each collision occupied one of those finite slots.
     return { kind: "limit" };
   }
 
@@ -173,7 +172,7 @@ export function createRankedAttemptService({ repository, randomInt = cryptoRando
 
   async function inspectRankedAttempt(userId: string, attemptId: string) {
     const attempt = await repository.findAttemptForUser(attemptId, userId);
-    return attempt ? { gameType: attempt.gameType, status: attempt.status } : null;
+    return attempt ? { gameType: attempt.gameType, status: attempt.status, expiresAt: attempt.expiresAt } : null;
   }
 
   return { startRankedAttempt, finishRankedAttempt, inspectRankedAttempt };
@@ -187,10 +186,16 @@ async function completedResponse(
   const candidates = await repository.findBestCompleted(attempt.userId, attempt.gameType);
   const best = candidates.sort((left, right) => compareAttempts(left, right))[0];
 
+  const occupiedAttempts = await repository.findAttemptNumbers(
+    attempt.userId,
+    attempt.gameType,
+    attempt.rankDate,
+  );
+
   return {
     kind: "completed",
     result: attempt.result,
-    attemptsRemaining: MAX_DAILY_ATTEMPTS - attempt.attemptNumber,
+    attemptsRemaining: Math.max(0, MAX_DAILY_ATTEMPTS - occupiedAttempts.length),
     isPersonalBest: attempt.result.isValid && best?.id === attempt.id,
   };
 }

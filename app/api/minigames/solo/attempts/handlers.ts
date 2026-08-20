@@ -40,7 +40,8 @@ const evidenceSchemas = {
   SEQUENCE_MEMORY: z.object({ responses: z.array(z.object({ level: z.number().int().min(1).max(10), inputs: z.array(z.number().int().min(0).max(3)).max(10) }).strict()).min(1).max(10), claimedCompletedLevel: z.number().int().min(0).max(10), clientElapsedMs: elapsedMs }).strict(),
 } satisfies Record<SoloGameType, z.ZodType>;
 
-type AttemptInspection = { gameType: SoloGameType; status: "STARTED" | "COMPLETED" | "EXPIRED" } | null;
+const attemptIdSchema = z.string().uuid();
+type AttemptInspection = { gameType: SoloGameType; status: "STARTED" | "COMPLETED" | "EXPIRED"; expiresAt: Date } | null;
 type FinishDependencies = {
   verifyAuth: (request: Request) => Promise<RouteUser | null>;
   checkRateLimit: (userId: string, scope: "arcade") => Promise<{ allowed: boolean; remaining: number }>;
@@ -57,19 +58,23 @@ export function createFinishHandler(dependencies: FinishDependencies) {
     const rateLimit = await dependencies.checkRateLimit(user.id, "arcade");
     if (!rateLimit.allowed) return NextResponse.json({ error: "Too many Arcade requests" }, { status: 429 });
     const { id: attemptId } = await context.params;
+    if (!attemptIdSchema.safeParse(attemptId).success) return NextResponse.json({ error: "Invalid attempt ID" }, { status: 400 });
     const attempt = await dependencies.inspectAttempt(user.id, attemptId);
     if (!attempt) return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
-    let evidence: unknown = undefined;
-    if (attempt.status === "STARTED") {
-      const parsed = evidenceSchemas[attempt.gameType].safeParse(await requestJson(request));
-      if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-      evidence = parsed.data;
+    const now = dependencies.now();
+    if (attempt.status !== "STARTED" || now > attempt.expiresAt) {
+      return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, undefined, now));
     }
-    const result = await dependencies.finishRankedAttempt(user.id, attemptId, evidence, dependencies.now());
+    const parsed = evidenceSchemas[attempt.gameType].safeParse(await requestJson(request));
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, parsed.data, now));
+  };
+}
+
+function finishResponse(result: FinishRankedAttemptResult) {
     if (result.kind === "not_found") return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     if (result.kind === "expired") return NextResponse.json({ error: "Attempt expired" }, { status: 410 });
     return NextResponse.json({ data: { result: result.result, attemptsRemaining: result.attemptsRemaining, isPersonalBest: result.isPersonalBest } });
-  };
 }
 
 async function requestJson(request: Request): Promise<unknown> {

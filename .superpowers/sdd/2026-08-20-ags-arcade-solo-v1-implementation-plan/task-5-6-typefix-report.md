@@ -61,6 +61,10 @@ exit 0
 
 ## Full Test Suite
 
+Historical implementation-time observation:
+- during the original implementation session, one full-suite run returned the failing result below while concurrent API work was also in progress in this shared worktree
+- this block is preserved as a record of that earlier run only; it is not the current status of the worktree
+
 Command:
 
 ```powershell
@@ -128,4 +132,39 @@ Docs commit:
 
 ```text
 Correct typefix report verification evidence
+```
+
+## Review-fix Round 2
+
+Reason:
+- the original `Full Test Suite` section still read like a current failing status instead of a historical run record
+
+Fresh verification command:
+
+```powershell
+npm test
+```
+
+Fresh output:
+
+```text
+> employegames@0.1.0 test
+> vitest run
+
+RUN  v4.1.10 C:/Users/D_Reyes/Desktop/AGS One/.worktrees/ags-arcade-solo-v1
+
+Test Files  27 passed (27)
+Tests  207 passed (207)
+Start at  03:20:54
+Duration  2.74s
+```
+
+Definitive current result:
+- the current full-suite status in this worktree is `27` passing test files and `207` passing tests
+- the earlier `3 failed | 203 passed (206)` block above is a historical implementation-time observation only
+
+Docs commit:
+
+```text
+Clarify typefix report historical test status
 ```

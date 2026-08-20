@@ -2,15 +2,18 @@ import { describe, expect, it } from "vitest";
 import { TYPING_PASSAGES } from "./typingPassages";
 import { createTypingChallenge, scoreTypingAttempt, type TypingChallenge } from "./typing";
 
+const PERFECT_PASSAGE = TYPING_PASSAGES[0]!;
+const THRESHOLD_PASSAGE = TYPING_PASSAGES[1]!;
+
 const PERFECT_MINUTE_CHALLENGE: TypingChallenge = {
-  passageId: "perfect-minute",
-  passageText: "calm fingers keep time as bright letters flow across the screen and each steady breath turns practice into a quiet daily win.",
+  passageId: PERFECT_PASSAGE.id,
+  passageText: PERFECT_PASSAGE.text,
   durationMs: 60_000,
 };
 
 const THRESHOLD_CHALLENGE: TypingChallenge = {
-  passageId: "threshold",
-  passageText: "practice builds pace",
+  passageId: THRESHOLD_PASSAGE.id,
+  passageText: THRESHOLD_PASSAGE.text,
   durationMs: 60_000,
 };
 
@@ -50,7 +53,7 @@ describe("scoreTypingAttempt", () => {
         correctChars: 125,
         typedChars: 125,
         accuracyBp: 10_000,
-        passageId: "perfect-minute",
+        passageId: PERFECT_PASSAGE.id,
       },
     });
   });
@@ -60,23 +63,23 @@ describe("scoreTypingAttempt", () => {
       scoreTypingAttempt(
         THRESHOLD_CHALLENGE,
         {
-          typedText: "practice builds pzce",
+          typedText: "Every focused session buiads durable speed, because clean strokes and patient rhythm outlast bursts of frantic typing.",
           clientElapsedMs: 60_000,
         },
         60_000,
       ),
     ).toEqual({
-      primaryScore: 3,
-      secondaryScore: 9_500,
+      primaryScore: 23,
+      secondaryScore: 9_915,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        correctChars: 19,
-        typedChars: 20,
-        accuracyBp: 9_500,
-        passageId: "threshold",
+        correctChars: 117,
+        typedChars: 118,
+        accuracyBp: 9_915,
+        passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });
@@ -86,23 +89,23 @@ describe("scoreTypingAttempt", () => {
       scoreTypingAttempt(
         THRESHOLD_CHALLENGE,
         {
-          typedText: "practice buxlds pzce",
+          typedText: "Every xocused sessiox builds durablx speed, becausx clean strokesxand patient rhxthm outlast bursts of frantic typing.",
           clientElapsedMs: 60_000,
         },
         60_000,
       ),
     ).toEqual({
-      primaryScore: 3,
-      secondaryScore: 9_000,
+      primaryScore: 22,
+      secondaryScore: 9_492,
       isValid: false,
       validationReason: "ACCURACY_TOO_LOW",
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        correctChars: 18,
-        typedChars: 20,
-        accuracyBp: 9_000,
-        passageId: "threshold",
+        correctChars: 112,
+        typedChars: 118,
+        accuracyBp: 9_492,
+        passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });
@@ -128,7 +131,7 @@ describe("scoreTypingAttempt", () => {
         correctChars: 0,
         typedChars: 0,
         accuracyBp: 0,
-        passageId: "threshold",
+        passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });
@@ -138,7 +141,7 @@ describe("scoreTypingAttempt", () => {
       scoreTypingAttempt(
         THRESHOLD_CHALLENGE,
         {
-          typedText: "practice builds pace now",
+          typedText: `${THRESHOLD_CHALLENGE.passageText}!`,
           clientElapsedMs: 60_000,
         },
         60_000,
@@ -151,7 +154,7 @@ describe("scoreTypingAttempt", () => {
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        passageId: "threshold",
+        passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });
@@ -175,7 +178,149 @@ describe("scoreTypingAttempt", () => {
       isValid: false,
       validationReason: "INVALID_EVIDENCE",
       metrics: {
-        passageId: "threshold",
+        passageId: THRESHOLD_PASSAGE.id,
+      },
+    });
+  });
+
+  it("rejects zero authoritative elapsed time", () => {
+    expect(
+      scoreTypingAttempt(
+        THRESHOLD_CHALLENGE,
+        {
+          typedText: THRESHOLD_CHALLENGE.passageText,
+          clientElapsedMs: 60_000,
+        },
+        0,
+      ),
+    ).toEqual({
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_EVIDENCE",
+      metrics: {
+        passageId: THRESHOLD_PASSAGE.id,
+      },
+    });
+  });
+
+  it("rejects negative authoritative elapsed time", () => {
+    expect(
+      scoreTypingAttempt(
+        THRESHOLD_CHALLENGE,
+        {
+          typedText: THRESHOLD_CHALLENGE.passageText,
+          clientElapsedMs: 60_000,
+        },
+        -1,
+      ),
+    ).toEqual({
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_EVIDENCE",
+      metrics: {
+        passageId: THRESHOLD_PASSAGE.id,
+      },
+    });
+  });
+
+  it("rejects authoritative elapsed time below the fixed ranked minute", () => {
+    expect(
+      scoreTypingAttempt(
+        THRESHOLD_CHALLENGE,
+        {
+          typedText: THRESHOLD_CHALLENGE.passageText,
+          clientElapsedMs: 10_000,
+        },
+        59_999,
+      ),
+    ).toEqual({
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_ELAPSED_TIME",
+      metrics: {
+        authoritativeElapsedMs: 59_999,
+        clientElapsedMs: 10_000,
+        passageId: THRESHOLD_PASSAGE.id,
+      },
+    });
+  });
+
+  it("accepts exactly sixty seconds as the ranked completion window", () => {
+    expect(
+      scoreTypingAttempt(
+        THRESHOLD_CHALLENGE,
+        {
+          typedText: THRESHOLD_CHALLENGE.passageText,
+          clientElapsedMs: 60_000,
+        },
+        60_000,
+      ),
+    ).toEqual({
+      primaryScore: 23,
+      secondaryScore: 10_000,
+      isValid: true,
+      validationReason: null,
+      metrics: {
+        authoritativeElapsedMs: 60_000,
+        clientElapsedMs: 60_000,
+        correctChars: 118,
+        typedChars: 118,
+        accuracyBp: 10_000,
+        passageId: THRESHOLD_PASSAGE.id,
+      },
+    });
+  });
+
+  it("clamps authoritative elapsed time above the ranked minute", () => {
+    expect(
+      scoreTypingAttempt(
+        THRESHOLD_CHALLENGE,
+        {
+          typedText: THRESHOLD_CHALLENGE.passageText,
+          clientElapsedMs: 70_000,
+        },
+        75_000,
+      ),
+    ).toEqual({
+      primaryScore: 23,
+      secondaryScore: 10_000,
+      isValid: true,
+      validationReason: null,
+      metrics: {
+        authoritativeElapsedMs: 60_000,
+        clientElapsedMs: 70_000,
+        correctChars: 118,
+        typedChars: 118,
+        accuracyBp: 10_000,
+        passageId: THRESHOLD_PASSAGE.id,
+      },
+    });
+  });
+
+  it("rejects challenges that do not match the canonical passage bank", () => {
+    expect(
+      scoreTypingAttempt(
+        {
+          passageId: THRESHOLD_PASSAGE.id,
+          passageText: "tampered passage text",
+          durationMs: 60_000,
+        },
+        {
+          typedText: "tampered passage text",
+          clientElapsedMs: 60_000,
+        },
+        60_000,
+      ),
+    ).toEqual({
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_CHALLENGE",
+      metrics: {
+        passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });
@@ -191,17 +336,17 @@ describe("scoreTypingAttempt", () => {
         60_000,
       ),
     ).toEqual({
-      primaryScore: 4,
+      primaryScore: 23,
       secondaryScore: 10_000,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 1_000,
-        correctChars: 20,
-        typedChars: 20,
+        correctChars: 118,
+        typedChars: 118,
         accuracyBp: 10_000,
-        passageId: "threshold",
+        passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });

@@ -38,6 +38,7 @@ export function scoreTypingAttempt(
 
   if (
     !Number.isFinite(authoritativeElapsedMs) ||
+    authoritativeElapsedMs <= 0 ||
     typeof evidence?.typedText !== "string" ||
     !Number.isFinite(evidence?.clientElapsedMs) ||
     evidence.clientElapsedMs < 0
@@ -51,14 +52,44 @@ export function scoreTypingAttempt(
     };
   }
 
-  const normalizedElapsedMs = clamp(authoritativeElapsedMs, RANKED_DURATION_MS, RANKED_DURATION_MS);
+  const canonicalPassage = TYPING_PASSAGES.find((passage) => passage.id === challenge.passageId);
+
+  if (
+    !canonicalPassage ||
+    challenge.passageText !== canonicalPassage.text ||
+    challenge.durationMs !== RANKED_DURATION_MS
+  ) {
+    return {
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_CHALLENGE",
+      metrics: baseMetrics,
+    };
+  }
+
+  if (authoritativeElapsedMs < RANKED_DURATION_MS) {
+    return {
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_ELAPSED_TIME",
+      metrics: {
+        ...baseMetrics,
+        authoritativeElapsedMs,
+        clientElapsedMs: evidence.clientElapsedMs,
+      },
+    };
+  }
+
+  const normalizedElapsedMs = Math.min(authoritativeElapsedMs, RANKED_DURATION_MS);
   const normalizedMetrics = {
     ...baseMetrics,
     authoritativeElapsedMs: normalizedElapsedMs,
     clientElapsedMs: evidence.clientElapsedMs,
   };
 
-  if (evidence.typedText.length > challenge.passageText.length) {
+  if (evidence.typedText.length > canonicalPassage.text.length) {
     return {
       primaryScore: 0,
       secondaryScore: null,
@@ -69,7 +100,7 @@ export function scoreTypingAttempt(
   }
 
   const typedChars = evidence.typedText.length;
-  const correctChars = countCorrectChars(challenge.passageText, evidence.typedText);
+  const correctChars = countCorrectChars(canonicalPassage.text, evidence.typedText);
   const accuracyBp = Math.round((correctChars / Math.max(typedChars, 1)) * 10_000);
   const primaryScore = Math.floor((correctChars / 5) / (normalizedElapsedMs / RANKED_DURATION_MS));
   const scoredMetrics = {
@@ -118,8 +149,4 @@ function countCorrectChars(targetText: string, typedText: string): number {
   }
 
   return correctChars;
-}
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(Math.max(value, minimum), maximum);
 }

@@ -10,6 +10,8 @@ import { useMentionInput, hasMentionTrigger, type MentionEmployee, type MentionI
 import { GifButton } from "./GifButton";
 import { GifPicker } from "./GifPicker";
 import { GifCommentMedia } from "./GifCommentMedia";
+import { ReactionBar } from "./ReactionBar";
+import { getReactionSummary } from "@/lib/helpers/reactionSummary";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 import { useGifResolution, type GifMapEntry } from "@/lib/hooks/useGifResolution";
 import type { GifResult } from "@/lib/giphy/client";
@@ -32,6 +34,10 @@ type ListProps = {
   onSetReplyingTo: (value: ReplyTarget) => void;
   onReplyDraftChange: (commentId: string, value: string) => void;
   onSubmitReply: (postId: string, commentId: string, gif?: GifResult, encodedContent?: string) => void;
+  /** React to a comment (parentId omitted) or a reply (parentId = its parent comment's id). */
+  onReactToComment: (postId: string, commentId: string, emoji: string, parentId?: string) => void;
+  /** Open the "who reacted" modal for a comment or reply. */
+  onOpenCommentReactions: (postId: string, commentId: string) => void;
   /** Whether an older page of top-level comments exists behind a cursor. */
   hasMoreComments: boolean;
   /** Whether that older page is currently being fetched. */
@@ -158,6 +164,8 @@ export function CommentList({
   onSetReplyingTo,
   onReplyDraftChange,
   onSubmitReply,
+  onReactToComment,
+  onOpenCommentReactions,
   hasMoreComments,
   loadingMoreComments,
   onLoadMoreComments,
@@ -228,7 +236,9 @@ export function CommentList({
           </button>
         </div>
       )}
-      {!loading && comments.map((c) => (
+      {!loading && comments.map((c) => {
+        const { total: cTotal, topEmojis: cTopEmojis } = getReactionSummary(c.reactions);
+        return (
         <div key={c.id}>
           <div className="flex gap-2.5">
             <button
@@ -252,6 +262,21 @@ export function CommentList({
               </div>
               <div className="flex items-center gap-3 mt-1 pl-1">
                 <span className="text-[11px] text-gray-500">{timeAgo(c.createdAt)}</span>
+                <ReactionBar
+                  myReactions={c.myReactions}
+                  onReact={(emoji) => onReactToComment(postId, c.id, emoji)}
+                  variant="compact"
+                />
+                {cTotal > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenCommentReactions(postId, c.id)}
+                    className="text-[11px] text-gray-500 hover:underline"
+                    aria-label={`${cTotal} ${cTotal === 1 ? "reaction" : "reactions"} — view who reacted`}
+                  >
+                    <span aria-hidden="true">{cTopEmojis.join("")}</span> {cTotal}
+                  </button>
+                )}
                 <button
                   onClick={() =>
                     startReply(
@@ -340,7 +365,9 @@ export function CommentList({
               )}
               {expandedReplies[c.id] && c.replies.length > 0 && (
                 <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
-                  {c.replies.map((r) => (
+                  {c.replies.map((r) => {
+                    const { total: rTotal, topEmojis: rTopEmojis } = getReactionSummary(r.reactions);
+                    return (
                     <div key={r.id} className="flex gap-2">
                       <button
                         type="button"
@@ -363,6 +390,21 @@ export function CommentList({
                         </div>
                         <div className="flex items-center gap-3 mt-1 pl-1">
                           <span className="text-[11px] text-gray-500">{timeAgo(r.createdAt)}</span>
+                          <ReactionBar
+                            myReactions={r.myReactions}
+                            onReact={(emoji) => onReactToComment(postId, r.id, emoji, c.id)}
+                            variant="compact"
+                          />
+                          {rTotal > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenCommentReactions(postId, r.id)}
+                              className="text-[11px] text-gray-500 hover:underline"
+                              aria-label={`${rTotal} ${rTotal === 1 ? "reaction" : "reactions"} — view who reacted`}
+                            >
+                              <span aria-hidden="true">{rTopEmojis.join("")}</span> {rTotal}
+                            </button>
+                          )}
                           {(r.authorId === dbUserId || isModerator) && (
                             <button
                               onClick={() => onDeleteComment(postId, r.id, c.id)}
@@ -374,13 +416,15 @@ export function CommentList({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -501,6 +545,8 @@ export function CommentThread({
   onSetReplyingTo,
   onReplyDraftChange,
   onSubmitReply,
+  onReactToComment,
+  onOpenCommentReactions,
   hasMoreComments,
   loadingMoreComments,
   onLoadMoreComments,
@@ -536,6 +582,8 @@ export function CommentThread({
         onSetReplyingTo={onSetReplyingTo}
         onReplyDraftChange={onReplyDraftChange}
         onSubmitReply={onSubmitReply}
+        onReactToComment={onReactToComment}
+        onOpenCommentReactions={onOpenCommentReactions}
         hasMoreComments={hasMoreComments}
         loadingMoreComments={loadingMoreComments}
         onLoadMoreComments={onLoadMoreComments}

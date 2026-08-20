@@ -181,7 +181,7 @@ export function scoreVisualMemoryAttempt(seed: number, evidence: VisualMemoryEvi
       answeredLevelCount,
       clientElapsedMs: evidence.clientElapsedMs,
       completedLevel,
-      failedLevel,
+      ...(failedLevel === null ? {} : { failedLevel }),
     },
   };
 }

@@ -115,7 +115,6 @@ describe("scoreVisualMemoryAttempt", () => {
         answeredLevelCount: 10,
         clientElapsedMs: 45_000,
         completedLevel: 10,
-        failedLevel: null,
       },
     });
   });

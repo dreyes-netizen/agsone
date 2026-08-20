@@ -197,7 +197,7 @@ export function scoreSequenceMemoryAttempt(seed: number, evidence: SequenceMemor
       answeredLevelCount,
       clientElapsedMs: evidence.clientElapsedMs,
       completedLevel,
-      failedLevel,
+      ...(failedLevel === null ? {} : { failedLevel }),
       totalInputCount,
     },
   };

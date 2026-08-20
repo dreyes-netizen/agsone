@@ -79,7 +79,6 @@ describe("scoreSequenceMemoryAttempt", () => {
         answeredLevelCount: 10,
         clientElapsedMs: 45_000,
         completedLevel: 10,
-        failedLevel: null,
         totalInputCount: 55,
       },
     });

@@ -14,4 +14,18 @@ describe("scheduleSequencePlayback", () => {
     expect(complete).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
+
+  it("cancels every scheduled flash and completion when its component unmounts", () => {
+    vi.useFakeTimers();
+    const flashes: Array<number | null> = [];
+    const complete = vi.fn();
+
+    const cleanup = scheduleSequencePlayback([1, 1, 2], 3, (value) => flashes.push(value), complete);
+    cleanup();
+    vi.runAllTimers();
+
+    expect(flashes).toEqual([]);
+    expect(complete).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });

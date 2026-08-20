@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactionGameProps } from "./types";
+import { focusOnPhase } from "./focusTransition";
 
 type Phase = "intro" | "waiting" | "ready" | "between" | "complete";
 
@@ -21,7 +22,7 @@ export function ReactionGame({ challenge, disabled = false, onComplete }: Reacti
     return () => window.clearTimeout(timer);
   }, [challenge.waitDurationsMs, phase, trial]);
   useEffect(() => {
-    if (phase === "ready") targetRef.current?.focus();
+    focusOnPhase(phase, "ready", targetRef.current);
   }, [phase]);
 
   function start() { if (!disabled) { startedAt.current = performance.now(); setPhase("waiting"); } }

@@ -29,6 +29,19 @@ export function finishSubmissionReducer(state: FinishSubmissionState, action: Fi
   }
 }
 
+export function createFinishSubmitter<TResponse>(send: (evidence: SoloGameEvidence) => Promise<TResponse>) {
+  let inFlight: Promise<TResponse> | null = null;
+
+  return (evidence: SoloGameEvidence) => {
+    if (inFlight) return inFlight;
+    const request = send(evidence);
+    inFlight = request;
+    return request.finally(() => {
+      if (inFlight === request) inFlight = null;
+    });
+  };
+}
+
 export function createPracticeResult(gameType: SoloGameType, challenge: TypingChallenge | ReactionChallenge | MemoryChallenge, evidence: SoloGameEvidence): SoloGameResult {
   switch (gameType) {
     case "TYPING": {

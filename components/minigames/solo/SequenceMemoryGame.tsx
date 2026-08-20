@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createSequenceMemoryChallenge, MAX_SEQUENCE_MEMORY_LEVEL, SEQUENCE_MEMORY_BUTTON_COUNT, type SequenceMemoryResponse } from "@/lib/minigames/solo/sequenceMemory";
 import type { SequenceMemoryGameProps } from "./types";
 import { scheduleSequencePlayback } from "./sequencePlayback";
+import { focusOnPhase } from "./focusTransition";
 
 type Phase = "intro" | "showing" | "input" | "complete";
 const labels = ["North", "East", "South", "West"];
@@ -24,7 +25,7 @@ export function SequenceMemoryGame({ challenge, disabled = false, onComplete }: 
     return scheduleSequencePlayback(sequence, level, setFlashIndex, () => setPhase("input"));
   }, [level, phase, sequence]);
   useEffect(() => {
-    if (phase === "input") buttonRefs.current[0]?.focus();
+    focusOnPhase(phase, "input", buttonRefs.current[0]);
   }, [phase]);
 
   function begin(event: React.MouseEvent<HTMLButtonElement>) { if (!disabled) { startedAt.current = event.timeStamp; setPhase("showing"); } }

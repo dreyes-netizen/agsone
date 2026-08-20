@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_TYPING_INPUT_CHARS } from "@/lib/minigames/solo/typing";
 import type { TypingGameProps } from "./types";
+import { getTypingLiveMetrics } from "./typingLive";
 
 export function TypingGame({ challenge, mode, disabled = false, onComplete }: TypingGameProps) {
   const [typedText, setTypedText] = useState("");
@@ -47,10 +48,7 @@ export function TypingGame({ challenge, mode, disabled = false, onComplete }: Ty
     setTypedText(value);
   }
 
-  const correctChars = typedText.split("").filter((character, index) => character === challenge.passageText[index]).length;
-  const accuracy = typedText.length ? Math.round((correctChars / typedText.length) * 100) : 100;
-  const elapsedMinutes = startedAt === null ? 0 : Math.max(1 / 60, (challenge.durationMs - remainingMs) / 60_000);
-  const wpm = Math.floor((correctChars / 5) / elapsedMinutes);
+  const { accuracy, wpm } = getTypingLiveMetrics(challenge.passageText, typedText, startedAt === null ? 0 : challenge.durationMs - remainingMs);
 
   return (
     <section className="bg-white border border-table-border rounded-card p-4 sm:p-6 space-y-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
@@ -13,7 +13,7 @@ import type { SequenceMemoryEvidence } from "@/lib/minigames/solo/sequenceMemory
 import type { SoloGameResult, SoloGameType } from "@/lib/minigames/solo/types";
 import type { VisualMemoryEvidence } from "@/lib/minigames/solo/visualMemory";
 import { SoloResultPanel } from "./SoloResultPanel";
-import { createPracticeResult, finishSubmissionReducer, type SoloGameEvidence } from "./soloGameRun";
+import { createFinishSubmitter, createPracticeResult, finishSubmissionReducer, type SoloGameEvidence } from "./soloGameRun";
 import type { MemoryChallenge, SoloGameMode } from "./types";
 
 const TypingGame = dynamic(() => import("./TypingGame").then((module) => module.TypingGame), { ssr: false, loading: () => <GameLoader /> });
@@ -41,6 +41,7 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
   const [isPersonalBest, setIsPersonalBest] = useState(false);
   const [gameInstance, setGameInstance] = useState(0);
   const [finishState, dispatchFinish] = useReducer(finishSubmissionReducer, { status: "idle", evidence: null });
+  const finishSubmitterRef = useRef<((evidence: SoloGameEvidence) => Promise<FinishResponse>) | null>(null);
 
   const loadSummary = useCallback(async () => {
     try {
@@ -71,12 +72,14 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
     try {
       if (mode === "practice") {
         setAttemptId(null);
+        finishSubmitterRef.current = null;
         setChallenge(createLocalChallenge(gameType));
         setGameInstance((instance) => instance + 1);
         return;
       }
       const response = await apiFetch<StartResponse>("/api/minigames/solo/attempts/start", { method: "POST", body: JSON.stringify({ gameType }) });
       setAttemptId(response.data.attemptId);
+      finishSubmitterRef.current = createFinishSubmitter((evidence) => apiFetch<FinishResponse>(`/api/minigames/solo/attempts/${response.data.attemptId}/finish`, { method: "POST", body: JSON.stringify(evidence) }));
       setAttemptsRemaining(response.data.attemptsRemaining);
       setChallenge(asChallenge(gameType, response.data.challenge));
       setGameInstance((instance) => instance + 1);
@@ -88,11 +91,12 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
   }
 
   async function submitRankedFinish(evidence: SoloGameEvidence) {
-    if (!attemptId || busy) return;
+    const submit = finishSubmitterRef.current;
+    if (!attemptId || !submit || busy) return;
     setBusy(true);
     setError(null);
     try {
-      const response = await apiFetch<FinishResponse>(`/api/minigames/solo/attempts/${attemptId}/finish`, { method: "POST", body: JSON.stringify(evidence) });
+      const response = await submit(evidence);
       setResult(response.data.result);
       setAttemptsRemaining(response.data.attemptsRemaining);
       setIsPersonalBest(response.data.isPersonalBest);
@@ -125,6 +129,7 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
   function reset() {
     setChallenge(null);
     setAttemptId(null);
+    finishSubmitterRef.current = null;
     setResult(null);
     setError(null);
     setIsPersonalBest(false);
@@ -163,12 +168,21 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
       {finishState.status === "retryable" && <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-2"><p>Your game is complete, but the official result was not received. Retry safely with the same evidence.</p><button onClick={retryFinish} className="px-3 py-1.5 rounded-lg bg-amber-700 text-white font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-700">Retry finish</button></div>}
       {result && <SoloResultPanel game={game} mode={mode} result={result} isPersonalBest={isPersonalBest} onPlayAgain={reset} />}
-      {challenge && !result && renderGame(gameType, mode, challenge, busy || finishState.status === "submitting", complete, gameInstance)}
+      {challenge && !result && <SoloGameRenderer gameType={gameType} mode={mode} challenge={challenge} disabled={busy || finishState.status === "submitting"} onComplete={complete} gameInstance={gameInstance} />}
     </div>
   );
 }
 
-function renderGame(gameType: SoloGameType, mode: SoloGameMode, challenge: ActiveChallenge, disabled: boolean, onComplete: (evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) => void, gameInstance: number) {
+type SoloGameRendererProps = {
+  gameType: SoloGameType;
+  mode: SoloGameMode;
+  challenge: ActiveChallenge;
+  disabled: boolean;
+  onComplete: (evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) => void;
+  gameInstance: number;
+};
+
+function SoloGameRenderer({ gameType, mode, challenge, disabled, onComplete, gameInstance }: SoloGameRendererProps) {
   switch (gameType) {
     case "TYPING": return <TypingGame key={gameInstance} mode={mode} challenge={challenge as TypingChallenge} disabled={disabled} onComplete={onComplete} />;
     case "REACTION": return <ReactionGame key={gameInstance} mode={mode} challenge={challenge as ReactionChallenge} disabled={disabled} onComplete={onComplete} />;

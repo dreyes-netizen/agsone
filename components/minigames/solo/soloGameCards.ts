@@ -1,5 +1,6 @@
 import { SOLO_GAME_REGISTRY } from "@/lib/minigames/solo/registry";
 import type { SoloGameType } from "@/lib/minigames/solo/types";
+import type { SoloPersonalBestState, SoloPersonalBestStates } from "./soloPersonalBests";
 
 export type SoloGameCard = {
   key: SoloGameType;
@@ -9,20 +10,23 @@ export type SoloGameCard = {
   href: string;
 };
 
-export function getSoloGameCards(personalBests: Partial<Record<SoloGameType, number>>): SoloGameCard[] {
+export function getSoloGameCards(personalBests: SoloPersonalBestStates): SoloGameCard[] {
   return Object.values(SOLO_GAME_REGISTRY).map((game) => {
-    const score = personalBests[game.key];
     return {
       key: game.key,
       label: game.label,
       scoreLabel: game.scoreLabel,
-      personalBest: score === undefined ? null : formatPersonalBest(game.key, score),
+      personalBest: formatPersonalBest(game.key, personalBests[game.key]),
       href: `/minigames/solo/${game.slug}`,
     };
   });
 }
 
-function formatPersonalBest(gameType: SoloGameType, score: number): string {
+function formatPersonalBest(gameType: SoloGameType, personalBest: SoloPersonalBestState): string {
+  if (personalBest.status === "loading") return "Loading official PB…";
+  if (personalBest.status === "unavailable") return "Official PB unavailable";
+  if (personalBest.status === "absent") return "No official PB yet";
+  const { score } = personalBest;
   if (gameType === "TYPING") return `${score} WPM`;
   if (gameType === "REACTION") return `${score} ms`;
   return `Level ${score}`;

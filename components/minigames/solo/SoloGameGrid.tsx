@@ -4,37 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Trophy } from "lucide-react";
 import { apiFetch } from "@/lib/hooks/useApiClient";
-import type { SoloGameType } from "@/lib/minigames/solo/types";
 import { getSoloGameCards } from "./soloGameCards";
-
-type SummaryResponse = {
-  data: {
-    personalBest: { primaryScore: number } | null;
-  };
-};
-
-const SOLO_GAME_TYPES: SoloGameType[] = ["TYPING", "REACTION", "VISUAL_MEMORY", "SEQUENCE_MEMORY"];
+import { createLoadingSoloPersonalBests, loadSoloPersonalBests } from "./soloPersonalBests";
 
 export function SoloGameGrid() {
-  const [personalBests, setPersonalBests] = useState<Partial<Record<SoloGameType, number>>>({});
+  const [personalBests, setPersonalBests] = useState(createLoadingSoloPersonalBests);
 
   useEffect(() => {
     let active = true;
 
     async function loadPersonalBests() {
-      const summaries = await Promise.all(
-        SOLO_GAME_TYPES.map(async (gameType) => {
-          try {
-            const response = await apiFetch<SummaryResponse>(`/api/minigames/solo/summary?gameType=${gameType}`);
-            return [gameType, response.data.personalBest?.primaryScore] as const;
-          } catch {
-            return [gameType, undefined] as const;
-          }
-        }),
-      );
-
+      const nextPersonalBests = await loadSoloPersonalBests(apiFetch);
       if (!active) return;
-      setPersonalBests(Object.fromEntries(summaries.filter(([, score]) => score !== undefined)));
+      setPersonalBests(nextPersonalBests);
     }
 
     void loadPersonalBests();
@@ -67,7 +49,7 @@ export function SoloGameGrid() {
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
               <p className="flex items-center gap-1.5 text-xs text-gray-600">
                 <Trophy className="size-3.5 text-amber-600" aria-hidden="true" />
-                <span>Official PB: <strong className="font-semibold text-gray-800">{game.personalBest ?? "No score yet"}</strong></span>
+                <span aria-live="polite">Official PB: <strong className="font-semibold text-gray-800">{game.personalBest}</strong></span>
               </p>
               <span className="text-xs font-semibold text-navy-700 group-hover:text-navy-800">Play</span>
             </div>

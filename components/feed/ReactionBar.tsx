@@ -62,7 +62,7 @@ export function ReactionBar({
 
   return (
     <div
-      className={variant === "compact" ? "relative inline-block" : "relative flex-1"}
+      className={variant === "compact" ? "relative inline-flex items-center" : "relative flex-1"}
       onMouseEnter={openPicker}
       onMouseLeave={closePicker}
       onKeyDown={handleKeyDown}

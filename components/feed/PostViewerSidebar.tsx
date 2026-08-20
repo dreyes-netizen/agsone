@@ -54,6 +54,8 @@ export function PostViewerSidebar({
   onSubmitReply,
   onToggleExpandedReplies,
   onDeleteComment,
+  onReactToComment,
+  onOpenCommentReactions,
   onCommentDraftChange,
   onSubmitComment,
   employees = [],
@@ -95,6 +97,8 @@ export function PostViewerSidebar({
   onSubmitReply: (postId: string, commentId: string) => void;
   onToggleExpandedReplies: (commentId: string) => void;
   onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
+  onReactToComment: (postId: string, commentId: string, emoji: string, parentId?: string) => void;
+  onOpenCommentReactions: (postId: string, commentId: string) => void;
   onCommentDraftChange: (postId: string, value: string) => void;
   onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
   /** Mention candidates for the comment/reply composers. */
@@ -154,6 +158,8 @@ export function PostViewerSidebar({
           onSetReplyingTo={onSetReplyingTo}
           onReplyDraftChange={onReplyDraftChange}
           onSubmitReply={onSubmitReply}
+          onReactToComment={onReactToComment}
+          onOpenCommentReactions={onOpenCommentReactions}
           onToggleExpandedReplies={onToggleExpandedReplies}
           onDeleteComment={onDeleteComment}
           autoResize={autoResize}

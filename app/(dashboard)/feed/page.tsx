@@ -15,6 +15,7 @@ import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
 import { PollVotersDialog } from "@/components/feed/PollVotersDialog";
+import { findCommentById } from "@/lib/helpers/commentTree";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
   AlertDialog,
@@ -140,13 +141,31 @@ export default function FeedPage() {
     handleComposerChange,
     insertMention,
     toggleReaction,
+    toggleCommentReaction,
   } = useFeedActions();
 
-  // Which post's "who reacted" modal is open, if any. Kept local to the page
-  // (not in useFeedActions) — it's transient UI state only relevant while the
-  // dialog is mounted, unlike the reaction data itself which lives on `posts`.
-  const [reactionsPostId, setReactionsPostId] = React.useState<string | null>(null);
-  const reactionsPost = posts.find((p) => p.id === reactionsPostId) ?? null;
+  // Which post's or comment's "who reacted" modal is open, if any. Kept
+  // local to the page (not in useFeedActions) — it's transient UI state only
+  // relevant while the dialog is mounted, unlike the reaction data itself
+  // which lives on `posts`/`commentsCache`.
+  const [reactionsTarget, setReactionsTarget] = React.useState<
+    { kind: "post"; postId: string } | { kind: "comment"; postId: string; commentId: string } | null
+  >(null);
+
+  const reactionsDialogTarget = !reactionsTarget
+    ? null
+    : reactionsTarget.kind === "post"
+      ? { key: reactionsTarget.postId, url: `/api/feed/${reactionsTarget.postId}/reactions` }
+      : {
+          key: `${reactionsTarget.postId}:${reactionsTarget.commentId}`,
+          url: `/api/feed/${reactionsTarget.postId}/comments/${reactionsTarget.commentId}/reactions`,
+        };
+
+  const reactionsMyEmoji = !reactionsTarget
+    ? null
+    : reactionsTarget.kind === "post"
+      ? posts.find((p) => p.id === reactionsTarget.postId)?.myReactions[0] ?? null
+      : findCommentById(commentsCache[reactionsTarget.postId] ?? [], reactionsTarget.commentId)?.myReactions[0] ?? null;
 
   // Which post's (and optionally, which option's) "who voted" modal is open,
   // if any — same transient-UI-only treatment as reactionsPostId above.
@@ -776,7 +795,7 @@ export default function FeedPage() {
                     commentsOpen={!!openComments[post.id]}
                     onReact={toggleReaction}
                     onToggleComments={() => toggleComments(post.id)}
-                    onOpenReactions={() => setReactionsPostId(post.id)}
+                    onOpenReactions={() => setReactionsTarget({ kind: "post", postId: post.id })}
                   />
                   {openComments[post.id] && (
                     <CommentThread
@@ -796,6 +815,8 @@ export default function FeedPage() {
                       onSetReplyingTo={setReplyingTo}
                       onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
                       onSubmitReply={submitReply}
+                      onReactToComment={toggleCommentReaction}
+                      onOpenCommentReactions={(postId, commentId) => setReactionsTarget({ kind: "comment", postId, commentId })}
                       hasMoreComments={!!commentsCursor[post.id]}
                       loadingMoreComments={!!commentsLoadingMore[post.id]}
                       onLoadMoreComments={loadMoreComments}
@@ -852,7 +873,7 @@ export default function FeedPage() {
                   commentsOpen={!!openComments[post.id]}
                   onReact={toggleReaction}
                   onToggleComments={() => toggleComments(post.id)}
-                  onOpenReactions={() => setReactionsPostId(post.id)}
+                  onOpenReactions={() => setReactionsTarget({ kind: "post", postId: post.id })}
                 />
 
                 {openComments[post.id] && (
@@ -873,6 +894,8 @@ export default function FeedPage() {
                     onSetReplyingTo={setReplyingTo}
                     onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
                     onSubmitReply={submitReply}
+                    onReactToComment={toggleCommentReaction}
+                    onOpenCommentReactions={(postId, commentId) => setReactionsTarget({ kind: "comment", postId, commentId })}
                     hasMoreComments={!!commentsCursor[post.id]}
                     loadingMoreComments={!!commentsLoadingMore[post.id]}
                     onLoadMoreComments={loadMoreComments}
@@ -928,7 +951,7 @@ export default function FeedPage() {
         onEdit={() => lightboxPost && startEditPost(lightboxPost)}
         onDelete={() => lightboxPost && deletePost(lightboxPost.id)}
         onReact={toggleReaction}
-        onOpenReactions={() => lightboxPost && setReactionsPostId(lightboxPost.id)}
+        onOpenReactions={() => lightboxPost && setReactionsTarget({ kind: "post", postId: lightboxPost.id })}
         onOpenVoters={(optionId) => lightboxPost && setPollVotersQuery({ postId: lightboxPost.id, optionId })}
         comments={lightbox ? commentsCache[lightbox.postId] ?? [] : []}
         commentsLoading={lightbox ? !!commentsLoading[lightbox.postId] : false}
@@ -949,6 +972,8 @@ export default function FeedPage() {
         onSetReplyingTo={setReplyingTo}
         onReplyDraftChange={(commentId, value) => setReplyDraft((prev) => ({ ...prev, [commentId]: value }))}
         onSubmitReply={submitReply}
+        onReactToComment={toggleCommentReaction}
+        onOpenCommentReactions={(postId, commentId) => setReactionsTarget({ kind: "comment", postId, commentId })}
         onToggleExpandedReplies={(commentId) => setExpandedReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }))}
         onDeleteComment={deleteComment}
         onCommentDraftChange={(pid, value) => setCommentDraft((prev) => ({ ...prev, [pid]: value }))}
@@ -996,11 +1021,11 @@ export default function FeedPage() {
       </AlertDialog>
 
       <ReactionDetailsDialog
-        postId={reactionsPostId}
-        onClose={() => setReactionsPostId(null)}
-        myEmoji={reactionsPost?.myReactions[0] ?? null}
+        target={reactionsDialogTarget}
+        onClose={() => setReactionsTarget(null)}
+        myEmoji={reactionsMyEmoji}
         currentUser={currentUserMeta}
-        onOpenProfile={(id) => { setReactionsPostId(null); router.push(`/employees/${id}`); }}
+        onOpenProfile={(id) => { setReactionsTarget(null); router.push(`/employees/${id}`); }}
       />
 
       <PollVotersDialog

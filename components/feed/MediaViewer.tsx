@@ -63,6 +63,8 @@ export function MediaViewer({
   onSubmitReply,
   onToggleExpandedReplies,
   onDeleteComment,
+  onReactToComment,
+  onOpenCommentReactions,
   onCommentDraftChange,
   onSubmitComment,
   employees = [],
@@ -110,6 +112,8 @@ export function MediaViewer({
   onSubmitReply: (postId: string, commentId: string) => void;
   onToggleExpandedReplies: (commentId: string) => void;
   onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
+  onReactToComment: (postId: string, commentId: string, emoji: string, parentId?: string) => void;
+  onOpenCommentReactions: (postId: string, commentId: string) => void;
   onCommentDraftChange: (postId: string, value: string) => void;
   onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
   employees?: { id: string; displayName: string }[];
@@ -217,6 +221,8 @@ export function MediaViewer({
               onSetReplyingTo={onSetReplyingTo}
               onReplyDraftChange={onReplyDraftChange}
               onSubmitReply={onSubmitReply}
+              onReactToComment={onReactToComment}
+              onOpenCommentReactions={onOpenCommentReactions}
               onToggleExpandedReplies={onToggleExpandedReplies}
               onDeleteComment={onDeleteComment}
               onCommentDraftChange={onCommentDraftChange}

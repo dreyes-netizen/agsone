@@ -32,6 +32,16 @@ describe("createTypingChallenge", () => {
 });
 
 describe("scoreTypingAttempt", () => {
+  it("scores repeated canonical passage input at badge-capable 100 WPM", () => {
+    const typedText = PERFECT_MINUTE_CHALLENGE.passageText.repeat(4);
+
+    expect(scoreTypingAttempt(PERFECT_MINUTE_CHALLENGE, { typedText, clientElapsedMs: 60_000 }, 60_000)).toMatchObject({
+      primaryScore: 100,
+      secondaryScore: 10_000,
+      isValid: true,
+    });
+  });
+
   it("scores a perfect 60-second attempt with integer WPM and full accuracy", () => {
     expect(
       scoreTypingAttempt(
@@ -136,12 +146,12 @@ describe("scoreTypingAttempt", () => {
     });
   });
 
-  it("rejects oversized submissions before scoring", () => {
+  it("rejects submissions above the bounded repeated-passage input size", () => {
     expect(
       scoreTypingAttempt(
         THRESHOLD_CHALLENGE,
         {
-          typedText: `${THRESHOLD_CHALLENGE.passageText}!`,
+          typedText: THRESHOLD_CHALLENGE.passageText.repeat(5),
           clientElapsedMs: 60_000,
         },
         60_000,

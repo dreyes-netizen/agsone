@@ -4,6 +4,7 @@ import { TYPING_PASSAGES } from "./typingPassages";
 
 const RANKED_DURATION_MS = 60_000;
 const MIN_VALID_ACCURACY_BP = 9_500;
+export const MAX_TYPING_INPUT_CHARS = 512;
 
 export type TypingChallenge = {
   passageId: string;
@@ -89,7 +90,7 @@ export function scoreTypingAttempt(
     clientElapsedMs: evidence.clientElapsedMs,
   };
 
-  if (evidence.typedText.length > canonicalPassage.text.length) {
+  if (evidence.typedText.length > MAX_TYPING_INPUT_CHARS) {
     return {
       primaryScore: 0,
       secondaryScore: null,
@@ -143,7 +144,7 @@ function countCorrectChars(targetText: string, typedText: string): number {
   let correctChars = 0;
 
   for (let index = 0; index < typedText.length; index += 1) {
-    if (typedText[index] === targetText[index]) {
+    if (typedText[index] === targetText[index % targetText.length]) {
       correctChars += 1;
     }
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MAX_TYPING_INPUT_CHARS } from "@/lib/minigames/solo/typing";
 import type { TypingGameProps } from "./types";
 
 export function TypingGame({ challenge, mode, disabled = false, onComplete }: TypingGameProps) {
@@ -42,9 +43,8 @@ export function TypingGame({ challenge, mode, disabled = false, onComplete }: Ty
 
   function onChange(value: string) {
     if (startedAt === null) begin();
-    const nextValue = value.slice(0, challenge.passageText.length);
-    typedTextRef.current = nextValue;
-    setTypedText(nextValue);
+    typedTextRef.current = value;
+    setTypedText(value);
   }
 
   const correctChars = typedText.split("").filter((character, index) => character === challenge.passageText[index]).length;
@@ -55,8 +55,8 @@ export function TypingGame({ challenge, mode, disabled = false, onComplete }: Ty
   return (
     <section className="bg-white border border-table-border rounded-card p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div><h2 className="text-base font-bold text-gray-900">Type the passage</h2><p className="text-xs text-gray-500">{mode === "ranked" ? "Ranked runs end after 60 seconds. Paste, cut and drop are disabled." : "Begin typing when you are ready."}</p></div>
-        <div aria-live="polite" className="text-right shrink-0"><p className="text-lg font-black text-navy-800">{Math.ceil(remainingMs / 1000)}s</p><p className="text-xs text-gray-500">{wpm} WPM · {accuracy}%</p></div>
+        <div><h2 className="text-base font-bold text-gray-900">Type the passage</h2><p className="text-xs text-gray-500">{mode === "ranked" ? "Repeat the passage as often as you can in 60 seconds. Paste, cut and drop are disabled." : "Begin typing when you are ready."}</p></div>
+        <div aria-live="polite" className="text-right shrink-0"><p className="text-lg font-black text-navy-800">{Math.ceil(remainingMs / 1000)}s</p><p className="text-xs text-gray-500">Provisional: {wpm} WPM · {accuracy}%</p></div>
       </div>
       <p aria-label="Passage" className="rounded-lg bg-gray-50 border border-gray-200 p-4 font-mono text-sm leading-7 text-gray-700 break-words">
         {challenge.passageText.split("").map((character, index) => {
@@ -66,7 +66,7 @@ export function TypingGame({ challenge, mode, disabled = false, onComplete }: Ty
         })}
       </p>
       {!startedAt && <button onClick={begin} disabled={disabled} className="w-full py-2 rounded-lg bg-navy-700 text-white font-bold text-sm hover:bg-navy-800 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-600">Start typing</button>}
-      <label className="block"><span className="sr-only">Type the passage</span><textarea ref={inputRef} value={typedText} onChange={(event) => onChange(event.target.value)} onPaste={mode === "ranked" ? (event) => event.preventDefault() : undefined} onCut={mode === "ranked" ? (event) => event.preventDefault() : undefined} onDrop={mode === "ranked" ? (event) => event.preventDefault() : undefined} disabled={disabled || isComplete} rows={4} className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 disabled:bg-gray-100" /> </label>
+      <label className="block"><span className="sr-only">Type the passage</span><textarea ref={inputRef} value={typedText} maxLength={MAX_TYPING_INPUT_CHARS} onChange={(event) => onChange(event.target.value)} onPaste={mode === "ranked" ? (event) => event.preventDefault() : undefined} onCut={mode === "ranked" ? (event) => event.preventDefault() : undefined} onDrop={mode === "ranked" ? (event) => event.preventDefault() : undefined} disabled={disabled || isComplete} rows={4} className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 disabled:bg-gray-100" /> </label>
     </section>
   );
 }

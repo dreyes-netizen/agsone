@@ -17,6 +17,9 @@ export function VisualMemoryGame({ challenge, disabled = false, onComplete }: Vi
   const board = createVisualMemoryBoard(challenge.seed, level);
 
   useEffect(() => { if (phase !== "showing") return; const timer = window.setTimeout(() => setPhase("selecting"), 1200); return () => window.clearTimeout(timer); }, [phase, level]);
+  useEffect(() => {
+    if (phase === "selecting") cellRefs.current[0]?.focus();
+  }, [phase]);
 
   function begin(event: React.MouseEvent<HTMLButtonElement>) { if (!disabled) { startedAt.current = event.timeStamp; setPhase("showing"); } }
   function end(nextAnswers: VisualMemoryAnswer[], completedLevel: number, elapsedMs: number) { if (!completed.current) { completed.current = true; setPhase("complete"); onComplete({ answers: nextAnswers, claimedCompletedLevel: completedLevel, clientElapsedMs: elapsedMs }); } }

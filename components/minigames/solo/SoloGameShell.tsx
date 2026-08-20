@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useApiClient } from "@/lib/hooks/useApiClient";
@@ -13,6 +13,7 @@ import type { SequenceMemoryEvidence } from "@/lib/minigames/solo/sequenceMemory
 import type { SoloGameResult, SoloGameType } from "@/lib/minigames/solo/types";
 import type { VisualMemoryEvidence } from "@/lib/minigames/solo/visualMemory";
 import { SoloResultPanel } from "./SoloResultPanel";
+import { createPracticeResult, finishSubmissionReducer, type SoloGameEvidence } from "./soloGameRun";
 import type { MemoryChallenge, SoloGameMode } from "./types";
 
 const TypingGame = dynamic(() => import("./TypingGame").then((module) => module.TypingGame), { ssr: false, loading: () => <GameLoader /> });
@@ -39,6 +40,7 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
   const [result, setResult] = useState<SoloGameResult | null>(null);
   const [isPersonalBest, setIsPersonalBest] = useState(false);
   const [gameInstance, setGameInstance] = useState(0);
+  const [finishState, dispatchFinish] = useReducer(finishSubmissionReducer, { status: "idle", evidence: null });
 
   const loadSummary = useCallback(async () => {
     try {
@@ -64,6 +66,7 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
     setError(null);
     setResult(null);
     setIsPersonalBest(false);
+    dispatchFinish({ type: "reset" });
     setBusy(true);
     try {
       if (mode === "practice") {
@@ -84,25 +87,39 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
     }
   }
 
-  async function complete(evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) {
-    if (busy || !challenge) return;
+  async function submitRankedFinish(evidence: SoloGameEvidence) {
+    if (!attemptId || busy) return;
     setBusy(true);
     setError(null);
     try {
-      if (mode === "practice") {
-        setResult({ primaryScore: 0, secondaryScore: null, isValid: true, validationReason: null, metrics: {} });
-        return;
-      }
-      if (!attemptId) throw new Error("This ranked attempt is no longer available. Start a new one.");
       const response = await apiFetch<FinishResponse>(`/api/minigames/solo/attempts/${attemptId}/finish`, { method: "POST", body: JSON.stringify(evidence) });
       setResult(response.data.result);
       setAttemptsRemaining(response.data.attemptsRemaining);
       setIsPersonalBest(response.data.isPersonalBest);
+      dispatchFinish({ type: "succeeded" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Couldn’t submit this attempt.");
+      const message = cause instanceof Error ? cause.message : "Couldn’t submit this attempt.";
+      setError(message);
+      dispatchFinish({ type: "failed", message });
     } finally {
       setBusy(false);
     }
+  }
+
+  function complete(evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) {
+    if (busy || !challenge || finishState.status === "submitting") return;
+    if (mode === "practice") {
+      setResult(createPracticeResult(gameType, challenge, evidence));
+      return;
+    }
+    dispatchFinish({ type: "submit", evidence });
+    void submitRankedFinish(evidence);
+  }
+
+  function retryFinish() {
+    if (finishState.status !== "retryable") return;
+    dispatchFinish({ type: "retry" });
+    void submitRankedFinish(finishState.evidence);
   }
 
   function reset() {
@@ -111,6 +128,7 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
     setResult(null);
     setError(null);
     setIsPersonalBest(false);
+    dispatchFinish({ type: "reset" });
   }
 
   return (
@@ -143,8 +161,9 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
       )}
 
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+      {finishState.status === "retryable" && <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-2"><p>Your game is complete, but the official result was not received. Retry safely with the same evidence.</p><button onClick={retryFinish} className="px-3 py-1.5 rounded-lg bg-amber-700 text-white font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-700">Retry finish</button></div>}
       {result && <SoloResultPanel game={game} mode={mode} result={result} isPersonalBest={isPersonalBest} onPlayAgain={reset} />}
-      {challenge && !result && renderGame(gameType, mode, challenge, busy, complete, gameInstance)}
+      {challenge && !result && renderGame(gameType, mode, challenge, busy || finishState.status === "submitting", complete, gameInstance)}
     </div>
   );
 }

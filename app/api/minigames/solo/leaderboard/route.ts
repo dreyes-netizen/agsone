@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { getSoloLeaderboard } from "@/lib/minigames/solo/leaderboard";
@@ -53,7 +53,11 @@ function dateOnly(value: string) {
 }
 
 function finalizeChampionsInBackground(now: Date) {
-  void finalizePreviousWeekIfNeeded(now).catch((error: unknown) => {
-    console.error("[solo champion finalization]", error);
+  after(async () => {
+    try {
+      await finalizePreviousWeekIfNeeded(now);
+    } catch (error) {
+      console.error("[solo champion finalization]", error);
+    }
   });
 }

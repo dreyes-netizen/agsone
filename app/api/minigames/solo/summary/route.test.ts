@@ -6,6 +6,7 @@ const routeDoubles = vi.hoisted(() => ({
   getManilaRankKeys: vi.fn(),
   count: vi.fn(),
   finalizePreviousWeekIfNeeded: vi.fn(),
+  after: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/verifyAuth", () => ({ verifyAuth: routeDoubles.verifyAuth }));
@@ -15,6 +16,10 @@ vi.mock("@/lib/minigames/solo/leaderboard", () => ({
 vi.mock("@/lib/minigames/solo/time", () => ({ getManilaRankKeys: routeDoubles.getManilaRankKeys }));
 vi.mock("@/lib/minigames/solo/champions", () => ({
   finalizePreviousWeekIfNeeded: routeDoubles.finalizePreviousWeekIfNeeded,
+}));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: routeDoubles.after,
 }));
 vi.mock("@/lib/prisma/client", () => ({
   prisma: { soloGameAttempt: { count: routeDoubles.count } },
@@ -35,6 +40,7 @@ describe("solo summary route", () => {
     routeDoubles.getSoloSummary.mockResolvedValue(null);
     routeDoubles.count.mockResolvedValue(0);
     routeDoubles.finalizePreviousWeekIfNeeded.mockResolvedValue(0);
+    routeDoubles.after.mockImplementation(() => undefined);
   });
 
   it("rejects unauthenticated and malformed summary requests", async () => {
@@ -118,10 +124,15 @@ describe("solo summary route", () => {
     });
   });
 
-  it("starts idempotent previous-week finalization lazily after an authenticated valid read", async () => {
+  it("schedules idempotent previous-week finalization after a valid read without blocking the response", async () => {
+    const callbacks: Array<() => void | Promise<void>> = [];
     routeDoubles.verifyAuth.mockResolvedValue(user);
+    routeDoubles.after.mockImplementation((callback) => callbacks.push(callback));
 
     expect((await GET(request("?gameType=TYPING") as never)).status).toBe(200);
+    expect(callbacks).toHaveLength(1);
+    expect(routeDoubles.finalizePreviousWeekIfNeeded).not.toHaveBeenCalled();
+    await callbacks[0]!();
     expect(routeDoubles.finalizePreviousWeekIfNeeded).toHaveBeenCalledWith(expect.any(Date));
   });
 });

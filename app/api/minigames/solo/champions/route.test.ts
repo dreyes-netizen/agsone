@@ -46,6 +46,29 @@ describe("solo champions route", () => {
     expect(routeDoubles.getRecentCompanyChampions).toHaveBeenCalledWith(12);
   });
 
+  it("awaits finalization before reading history so a just-finalized championship is visible", async () => {
+    const events: string[] = [];
+    let resolveFinalization: (() => void) | undefined;
+    routeDoubles.verifyAuth.mockResolvedValue({ id: "user-1" });
+    routeDoubles.finalizePreviousWeekIfNeeded.mockImplementation(() => new Promise<void>((resolve) => {
+      resolveFinalization = () => {
+        events.push("finalize");
+        resolve();
+      };
+    }));
+    routeDoubles.getUserChampionships.mockImplementation(async () => {
+      events.push("history");
+      return [];
+    });
+
+    const response = GET(request() as never);
+    await Promise.resolve();
+    expect(routeDoubles.getUserChampionships).not.toHaveBeenCalled();
+    resolveFinalization?.();
+    expect((await response).status).toBe(200);
+    expect(events).toEqual(["finalize", "history"]);
+  });
+
   it("rejects malformed or duplicate query parameters", async () => {
     routeDoubles.verifyAuth.mockResolvedValue({ id: "user-1" });
 

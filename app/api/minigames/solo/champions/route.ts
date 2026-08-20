@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const parsed = parseQuery(request);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  finalizeChampionsInBackground(new Date());
+  await finalizePreviousWeekIfNeeded(new Date());
   const championships = await getUserChampionships(user.id);
   const recentCompanyChampions = parsed.data.includeRecentCompany === "true"
     ? await getRecentCompanyChampions(12)
@@ -39,10 +39,4 @@ function parseQuery(request: Request) {
   const entries = Array.from(new URL(request.url).searchParams.entries());
   if (new Set(entries.map(([key]) => key)).size !== entries.length) return querySchema.safeParse({ duplicateQueryParameter: true });
   return querySchema.safeParse(Object.fromEntries(entries));
-}
-
-function finalizeChampionsInBackground(now: Date) {
-  void finalizePreviousWeekIfNeeded(now).catch((error: unknown) => {
-    console.error("[solo champion finalization]", error);
-  });
 }

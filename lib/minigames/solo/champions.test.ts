@@ -98,4 +98,21 @@ describe("weekly solo champion service", () => {
     expect(repository.creations[0]).toHaveLength(4);
     expect(repository.creations[1]).toHaveLength(4);
   });
+
+  it("waits through the 15-minute Manila week-close grace period before recording scores completed after the boundary", async () => {
+    const repository = new ChampionRepository(
+      [{ id: "sunday-attempt-finished-after-midnight", userId: "winner", departmentId: null, departmentNameSnapshot: null, primaryScore: 100, secondaryScore: 99 }],
+      [],
+    );
+    const service = createSoloChampionService(repository);
+
+    await expect(service.finalizePreviousWeekIfNeeded(new Date("2026-08-23T16:14:59.000Z"))).resolves.toBe(0);
+    expect(repository.queries).toHaveLength(0);
+    expect(repository.creations).toHaveLength(0);
+
+    await expect(service.finalizePreviousWeekIfNeeded(new Date("2026-08-23T16:15:00.000Z"))).resolves.toBe(4);
+    expect(repository.creations[0]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ weekStart: new Date("2026-08-17T00:00:00.000Z"), winningAttemptId: "sunday-attempt-finished-after-midnight" }),
+    ]));
+  });
 });

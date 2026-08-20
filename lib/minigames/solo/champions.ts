@@ -38,10 +38,13 @@ export interface SoloChampionRepository {
 }
 
 const GAME_TYPES = Object.keys(SOLO_GAME_REGISTRY) as SoloGameType[];
+const MANILA_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
+const WEEK_CLOSE_GRACE_MS = 15 * 60 * 1000;
 
 export function createSoloChampionService(repository: SoloChampionRepository) {
   async function finalizePreviousWeekIfNeeded(now: Date) {
     const closedWeekStart = previousWeekStart(now);
+    if (!closedWeekStart) return 0;
 
     return repository.transaction(async (transaction) => {
       const writes: ChampionWrite[] = [];
@@ -74,6 +77,8 @@ export function createSoloChampionService(repository: SoloChampionRepository) {
 function previousWeekStart(now: Date) {
   const currentWeekStart = getManilaRankKeys(now).weekStart;
   const currentWeek = new Date(`${currentWeekStart}T00:00:00.000Z`);
+  const manilaWeekBoundary = currentWeek.getTime() - MANILA_UTC_OFFSET_MS;
+  if (now.getTime() < manilaWeekBoundary + WEEK_CLOSE_GRACE_MS) return null;
   return new Date(currentWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
 }
 

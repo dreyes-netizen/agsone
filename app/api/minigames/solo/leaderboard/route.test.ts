@@ -5,6 +5,7 @@ const routeDoubles = vi.hoisted(() => ({
   getSoloLeaderboard: vi.fn(),
   getManilaRankKeys: vi.fn(),
   finalizePreviousWeekIfNeeded: vi.fn(),
+  after: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/verifyAuth", () => ({ verifyAuth: routeDoubles.verifyAuth }));
@@ -14,6 +15,10 @@ vi.mock("@/lib/minigames/solo/leaderboard", () => ({
 vi.mock("@/lib/minigames/solo/time", () => ({ getManilaRankKeys: routeDoubles.getManilaRankKeys }));
 vi.mock("@/lib/minigames/solo/champions", () => ({
   finalizePreviousWeekIfNeeded: routeDoubles.finalizePreviousWeekIfNeeded,
+}));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: routeDoubles.after,
 }));
 
 import { GET } from "./route";
@@ -29,6 +34,7 @@ describe("solo leaderboard route", () => {
     vi.resetAllMocks();
     routeDoubles.getManilaRankKeys.mockReturnValue({ rankDate: "2026-08-21", weekStart: "2026-08-17" });
     routeDoubles.finalizePreviousWeekIfNeeded.mockResolvedValue(0);
+    routeDoubles.after.mockImplementation(() => undefined);
   });
 
   it("rejects unauthenticated requests before parsing or querying", async () => {
@@ -82,11 +88,16 @@ describe("solo leaderboard route", () => {
     });
   });
 
-  it("starts idempotent previous-week finalization lazily after an authenticated valid read", async () => {
+  it("schedules idempotent previous-week finalization after a valid read without blocking the response", async () => {
+    const callbacks: Array<() => void | Promise<void>> = [];
     routeDoubles.verifyAuth.mockResolvedValue(user);
     routeDoubles.getSoloLeaderboard.mockResolvedValue([]);
+    routeDoubles.after.mockImplementation((callback) => callbacks.push(callback));
 
     expect((await GET(request("?gameType=TYPING&period=week&scope=company") as never)).status).toBe(200);
+    expect(callbacks).toHaveLength(1);
+    expect(routeDoubles.finalizePreviousWeekIfNeeded).not.toHaveBeenCalled();
+    await callbacks[0]!();
     expect(routeDoubles.finalizePreviousWeekIfNeeded).toHaveBeenCalledWith(expect.any(Date));
   });
 });

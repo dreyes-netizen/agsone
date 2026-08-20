@@ -4,6 +4,7 @@ import {
   createSoloChampionService,
   type SoloChampionRepository,
 } from "./champions";
+import { createStatefulChampionRepository } from "./champions.test.support";
 
 type WinnerRow = {
   id: string;
@@ -146,4 +147,68 @@ describe("weekly solo champion service", () => {
     expect(terminalization.values).toContainEqual(new Date("2026-08-17T00:00:00.000Z"));
     expect(terminalization.values).toContainEqual(finalizationNow);
   });
+
+  it("rejects an in-flight late completion after finalization expires it and preserves the already-selected champion", async () => {
+    const finalizationNow = new Date("2026-08-23T16:15:00.000Z");
+    const repository = createStatefulChampionRepository([
+      completedAttempt("completed-before-finalization", 100),
+      startedAttempt("late-in-flight-completion", 200),
+    ]);
+    const lateCompletion = repository.beginCompletion("late-in-flight-completion");
+    const service = createSoloChampionService(repository);
+
+    await service.finalizePreviousWeekIfNeeded(finalizationNow);
+
+    expect(await lateCompletion()).toBe(false);
+    expect(repository.champions).toEqual([
+      expect.objectContaining({ winningAttemptId: "completed-before-finalization" }),
+    ]);
+  });
+
+  it("ranks a prior-week completion that commits before finalization begins", async () => {
+    const repository = createStatefulChampionRepository([
+      completedAttempt("completed-before-finalization", 100),
+      startedAttempt("completion-that-wins-the-race", 200),
+    ]);
+    expect(await repository.completeStarted("completion-that-wins-the-race")).toBe(true);
+    const service = createSoloChampionService(repository);
+
+    await service.finalizePreviousWeekIfNeeded(new Date("2026-08-23T16:15:00.000Z"));
+
+    expect(repository.champions).toEqual([
+      expect.objectContaining({ winningAttemptId: "completion-that-wins-the-race" }),
+    ]);
+  });
+
+  it("expires an abandoned prior-week STARTED attempt without blocking finalization", async () => {
+    const repository = createStatefulChampionRepository([startedAttempt("abandoned-start")]);
+    const service = createSoloChampionService(repository);
+
+    await expect(service.finalizePreviousWeekIfNeeded(new Date("2026-08-23T16:15:00.000Z"))).resolves.toBe(0);
+
+    expect(repository.statusOf("abandoned-start")).toBe("EXPIRED");
+    expect(repository.champions).toEqual([]);
+  });
 });
+
+function completedAttempt(id: string, primaryScore: number) {
+  return {
+    id,
+    userId: id,
+    gameType: "TYPING" as const,
+    status: "COMPLETED" as const,
+    weekStart: new Date("2026-08-17T00:00:00.000Z"),
+    expiresAt: new Date("2026-08-23T16:14:00.000Z"),
+    completedAt: new Date("2026-08-23T16:10:00.000Z"),
+    primaryScore,
+    secondaryScore: 99,
+  };
+}
+
+function startedAttempt(id: string, primaryScore = 200) {
+  return {
+    ...completedAttempt(id, primaryScore),
+    status: "STARTED" as const,
+    completedAt: null,
+  };
+}

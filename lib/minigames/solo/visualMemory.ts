@@ -54,6 +54,7 @@ export function scoreVisualMemoryAttempt(seed: number, evidence: VisualMemoryEvi
 
   if (
     !Array.isArray(evidence?.answers) ||
+    evidence.answers.length === 0 ||
     !Number.isFinite(evidence?.clientElapsedMs) ||
     evidence.clientElapsedMs < 0 ||
     !Number.isInteger(evidence?.claimedCompletedLevel) ||
@@ -89,7 +90,7 @@ export function scoreVisualMemoryAttempt(seed: number, evidence: VisualMemoryEvi
   for (const [index, answer] of evidence.answers.entries()) {
     const expectedLevel = index + 1;
 
-    if (!isValidAnswerShape(answer) || answer.level !== expectedLevel) {
+    if (!hasValidAnswerEnvelope(answer) || answer.level !== expectedLevel) {
       return {
         primaryScore: 0,
         secondaryScore: null,
@@ -227,11 +228,10 @@ function pickUniqueIndexes(random: () => number, gridCellCount: number, highligh
   return highlightedIndexes;
 }
 
-function isValidAnswerShape(answer: VisualMemoryAnswer): answer is VisualMemoryAnswer {
+function hasValidAnswerEnvelope(answer: VisualMemoryAnswer): answer is VisualMemoryAnswer {
   return (
     Number.isInteger(answer?.level) &&
-    Array.isArray(answer?.selectedIndexes) &&
-    answer.selectedIndexes.every((value) => Number.isInteger(value))
+    Array.isArray(answer?.selectedIndexes)
   );
 }
 
@@ -239,7 +239,7 @@ function hasValidSelectedIndexes(selectedIndexes: number[], gridCellCount: numbe
   const seen = new Set<number>();
 
   for (const selectedIndex of selectedIndexes) {
-    if (selectedIndex < 0 || selectedIndex >= gridCellCount || seen.has(selectedIndex)) {
+    if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= gridCellCount || seen.has(selectedIndex)) {
       return false;
     }
 

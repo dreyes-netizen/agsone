@@ -247,6 +247,24 @@ describe("scoreVisualMemoryAttempt", () => {
     });
   });
 
+  it("rejects empty answers instead of treating them as a valid scoreless run", () => {
+    expect(
+      scoreVisualMemoryAttempt(12345, {
+        answers: [],
+        claimedCompletedLevel: 0,
+        clientElapsedMs: 0,
+      }),
+    ).toEqual({
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "INVALID_EVIDENCE",
+      metrics: {
+        answeredLevelCount: 0,
+      },
+    });
+  });
+
   it("rejects more than ten submitted level answers as an oversized payload", () => {
     expect(
       scoreVisualMemoryAttempt(12345, {
@@ -274,6 +292,29 @@ describe("scoreVisualMemoryAttempt", () => {
       metrics: {
         answeredLevelCount: 11,
         maxLevel: MAX_VISUAL_MEMORY_LEVEL,
+      },
+    });
+  });
+
+  it("enforces the per-level selected-index cap before scanning malformed contents", () => {
+    expect(
+      scoreVisualMemoryAttempt(12345, {
+        answers: [
+          { level: 1, selectedIndexes: [0, 1, 2, Number.NaN] as unknown as number[] },
+        ],
+        claimedCompletedLevel: 0,
+        clientElapsedMs: 3_000,
+      }),
+    ).toEqual({
+      primaryScore: 0,
+      secondaryScore: null,
+      isValid: false,
+      validationReason: "TOO_MANY_SELECTED_INDEXES",
+      metrics: {
+        answeredLevelCount: 1,
+        expectedSelectedCount: 3,
+        invalidLevel: 1,
+        selectedCount: 4,
       },
     });
   });

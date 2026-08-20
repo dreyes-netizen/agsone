@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createVisualMemoryBoard, MAX_VISUAL_MEMORY_LEVEL, type VisualMemoryAnswer } from "@/lib/minigames/solo/visualMemory";
 import type { VisualMemoryGameProps } from "./types";
-import { focusOnPhase } from "./focusTransition";
+import { runPhaseFocusEffect } from "./phaseFocusEffect";
 
 type Phase = "intro" | "showing" | "selecting" | "complete";
 
@@ -19,7 +19,7 @@ export function VisualMemoryGame({ challenge, disabled = false, onComplete }: Vi
 
   useEffect(() => { if (phase !== "showing") return; const timer = window.setTimeout(() => setPhase("selecting"), 1200); return () => window.clearTimeout(timer); }, [phase, level]);
   useEffect(() => {
-    focusOnPhase(phase, "selecting", cellRefs.current[0]);
+    runPhaseFocusEffect(phase, "selecting", { current: cellRefs.current[0] });
   }, [phase]);
 
   function begin(event: React.MouseEvent<HTMLButtonElement>) { if (!disabled) { startedAt.current = event.timeStamp; setPhase("showing"); } }

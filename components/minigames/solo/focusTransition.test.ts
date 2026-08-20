@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { focusOnPhase } from "./focusTransition";
+import { runPhaseFocusEffect } from "./phaseFocusEffect";
 
 describe("focusOnPhase", () => {
   it("focuses each game control only when its interactive phase begins", () => {
@@ -7,11 +7,12 @@ describe("focusOnPhase", () => {
     const visualGridTarget = { focus: vi.fn() };
     const sequenceTarget = { focus: vi.fn() };
 
-    focusOnPhase("waiting", "ready", reactionTarget);
-    focusOnPhase("selecting", "selecting", visualGridTarget);
-    focusOnPhase("input", "input", sequenceTarget);
+    runPhaseFocusEffect("waiting", "ready", { current: reactionTarget });
+    runPhaseFocusEffect("ready", "ready", { current: reactionTarget });
+    runPhaseFocusEffect("selecting", "selecting", { current: visualGridTarget });
+    runPhaseFocusEffect("input", "input", { current: sequenceTarget });
 
-    expect(reactionTarget.focus).not.toHaveBeenCalled();
+    expect(reactionTarget.focus).toHaveBeenCalledOnce();
     expect(visualGridTarget.focus).toHaveBeenCalledOnce();
     expect(sequenceTarget.focus).toHaveBeenCalledOnce();
   });

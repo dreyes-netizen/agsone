@@ -14,6 +14,7 @@ import type { SoloGameResult, SoloGameType } from "@/lib/minigames/solo/types";
 import type { VisualMemoryEvidence } from "@/lib/minigames/solo/visualMemory";
 import { SoloResultPanel } from "./SoloResultPanel";
 import { createFinishSubmitter, createPracticeResult, finishSubmissionReducer, type SoloGameEvidence } from "./soloGameRun";
+import { completeSoloRun, startSoloRun } from "./soloGameOrchestration";
 import type { MemoryChallenge, SoloGameMode } from "./types";
 
 const TypingGame = dynamic(() => import("./TypingGame").then((module) => module.TypingGame), { ssr: false, loading: () => <GameLoader /> });
@@ -70,14 +71,20 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
     dispatchFinish({ type: "reset" });
     setBusy(true);
     try {
-      if (mode === "practice") {
+      const started = await startSoloRun(
+        mode,
+        gameType,
+        createLocalChallenge,
+        (rankedGameType) => apiFetch<StartResponse>("/api/minigames/solo/attempts/start", { method: "POST", body: JSON.stringify({ gameType: rankedGameType }) }),
+      );
+      if (started.kind === "practice") {
         setAttemptId(null);
         finishSubmitterRef.current = null;
-        setChallenge(createLocalChallenge(gameType));
+        setChallenge(started.challenge);
         setGameInstance((instance) => instance + 1);
         return;
       }
-      const response = await apiFetch<StartResponse>("/api/minigames/solo/attempts/start", { method: "POST", body: JSON.stringify({ gameType }) });
+      const response = started.data;
       setAttemptId(response.data.attemptId);
       finishSubmitterRef.current = createFinishSubmitter((evidence) => apiFetch<FinishResponse>(`/api/minigames/solo/attempts/${response.data.attemptId}/finish`, { method: "POST", body: JSON.stringify(evidence) }));
       setAttemptsRemaining(response.data.attemptsRemaining);
@@ -113,11 +120,25 @@ export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
   function complete(evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) {
     if (busy || !challenge || finishState.status === "submitting") return;
     if (mode === "practice") {
-      setResult(createPracticeResult(gameType, challenge, evidence));
+      void completePracticeRun(challenge, evidence);
       return;
     }
     dispatchFinish({ type: "submit", evidence });
     void submitRankedFinish(evidence);
+  }
+
+  async function completePracticeRun(challenge: ActiveChallenge, evidence: SoloGameEvidence) {
+    const completed = await completeSoloRun(
+      "practice",
+      gameType,
+      challenge,
+      evidence,
+      (practiceGameType, practiceChallenge, practiceEvidence) => createPracticeResult(practiceGameType, practiceChallenge, practiceEvidence),
+      async () => {
+        throw new Error("Practice runs must not finish through the ranked API");
+      },
+    );
+    if (completed.kind === "practice") setResult(completed.result);
   }
 
   function retryFinish() {

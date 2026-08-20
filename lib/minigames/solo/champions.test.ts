@@ -16,18 +16,30 @@ type WinnerRow = {
 
 class ChampionRepository implements SoloChampionRepository {
   readonly queries: Prisma.Sql[] = [];
+  readonly terminalizations: Prisma.Sql[] = [];
   readonly creations: Array<Record<string, unknown>[]> = [];
+  readonly operations: string[] = [];
 
   constructor(
     private readonly companyRows: WinnerRow[] = [],
     private readonly departmentRows: WinnerRow[] = [],
   ) {}
 
-  async transaction<T>(callback: (transaction: { query<T>(query: Prisma.Sql): Promise<T[]>; createMany(data: Record<string, unknown>[]): Promise<number> }) => Promise<T>) {
+  async transaction<T>(callback: (transaction: {
+    query<T>(query: Prisma.Sql): Promise<T[]>;
+    terminalizeExpiredStarts(query: Prisma.Sql): Promise<number>;
+    createMany(data: Record<string, unknown>[]): Promise<number>;
+  }) => Promise<T>) {
     return callback({
       query: async <T>(query: Prisma.Sql) => {
+        this.operations.push("select-winner");
         this.queries.push(query);
         return (this.queries.length % 2 === 1 ? this.companyRows : this.departmentRows) as T[];
+      },
+      terminalizeExpiredStarts: async (query: Prisma.Sql) => {
+        this.operations.push("terminalize-started");
+        this.terminalizations.push(query);
+        return 1;
       },
       createMany: async (data) => {
         this.creations.push(data);
@@ -114,5 +126,24 @@ describe("weekly solo champion service", () => {
     expect(repository.creations[0]).toEqual(expect.arrayContaining([
       expect.objectContaining({ weekStart: new Date("2026-08-17T00:00:00.000Z"), winningAttemptId: "sunday-attempt-finished-after-midnight" }),
     ]));
+  });
+
+  it("terminalizes expired STARTED prior-week attempts before selecting winners, so an in-flight completion loses deterministically", async () => {
+    const repository = new ChampionRepository(
+      [{ id: "completed-before-finalization", userId: "winner", departmentId: null, departmentNameSnapshot: null, primaryScore: 100, secondaryScore: 99 }],
+      [],
+    );
+    const service = createSoloChampionService(repository);
+    const finalizationNow = new Date("2026-08-23T16:15:00.000Z");
+
+    await service.finalizePreviousWeekIfNeeded(finalizationNow);
+
+    expect(repository.operations[0]).toBe("terminalize-started");
+    const terminalization = repository.terminalizations[0]!;
+    expect(sqlText(terminalization)).toContain('UPDATE "SoloGameAttempt"');
+    expect(sqlText(terminalization)).toContain('SET status = \'EXPIRED\'');
+    expect(sqlText(terminalization)).toContain('status = \'STARTED\'');
+    expect(terminalization.values).toContainEqual(new Date("2026-08-17T00:00:00.000Z"));
+    expect(terminalization.values).toContainEqual(finalizationNow);
   });
 });

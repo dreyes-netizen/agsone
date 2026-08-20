@@ -28,6 +28,7 @@ type ChampionWrite = {
 
 type ChampionTransaction = {
   query<T>(query: Prisma.Sql): Promise<T[]>;
+  terminalizeExpiredStarts(query: Prisma.Sql): Promise<number>;
   createMany(data: ChampionWrite[]): Promise<number>;
 };
 
@@ -47,6 +48,7 @@ export function createSoloChampionService(repository: SoloChampionRepository) {
     if (!closedWeekStart) return 0;
 
     return repository.transaction(async (transaction) => {
+      await transaction.terminalizeExpiredStarts(expirePriorWeekStartsQuery(closedWeekStart, now));
       const writes: ChampionWrite[] = [];
 
       for (const gameType of GAME_TYPES) {
@@ -80,6 +82,16 @@ function previousWeekStart(now: Date) {
   const manilaWeekBoundary = currentWeek.getTime() - MANILA_UTC_OFFSET_MS;
   if (now.getTime() < manilaWeekBoundary + WEEK_CLOSE_GRACE_MS) return null;
   return new Date(currentWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
+}
+
+function expirePriorWeekStartsQuery(weekStart: Date, now: Date) {
+  return Prisma.sql`
+    UPDATE "SoloGameAttempt"
+    SET status = 'EXPIRED'
+    WHERE status = 'STARTED'
+      AND "weekStart" = ${weekStart}::date
+      AND "expiresAt" <= ${now}
+  `;
 }
 
 function toCompanyWrite(winner: ChampionWinnerRow, gameType: SoloGameType, weekStart: Date): ChampionWrite {
@@ -186,6 +198,7 @@ const prismaRepository: SoloChampionRepository = {
   async transaction(callback) {
     return prisma.$transaction(async (transaction) => callback({
       query: async <T>(query: Prisma.Sql) => transaction.$queryRaw<T[]>(query),
+      terminalizeExpiredStarts: async (query: Prisma.Sql) => transaction.$executeRaw(query),
       createMany: async (data) => (await transaction.arcadeWeeklyChampion.createMany({ data, skipDuplicates: true })).count,
     }));
   },

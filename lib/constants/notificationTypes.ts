@@ -251,6 +251,16 @@ export const NOTIFICATION_TYPES = {
     defaults: { inApp: true, push: false },
     groupKey: (d) => (str(d, "postId") ? `reaction:${str(d, "postId")}` : null),
   },
+  REACTION_ON_COMMENT: {
+    label: "Reactions to your comments",
+    description: "When someone reacts to a comment you wrote",
+    group: "Social",
+    audience: "everyone",
+    href: feedPost,
+    toggleable: true,
+    defaults: { inApp: true, push: false },
+    groupKey: (d) => (str(d, "commentId") ? `reaction-comment:${str(d, "commentId")}` : null),
+  },
   POLL_VOTE: {
     label: "Votes on your poll",
     description: "When someone votes in a poll you created",

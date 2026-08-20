@@ -128,6 +128,32 @@ describe("ranked attempt routes", () => {
     expect(finish).toHaveBeenCalledWith("user-1", expect.any(String), undefined, expect.any(Date));
   });
 
+  it("rechecks the authoritative clock after a delayed valid body crosses expiry", async () => {
+    const expiresAt = new Date("2026-08-21T04:01:00.000Z");
+    let now = new Date("2026-08-21T04:00:59.000Z");
+    const finishRankedAttempt = vi.fn(async (_userId, _attemptId, _evidence, finishNow: Date) => {
+      return finishNow > expiresAt
+        ? { kind: "expired" as const }
+        : { kind: "completed" as const, result: { primaryScore: 1, secondaryScore: null, isValid: true, validationReason: null, metrics: {} }, attemptsRemaining: 2, isPersonalBest: false };
+    });
+    const handler = createFinishHandler({
+      verifyAuth: async () => user,
+      checkRateLimit: async () => ({ allowed: true, remaining: 29 }),
+      inspectAttempt: async () => ({ gameType: "TYPING" as const, status: "STARTED" as const, expiresAt }),
+      finishRankedAttempt,
+      now: () => now,
+    });
+    const slowRequest = {
+      json: async () => {
+        now = new Date("2026-08-21T04:01:01.000Z");
+        return { typedText: "ok", clientElapsedMs: 60_000 };
+      },
+    } as Request;
+
+    expect((await handler(slowRequest, { params: Promise.resolve({ id: attemptId }) })).status).toBe(410);
+    expect(finishRankedAttempt).toHaveBeenCalledWith("user-1", attemptId, undefined, new Date("2026-08-21T04:01:01.000Z"));
+  });
+
   it("rejects a non-UUID route parameter before inspecting persistence", async () => {
     const inspectAttempt = vi.fn();
     const handler = createFinishHandler({

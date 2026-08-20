@@ -61,13 +61,18 @@ export function createFinishHandler(dependencies: FinishDependencies) {
     if (!attemptIdSchema.safeParse(attemptId).success) return NextResponse.json({ error: "Invalid attempt ID" }, { status: 400 });
     const attempt = await dependencies.inspectAttempt(user.id, attemptId);
     if (!attempt) return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
-    const now = dependencies.now();
-    if (attempt.status !== "STARTED" || now > attempt.expiresAt) {
-      return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, undefined, now));
+    const inspectionNow = dependencies.now();
+    if (attempt.status !== "STARTED" || inspectionNow > attempt.expiresAt) {
+      return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, undefined, inspectionNow));
     }
-    const parsed = evidenceSchemas[attempt.gameType].safeParse(await requestJson(request));
+    const body = await requestJson(request);
+    const completionNow = dependencies.now();
+    if (completionNow > attempt.expiresAt) {
+      return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, undefined, completionNow));
+    }
+    const parsed = evidenceSchemas[attempt.gameType].safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, parsed.data, now));
+    return finishResponse(await dependencies.finishRankedAttempt(user.id, attemptId, parsed.data, completionNow));
   };
 }
 

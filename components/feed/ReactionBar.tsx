@@ -7,17 +7,25 @@ import { REACTIONS as EMOJIS } from "@/lib/constants/reactions";
 /**
  * Just the interactive "React" trigger + its emoji picker — the reaction
  * count/summary line lives separately in PostEngagement so it can sit above
- * this button instead of squeezed beside it. Rendered as a flat flex-1
- * segment (not a pill) to sit in a two-up React/Comment row.
+ * this button instead of squeezed beside it.
+ *
+ * `variant="post"` (default) renders the flat flex-1 segment used in the
+ * post footer's two-up React/Comment row. `variant="compact"` renders a
+ * small text trigger matching the Reply/Delete links in a comment's action
+ * row, for the same picker reused on comments (see CommentThread).
+ *
+ * Takes no id — every caller already has the post/comment id in closure
+ * scope for its own `onReact`, so round-tripping it through this component
+ * would be pure ceremony.
  */
 export function ReactionBar({
-  postId,
   myReactions,
   onReact,
+  variant = "post",
 }: {
-  postId: string;
   myReactions: string[];
-  onReact: (postId: string, emoji: string) => void;
+  onReact: (emoji: string) => void;
+  variant?: "post" | "compact";
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,7 +41,7 @@ export function ReactionBar({
   }
   function handleMainClick() {
     if (myReaction) {
-      onReact(postId, myReaction); // toggle off
+      onReact(myReaction); // toggle off
     } else {
       setPickerOpen((v) => !v);
     }
@@ -42,7 +50,7 @@ export function ReactionBar({
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (myReaction) {
-        onReact(postId, myReaction);
+        onReact(myReaction);
       } else {
         setPickerOpen((v) => !v);
       }
@@ -54,7 +62,7 @@ export function ReactionBar({
 
   return (
     <div
-      className="relative flex-1"
+      className={variant === "compact" ? "relative inline-block" : "relative flex-1"}
       onMouseEnter={openPicker}
       onMouseLeave={closePicker}
       onKeyDown={handleKeyDown}
@@ -69,7 +77,7 @@ export function ReactionBar({
                 key={emoji}
                 type="button"
                 title={label}
-                onClick={() => { onReact(postId, emoji); closePicker(); }}
+                onClick={() => { onReact(emoji); closePicker(); }}
                 className={`text-xl leading-none transition-all duration-150 hover:scale-[1.4] active:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400 focus-visible:ring-offset-1 ${
                   myReaction === emoji ? "scale-125" : ""
                 }`}
@@ -88,16 +96,26 @@ export function ReactionBar({
         aria-haspopup="true"
         aria-expanded={pickerOpen}
         aria-label={myReaction ? `Remove ${EMOJIS.find(e => e.emoji === myReaction)?.label ?? "reaction"}` : "Add reaction"}
-        className={`flex w-full items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
-          myReaction ? "text-navy-600" : "text-gray-600 hover:bg-gray-50"
-        }`}
+        className={
+          variant === "compact"
+            ? `text-[11px] font-semibold transition-colors ${myReaction ? "text-navy-600" : "text-gray-500 hover:text-navy-600"}`
+            : `flex w-full items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                myReaction ? "text-navy-600" : "text-gray-600 hover:bg-gray-50"
+              }`
+        }
       >
-        {myReaction ? (
-          <span className="text-base leading-none">{myReaction}</span>
+        {variant === "compact" ? (
+          myReaction ?? "React"
         ) : (
-          <SmilePlus className="w-4 h-4" />
+          <>
+            {myReaction ? (
+              <span className="text-base leading-none">{myReaction}</span>
+            ) : (
+              <SmilePlus className="w-4 h-4" />
+            )}
+            <span>{myReaction ? EMOJIS.find((e) => e.emoji === myReaction)?.label ?? "Reacted" : "React"}</span>
+          </>
         )}
-        <span>{myReaction ? EMOJIS.find((e) => e.emoji === myReaction)?.label ?? "Reacted" : "React"}</span>
       </button>
     </div>
   );

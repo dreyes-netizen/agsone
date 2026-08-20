@@ -55,7 +55,7 @@ export function PostEngagement({
         </div>
       )}
       <div className="flex items-center gap-1 border-t border-gray-100 pt-1">
-        <ReactionBar postId={postId} myReactions={myReactions} onReact={onReact} />
+        <ReactionBar myReactions={myReactions} onReact={(emoji) => onReact(postId, emoji)} />
         <button
           type="button"
           onClick={onToggleComments}

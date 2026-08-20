@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/helpers/timeAgo";
 import { GAME_TYPE_LABELS, GAME_TYPE_ICONS } from "@/lib/constants/gameTypes";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { SoloLeaderboardPanel } from "@/components/minigames/solo/SoloLeaderboardPanel";
 
 const GAME_LABEL = GAME_TYPE_LABELS;
 
@@ -54,6 +55,10 @@ const outcomeStyle: Record<string, { label: string; cls: string }> = {
   draw: { label: "Draw", cls: "text-gray-500 bg-gray-100" },
 };
 
+export function canLoadMultiplayerStats(view: "multiplayer" | "solo", authLoading: boolean, hasUser: boolean) {
+  return view === "multiplayer" && !authLoading && hasUser;
+}
+
 export default function MinigamesStatsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -63,6 +68,7 @@ export default function MinigamesStatsPage() {
   const [board, setBoard] = useState<LeaderEntry[]>([]);
   const [period, setPeriod] = useState<"monthly" | "alltime">("alltime");
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"multiplayer" | "solo">("multiplayer");
 
   function loadStats() {
     return apiFetch<{ data: Stats }>("/api/minigames/stats")
@@ -79,20 +85,21 @@ export default function MinigamesStatsPage() {
   }
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (!canLoadMultiplayerStats(view, authLoading, Boolean(user))) return;
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, [authLoading, user, view]);
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (!canLoadMultiplayerStats(view, authLoading, Boolean(user))) return;
     queueMicrotask(loadBoard);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, period]);
+  }, [authLoading, user, period, view]);
 
   useRealtimeChannel(
     realtimeTopics.minigameStats,
     () => {
+      if (view !== "multiplayer") return;
       loadStats();
       loadBoard();
     },
@@ -109,6 +116,12 @@ export default function MinigamesStatsPage() {
         <h1 className="text-2xl font-bold text-gray-900 flex-1">Stats & Leaderboard</h1>
       </div>
 
+      <div role="tablist" aria-label="Minigame leaderboard type" className="flex w-full rounded-xl bg-zinc-100 p-1 text-sm sm:w-fit">
+        <button role="tab" aria-selected={view === "multiplayer"} onClick={() => setView("multiplayer")} className={`flex-1 rounded-lg px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 sm:flex-none ${view === "multiplayer" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Multiplayer</button>
+        <button role="tab" aria-selected={view === "solo"} onClick={() => setView("solo")} className={`flex-1 rounded-lg px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 sm:flex-none ${view === "solo" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Solo</button>
+      </div>
+
+      {view === "solo" ? <SoloLeaderboardPanel /> : <>
       {/* Personal summary */}
       <div className="bg-white border border-table-border rounded-card p-5">
         <div className="grid grid-cols-4 gap-3 text-center">
@@ -216,6 +229,7 @@ export default function MinigamesStatsPage() {
           </ul>
         )}
       </div>
+      </>}
     </div>
   );
 }

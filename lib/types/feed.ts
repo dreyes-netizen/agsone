@@ -55,6 +55,8 @@ export type ReplyItem = {
   parentId: string | null;
   authorId: string;
   author: { displayName: string; avatarUrl: string | null };
+  reactions: Record<string, number>;
+  myReactions: string[];
 };
 
 export type CommentItem = {
@@ -66,6 +68,8 @@ export type CommentItem = {
   createdAt: string;
   authorId: string;
   author: { displayName: string; avatarUrl: string | null };
+  reactions: Record<string, number>;
+  myReactions: string[];
   replies: ReplyItem[];
 };
 

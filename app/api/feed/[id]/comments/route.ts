@@ -75,6 +75,40 @@ export async function GET(
   const nextCursor = hasMore ? page[page.length - 1].id : null;
   const comments = page.reverse();
 
+  // Same pattern GET /api/feed uses for posts: one groupBy for per-emoji
+  // counts and one targeted query for this user's own reactions, across
+  // every comment AND reply id in the page — not N+1 queries per comment.
+  const commentIds: string[] = [];
+  for (const c of comments) {
+    commentIds.push(c.id);
+    for (const r of c.replies) commentIds.push(r.id);
+  }
+
+  const [reactionCounts, myReactions] = await Promise.all([
+    prisma.commentReaction.groupBy({
+      by: ["commentId", "emoji"],
+      where: { commentId: { in: commentIds } },
+      _count: true,
+    }),
+    prisma.commentReaction.findMany({
+      where: { commentId: { in: commentIds }, userId: user.id },
+      select: { commentId: true, emoji: true },
+    }),
+  ]);
+
+  const reactionMap = new Map<string, Record<string, number>>();
+  for (const r of reactionCounts) {
+    const m = reactionMap.get(r.commentId) ?? {};
+    m[r.emoji] = r._count;
+    reactionMap.set(r.commentId, m);
+  }
+  const myReactionMap = new Map<string, string[]>();
+  for (const r of myReactions) {
+    const arr = myReactionMap.get(r.commentId) ?? [];
+    arr.push(r.emoji);
+    myReactionMap.set(r.commentId, arr);
+  }
+
   const data = comments.map((c) => ({
     id: c.id,
     content: c.content,
@@ -84,6 +118,8 @@ export async function GET(
     createdAt: c.createdAt.toISOString(),
     authorId: c.authorId,
     author: { displayName: c.author.displayName, avatarUrl: c.author.avatarUrl },
+    reactions: reactionMap.get(c.id) ?? {},
+    myReactions: myReactionMap.get(c.id) ?? [],
     replies: c.replies.map((r) => ({
       id: r.id,
       content: r.content,
@@ -94,6 +130,8 @@ export async function GET(
       authorId: r.authorId,
       author: { displayName: r.author.displayName, avatarUrl: r.author.avatarUrl },
       parentId: r.parentId,
+      reactions: reactionMap.get(r.id) ?? {},
+      myReactions: myReactionMap.get(r.id) ?? [],
     })),
   }));
 
@@ -218,6 +256,8 @@ export async function POST(
       authorId: comment.authorId,
       author: { displayName: comment.author.displayName, avatarUrl: comment.author.avatarUrl },
       parentId: comment.parentId ?? null,
+      reactions: {},
+      myReactions: [],
       replies: [],
     },
   }, { status: 201 });

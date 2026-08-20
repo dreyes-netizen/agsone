@@ -171,7 +171,12 @@ export function createRankedAttemptService({ repository, randomInt = cryptoRando
     return completedResponse(completed, repository);
   }
 
-  return { startRankedAttempt, finishRankedAttempt };
+  async function inspectRankedAttempt(userId: string, attemptId: string) {
+    const attempt = await repository.findAttemptForUser(attemptId, userId);
+    return attempt ? { gameType: attempt.gameType, status: attempt.status } : null;
+  }
+
+  return { startRankedAttempt, finishRankedAttempt, inspectRankedAttempt };
 }
 
 async function completedResponse(
@@ -381,3 +386,4 @@ const defaultService = createRankedAttemptService({ repository: prismaRepository
 
 export const startRankedAttempt = defaultService.startRankedAttempt;
 export const finishRankedAttempt = defaultService.finishRankedAttempt;
+export const inspectRankedAttempt = defaultService.inspectRankedAttempt;

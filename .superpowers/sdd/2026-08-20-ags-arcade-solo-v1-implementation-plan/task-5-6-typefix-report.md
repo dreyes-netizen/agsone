@@ -94,3 +94,38 @@ Failure details:
 - The tests now lock the intended contract directly at the scoring boundary.
 - The implementation change is local to success-payload assembly and does not alter invalid-result or terminal-failure payloads.
 - The correction satisfies the established `Record<string, string | number | boolean>` metrics contract without loosening types or adding sentinel values.
+
+## Review-fix Round 1
+
+Reason:
+- the earlier report recorded a transient failing `npm test` run that no longer reflects the current verified state of this worktree
+
+Fresh verification command:
+
+```powershell
+npm test
+```
+
+Fresh output:
+
+```text
+> employegames@0.1.0 test
+> vitest run
+
+RUN  v4.1.10 C:/Users/D_Reyes/Desktop/AGS One/.worktrees/ags-arcade-solo-v1
+
+Test Files  27 passed (27)
+Tests  207 passed (207)
+Start at  03:19:17
+Duration  5.02s
+```
+
+Correction:
+- full `npm test` is currently passing in this worktree
+- the metric-shape correction remains limited to Visual Memory and Sequence Memory code plus tests
+
+Docs commit:
+
+```text
+Correct typefix report verification evidence
+```

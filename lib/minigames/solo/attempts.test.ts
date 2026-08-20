@@ -138,6 +138,26 @@ describe("ranked solo attempt service", () => {
     expect(duplicate).toEqual(first);
   });
 
+  it("evaluates solo badges once after a newly completed valid ranked attempt", async () => {
+    const repository = new InMemoryAttempts();
+    const awarded: Array<{ userId: string; gameType: string; isValid: boolean }> = [];
+    const service = createRankedAttemptService({
+      repository,
+      randomInt: () => 123456,
+      awardSoloAchievementBadges: async (userId, result) => {
+        awarded.push({ userId, gameType: result.gameType, isValid: result.isValid });
+      },
+    });
+    const started = await service.startRankedAttempt("user-1", "REACTION", NOW, null);
+    if (started.kind !== "started") throw new Error("expected a started attempt");
+    const evidence = { reactionMs: [220, 240, 260, 280, 300], falseStartTrials: [], clientElapsedMs: 5_000 };
+
+    await service.finishRankedAttempt("user-1", started.attemptId, evidence, NOW);
+    await service.finishRankedAttempt("user-1", started.attemptId, evidence, NOW);
+
+    expect(awarded).toEqual([{ userId: "user-1", gameType: "REACTION", isValid: true }]);
+  });
+
   it("reports remaining starts from all occupied slots after out-of-order finish and duplicate retry", async () => {
     const { service } = serviceFor();
     const first = await service.startRankedAttempt("user-1", "REACTION", NOW, null);

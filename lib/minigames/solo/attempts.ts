@@ -1,5 +1,6 @@
 import { randomInt as cryptoRandomInt } from "node:crypto";
 import { prisma } from "@/lib/prisma/client";
+import { awardSoloAchievementBadges as awardBadges, type SoloBadgeAttemptResult } from "./badges";
 import { createReactionChallenge, scoreReactionAttempt } from "./reaction";
 import { SOLO_GAME_REGISTRY } from "./registry";
 import { scoreSequenceMemoryAttempt } from "./sequenceMemory";
@@ -69,6 +70,7 @@ export type FinishRankedAttemptResult =
 type AttemptServiceDependencies = {
   repository: RankedAttemptRepository;
   randomInt?: (min: number, max: number) => number;
+  awardSoloAchievementBadges?: (userId: string, attemptResult: SoloBadgeAttemptResult) => Promise<void>;
 };
 
 /**
@@ -77,7 +79,11 @@ type AttemptServiceDependencies = {
  * repository to exercise allocation and terminal-transition algorithms without
  * needing PostgreSQL or Firebase.
  */
-export function createRankedAttemptService({ repository, randomInt = cryptoRandomInt }: AttemptServiceDependencies) {
+export function createRankedAttemptService({
+  repository,
+  randomInt = cryptoRandomInt,
+  awardSoloAchievementBadges = async () => {},
+}: AttemptServiceDependencies) {
   async function startRankedAttempt(
     userId: string,
     gameType: SoloGameType,
@@ -167,6 +173,9 @@ export function createRankedAttemptService({ repository, randomInt = cryptoRando
 
     const completed = await repository.findAttemptForUser(attemptId, userId);
     if (!completed || completed.status !== "COMPLETED") return { kind: "not_found" };
+    if (completed.result?.isValid) {
+      await awardSoloAchievementBadges(userId, { gameType: completed.gameType, ...completed.result });
+    }
     return completedResponse(completed, repository);
   }
 
@@ -387,7 +396,10 @@ const prismaRepository: RankedAttemptRepository = {
   },
 };
 
-const defaultService = createRankedAttemptService({ repository: prismaRepository });
+const defaultService = createRankedAttemptService({
+  repository: prismaRepository,
+  awardSoloAchievementBadges: awardBadges,
+});
 
 export const startRankedAttempt = defaultService.startRankedAttempt;
 export const finishRankedAttempt = defaultService.finishRankedAttempt;

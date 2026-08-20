@@ -17,7 +17,7 @@ export function BadgesTab({ userBadges }: BadgesTabProps) {
         <div className="flex flex-col items-center py-8 gap-2 text-center">
           <Award className="w-10 h-10 text-gray-300" aria-hidden="true" />
           <p className="text-sm text-gray-500 font-medium">No badges yet</p>
-          <p className="text-xs text-gray-500">Keep earning points to unlock your first badge!</p>
+          <p className="text-xs text-gray-500">Keep participating to unlock achievements.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

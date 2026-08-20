@@ -48,3 +48,7 @@ export const SOLO_GAME_REGISTRY: Record<SoloGameType, SoloGameDefinition> = {
     rankedCopy: "Three daily Manila-ranked starts. The server rebuilds the seeded sequence and scores your best completed level, then elapsed time.",
   },
 };
+
+export function getSoloGameBySlug(slug: string): SoloGameDefinition | undefined {
+  return Object.values(SOLO_GAME_REGISTRY).find((game) => game.slug === slug);
+}

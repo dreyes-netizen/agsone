@@ -1,0 +1,176 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useApiClient } from "@/lib/hooks/useApiClient";
+import { useConfetti } from "@/lib/hooks/useConfetti";
+import { createReactionChallenge, type ReactionChallenge, type ReactionEvidence } from "@/lib/minigames/solo/reaction";
+import { SOLO_GAME_REGISTRY } from "@/lib/minigames/solo/registry";
+import { createTypingChallenge, type TypingChallenge, type TypingEvidence } from "@/lib/minigames/solo/typing";
+import type { SequenceMemoryEvidence } from "@/lib/minigames/solo/sequenceMemory";
+import type { SoloGameResult, SoloGameType } from "@/lib/minigames/solo/types";
+import type { VisualMemoryEvidence } from "@/lib/minigames/solo/visualMemory";
+import { SoloResultPanel } from "./SoloResultPanel";
+import type { MemoryChallenge, SoloGameMode } from "./types";
+
+const TypingGame = dynamic(() => import("./TypingGame").then((module) => module.TypingGame), { ssr: false, loading: () => <GameLoader /> });
+const ReactionGame = dynamic(() => import("./ReactionGame").then((module) => module.ReactionGame), { ssr: false, loading: () => <GameLoader /> });
+const VisualMemoryGame = dynamic(() => import("./VisualMemoryGame").then((module) => module.VisualMemoryGame), { ssr: false, loading: () => <GameLoader /> });
+const SequenceMemoryGame = dynamic(() => import("./SequenceMemoryGame").then((module) => module.SequenceMemoryGame), { ssr: false, loading: () => <GameLoader /> });
+
+type StartResponse = { data: { attemptId: string; attemptsRemaining: number; challenge: Record<string, unknown> } };
+type FinishResponse = { data: { result: SoloGameResult; attemptsRemaining: number; isPersonalBest: boolean } };
+type SummaryResponse = { data: { attemptsRemaining: number } };
+type ActiveChallenge = TypingChallenge | ReactionChallenge | MemoryChallenge;
+
+export function SoloGameShell({ gameType }: { gameType: SoloGameType }) {
+  const game = SOLO_GAME_REGISTRY[gameType];
+  const router = useRouter();
+  const { apiFetch } = useApiClient();
+  const { fire } = useConfetti();
+  const [mode, setMode] = useState<SoloGameMode>("practice");
+  const [challenge, setChallenge] = useState<ActiveChallenge | null>(null);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<SoloGameResult | null>(null);
+  const [isPersonalBest, setIsPersonalBest] = useState(false);
+  const [gameInstance, setGameInstance] = useState(0);
+
+  const loadSummary = useCallback(async () => {
+    try {
+      const response = await apiFetch<SummaryResponse>(`/api/minigames/solo/summary?gameType=${gameType}`);
+      setAttemptsRemaining(response.data.attemptsRemaining);
+    } catch {
+      setAttemptsRemaining(null);
+    }
+  }, [apiFetch, gameType]);
+
+  // Practice is entirely local: do not read attempt state until Ranked is selected.
+  useEffect(() => {
+    if (mode === "ranked" && !challenge) queueMicrotask(() => void loadSummary());
+  }, [challenge, loadSummary, mode]);
+  useEffect(() => {
+    if (!isPersonalBest || !result?.isValid || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    fire();
+  }, [fire, isPersonalBest, result?.isValid]);
+
+  const attemptLabel = useMemo(() => attemptsRemaining === null ? "Ranked attempts loading…" : `${attemptsRemaining} attempt${attemptsRemaining === 1 ? "" : "s"} remaining today`, [attemptsRemaining]);
+
+  async function begin() {
+    setError(null);
+    setResult(null);
+    setIsPersonalBest(false);
+    setBusy(true);
+    try {
+      if (mode === "practice") {
+        setAttemptId(null);
+        setChallenge(createLocalChallenge(gameType));
+        setGameInstance((instance) => instance + 1);
+        return;
+      }
+      const response = await apiFetch<StartResponse>("/api/minigames/solo/attempts/start", { method: "POST", body: JSON.stringify({ gameType }) });
+      setAttemptId(response.data.attemptId);
+      setAttemptsRemaining(response.data.attemptsRemaining);
+      setChallenge(asChallenge(gameType, response.data.challenge));
+      setGameInstance((instance) => instance + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Couldn’t start this ranked attempt.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function complete(evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) {
+    if (busy || !challenge) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === "practice") {
+        setResult({ primaryScore: 0, secondaryScore: null, isValid: true, validationReason: null, metrics: {} });
+        return;
+      }
+      if (!attemptId) throw new Error("This ranked attempt is no longer available. Start a new one.");
+      const response = await apiFetch<FinishResponse>(`/api/minigames/solo/attempts/${attemptId}/finish`, { method: "POST", body: JSON.stringify(evidence) });
+      setResult(response.data.result);
+      setAttemptsRemaining(response.data.attemptsRemaining);
+      setIsPersonalBest(response.data.isPersonalBest);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Couldn’t submit this attempt.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function reset() {
+    setChallenge(null);
+    setAttemptId(null);
+    setResult(null);
+    setError(null);
+    setIsPersonalBest(false);
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-4">
+      <div className="flex items-center gap-3">
+        <button onClick={() => router.push("/minigames")} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Minigames
+        </button>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900">{game.label}</h1>
+          <p className="text-xs text-gray-500">No points or credits are awarded for Solo Arcade.</p>
+        </div>
+      </div>
+
+      {!challenge && !result && (
+        <section className="bg-white border border-table-border rounded-card p-5 space-y-4">
+          <div role="group" aria-label="Game mode" className="grid grid-cols-2 gap-2">
+            {(["practice", "ranked"] as const).map((nextMode) => (
+              <button key={nextMode} aria-pressed={mode === nextMode} onClick={() => setMode(nextMode)} className={`rounded-lg border px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-600 ${mode === nextMode ? "border-navy-600 bg-navy-50 text-navy-900" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
+                <span className="block text-sm font-bold capitalize">{nextMode}</span>
+                <span className="block text-xs mt-1 text-gray-500">{nextMode === "practice" ? game.practiceCopy : game.rankedCopy}</span>
+              </button>
+            ))}
+          </div>
+          {mode === "ranked" && <p aria-live="polite" className="text-sm font-semibold text-navy-800">{attemptLabel}</p>}
+          <button onClick={() => void begin()} disabled={busy || (mode === "ranked" && attemptsRemaining === 0)} className="w-full py-2.5 rounded-xl bg-command-black text-white text-sm font-bold hover:bg-gray-800 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900">
+            {busy ? "Starting…" : mode === "ranked" ? "Start ranked attempt" : "Start practice"}
+          </button>
+        </section>
+      )}
+
+      {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+      {result && <SoloResultPanel game={game} mode={mode} result={result} isPersonalBest={isPersonalBest} onPlayAgain={reset} />}
+      {challenge && !result && renderGame(gameType, mode, challenge, busy, complete, gameInstance)}
+    </div>
+  );
+}
+
+function renderGame(gameType: SoloGameType, mode: SoloGameMode, challenge: ActiveChallenge, disabled: boolean, onComplete: (evidence: TypingEvidence | ReactionEvidence | VisualMemoryEvidence | SequenceMemoryEvidence) => void, gameInstance: number) {
+  switch (gameType) {
+    case "TYPING": return <TypingGame key={gameInstance} mode={mode} challenge={challenge as TypingChallenge} disabled={disabled} onComplete={onComplete} />;
+    case "REACTION": return <ReactionGame key={gameInstance} mode={mode} challenge={challenge as ReactionChallenge} disabled={disabled} onComplete={onComplete} />;
+    case "VISUAL_MEMORY": return <VisualMemoryGame key={gameInstance} mode={mode} challenge={challenge as MemoryChallenge} disabled={disabled} onComplete={onComplete} />;
+    case "SEQUENCE_MEMORY": return <SequenceMemoryGame key={gameInstance} mode={mode} challenge={challenge as MemoryChallenge} disabled={disabled} onComplete={onComplete} />;
+  }
+}
+
+function createLocalChallenge(gameType: SoloGameType): ActiveChallenge {
+  const seed = Math.floor(Math.random() * 2 ** 32);
+  if (gameType === "TYPING") return createTypingChallenge(seed);
+  if (gameType === "REACTION") return createReactionChallenge(seed);
+  return { seed };
+}
+
+function asChallenge(gameType: SoloGameType, value: Record<string, unknown>): ActiveChallenge {
+  if (gameType === "TYPING") return { passageId: String(value.passageId), passageText: String(value.text), durationMs: Number(value.durationMs) };
+  if (gameType === "REACTION") return { waitDurationsMs: value.waitDurationsMs as ReactionChallenge["waitDurationsMs"] };
+  return { seed: Number(value.seed) };
+}
+
+function GameLoader() {
+  return <div role="status" className="bg-white border border-table-border rounded-card min-h-48 flex items-center justify-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Loading game…</div>;
+}

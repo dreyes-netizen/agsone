@@ -129,6 +129,32 @@ describe("scoreSequenceMemoryAttempt", () => {
     });
   });
 
+  it("accepts a short final response with a mismatch as valid terminal wrong evidence", () => {
+    expect(
+      scoreSequenceMemoryAttempt(12345, {
+        responses: [
+          { level: 1, inputs: [3] },
+          { level: 2, inputs: [3, 1] },
+          { level: 3, inputs: [3, 0] },
+        ],
+        claimedCompletedLevel: 2,
+        clientElapsedMs: 3_500,
+      }),
+    ).toEqual({
+      primaryScore: 2,
+      secondaryScore: 3_500,
+      isValid: true,
+      validationReason: null,
+      metrics: {
+        answeredLevelCount: 3,
+        clientElapsedMs: 3_500,
+        completedLevel: 2,
+        failedLevel: 3,
+        totalInputCount: 5,
+      },
+    });
+  });
+
   it("rejects any evidence after the first wrong response", () => {
     expect(
       scoreSequenceMemoryAttempt(12345, {

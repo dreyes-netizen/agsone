@@ -116,22 +116,6 @@ export function scoreSequenceMemoryAttempt(seed: number, evidence: SequenceMemor
       };
     }
 
-    if (response.inputs.length < response.level) {
-      return {
-        primaryScore: 0,
-        secondaryScore: null,
-        isValid: false,
-        validationReason: "TRUNCATED_RESPONSE",
-        metrics: {
-          answeredLevelCount,
-          invalidLevel: response.level,
-          providedInputCount: response.inputs.length,
-          expectedInputCount: response.level,
-          totalInputCount,
-        },
-      };
-    }
-
     if (!hasValidInputs(response.inputs)) {
       return {
         primaryScore: 0,
@@ -148,6 +132,22 @@ export function scoreSequenceMemoryAttempt(seed: number, evidence: SequenceMemor
 
     const expectedInputs = challenge.sequence.slice(0, response.level);
     const isCorrect = response.inputs.every((input, inputIndex) => input === expectedInputs[inputIndex]);
+
+    if (isCorrect && response.inputs.length < response.level) {
+      return {
+        primaryScore: 0,
+        secondaryScore: null,
+        isValid: false,
+        validationReason: "TRUNCATED_RESPONSE",
+        metrics: {
+          answeredLevelCount,
+          invalidLevel: response.level,
+          providedInputCount: response.inputs.length,
+          expectedInputCount: response.level,
+          totalInputCount,
+        },
+      };
+    }
 
     if (!isCorrect) {
       failedLevel = response.level;

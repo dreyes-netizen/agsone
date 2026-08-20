@@ -467,6 +467,8 @@ export function useFeedActions() {
       authorId: user?.uid ?? "",
       author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
       replies: [],
+      reactions: {},
+      myReactions: [],
     };
     if (gif) seedGifCache(gif);
     setCommentsCache((prev) => ({ ...prev, [postId]: [...(prev[postId] ?? []), optimistic] }));
@@ -513,6 +515,8 @@ export function useFeedActions() {
       parentId,
       authorId: user?.uid ?? "",
       author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
+      reactions: {},
+      myReactions: [],
     };
     if (gif) seedGifCache(gif);
     setCommentsCache((prev) => ({
@@ -769,6 +773,49 @@ export function useFeedActions() {
     }
   }
 
+  async function toggleCommentReaction(postId: string, commentId: string, emoji: string, parentId?: string) {
+    const previousCache = commentsCache;
+    // Optimistic update — mirrors toggleReaction's post-level logic above,
+    // applied to whichever comment or reply carries this id inside the
+    // nested per-post cache. `parentId` disambiguates a reply from a
+    // top-level comment sharing the lookup, same as onDeleteComment already
+    // does elsewhere in this file.
+    function patch<T extends { reactions: Record<string, number>; myReactions: string[] }>(item: T): T {
+      const current = item.myReactions[0] ?? null;
+      const newReactions = { ...item.reactions };
+      if (current) {
+        newReactions[current] = (newReactions[current] ?? 1) - 1;
+        if (newReactions[current] <= 0) delete newReactions[current];
+      }
+      if (current === emoji) {
+        return { ...item, reactions: newReactions, myReactions: [] };
+      }
+      newReactions[emoji] = (newReactions[emoji] ?? 0) + 1;
+      return { ...item, reactions: newReactions, myReactions: [emoji] };
+    }
+
+    setCommentsCache((prev) => {
+      const comments = prev[postId] ?? [];
+      const updated = comments.map((c) => {
+        if (!parentId && c.id === commentId) return patch(c);
+        if (parentId && c.id === parentId) {
+          return { ...c, replies: c.replies.map((r) => (r.id === commentId ? patch(r) : r)) };
+        }
+        return c;
+      });
+      return { ...prev, [postId]: updated };
+    });
+
+    try {
+      await apiFetch(`/api/feed/${postId}/comments/${commentId}/react`, {
+        method: "POST",
+        body: JSON.stringify({ emoji }),
+      });
+    } catch {
+      setCommentsCache(previousCache);
+    }
+  }
+
   return {
     // state
     posts, setPosts,
@@ -857,5 +904,6 @@ export function useFeedActions() {
     handleComposerChange,
     insertMention,
     toggleReaction,
+    toggleCommentReaction,
   };
 }

@@ -12,6 +12,9 @@ const SCOPE_CONFIG = {
   // uploads): loose enough for legitimate rapid admin work, tight enough to
   // blunt scripted abuse from a valid-but-malicious account.
   write: { limit: 30, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
+  // Ranked Arcade starts and finishes have their own bucket so rapid play
+  // cannot consume capacity intended for administrative writes.
+  arcade: { limit: 30, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
   // Throttles notifications that fire on a high-frequency action rather than a
   // user request — currently "your turn" in turn-based minigames, where a fast
   // exchange would otherwise notify on every single move. Keyed per session per

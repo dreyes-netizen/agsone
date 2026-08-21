@@ -8,6 +8,7 @@ import { applyRPSChoice, checkRPSResult, maskRPSState } from "@/lib/minigames/rp
 import { applyDnBMove, checkDnBResult } from "@/lib/minigames/dotsandboxes";
 import { applyBSMove, checkBSResult, maskBSState, type BSState } from "@/lib/minigames/battleship";
 import { applyMemoryMove, checkMemoryResult, maskMemoryState, type MemoryState } from "@/lib/minigames/memory";
+import { applyChessMove, type ChessMoveInput, type ChessState } from "@/lib/minigames/chess";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { gameLabel } from "@/lib/constants/gameLabels";
 import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
@@ -44,6 +45,7 @@ export async function POST(
     gameType: true,
     status: true,
     state: true,
+    settings: true,
     currentTurn: true,
     winnerId: true,
     pointsWager: true,
@@ -62,6 +64,12 @@ export async function POST(
   // only ever touch the acting player's own field and throw if that
   // player already acted, so replaying the computation against a fresher
   // read is always safe.
+  //
+  // Chess joins the same loop for a different reason: a racing draw-accept or
+  // timeout-settle can land between our read and our write. applyChessMove
+  // derives everything from the persisted move list, so replaying it against
+  // the refetched row appends exactly one move to the *current* history — it
+  // can never double-apply the move it computed on the previous iteration.
   const MAX_MOVE_RETRIES = 5;
   let newState: Record<string, unknown> = {};
   let nextTurn: string | null = session.currentTurn;
@@ -139,6 +147,32 @@ export async function POST(
         newState = ms as unknown as Record<string, unknown>;
         gameResult = checkMemoryResult(ms);
         nextTurn = gameResult ? null : (keepTurn ? authUser.id : (isHost ? session.guestId : session.hostId));
+        break;
+      }
+      case "CHESS": {
+        if (session.currentTurn !== authUser.id) return NextResponse.json({ error: "Not your turn" }, { status: 400 });
+        // Only from/to/promotion are read off the request. FEN, clocks, SAN,
+        // winner and end reason are all recomputed by applyChessMove from the
+        // persisted move list — a client that posts them is simply ignored.
+        const chessMove: ChessMoveInput = { from: body.from, to: body.to, promotion: body.promotion };
+        // Throws "Not your turn" / "Illegal move" / "Clock expired" /
+        // "Game already finished" — the surrounding catch turns each into a 400.
+        // `new Date()` is re-read on every retry iteration, so a move that had
+        // to be replayed against a fresher row is still billed the real elapsed
+        // time rather than the time of the first attempt.
+        const result = applyChessMove(state as unknown as ChessState, chessMove, isHost ? "host" : "guest", new Date());
+        newState = result.state as unknown as Record<string, unknown>;
+        if (result.outcome.status === "ongoing") {
+          gameResult = null;
+          nextTurn = isHost ? session.guestId : session.hostId;
+        } else if (result.outcome.status === "draw") {
+          gameResult = "draw";
+          nextTurn = null;
+        } else {
+          // "host" / "guest" — resolveWinnerId already maps both to a user id.
+          gameResult = result.outcome.winner;
+          nextTurn = null;
+        }
         break;
       }
       default:

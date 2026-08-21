@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     data: {
       gameType,
       hostId: authUser.id,
-      state: initState(gameType),
+      state: initState(gameType, settings),
       settings: JSON.parse(JSON.stringify(settings)),
       pointsWager,
       currentTurn: null,

@@ -12,6 +12,7 @@ const sessionSelect = {
   gameType: true,
   status: true,
   state: true,
+  settings: true,
   currentTurn: true,
   winnerId: true,
   pointsWager: true,
@@ -66,7 +67,11 @@ export async function POST(
     data: {
       gameType: old.gameType,
       hostId: authUser.id,
-      state: initState(old.gameType as GameType),
+      state: initState(
+        old.gameType as GameType,
+        old.settings as Record<string, unknown>,
+      ),
+      settings: old.settings ?? {},
       pointsWager: old.pointsWager,
       currentTurn: null,
     },

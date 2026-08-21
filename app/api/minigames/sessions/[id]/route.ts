@@ -10,6 +10,7 @@ const sessionSelect = {
   gameType: true,
   status: true,
   state: true,
+  settings: true,
   currentTurn: true,
   winnerId: true,
   pointsWager: true,

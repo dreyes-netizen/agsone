@@ -5,6 +5,7 @@ import { broadcastMany } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { gameLabel } from "@/lib/constants/gameLabels";
+import { startChessClock, type ChessState } from "@/lib/minigames/chess";
 
 export async function POST(
   req: NextRequest,
@@ -35,6 +36,13 @@ export async function POST(
     }
   }
 
+  // Chess's clock starts here — the only moment a WAITING session becomes
+  // ACTIVE. Time spent waiting in the lobby never counts against either side.
+  const activatedState =
+    session.gameType === "CHESS"
+      ? startChessClock(session.state as unknown as ChessState, new Date())
+      : session.state;
+
   // Seat-claim and wager debit happen in one atomic transaction: if either
   // debit fails (e.g. the host's balance was drained by a concurrent join on
   // a DIFFERENT session they're hosting — a single host can open several
@@ -45,7 +53,12 @@ export async function POST(
   await prisma.$transaction(async (tx) => {
     const joinResult = await tx.gameSession.updateMany({
       where: { id, status: 'WAITING', guestId: null },
-      data: { guestId: authUser.id, status: 'ACTIVE', currentTurn: session.hostId },
+      data: {
+        guestId: authUser.id,
+        status: 'ACTIVE',
+        currentTurn: session.hostId,
+        state: JSON.parse(JSON.stringify(activatedState)),
+      },
     });
     if (joinResult.count === 0) {
       joinError = "SEAT_TAKEN";
@@ -91,7 +104,7 @@ export async function POST(
   const updated = await prisma.gameSession.findUnique({
     where: { id },
     select: {
-      id: true, gameType: true, status: true, state: true,
+      id: true, gameType: true, status: true, state: true, settings: true,
       currentTurn: true, winnerId: true, pointsWager: true,
       createdAt: true, updatedAt: true,
       host: { select: { id: true, displayName: true, avatarUrl: true } },

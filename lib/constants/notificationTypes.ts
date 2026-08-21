@@ -65,9 +65,9 @@ const str = (data: NotificationData, key: string): string | null => {
 };
 
 /**
- * The feed has no single-post route and ignores query params today, so this
- * lands on /feed regardless. The id is included so the payload is already
- * correct when the feed learns to scroll to a post — see AGSON follow-up.
+ * `/feed?post=<id>` — the feed page reads this on mount (see the deep-link
+ * effect in useFeedActions), fetches the post if it isn't already on the
+ * loaded page, opens its comments, and scrolls it into view.
  */
 const feedPost = (data: NotificationData): string => {
   const id = str(data, "postId");

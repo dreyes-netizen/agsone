@@ -5,11 +5,56 @@ import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
+import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 
 const editSchema = z.object({
   title: z.string().max(120).nullable().optional(),
   content: z.string().min(1).max(1000).optional(),
 });
+
+// Single-post lookup, used by the notification bell's deep links (mentions,
+// comments, reactions) to pull in a post that isn't on the reader's currently
+// loaded feed page — e.g. an older post, or one under a different filter than
+// whatever the feed happened to be showing when the link was opened.
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await verifyAuth(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+
+  const post = await prisma.socialPost.findFirst({
+    where: { id, ...postVisibilityWhere(user) },
+    include: {
+      author: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } },
+      shoutoutRecipients: { include: { user: { select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } } } } },
+      department: { select: { name: true } },
+      _count: { select: { comments: true } },
+      pollOptions: { include: { _count: { select: { votes: true } } } },
+    },
+  });
+  if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const [myVote, reactionCounts, myReactions] = await Promise.all([
+    prisma.pollVote.findFirst({ where: { userId: user.id, postId: id }, select: { optionId: true } }),
+    prisma.socialReaction.groupBy({ by: ["emoji"], where: { postId: id }, _count: true }),
+    prisma.socialReaction.findMany({ where: { postId: id, userId: user.id }, select: { emoji: true } }),
+  ]);
+
+  const imageUrls = post.imageUrls.length > 0 ? post.imageUrls : post.imageUrl ? [post.imageUrl] : [];
+  const enriched = {
+    ...post,
+    imageUrls,
+    reactions: Object.fromEntries(reactionCounts.map((r) => [r.emoji, r._count])),
+    myReactions: myReactions.map((r) => r.emoji),
+    commentCount: post._count.comments,
+    myVoteOptionId: myVote?.optionId ?? null,
+  };
+
+  return NextResponse.json({ data: enriched });
+}
 
 export async function PATCH(
   req: NextRequest,

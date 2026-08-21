@@ -122,6 +122,35 @@ export function useFeedActions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, activeFilter]);
 
+  // Deep link from a notification (e.g. "?post=<id>" from a mention/comment/
+  // reaction notification — see feedPost() in lib/constants/notificationTypes.ts).
+  // The target post may not be on the reader's currently loaded page — a
+  // different filter, or simply further back than the first page — so it's
+  // fetched directly and prepended rather than assumed to already be in `posts`.
+  const jumpHandledRef = useRef(false);
+  useEffect(() => {
+    if (authLoading || !user || loading || jumpHandledRef.current) return;
+    const targetPostId = new URLSearchParams(window.location.search).get("post");
+    if (!targetPostId) return;
+    jumpHandledRef.current = true;
+
+    (async () => {
+      if (!posts.some((p) => p.id === targetPostId)) {
+        try {
+          const res = await apiFetch<{ data: FeedPost }>(`/api/feed/${targetPostId}`);
+          setPosts((prev) => (prev.some((p) => p.id === res.data.id) ? prev : [res.data, ...prev]));
+        } catch (err) {
+          console.error("failed to load linked post", err);
+          return;
+        }
+      }
+      setOpenComments((prev) => ({ ...prev, [targetPostId]: true }));
+      if (!commentsCache[targetPostId]) await refreshComments(targetPostId);
+      jumpToPost(targetPostId);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user, loading]);
+
   // Keep open discussions live without resetting the reader's scroll/pagination.
   // New/edited feed items still use the existing banner so content does not
   // jump underneath someone who is reading or composing.
@@ -687,13 +716,18 @@ export function useFeedActions() {
     }
   }
 
-  function jumpToPost(id: string) {
+  // `attempts` covers the deep-link case below, where the target post is
+  // fetched and prepended to `posts` asynchronously — the DOM node isn't
+  // there yet on the first call, so this polls briefly instead of giving up.
+  function jumpToPost(id: string, attempts = 20) {
     const el = document.getElementById(`feed-post-${id}`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       el.classList.add("ring-2", "ring-amber-300");
       setTimeout(() => el.classList.remove("ring-2", "ring-amber-300"), 1600);
+      return;
     }
+    if (attempts > 0) setTimeout(() => jumpToPost(id, attempts - 1), 100);
   }
 
   function handleComposerChange(e: React.ChangeEvent<HTMLTextAreaElement>) {

@@ -49,6 +49,12 @@ describe("createTypingChallenge", () => {
       expect(sentenceCount).toBeGreaterThanOrEqual(2);
     }
   });
+
+  it("ends passage 004 with clear natural prose", () => {
+    expect(TYPING_PASSAGES[3]?.text).toContain(
+      "Over a minute, disciplined timing outlasts the scramble for instant numbers.",
+    );
+  });
 });
 
 describe("scoreTypingAttempt", () => {

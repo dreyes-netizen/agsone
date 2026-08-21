@@ -18,6 +18,6 @@ export const TYPING_PASSAGES: readonly TypingPassage[] = [
   },
   {
     id: "solo-typing-004",
-    text: "A steady pace leaves room for judgment, and judgment keeps fast hands from wasting effort on avoidable errors. The strongest runs are rarely dramatic; they come from reading ahead, trusting familiar patterns, and refusing to chase speed that your fingers cannot support yet. If one line goes wrong, recover cleanly and continue, because hesitation can cost more than a single typo. Over a minute disciplined timing beats scramble for instant figures.",
+    text: "A steady pace leaves room for judgment, and judgment keeps hands from wasting effort on avoidable errors. The strongest runs are rarely dramatic; they come from reading ahead, trusting familiar patterns, and refusing to chase speed that your fingers cannot support yet. If one line goes wrong, recover and continue, because hesitation can cost more than a single typo. Over a minute, disciplined timing outlasts the scramble for instant numbers.",
   },
 ] as const;

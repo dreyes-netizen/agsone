@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractMentionIds } from "./parseMentions";
+import { extractMentionIds, stripMentionTokens } from "./parseMentions";
 
 const UUID_A = "3f1a2b4c-5d6e-4f70-8a91-b2c3d4e5f601";
 const UUID_B = "9c8b7a65-4321-4dcb-9876-0fedcba98765";
@@ -45,5 +45,24 @@ describe("extractMentionIds", () => {
     // A name containing ] or | must not match — otherwise crafted content
     // could forge a token boundary.
     expect(extractMentionIds(`@[Jane]Doe|${UUID_A}]`)).toEqual([]);
+  });
+});
+
+describe("stripMentionTokens", () => {
+  it("leaves plain text untouched", () => {
+    expect(stripMentionTokens("no mentions here")).toBe("no mentions here");
+  });
+
+  it("replaces a mention token with plain @Name text", () => {
+    expect(stripMentionTokens(`hey @[Jane Doe|${UUID_A}] look`)).toBe("hey @Jane Doe look");
+  });
+
+  it("replaces several tokens in one string", () => {
+    const content = `@[Jane Doe|${UUID_A}] and @[Bob|${UUID_B}]`;
+    expect(stripMentionTokens(content)).toBe("@Jane Doe and @Bob");
+  });
+
+  it("leaves a malformed token as-is rather than mangling it", () => {
+    expect(stripMentionTokens("@[Jane Doe] hi")).toBe("@[Jane Doe] hi");
   });
 });

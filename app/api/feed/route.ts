@@ -7,7 +7,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { FLAIR_IDS } from "@/lib/flairs";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
-import { resolveMentionRecipients } from "@/lib/helpers/parseMentions";
+import { resolveMentionRecipients, stripMentionTokens } from "@/lib/helpers/parseMentions";
 
 const PAGE_SIZE = 15;
 
@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
           userId: recipientId,
           type: "SHOUTOUT_RECEIVED",
           title: `${user.displayName} gave you a shoutout!`,
-          body: parsed.data.content.slice(0, 100),
+          body: stripMentionTokens(parsed.data.content).slice(0, 100),
           data: { postId: post.id },
         })
       )
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
             userId: r.id,
             type: "MENTION",
             title: `${user.displayName} mentioned you`,
-            body: post.title?.trim() || post.content.slice(0, 140),
+            body: post.title?.trim() || stripMentionTokens(post.content).slice(0, 140),
             data: { postId: post.id },
           }),
         ),

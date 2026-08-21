@@ -32,6 +32,16 @@ export function extractMentionIds(content: string | null | undefined): string[] 
   return [...ids];
 }
 
+/**
+ * Replace `@[Name|uuid]` tokens with plain `@Name` text. Notification
+ * previews (NotificationBell etc.) render `body` as plain text, not through
+ * PostMentionText, so a raw token left in would show the literal
+ * `@[Name|uuid]` syntax — including the uuid — to the recipient.
+ */
+export function stripMentionTokens(content: string): string {
+  return content.replace(MENTION_TOKEN, (_match, name: string) => `@${name}`);
+}
+
 type ResolveArgs = {
   content: string | null | undefined;
   /** The post the mention appears in — null departmentId means company-wide. */

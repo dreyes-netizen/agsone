@@ -7,7 +7,7 @@ import { realtimeTopics } from "@/lib/realtime/topics";
 import { GIF_PROVIDERS, GIF_ID_PATTERN } from "@/lib/constants/gif";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 import { createNotification } from "@/lib/helpers/createNotification";
-import { resolveMentionRecipients } from "@/lib/helpers/parseMentions";
+import { resolveMentionRecipients, stripMentionTokens } from "@/lib/helpers/parseMentions";
 
 const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
@@ -198,7 +198,7 @@ export async function POST(
   // on your own post should be silent. When someone replies to a comment on
   // someone else's post, only the comment author is told: the post author gets
   // the top-level comment notification and does not need every sub-reply too.
-  const preview = comment.content?.slice(0, 140) ?? "Sent a GIF";
+  const preview = comment.content ? stripMentionTokens(comment.content).slice(0, 140) : "Sent a GIF";
   const recipientId = parent ? parent.authorId : post.authorId;
 
   // Anyone @mentioned in the comment body. Same validated path as post

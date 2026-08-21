@@ -108,6 +108,17 @@ enum GameSessionStatus {
   CANCELLED
 }
 
+enum SoloAttemptStatus {
+  STARTED
+  COMPLETED
+  EXPIRED
+}
+
+enum ArcadeChampionScope {
+  COMPANY
+  DEPARTMENT
+}
+
 enum CommentType {
   TEXT
   GIF
@@ -121,8 +132,10 @@ model Department {
   description String?
   createdAt   DateTime @default(now())
 
-  users User[]
-  posts SocialPost[]
+  users            User[]
+  posts            SocialPost[]
+  soloGameAttempts SoloGameAttempt[]
+  weeklyChampions  ArcadeWeeklyChampion[]
 }
 
 model PointOfContact {
@@ -173,18 +186,18 @@ model User {
   additionalReportsAsUser    OrgChartAdditionalReport[] @relation("AdditionalReportUser")
   additionalReportsAsManager OrgChartAdditionalReport[] @relation("AdditionalReportManager")
 
-  pointsReceived       PointTransaction[]  @relation("PointsReceived")
-  pointsGiven          PointTransaction[]  @relation("PointsGiven")
-  pointsCreatedBy      PointTransaction[]  @relation("PointsCreatedBy")
+  pointsReceived       PointTransaction[]     @relation("PointsReceived")
+  pointsGiven          PointTransaction[]     @relation("PointsGiven")
+  pointsCreatedBy      PointTransaction[]     @relation("PointsCreatedBy")
   redemptions          Redemption[]
-  redemptionsProcessed Redemption[]        @relation("ProcessedBy")
+  redemptionsProcessed Redemption[]           @relation("ProcessedBy")
   userBadges           UserBadge[]
-  badgesAwarded        UserBadge[]         @relation("BadgeAwardedBy")
+  badgesAwarded        UserBadge[]            @relation("BadgeAwardedBy")
   rewardsCreated       Reward[]
   gamesCreated         Game[]
   gamePlays            GamePlay[]
   posts                SocialPost[]
-  shoutoutsReceived    ShoutoutRecipient[] @relation("ShoutoutsReceived")
+  shoutoutsReceived    ShoutoutRecipient[]    @relation("ShoutoutsReceived")
   reactions            SocialReaction[]
   comments             SocialComment[]
   commentReactions     CommentReaction[]
@@ -192,8 +205,8 @@ model User {
   notifications        Notification[]
   pushSubscriptions    PushSubscription[]
   auditLogs            AuditLog[]
-  foodListings         FoodListing[]       @relation("FoodListingsCreated")
-  foodOrders           FoodOrder[]         @relation("FoodOrdersPlaced")
+  foodListings         FoodListing[]          @relation("FoodListingsCreated")
+  foodOrders           FoodOrder[]            @relation("FoodOrdersPlaced")
   feedbacks            Feedback[]
   feedbackReplies      FeedbackReply[]
   policyDocuments      PolicyDocument[]
@@ -201,12 +214,14 @@ model User {
   pointsOfContact      PointOfContact[]
   hrDocumentsUploaded  HrDocument[]
   chatSessions         ChatSession[]
-  medicineItems        MedicineItem[]      @relation("MedicineItemsCreated")
-  medicineRequests     MedicineRequest[]   @relation("MedicineRequestsMade")
-  medicineApprovals    MedicineRequest[]   @relation("MedicineRequestsApproved")
-  gameSessionsHosted   GameSession[]       @relation("GameSessionHost")
-  gameSessionsJoined   GameSession[]       @relation("GameSessionGuest")
-  gameSessionsWon      GameSession[]       @relation("GameSessionWinner")
+  medicineItems        MedicineItem[]         @relation("MedicineItemsCreated")
+  medicineRequests     MedicineRequest[]      @relation("MedicineRequestsMade")
+  medicineApprovals    MedicineRequest[]      @relation("MedicineRequestsApproved")
+  gameSessionsHosted   GameSession[]          @relation("GameSessionHost")
+  gameSessionsJoined   GameSession[]          @relation("GameSessionGuest")
+  gameSessionsWon      GameSession[]          @relation("GameSessionWinner")
+  soloGameAttempts     SoloGameAttempt[]
+  weeklyChampions      ArcadeWeeklyChampion[]
 
   @@index([pointsBalance])
   @@index([role, isActive])
@@ -703,6 +718,59 @@ model MedicineRequest {
 
   @@index([status])
   @@index([userId])
+}
+
+model SoloGameAttempt {
+  id               String            @id @default(uuid())
+  userId           String
+  departmentId     String?
+  gameType         String
+  status           SoloAttemptStatus @default(STARTED)
+  attemptNumber    Int
+  rankDate         DateTime          @db.Date
+  weekStart        DateTime          @db.Date
+  challenge        Json
+  challengeVersion Int               @default(1)
+  startedAt        DateTime          @default(now())
+  expiresAt        DateTime
+  completedAt      DateTime?
+  primaryScore     Int?
+  secondaryScore   Int?
+  metrics          Json?
+  isValid          Boolean           @default(false)
+  validationReason String?
+
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department         Department?            @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  weeklyChampionWins ArcadeWeeklyChampion[] @relation("ArcadeWeeklyChampionWinningAttempt")
+
+  @@unique([userId, gameType, rankDate, attemptNumber])
+  @@index([gameType, status, weekStart])
+  @@index([userId, gameType, completedAt])
+  @@index([departmentId, gameType, weekStart])
+}
+
+model ArcadeWeeklyChampion {
+  id                     String              @id @default(uuid())
+  userId                 String
+  gameType               String
+  scope                  ArcadeChampionScope
+  scopeKey               String
+  departmentId           String?
+  departmentNameSnapshot String?
+  weekStart              DateTime            @db.Date
+  winningAttemptId       String
+  primaryScore           Int
+  secondaryScore         Int?
+  awardedAt              DateTime            @default(now())
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department     Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  winningAttempt SoloGameAttempt @relation("ArcadeWeeklyChampionWinningAttempt", fields: [winningAttemptId], references: [id], onDelete: Restrict)
+
+  @@unique([gameType, scopeKey, weekStart])
+  @@index([userId, weekStart])
+  @@index([weekStart, gameType])
 }
 
 model GameSession {

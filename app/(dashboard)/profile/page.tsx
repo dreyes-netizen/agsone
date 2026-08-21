@@ -6,7 +6,7 @@ import { useApiClient } from "@/lib/hooks/useApiClient";
 import { Loader2 } from "lucide-react";
 import { getLevelProgress } from "@/lib/helpers/levelUtils";
 
-import type { UserProfile, PointsData, ShoutoutEntry } from "./types";
+import type { ArcadeChampionship, UserProfile, PointsData, ShoutoutEntry } from "./types";
 import { BioSection } from "./components/BioSection";
 import { SkillsSection } from "./components/SkillsSection";
 import { BirthdayHireCard } from "./components/BirthdayHireCard";
@@ -25,8 +25,10 @@ import { DepartmentRankWidget } from "./components/DepartmentRankWidget";
 import { RecentActivityWidget } from "./components/RecentActivityWidget";
 import { QuickActionsWidget } from "./components/QuickActionsWidget";
 import { RecentBadgesWidget } from "./components/RecentBadgesWidget";
+import { ArcadeChampionships } from "./components/ArcadeChampionships";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { shouldLoadArcadeChampionships } from "./utils";
 
 export default function ProfilePage() {
   const { user: authUser, dbUser, loading: authLoading } = useAuth();
@@ -45,6 +47,8 @@ export default function ProfilePage() {
   const [profileError, setProfileError] = useState("");
   const [deptRank, setDeptRank] = useState<{ rank: number; total: number } | null>(null);
   const [shoutouts, setShoutouts] = useState<ShoutoutEntry[] | null>(null);
+  const [championships, setChampionships] = useState<ArcadeChampionship[] | null>(null);
+  const [championshipsError, setChampionshipsError] = useState<string | null>(null);
 
   function loadProfile() {
     if (authLoading || !authUser) return;
@@ -144,6 +148,23 @@ export default function ProfilePage() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.department?.id]);
+
+  useEffect(() => {
+    if (!shouldLoadArcadeChampionships(activeTab, championships)) return;
+
+    let active = true;
+    void apiFetch<{ data: ArcadeChampionship[] }>("/api/me/arcade-championships")
+      .then((response) => {
+        if (active) setChampionships(response.data);
+      })
+      .catch(() => {
+        if (active) setChampionshipsError("Unable to load arcade championships.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab, apiFetch, championships]);
 
   useRealtimeChannel(
     realtimeTopics.leaderboard,
@@ -260,6 +281,20 @@ export default function ProfilePage() {
       {activeTab === "badges" && (
         <div id="panel-badges" role="tabpanel">
           <BadgesTab userBadges={profile.userBadges} />
+          <div className="mt-5">
+            {championships === null ? (
+              championshipsError ? (
+                <p role="alert" className="text-sm text-red-600">{championshipsError}</p>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-gray-500" role="status" aria-live="polite">
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  Loading arcade championships…
+                </div>
+              )
+            ) : (
+              <ArcadeChampionships championships={championships} />
+            )}
+          </div>
         </div>
       )}
 

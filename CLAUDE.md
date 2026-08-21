@@ -20,6 +20,8 @@ npm run dev               # next dev -p 3010 — 3000 is taken by an unrelated l
 npm run build             # prisma generate && next build
 npm run start
 npm run lint               # eslint (flat config: eslint-config-next core-web-vitals + typescript)
+npm test                   # Vitest unit/route/component-boundary suite
+npm run test:watch         # Vitest watch mode
 npm run setup:hooks         # installs the secret/PII-blocking pre-commit hook (scripts/git-hooks/pre-commit)
 npx prisma migrate dev      # apply/create a migration
 npx prisma generate         # regenerate the client into lib/generated/prisma after schema.prisma changes (also runs automatically on npm install)
@@ -28,7 +30,7 @@ npx tsx prisma/seed.ts      # seed (also runs via `prisma db seed`)
 
 Requires a `.env.local` with Firebase client/admin, `DATABASE_URL`, Supabase, Cloudinary, Groq, and Upstash Redis credentials — see the `process.env.*` reads across `lib/` and `app/api/` for the full list; there's no committed `.env.example`.
 
-There is no automated test suite (no test runner in `package.json`, no test files in the repo). Verify changes by running `npm run dev` and exercising the flow, plus `npm run lint`.
+Vitest is the automated test runner; tests use the `**/*.test.ts` convention in a Node environment. Verify changes with focused Vitest tests, `npm test`, `npm run lint`, `npx tsc --noEmit`, and an authenticated browser pass when the flow depends on Firebase or live data. The repository has Playwright installed but no committed Playwright configuration or authenticated fixture yet; do not claim protected E2E coverage without one.
 
 ## Architecture
 
@@ -47,7 +49,7 @@ Client-side, all authenticated requests go through `apiFetch`/`streamFetch` (`li
 
 **Realtime.** `lib/realtime/broadcast.ts` sends an empty "something changed" ping over Supabase Realtime (stateless HTTP broadcast, not a websocket held open in the serverless function) so subscribed clients know to re-fetch through the normal authed API — game/points state itself is never put on the Realtime payload. `broadcast()` never throws; a slow client-side poll is the fallback if a broadcast is missed. Client side: `lib/hooks/useRealtimeChannel.ts`, `lib/realtime/tabState.ts` + `useTabState`/`useVisibleInterval` coordinate polling/subscriptions across tabs and visibility state. When a piece of state is read by multiple mounted instances of the same component (e.g. the notification bell renders in the desktop sidebar, mobile drawer, and mobile top bar simultaneously), hoist the fetch/poll/subscribe side effects into a shared `zustand` store (`lib/stores/notifications.ts`) instead of letting each instance run its own — otherwise every mount multiplies the request/subscription count.
 
-**Minigames.** Each game (`battleship`, `connectfour`, `dotsandboxes`, `memory`, `rps`, `tictactoe`) has its own pure logic module under `lib/minigames/`, driven through the shared `GameSession` model — server is authoritative, opponents' hidden state (ship positions, RPS picks) never reaches the other client.
+**Minigames.** Multiplayer games (`battleship`, `connectfour`, `dotsandboxes`, `memory`, `rps`, `tictactoe`) each have a pure logic module under `lib/minigames/` and use the shared authoritative `GameSession` model; opponents' hidden state never reaches the other client. Solo Arcade (`typing`, `reaction`, `visual-memory`, `sequence-memory`) is separate under `lib/minigames/solo/`, with local-only Practice play and server-scored Ranked attempts (three starts per game per Manila day). Solo games never award or spend AGS Points. The client performs one ranked start request, local gameplay with no per-input requests, and one idempotent finish request; rankings, badges, and weekly championships are separate read/award paths.
 
 **AI features.** `lib/rag/` (chunker/embedder/search) backs a policy-document assistant (`ChatSession`/`ChatMessage` models, `app/api/assistant`); providers are Groq (`lib/groq/client.ts`) and Google Generative AI. `lib/guardrails/jailbreak.ts` and `lib/guardrails/rateLimiter.ts` (Upstash) sit in front of the assistant.
 

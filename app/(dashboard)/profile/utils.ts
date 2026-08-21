@@ -1,3 +1,12 @@
+import type { ArcadeChampionship } from "./types";
+
+export function shouldLoadArcadeChampionships(
+  activeTab: string,
+  championships: ArcadeChampionship[] | null,
+) {
+  return activeTab === "badges" && championships === null;
+}
+
 export function getDaysUntil(isoDate: string): number {
   const now = new Date();
   const d = new Date(isoDate);

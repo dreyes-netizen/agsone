@@ -11,6 +11,7 @@ import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { BarChart2, Gamepad2, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { GAME_TYPES, GAME_TYPE_LABELS, type GameTypeKey } from "@/lib/constants/gameTypes";
+import { SoloGameGrid } from "@/components/minigames/solo/SoloGameGrid";
 
 // Closed by default — split into its own chunk instead of shipping with the
 // page bundle.
@@ -140,6 +141,14 @@ export default function MinigamesPage() {
           <span className="hidden sm:inline">Stats & Leaderboard</span><span className="sm:hidden">Stats</span>
         </button>
       </div>
+
+      <SoloGameGrid />
+
+      <section aria-labelledby="multiplayer-heading" className="space-y-4">
+        <div>
+          <h2 id="multiplayer-heading" className="text-lg font-bold text-gray-900">Multiplayer</h2>
+          <p className="mt-0.5 text-sm text-gray-500">Challenge a coworker to a quick 2-player game.</p>
+        </div>
 
       {/* Active + waiting banners */}
       {(myActive.length > 0 || myWaiting.length > 0) && (
@@ -333,6 +342,7 @@ export default function MinigamesPage() {
           </div>
         </div>
       </div>
+      </section>
     </div>
   );
 }

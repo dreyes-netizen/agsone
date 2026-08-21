@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
@@ -24,39 +24,172 @@ type HistoryItem = {
 };
 
 type Stats = {
-  wins: number; losses: number; draws: number; total: number;
-  winRate: number; currentStreak: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  total: number;
+  winRate: number;
+  currentStreak: number;
   perGame: Record<string, { w: number; l: number; d: number }>;
   history: HistoryItem[];
 };
 
 type LeaderEntry = {
-  rank: number; userId: string; displayName: string; avatarUrl: string | null;
-  department: string | null; wins: number; losses: number; draws: number;
-  total: number; winRate: number; isCurrentUser: boolean;
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  department: string | null;
+  wins: number;
+  losses: number;
+  draws: number;
+  total: number;
+  winRate: number;
+  isCurrentUser: boolean;
 };
 
-const rankColors: Record<number, string> = { 1: "text-yellow-500", 2: "text-gray-500", 3: "text-orange-500" };
+const rankColors: Record<number, string> = {
+  1: "text-yellow-500",
+  2: "text-gray-500",
+  3: "text-orange-500",
+};
 
-function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" }) {
+function Avatar({
+  name,
+  url,
+  size = "md",
+}: {
+  name: string;
+  url: string | null;
+  size?: "sm" | "md";
+}) {
   const [errored, setErrored] = useState(false);
   const cls = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
-  if (url && !errored) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
+  if (url && !errored)
+    return (
+      <img
+        src={url}
+        alt={name}
+        className={`${cls} rounded-full object-cover shrink-0`}
+        onError={() => setErrored(true)}
+      />
+    );
   return (
-    <div className={`${cls} rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold shrink-0`}>
+    <div
+      className={`${cls} rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold shrink-0`}
+    >
       {name.charAt(0).toUpperCase()}
     </div>
   );
 }
 
 const outcomeStyle: Record<string, { label: string; cls: string }> = {
-  win:  { label: "Won",  cls: "text-emerald-600 bg-emerald-50" },
+  win: { label: "Won", cls: "text-emerald-600 bg-emerald-50" },
   loss: { label: "Lost", cls: "text-rose-500 bg-rose-50" },
   draw: { label: "Draw", cls: "text-gray-500 bg-gray-100" },
 };
 
-export function canLoadMultiplayerStats(view: "multiplayer" | "solo", authLoading: boolean, hasUser: boolean) {
+type MinigameStatsView = "multiplayer" | "solo";
+
+export function canLoadMultiplayerStats(
+  view: MinigameStatsView,
+  authLoading: boolean,
+  hasUser: boolean,
+) {
   return view === "multiplayer" && !authLoading && hasUser;
+}
+
+export function getMinigameStatsTabFromKey(
+  view: MinigameStatsView,
+  key: string,
+): MinigameStatsView | null {
+  if (key === "Home") return "multiplayer";
+  if (key === "End") return "solo";
+  if (key === "ArrowLeft" || key === "ArrowUp")
+    return view === "multiplayer" ? "solo" : "multiplayer";
+  if (key === "ArrowRight" || key === "ArrowDown")
+    return view === "multiplayer" ? "solo" : "multiplayer";
+  return null;
+}
+
+export function MinigameStatsTabs({
+  view,
+  onChange,
+}: {
+  view: MinigameStatsView;
+  onChange: (view: MinigameStatsView) => void;
+}) {
+  const refs = useRef<Record<MinigameStatsView, HTMLButtonElement | null>>({
+    multiplayer: null,
+    solo: null,
+  });
+  function onKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    activeView: MinigameStatsView,
+  ) {
+    const next = getMinigameStatsTabFromKey(activeView, event.key);
+    if (!next) return;
+    event.preventDefault();
+    onChange(next);
+    refs.current[next]?.focus();
+  }
+  return (
+    <div
+      role="tablist"
+      aria-label="Minigame leaderboard type"
+      className="flex w-full rounded-xl bg-zinc-100 p-1 text-sm sm:w-fit"
+    >
+      <button
+        ref={(element) => {
+          refs.current.multiplayer = element;
+        }}
+        id="minigame-stats-multiplayer-tab"
+        role="tab"
+        aria-controls="minigame-stats-multiplayer-panel"
+        aria-selected={view === "multiplayer"}
+        tabIndex={view === "multiplayer" ? 0 : -1}
+        onClick={() => onChange("multiplayer")}
+        onKeyDown={(event) => onKeyDown(event, "multiplayer")}
+        className={`flex-1 rounded-lg px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 sm:flex-none ${view === "multiplayer" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+      >
+        Multiplayer
+      </button>
+      <button
+        ref={(element) => {
+          refs.current.solo = element;
+        }}
+        id="minigame-stats-solo-tab"
+        role="tab"
+        aria-controls="minigame-stats-solo-panel"
+        aria-selected={view === "solo"}
+        tabIndex={view === "solo" ? 0 : -1}
+        onClick={() => onChange("solo")}
+        onKeyDown={(event) => onKeyDown(event, "solo")}
+        className={`flex-1 rounded-lg px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 sm:flex-none ${view === "solo" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+      >
+        Solo
+      </button>
+    </div>
+  );
+}
+
+export function MinigameStatsTabPanel({
+  view,
+  children,
+}: {
+  view: MinigameStatsView;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      id={`minigame-stats-${view}-panel`}
+      role="tabpanel"
+      aria-labelledby={`minigame-stats-${view}-tab`}
+      tabIndex={0}
+    >
+      {children}
+    </div>
+  );
 }
 
 export default function MinigamesStatsPage() {
@@ -68,7 +201,7 @@ export default function MinigamesStatsPage() {
   const [board, setBoard] = useState<LeaderEntry[]>([]);
   const [period, setPeriod] = useState<"monthly" | "alltime">("alltime");
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"multiplayer" | "solo">("multiplayer");
+  const [view, setView] = useState<MinigameStatsView>("multiplayer");
 
   function loadStats() {
     return apiFetch<{ data: Stats }>("/api/minigames/stats")
@@ -78,7 +211,9 @@ export default function MinigamesStatsPage() {
 
   function loadBoard() {
     setLoading(true);
-    return apiFetch<{ data: LeaderEntry[] }>(`/api/minigames/leaderboard?period=${period}`)
+    return apiFetch<{ data: LeaderEntry[] }>(
+      `/api/minigames/leaderboard?period=${period}`,
+    )
       .then((res) => setBoard(res.data))
       .catch(() => setBoard([]))
       .finally(() => setLoading(false));
@@ -110,126 +245,224 @@ export default function MinigamesStatsPage() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.push("/minigames")} aria-label="Back to minigames" className="text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded">
+        <button
+          onClick={() => router.push("/minigames")}
+          aria-label="Back to minigames"
+          className="text-sm text-gray-500 hover:text-gray-700 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded"
+        >
           ← Minigames
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 flex-1">Stats & Leaderboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex-1">
+          Stats & Leaderboard
+        </h1>
       </div>
 
-      <div role="tablist" aria-label="Minigame leaderboard type" className="flex w-full rounded-xl bg-zinc-100 p-1 text-sm sm:w-fit">
-        <button role="tab" aria-selected={view === "multiplayer"} onClick={() => setView("multiplayer")} className={`flex-1 rounded-lg px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 sm:flex-none ${view === "multiplayer" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Multiplayer</button>
-        <button role="tab" aria-selected={view === "solo"} onClick={() => setView("solo")} className={`flex-1 rounded-lg px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 sm:flex-none ${view === "solo" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Solo</button>
-      </div>
+      <MinigameStatsTabs view={view} onChange={setView} />
 
-      {view === "solo" ? <SoloLeaderboardPanel /> : <>
-      {/* Personal summary */}
-      <div className="bg-white border border-table-border rounded-card p-5">
-        <div className="grid grid-cols-4 gap-3 text-center">
-          <div>
-            <p className="text-2xl font-bold text-emerald-600">{stats?.wins ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Wins</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-rose-500">{stats?.losses ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Losses</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-500">{stats?.draws ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Draws</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-navy-600">{stats?.winRate ?? 0}%</p>
-            <p className="text-xs text-gray-500 mt-0.5">Win rate</p>
-          </div>
-        </div>
-        {(stats?.currentStreak ?? 0) > 0 && (
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-orange-600 bg-orange-50 rounded-xl py-2">
-            <Flame className="w-4 h-4" aria-hidden="true" /> {stats!.currentStreak}-win streak
-          </div>
-        )}
-      </div>
-
-      {/* Per-game breakdown */}
-      {stats && Object.keys(stats.perGame).length > 0 && (
-        <div className="bg-white border border-table-border rounded-card p-5">
-          <p className="text-sm font-bold text-gray-800 mb-3">By game</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(stats.perGame).map(([g, r]) => {
-              const Icon = GAME_TYPE_ICONS[g] ?? Gamepad2;
-              return (
-                <div key={g} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-xs">
-                  <Icon className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" />
-                  <span className="font-medium text-gray-700">{GAME_LABEL[g] ?? g}</span>
-                  <span className="text-gray-500">{r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Leaderboard */}
-      <div className="bg-white rounded-card border border-table-border overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-yellow-500" /> Leaderboard</p>
-          <div role="group" aria-label="Leaderboard period" className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-            <button aria-pressed={period === "monthly"} className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "monthly" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`} onClick={() => setPeriod("monthly")}>This Month</button>
-            <button aria-pressed={period === "alltime"} className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "alltime" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`} onClick={() => setPeriod("alltime")}>All Time</button>
-          </div>
-        </div>
-        {loading ? (
-          <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 py-10 text-gray-500 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Loading…
-          </div>
-        ) : board.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 text-sm">No games played yet. Be the first!</div>
+      <MinigameStatsTabPanel view={view}>
+        {view === "solo" ? (
+          <SoloLeaderboardPanel />
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {board.map(e => (
-              <li key={e.userId} aria-label={`Rank ${e.rank}: ${e.displayName}, ${e.wins} wins, ${e.winRate}% win rate`} className={`flex items-center gap-3 px-5 py-3 ${e.isCurrentUser ? "bg-navy-50 border-l-2 border-navy-500" : "border-l-2 border-transparent"}`}>
-                <span className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-gray-500"}`}>
-                  {e.rank <= 3 ? <Medal className={`w-4 h-4 inline ${rankColors[e.rank]}`} /> : `#${e.rank}`}
-                </span>
-                <Avatar name={e.displayName} url={e.avatarUrl} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-gray-900 truncate">{e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}</p>
-                  <p className="text-xs text-gray-500">{e.wins}W · {e.losses}L{e.draws > 0 ? ` · ${e.draws}D` : ""}</p>
+          <>
+            {/* Personal summary */}
+            <div className="bg-white border border-table-border rounded-card p-5">
+              <div className="grid grid-cols-4 gap-3 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-emerald-600">
+                    {stats?.wins ?? 0}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Wins</p>
                 </div>
-                <span className="font-bold text-navy-600 text-sm tabular-nums">{e.winRate}%</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                <div>
+                  <p className="text-2xl font-bold text-rose-500">
+                    {stats?.losses ?? 0}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Losses</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-500">
+                    {stats?.draws ?? 0}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Draws</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-navy-600">
+                    {stats?.winRate ?? 0}%
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Win rate</p>
+                </div>
+              </div>
+              {(stats?.currentStreak ?? 0) > 0 && (
+                <div className="mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-orange-600 bg-orange-50 rounded-xl py-2">
+                  <Flame className="w-4 h-4" aria-hidden="true" />{" "}
+                  {stats!.currentStreak}-win streak
+                </div>
+              )}
+            </div>
 
-      {/* Recent history */}
-      <div className="bg-white rounded-card border border-table-border overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100">
-          <p className="text-sm font-bold text-gray-800">Recent games</p>
-        </div>
-        {!stats || stats.history.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 text-sm">No finished games yet.</div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {stats.history.map(h => {
-              const o = outcomeStyle[h.outcome];
-              const Icon = GAME_TYPE_ICONS[h.gameType] ?? Gamepad2;
-              return (
-                <li key={h.id} aria-label={`${GAME_LABEL[h.gameType] ?? h.gameType} vs ${h.opponentName}, ${o.label}${h.wager > 0 ? `, ${h.wager} pts wager` : ""}, ${timeAgo(h.finishedAt)}`} className="flex items-center gap-3 px-5 py-3">
-                  <Icon className="w-5 h-5 shrink-0 text-gray-500" aria-hidden="true" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{GAME_LABEL[h.gameType] ?? h.gameType}</p>
-                    <p className="text-xs text-gray-500 truncate">vs {h.opponentName} · {timeAgo(h.finishedAt)}</p>
-                  </div>
-                  {h.wager > 0 && <span className="text-xs text-amber-600 font-medium shrink-0">{h.wager} pts</span>}
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${o.cls}`}>{o.label}</span>
-                </li>
-              );
-            })}
-          </ul>
+            {/* Per-game breakdown */}
+            {stats && Object.keys(stats.perGame).length > 0 && (
+              <div className="bg-white border border-table-border rounded-card p-5">
+                <p className="text-sm font-bold text-gray-800 mb-3">By game</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(stats.perGame).map(([g, r]) => {
+                    const Icon = GAME_TYPE_ICONS[g] ?? Gamepad2;
+                    return (
+                      <div
+                        key={g}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-xs"
+                      >
+                        <Icon
+                          className="w-3.5 h-3.5 text-gray-500"
+                          aria-hidden="true"
+                        />
+                        <span className="font-medium text-gray-700">
+                          {GAME_LABEL[g] ?? g}
+                        </span>
+                        <span className="text-gray-500">
+                          {r.w}W·{r.l}L{r.d > 0 ? `·${r.d}D` : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Leaderboard */}
+            <div className="bg-white rounded-card border border-table-border overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-yellow-500" /> Leaderboard
+                </p>
+                <div
+                  role="group"
+                  aria-label="Leaderboard period"
+                  className="flex rounded-lg border border-gray-200 overflow-hidden text-xs"
+                >
+                  <button
+                    aria-pressed={period === "monthly"}
+                    className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "monthly" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`}
+                    onClick={() => setPeriod("monthly")}
+                  >
+                    This Month
+                  </button>
+                  <button
+                    aria-pressed={period === "alltime"}
+                    className={`px-3 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900 ${period === "alltime" ? "bg-command-black text-white" : "text-gray-600 hover:bg-gray-50"}`}
+                    onClick={() => setPeriod("alltime")}
+                  >
+                    All Time
+                  </button>
+                </div>
+              </div>
+              {loading ? (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center justify-center gap-2 py-10 text-gray-500 text-sm"
+                >
+                  <Loader2
+                    className="w-4 h-4 animate-spin"
+                    aria-hidden="true"
+                  />{" "}
+                  Loading…
+                </div>
+              ) : board.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 text-sm">
+                  No games played yet. Be the first!
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {board.map((e) => (
+                    <li
+                      key={e.userId}
+                      aria-label={`Rank ${e.rank}: ${e.displayName}, ${e.wins} wins, ${e.winRate}% win rate`}
+                      className={`flex items-center gap-3 px-5 py-3 ${e.isCurrentUser ? "bg-navy-50 border-l-2 border-navy-500" : "border-l-2 border-transparent"}`}
+                    >
+                      <span
+                        className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-gray-500"}`}
+                      >
+                        {e.rank <= 3 ? (
+                          <Medal
+                            className={`w-4 h-4 inline ${rankColors[e.rank]}`}
+                          />
+                        ) : (
+                          `#${e.rank}`
+                        )}
+                      </span>
+                      <Avatar name={e.displayName} url={e.avatarUrl} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 truncate">
+                          {e.isCurrentUser
+                            ? `${e.displayName} (You)`
+                            : e.displayName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {e.wins}W · {e.losses}L
+                          {e.draws > 0 ? ` · ${e.draws}D` : ""}
+                        </p>
+                      </div>
+                      <span className="font-bold text-navy-600 text-sm tabular-nums">
+                        {e.winRate}%
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Recent history */}
+            <div className="bg-white rounded-card border border-table-border overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100">
+                <p className="text-sm font-bold text-gray-800">Recent games</p>
+              </div>
+              {!stats || stats.history.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 text-sm">
+                  No finished games yet.
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {stats.history.map((h) => {
+                    const o = outcomeStyle[h.outcome];
+                    const Icon = GAME_TYPE_ICONS[h.gameType] ?? Gamepad2;
+                    return (
+                      <li
+                        key={h.id}
+                        aria-label={`${GAME_LABEL[h.gameType] ?? h.gameType} vs ${h.opponentName}, ${o.label}${h.wager > 0 ? `, ${h.wager} pts wager` : ""}, ${timeAgo(h.finishedAt)}`}
+                        className="flex items-center gap-3 px-5 py-3"
+                      >
+                        <Icon
+                          className="w-5 h-5 shrink-0 text-gray-500"
+                          aria-hidden="true"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {GAME_LABEL[h.gameType] ?? h.gameType}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            vs {h.opponentName} · {timeAgo(h.finishedAt)}
+                          </p>
+                        </div>
+                        {h.wager > 0 && (
+                          <span className="text-xs text-amber-600 font-medium shrink-0">
+                            {h.wager} pts
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${o.cls}`}
+                        >
+                          {o.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </>
         )}
-      </div>
-      </>}
+      </MinigameStatsTabPanel>
     </div>
   );
 }

@@ -4,7 +4,11 @@ import { TYPING_PASSAGES } from "./typingPassages";
 
 const RANKED_DURATION_MS = 60_000;
 const MIN_VALID_ACCURACY_BP = 9_500;
-export const MAX_TYPING_INPUT_CHARS = 512;
+// Passages are ~450 chars, so a 90 WPM typist (~450 chars/min) already fills one full
+// pass in 60s. The UI has the player loop back to the start of the passage when they
+// finish early, so this cap must hold several loops — sized for well above realistic
+// human typing speed (~300 WPM sustained ~= 1,500 chars/min) plus margin.
+export const MAX_TYPING_INPUT_CHARS = 2_000;
 
 export type TypingChallenge = {
   passageId: string;

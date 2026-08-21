@@ -57,11 +57,24 @@ export function TypingGame({ challenge, mode, disabled = false, onComplete }: Ty
         <div aria-live="polite" className="text-right shrink-0"><p className="text-lg font-black text-navy-800">{Math.ceil(remainingMs / 1000)}s</p><p className="text-xs text-gray-500">Provisional: {wpm} WPM · {accuracy}%</p></div>
       </div>
       <p aria-label="Passage" className="rounded-lg bg-gray-50 border border-gray-200 p-4 font-mono text-sm leading-7 text-gray-700 break-words">
-        {challenge.passageText.split("").map((character, index) => {
-          const typed = typedText[index];
-          const className = typed === undefined ? "text-gray-500" : typed === character ? "text-emerald-700 bg-emerald-50" : "text-red-700 bg-red-100 underline";
-          return <span key={index} className={className}>{character}</span>;
-        })}
+        {(() => {
+          const passageLength = challenge.passageText.length;
+          const currentLapStart = Math.floor(typedText.length / passageLength) * passageLength;
+          const currentLapTyped = typedText.slice(currentLapStart);
+          return challenge.passageText.split("").map((character, index) => {
+            const typed = currentLapTyped[index];
+            const isCurrent = index === currentLapTyped.length;
+            const className =
+              typed === undefined
+                ? isCurrent
+                  ? "text-gray-900 bg-navy-100 rounded-sm"
+                  : "text-gray-800"
+                : typed === character
+                  ? "text-emerald-700 bg-emerald-50"
+                  : "text-red-700 bg-red-100 underline";
+            return <span key={index} className={className}>{character}</span>;
+          });
+        })()}
       </p>
       {!startedAt && <button onClick={begin} disabled={disabled} className="w-full py-2 rounded-lg bg-navy-700 text-white font-bold text-sm hover:bg-navy-800 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-600">Start typing</button>}
       <label className="block"><span className="sr-only">Type the passage</span><textarea ref={inputRef} value={typedText} maxLength={MAX_TYPING_INPUT_CHARS} onChange={(event) => onChange(event.target.value)} onPaste={mode === "ranked" ? (event) => event.preventDefault() : undefined} onCut={mode === "ranked" ? (event) => event.preventDefault() : undefined} onDrop={mode === "ranked" ? (event) => event.preventDefault() : undefined} disabled={disabled || isComplete} rows={4} className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 disabled:bg-gray-100" /> </label>

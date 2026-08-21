@@ -32,6 +32,7 @@ type Stats = {
   currentStreak: number;
   perGame: Record<string, { w: number; l: number; d: number }>;
   history: HistoryItem[];
+  historyCursor: string | null;
 };
 
 type LeaderEntry = {
@@ -205,15 +206,46 @@ export default function MinigamesStatsPage() {
   const [period, setPeriod] = useState<"monthly" | "alltime">("alltime");
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<MinigameStatsView>("multiplayer");
+  // Pages fetched past the first one baked into `stats.history`, plus the
+  // cursor for the next page (mirrors stats.historyCursor but keeps moving
+  // forward as more pages load in).
+  const [extraHistory, setExtraHistory] = useState<HistoryItem[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
 
   function loadStats() {
     return apiFetch<{ data: Stats }>("/api/minigames/stats")
-      .then((res) => setStats(res.data))
+      .then((res) => {
+        setStats(res.data);
+        setHistoryCursor(res.data.historyCursor);
+        // A fresh full-stats load (mount, realtime resync) starts history
+        // over from page one — pages loaded via "Load more" don't survive it.
+        setExtraHistory([]);
+      })
       .catch((err) => console.error("minigame stats fetch failed", err));
   }
 
+  function loadMoreHistory() {
+    if (!historyCursor || loadingMoreHistory) return;
+    setLoadingMoreHistory(true);
+    apiFetch<{ data: { history: HistoryItem[]; nextCursor: string | null } }>(
+      `/api/minigames/stats?cursor=${encodeURIComponent(historyCursor)}`,
+    )
+      .then((res) => {
+        setExtraHistory((prev) => [...prev, ...res.data.history]);
+        setHistoryCursor(res.data.nextCursor);
+      })
+      .catch((err) => console.error("minigame history fetch failed", err))
+      .finally(() => setLoadingMoreHistory(false));
+  }
+
   function loadBoard() {
-    setLoading(true);
+    // Only show the spinner when there's nothing on screen yet (first load,
+    // or switching to a period we haven't fetched). A realtime-triggered
+    // background refresh (any game finishing company-wide pings this topic)
+    // must not blank an already-populated board back to a spinner — that's
+    // what caused the visible flicker.
+    if (board.length === 0) setLoading(true);
     return apiFetch<{ data: LeaderEntry[] }>(
       `/api/minigames/leaderboard?period=${period}`,
     )
@@ -243,6 +275,8 @@ export default function MinigamesStatsPage() {
     },
     { debounceMs: 200 },
   );
+
+  const fullHistory = [...(stats?.history ?? []), ...extraHistory];
 
   return (
     <div className="space-y-5">
@@ -418,13 +452,13 @@ export default function MinigamesStatsPage() {
               <div className="px-5 py-3 border-b border-gray-100">
                 <p className="text-sm font-bold text-gray-800">Recent games</p>
               </div>
-              {!stats || stats.history.length === 0 ? (
+              {!stats || fullHistory.length === 0 ? (
                 <div className="text-center py-10 text-gray-500 text-sm">
                   No finished games yet.
                 </div>
               ) : (
                 <ul className="divide-y divide-gray-100">
-                  {stats.history.map((h) => {
+                  {fullHistory.map((h) => {
                     const o = outcomeStyle[h.outcome];
                     const Icon = GAME_TYPE_ICONS[h.gameType] ?? Gamepad2;
                     return (
@@ -459,6 +493,23 @@ export default function MinigamesStatsPage() {
                     );
                   })}
                 </ul>
+              )}
+              {historyCursor && (
+                <div className="border-t border-gray-100 px-5 py-3">
+                  <button
+                    onClick={loadMoreHistory}
+                    disabled={loadingMoreHistory}
+                    className="w-full flex items-center justify-center gap-2 py-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900 disabled:opacity-60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-900 rounded"
+                  >
+                    {loadingMoreHistory ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Loading…
+                      </>
+                    ) : (
+                      "Load more"
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           </>

@@ -53,7 +53,7 @@ export function TypingGame({ challenge, mode, disabled = false, onComplete }: Ty
   return (
     <section className="bg-white border border-table-border rounded-card p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div><h2 className="text-base font-bold text-gray-900">Type the passage</h2><p className="text-xs text-gray-500">{mode === "ranked" ? "Repeat the passage as often as you can in 60 seconds. Paste, cut and drop are disabled." : "Begin typing when you are ready."}</p></div>
+        <div><h2 className="text-base font-bold text-gray-900">Type the passage</h2><p className="text-xs text-gray-500">{mode === "ranked" ? "Type as much of the passage as you can in 60 seconds. Paste, cut and drop are disabled." : "Begin typing when you are ready."}</p></div>
         <div aria-live="polite" className="text-right shrink-0"><p className="text-lg font-black text-navy-800">{Math.ceil(remainingMs / 1000)}s</p><p className="text-xs text-gray-500">Provisional: {wpm} WPM · {accuracy}%</p></div>
       </div>
       <p aria-label="Passage" className="rounded-lg bg-gray-50 border border-gray-200 p-4 font-mono text-sm leading-7 text-gray-700 break-words">

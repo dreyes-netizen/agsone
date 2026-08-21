@@ -7,6 +7,7 @@ export type Session = {
   gameType: string;
   status: "WAITING" | "ACTIVE" | "FINISHED" | "CANCELLED";
   state: Record<string, unknown>;
+  settings: Record<string, unknown>;
   currentTurn: string | null;
   winnerId: string | null;
   pointsWager: number;

@@ -780,6 +780,7 @@ model GameSession {
   guestId     String?
   status      GameSessionStatus @default(WAITING)
   state       Json
+  settings    Json              @default("{}")
   currentTurn String?
   winnerId    String?
   pointsWager Int               @default(0)

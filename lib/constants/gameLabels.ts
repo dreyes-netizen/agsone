@@ -17,6 +17,7 @@ export const GAME_LABELS = {
   DOTS_AND_BOXES: "Dots & Boxes",
   BATTLESHIP: "Battleship",
   MEMORY: "Memory",
+  CHESS: "Chess",
 } as const;
 
 /**

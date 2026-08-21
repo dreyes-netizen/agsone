@@ -36,6 +36,7 @@ export function SoloGameGrid() {
           <Link
             key={game.key}
             href={game.href}
+            prefetch={false}
             aria-label={`Play ${game.label}`}
             className="group rounded-xl border border-table-border bg-white p-4 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-navy-600"
           >

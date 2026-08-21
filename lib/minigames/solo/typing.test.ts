@@ -17,6 +17,16 @@ const THRESHOLD_CHALLENGE: TypingChallenge = {
   durationMs: 60_000,
 };
 
+function withTypos(text: string, indexes: readonly number[]) {
+  const characters = text.split("");
+
+  for (const index of indexes) {
+    characters[index] = characters[index] === "x" ? "z" : "x";
+  }
+
+  return characters.join("");
+}
+
 describe("createTypingChallenge", () => {
   it("returns the same ranked challenge for the same seed", () => {
     const first = createTypingChallenge(12345);
@@ -29,14 +39,30 @@ describe("createTypingChallenge", () => {
       text: first.passageText,
     });
   });
+
+  it("uses longer multi-sentence canonical passages for a full ranked minute", () => {
+    for (const passage of TYPING_PASSAGES) {
+      const sentenceCount = passage.text.split(/[.!?](?:\s|$)/).filter(Boolean).length;
+
+      expect(passage.text.length).toBeGreaterThanOrEqual(350);
+      expect(passage.text.length).toBeLessThanOrEqual(450);
+      expect(sentenceCount).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("ends passage 004 with clear natural prose", () => {
+    expect(TYPING_PASSAGES[3]?.text).toContain(
+      "Over a minute, disciplined timing outlasts the scramble for instant numbers.",
+    );
+  });
 });
 
 describe("scoreTypingAttempt", () => {
-  it("scores repeated canonical passage input at badge-capable 100 WPM", () => {
-    const typedText = PERFECT_MINUTE_CHALLENGE.passageText.repeat(4);
+  it("scores bounded repeated canonical passage input with cyclic passage matching", () => {
+    const typedText = PERFECT_MINUTE_CHALLENGE.passageText + PERFECT_MINUTE_CHALLENGE.passageText.slice(0, 50);
 
     expect(scoreTypingAttempt(PERFECT_MINUTE_CHALLENGE, { typedText, clientElapsedMs: 60_000 }, 60_000)).toMatchObject({
-      primaryScore: 100,
+      primaryScore: 98,
       secondaryScore: 10_000,
       isValid: true,
     });
@@ -53,15 +79,15 @@ describe("scoreTypingAttempt", () => {
         60_000,
       ),
     ).toEqual({
-      primaryScore: 25,
+      primaryScore: 88,
       secondaryScore: 10_000,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        correctChars: 125,
-        typedChars: 125,
+        correctChars: 443,
+        typedChars: 443,
         accuracyBp: 10_000,
         passageId: PERFECT_PASSAGE.id,
       },
@@ -69,52 +95,59 @@ describe("scoreTypingAttempt", () => {
   });
 
   it("computes accuracy in basis points from character matches", () => {
+    const typedText = withTypos(THRESHOLD_CHALLENGE.passageText, [24]);
+
     expect(
       scoreTypingAttempt(
         THRESHOLD_CHALLENGE,
         {
-          typedText: "Every focused session buiads durable speed, because clean strokes and patient rhythm outlast bursts of frantic typing.",
+          typedText,
           clientElapsedMs: 60_000,
         },
         60_000,
       ),
     ).toEqual({
-      primaryScore: 23,
-      secondaryScore: 9_915,
+      primaryScore: 88,
+      secondaryScore: 9_977,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        correctChars: 117,
-        typedChars: 118,
-        accuracyBp: 9_915,
+        correctChars: 443,
+        typedChars: 444,
+        accuracyBp: 9_977,
         passageId: THRESHOLD_PASSAGE.id,
       },
     });
   });
 
   it("invalidates ranked results below 95 percent accuracy", () => {
+    const typedText = withTypos(THRESHOLD_CHALLENGE.passageText, [
+      6, 15, 28, 37, 49, 58, 72, 84, 96, 108, 121, 137,
+      152, 169, 183, 197, 214, 229, 247, 263, 281, 304, 327,
+    ]);
+
     expect(
       scoreTypingAttempt(
         THRESHOLD_CHALLENGE,
         {
-          typedText: "Every xocused sessiox builds durablx speed, becausx clean strokesxand patient rhxthm outlast bursts of frantic typing.",
+          typedText,
           clientElapsedMs: 60_000,
         },
         60_000,
       ),
     ).toEqual({
-      primaryScore: 22,
-      secondaryScore: 9_492,
+      primaryScore: 84,
+      secondaryScore: 9_482,
       isValid: false,
       validationReason: "ACCURACY_TOO_LOW",
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        correctChars: 112,
-        typedChars: 118,
-        accuracyBp: 9_492,
+        correctChars: 421,
+        typedChars: 444,
+        accuracyBp: 9_482,
         passageId: THRESHOLD_PASSAGE.id,
       },
     });
@@ -269,15 +302,15 @@ describe("scoreTypingAttempt", () => {
         60_000,
       ),
     ).toEqual({
-      primaryScore: 23,
+      primaryScore: 88,
       secondaryScore: 10_000,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 60_000,
-        correctChars: 118,
-        typedChars: 118,
+        correctChars: 444,
+        typedChars: 444,
         accuracyBp: 10_000,
         passageId: THRESHOLD_PASSAGE.id,
       },
@@ -295,15 +328,15 @@ describe("scoreTypingAttempt", () => {
         75_000,
       ),
     ).toEqual({
-      primaryScore: 23,
+      primaryScore: 88,
       secondaryScore: 10_000,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 70_000,
-        correctChars: 118,
-        typedChars: 118,
+        correctChars: 444,
+        typedChars: 444,
         accuracyBp: 10_000,
         passageId: THRESHOLD_PASSAGE.id,
       },
@@ -346,15 +379,15 @@ describe("scoreTypingAttempt", () => {
         60_000,
       ),
     ).toEqual({
-      primaryScore: 23,
+      primaryScore: 88,
       secondaryScore: 10_000,
       isValid: true,
       validationReason: null,
       metrics: {
         authoritativeElapsedMs: 60_000,
         clientElapsedMs: 1_000,
-        correctChars: 118,
-        typedChars: 118,
+        correctChars: 444,
+        typedChars: 444,
         accuracyBp: 10_000,
         passageId: THRESHOLD_PASSAGE.id,
       },

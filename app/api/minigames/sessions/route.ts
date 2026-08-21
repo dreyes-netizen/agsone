@@ -4,10 +4,12 @@ import { prisma } from "@/lib/prisma/client";
 import { z } from "zod";
 import { broadcast } from "@/lib/realtime/broadcast";
 import { initState, GAME_TYPES } from "@/lib/minigames/initState";
+import { parseGameSettings } from "@/lib/minigames/gameSettings";
 
 const createSchema = z.object({
   gameType: z.enum(GAME_TYPES),
   pointsWager: z.number().int().min(0).max(100).default(0),
+  settings: z.unknown().optional(),
 });
 
 const sessionSelect = {
@@ -15,6 +17,7 @@ const sessionSelect = {
   gameType: true,
   status: true,
   state: true,
+  settings: true,
   currentTurn: true,
   winnerId: true,
   pointsWager: true,
@@ -54,6 +57,16 @@ export async function POST(req: NextRequest) {
 
   const { gameType, pointsWager } = parsed.data;
 
+  let settings: Record<string, unknown>;
+  try {
+    settings = parseGameSettings(gameType, parsed.data.settings);
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid game settings" },
+      { status: 400 },
+    );
+  }
+
   if (pointsWager > 0) {
     const user = await prisma.user.findUnique({ where: { id: authUser.id }, select: { pointsBalance: true } });
     if (!user || user.pointsBalance < pointsWager) {
@@ -66,6 +79,7 @@ export async function POST(req: NextRequest) {
       gameType,
       hostId: authUser.id,
       state: initState(gameType),
+      settings: JSON.parse(JSON.stringify(settings)),
       pointsWager,
       currentTurn: null,
     },

@@ -215,15 +215,21 @@ describe("ranked attempt routes", () => {
   });
 
   it("wires the production start and finish route modules through mocked dependencies", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-21T04:00:00.000Z"));
     routeDoubles.verifyAuth.mockResolvedValue(user);
     routeDoubles.checkRateLimit.mockResolvedValue({ allowed: true, remaining: 29 });
     routeDoubles.startRankedAttempt.mockResolvedValue(started);
     routeDoubles.inspectRankedAttempt.mockResolvedValue({ gameType: "TYPING", status: "STARTED", expiresAt: new Date("2026-08-21T04:15:00.000Z") });
     routeDoubles.finishRankedAttempt.mockResolvedValue({ kind: "completed", result: { primaryScore: 12, secondaryScore: 99, isValid: true, validationReason: null, metrics: {} }, attemptsRemaining: 2, isPersonalBest: true });
 
-    expect((await productionStart(request({ gameType: "TYPING" }) as never)).status).toBe(200);
-    expect((await productionFinish(request({ typedText: "ok", clientElapsedMs: 60_000 }) as never, { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }) })).status).toBe(200);
-    expect(routeDoubles.startRankedAttempt).toHaveBeenCalledWith("user-1", "TYPING", expect.any(Date), "department-1");
-    expect(routeDoubles.finishRankedAttempt).toHaveBeenCalledWith("user-1", "00000000-0000-4000-8000-000000000001", expect.any(Object), expect.any(Date));
+    try {
+      expect((await productionStart(request({ gameType: "TYPING" }) as never)).status).toBe(200);
+      expect((await productionFinish(request({ typedText: "ok", clientElapsedMs: 60_000 }) as never, { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }) })).status).toBe(200);
+      expect(routeDoubles.startRankedAttempt).toHaveBeenCalledWith("user-1", "TYPING", expect.any(Date), "department-1");
+      expect(routeDoubles.finishRankedAttempt).toHaveBeenCalledWith("user-1", "00000000-0000-4000-8000-000000000001", expect.any(Object), expect.any(Date));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

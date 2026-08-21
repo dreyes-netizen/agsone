@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { getSoloLeaderboard } from "@/lib/minigames/solo/leaderboard";
 import { finalizePreviousWeekIfNeeded } from "@/lib/minigames/solo/champions";
 import { getManilaRankKeys } from "@/lib/minigames/solo/time";
+import { prisma } from "@/lib/prisma/client";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,7 +38,18 @@ export async function GET(request: NextRequest) {
     currentUserId: user.id,
   });
 
-  return NextResponse.json({ data: leaderboard });
+  const users = await prisma.user.findMany({
+    where: { id: { in: leaderboard.map((entry) => entry.userId) } },
+    select: { id: true, displayName: true, avatarUrl: true },
+  });
+  const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
+  const data = leaderboard.map((entry) => ({
+    ...entry,
+    displayName: userMap[entry.userId]?.displayName ?? "Unknown",
+    avatarUrl: userMap[entry.userId]?.avatarUrl ?? null,
+  }));
+
+  return NextResponse.json({ data });
 }
 
 function parseQuery<T extends z.ZodType>(request: Request, schema: T) {

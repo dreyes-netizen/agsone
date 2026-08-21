@@ -6,6 +6,7 @@ const routeDoubles = vi.hoisted(() => ({
   getManilaRankKeys: vi.fn(),
   finalizePreviousWeekIfNeeded: vi.fn(),
   after: vi.fn(),
+  findManyUsers: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/verifyAuth", () => ({ verifyAuth: routeDoubles.verifyAuth }));
@@ -15,6 +16,9 @@ vi.mock("@/lib/minigames/solo/leaderboard", () => ({
 vi.mock("@/lib/minigames/solo/time", () => ({ getManilaRankKeys: routeDoubles.getManilaRankKeys }));
 vi.mock("@/lib/minigames/solo/champions", () => ({
   finalizePreviousWeekIfNeeded: routeDoubles.finalizePreviousWeekIfNeeded,
+}));
+vi.mock("@/lib/prisma/client", () => ({
+  prisma: { user: { findMany: routeDoubles.findManyUsers } },
 }));
 vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
@@ -35,6 +39,7 @@ describe("solo leaderboard route", () => {
     routeDoubles.getManilaRankKeys.mockReturnValue({ rankDate: "2026-08-21", weekStart: "2026-08-17" });
     routeDoubles.finalizePreviousWeekIfNeeded.mockResolvedValue(0);
     routeDoubles.after.mockImplementation(() => undefined);
+    routeDoubles.findManyUsers.mockResolvedValue([]);
   });
 
   it("rejects unauthenticated requests before parsing or querying", async () => {
@@ -73,11 +78,20 @@ describe("solo leaderboard route", () => {
     };
     routeDoubles.verifyAuth.mockResolvedValue(user);
     routeDoubles.getSoloLeaderboard.mockResolvedValue([pinnedCurrentUser]);
+    routeDoubles.findManyUsers.mockResolvedValue([
+      { id: "user-1", displayName: "Rae", avatarUrl: null },
+    ]);
 
     const response = await GET(request("?gameType=TYPING&period=week&scope=department") as never);
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ data: [expect.objectContaining({ userId: "user-1", rank: 67 })] });
+    expect(await response.json()).toEqual({
+      data: [expect.objectContaining({ userId: "user-1", rank: 67, displayName: "Rae", avatarUrl: null })],
+    });
+    expect(routeDoubles.findManyUsers).toHaveBeenCalledWith({
+      where: { id: { in: ["user-1"] } },
+      select: { id: true, displayName: true, avatarUrl: true },
+    });
     expect(routeDoubles.getSoloLeaderboard).toHaveBeenCalledWith({
       gameType: "TYPING",
       period: "week",

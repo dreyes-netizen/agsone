@@ -22,6 +22,8 @@ const visibleTopRows: SoloLeaderboardEntry[] = Array.from(
   { length: 10 },
   (_, index) => ({
     userId: `user-${index + 1}`,
+    displayName: `Player ${index + 1}`,
+    avatarUrl: null,
     primaryScore: 90 - index,
     secondaryScore: null,
     completedAt: "2026-08-20T12:00:00.000Z",
@@ -45,6 +47,8 @@ describe("SoloLeaderboardPanel helpers", () => {
   it("pins the current player only when their rank falls outside the visible top rows", () => {
     const pinned: SoloLeaderboardEntry = {
       userId: "current-user",
+      displayName: "Current User",
+      avatarUrl: null,
       primaryScore: 72,
       secondaryScore: 420,
       completedAt: "2026-08-20T12:00:00.000Z",
@@ -72,6 +76,8 @@ describe("SoloLeaderboardPanel helpers", () => {
   it("renders the API's allTime summary, database current user, and secondary tiebreak scores", () => {
     const current: SoloLeaderboardEntry = {
       userId: "database-user-id",
+      displayName: "Rae",
+      avatarUrl: null,
       primaryScore: 77,
       secondaryScore: 9_915,
       completedAt: "2026-08-20T12:00:00.000Z",

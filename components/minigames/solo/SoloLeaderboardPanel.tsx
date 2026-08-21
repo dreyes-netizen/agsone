@@ -13,6 +13,8 @@ import type {
 
 export type SoloLeaderboardEntry = {
   userId: string;
+  displayName: string;
+  avatarUrl: string | null;
   primaryScore: number;
   secondaryScore: number | null;
   completedAt: string;
@@ -504,14 +506,14 @@ function RankingRow({
   const secondary = formatSoloSecondaryScore(gameType, entry.secondaryScore);
   return (
     <li
-      aria-label={`Rank ${entry.rank}: ${isCurrentUser ? currentUserName : "Player"}, ${formatSoloResult(gameType, entry.primaryScore, entry.secondaryScore)}`}
+      aria-label={`Rank ${entry.rank}: ${isCurrentUser ? currentUserName : entry.displayName}, ${formatSoloResult(gameType, entry.primaryScore, entry.secondaryScore)}`}
       className={`grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-sm sm:px-5 ${isCurrentUser ? "bg-navy-50" : ""}`}
     >
       <span className="font-bold tabular-nums text-gray-500">
         #{entry.rank}
       </span>
       <span className="min-w-0 truncate font-medium text-gray-900">
-        {isCurrentUser ? `${currentUserName} (You)` : `Player #${entry.rank}`}
+        {isCurrentUser ? `${currentUserName} (You)` : entry.displayName}
       </span>
       <span className="text-right font-bold tabular-nums text-navy-700">
         {formatSoloScore(gameType, entry.primaryScore)}

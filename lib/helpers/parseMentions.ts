@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma/client";
+import { extractMentionIds } from "@/lib/helpers/mentionTokens";
 
 /**
  * Mentions are stored inline in `SocialPost.content` as `@[Display Name|uuid]`.
@@ -16,31 +17,10 @@ import { prisma } from "@/lib/prisma/client";
  * confirmed to be someone who can actually see the post being mentioned in.
  */
 
-// Deliberately strict on the id half. The display-name half is free text
-// (names contain spaces, apostrophes, hyphens) but must not contain the
-// delimiters, so a malformed token simply fails to match rather than
-// swallowing the rest of the post.
-const MENTION_TOKEN = /@\[([^\]|]{1,100})\|([0-9a-fA-F-]{36})\]/g;
-
-/** Pull the candidate user ids out of a post body. Unvalidated. */
-export function extractMentionIds(content: string | null | undefined): string[] {
-  if (!content) return [];
-  const ids = new Set<string>();
-  for (const match of content.matchAll(MENTION_TOKEN)) {
-    ids.add(match[2].toLowerCase());
-  }
-  return [...ids];
-}
-
-/**
- * Replace `@[Name|uuid]` tokens with plain `@Name` text. Notification
- * previews (NotificationBell etc.) render `body` as plain text, not through
- * PostMentionText, so a raw token left in would show the literal
- * `@[Name|uuid]` syntax — including the uuid — to the recipient.
- */
-export function stripMentionTokens(content: string): string {
-  return content.replace(MENTION_TOKEN, (_match, name: string) => `@${name}`);
-}
+// extractMentionIds and stripMentionTokens live in mentionTokens.ts (no
+// server imports) so client components can use them too; re-exported here
+// so existing callers of this module don't need to change their import.
+export { extractMentionIds, stripMentionTokens } from "@/lib/helpers/mentionTokens";
 
 type ResolveArgs = {
   content: string | null | undefined;

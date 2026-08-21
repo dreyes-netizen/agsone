@@ -5,6 +5,7 @@ import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useNotificationsStore, type Notification } from "@/lib/stores/notifications";
 import { getNotificationEntry } from "@/lib/constants/notificationTypes";
+import { stripMentionTokens } from "@/lib/helpers/mentionTokens";
 
 // Deep links come from the notification catalog, not a switch maintained here.
 // The switch this replaces had drifted badly: it routed two types nothing ever
@@ -97,7 +98,7 @@ export function NotificationBell() {
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{stripMentionTokens(n.body)}</p>
                         <p className="text-[10px] text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
                         {link && <p className="text-[10px] text-navy-500 mt-0.5">Tap to view →</p>}
                       </div>

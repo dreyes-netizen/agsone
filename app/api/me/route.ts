@@ -30,8 +30,10 @@ export async function GET(req: NextRequest) {
 }
 
 const patchSchema = z.object({
-  bio: z.string().max(500).optional(),
-  skills: z.array(z.string().min(1).max(50)).max(20).optional(),
+  bio: z.string().max(500, "Bio must be 500 characters or fewer").optional(),
+  skills: z.array(z.string().min(1).max(250, "Each skill must be 250 characters or fewer"))
+    .max(20, "You can add up to 20 skills")
+    .optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -40,7 +42,10 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json();
   const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "Invalid profile data";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 
   const updated = await prisma.user.update({
     where: { id: user.id },

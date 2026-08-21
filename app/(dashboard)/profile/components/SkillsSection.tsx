@@ -43,6 +43,7 @@ export function SkillsSection(props: SkillsSectionProps) {
             id="skill-input"
             onChange={(e) => onSkillInputChange(e.target.value)}
             onKeyDown={onSkillKeyDown}
+            maxLength={250}
             placeholder="e.g. Leadership, Excel, Python…"
             aria-label="Add a skill (press Enter to add)"
             className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition"

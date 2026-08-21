@@ -175,9 +175,11 @@ export function MinigameStatsTabs({
 
 export function MinigameStatsTabPanel({
   view,
+  activeView = view,
   children,
 }: {
   view: MinigameStatsView;
+  activeView?: MinigameStatsView;
   children?: React.ReactNode;
 }) {
   return (
@@ -186,6 +188,7 @@ export function MinigameStatsTabPanel({
       role="tabpanel"
       aria-labelledby={`minigame-stats-${view}-tab`}
       tabIndex={0}
+      hidden={view !== activeView}
     >
       {children}
     </div>
@@ -259,10 +262,8 @@ export default function MinigamesStatsPage() {
 
       <MinigameStatsTabs view={view} onChange={setView} />
 
-      <MinigameStatsTabPanel view={view}>
-        {view === "solo" ? (
-          <SoloLeaderboardPanel />
-        ) : (
+      <MinigameStatsTabPanel view="multiplayer" activeView={view}>
+        {view === "multiplayer" && (
           <>
             {/* Personal summary */}
             <div className="bg-white border border-table-border rounded-card p-5">
@@ -462,6 +463,9 @@ export default function MinigamesStatsPage() {
             </div>
           </>
         )}
+      </MinigameStatsTabPanel>
+      <MinigameStatsTabPanel view="solo" activeView={view}>
+        {view === "solo" && <SoloLeaderboardPanel />}
       </MinigameStatsTabPanel>
     </div>
   );

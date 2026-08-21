@@ -19,6 +19,7 @@ import {
   MinigameStatsTabPanel,
   MinigameStatsTabs,
 } from "./page";
+import MinigamesStatsPage from "./page";
 
 describe("canLoadMultiplayerStats", () => {
   it("keeps W/L/D requests idle while the Solo view is selected", () => {
@@ -59,5 +60,14 @@ describe("canLoadMultiplayerStats", () => {
     expect(getMinigameStatsTabFromKey("solo", "Home")).toBe("multiplayer");
     expect(getMinigameStatsTabFromKey("multiplayer", "End")).toBe("solo");
     expect(getMinigameStatsTabFromKey("solo", "Enter")).toBeNull();
+  });
+
+  it("renders both production tab panels so every tab controls an existing panel", () => {
+    const html = renderToStaticMarkup(createElement(MinigamesStatsPage));
+
+    expect(html).toMatch(/id="minigame-stats-multiplayer-tab"[^>]*aria-controls="minigame-stats-multiplayer-panel"/);
+    expect(html).toMatch(/id="minigame-stats-solo-tab"[^>]*aria-controls="minigame-stats-solo-panel"/);
+    expect(html).toMatch(/id="minigame-stats-multiplayer-panel"[^>]*aria-labelledby="minigame-stats-multiplayer-tab"/);
+    expect(html).toMatch(/id="minigame-stats-solo-panel"[^>]*aria-labelledby="minigame-stats-solo-tab"[^>]*hidden/);
   });
 });

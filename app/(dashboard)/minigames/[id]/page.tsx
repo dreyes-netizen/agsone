@@ -166,7 +166,7 @@ export default function MinigameSessionPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-3xl mx-auto">
       {showHelp && <HowToPlayModal gameType={session.gameType} onClose={() => setShowHelp(false)} />}
 
       <ForfeitModal

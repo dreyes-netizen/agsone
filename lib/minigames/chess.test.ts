@@ -11,6 +11,7 @@ import {
   type ChessRole,
   type ChessState,
 } from "./chess";
+import { initState } from "./initState";
 
 const T0 = "2026-08-22T00:00:00.000Z";
 
@@ -109,6 +110,26 @@ const PROMOTION_PRELUDE: ChessMoveInput[] = [
   { from: "h6", to: "g7" },
   { from: "a3", to: "b2" },
 ];
+
+// --- Regression: initState two-arg contract ---------------------------------
+// The create session route (app/api/minigames/sessions/route.ts) calls
+// initState(gameType, settings) with the validated settings. For CHESS this
+// must be forwarded to asChessSettings, which requires a valid
+// timeControlMinutes. Omitting settings (the pre-fix, single-arg call) used
+// to fall through to the default `= {}` and throw an uncaught zod error.
+
+describe("initState CHESS contract", () => {
+  it("builds a valid initial ChessState when settings are provided", () => {
+    const state = initState("CHESS", { timeControlMinutes: 5 }) as ChessState;
+
+    expect(state.whiteMs).toBe(300_000);
+    expect(state.turnStartedAt).toBeNull();
+  });
+
+  it("throws when settings are omitted (the bug this task fixed)", () => {
+    expect(() => initState("CHESS")).toThrow();
+  });
+});
 
 // --- Step 1: initial state and clock ---------------------------------------
 

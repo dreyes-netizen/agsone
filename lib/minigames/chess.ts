@@ -213,6 +213,40 @@ export function deriveChessOutcome(
 }
 
 /**
+ * Records a draw offer from `role`.
+ *
+ * There is deliberately only ever *one* outstanding offer: re-offering (by
+ * either side) replaces it rather than queueing a second one, so the accept
+ * path never has to decide which of two offers it is answering.
+ */
+export function offerChessDraw(
+  state: ChessState,
+  role: ChessRole,
+): ChessState {
+  if (state.endReason) throw new Error("Game already finished");
+  return { ...state, drawOfferBy: role };
+}
+
+/**
+ * Clears an outstanding draw offer.
+ *
+ * You cannot decline your own offer — retracting is not a V1 action, and
+ * allowing it would let a player yank the offer out from under an opponent who
+ * is already accepting it. Accepting is NOT here: it finishes the game and
+ * settles the wager, which only the route can do atomically against the row.
+ */
+export function declineChessDraw(
+  state: ChessState,
+  role: ChessRole,
+): ChessState {
+  if (!state.drawOfferBy) throw new Error("No draw offer");
+  if (state.drawOfferBy === role) {
+    throw new Error("Cannot decline your own draw offer");
+  }
+  return { ...state, drawOfferBy: null };
+}
+
+/**
  * Validates and applies one move. Throws on anything the mover is not allowed
  * to do — the caller maps these messages to 4xx responses.
  */

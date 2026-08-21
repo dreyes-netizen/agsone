@@ -2,9 +2,11 @@ import { Chess } from "chess.js";
 import { describe, expect, it } from "vitest";
 import {
   applyChessMove,
+  declineChessDraw,
   deriveChessOutcome,
   getChessClock,
   initChess,
+  offerChessDraw,
   rehydrateChess,
   startChessClock,
   type ChessMoveInput,
@@ -437,5 +439,67 @@ describe("chess clock expiry", () => {
         new Date("2026-08-22T00:05:00.001Z"),
       ),
     ).toThrow("Clock expired");
+  });
+});
+
+// --- Step 6: draw offers ---------------------------------------------------
+
+describe("chess draw offers", () => {
+  it("records a draw offer from a participant", () => {
+    const offered = offerChessDraw(freshStarted(), "host");
+
+    expect(offered.drawOfferBy).toBe("host");
+  });
+
+  it("leaves the rest of the position untouched when an offer is recorded", () => {
+    const started = freshStarted();
+    const offered = offerChessDraw(started, "guest");
+
+    expect(offered).toEqual({ ...started, drawOfferBy: "guest" });
+    // Pure: the caller's snapshot must not be mutated in place.
+    expect(started.drawOfferBy).toBeNull();
+  });
+
+  it("re-offering replaces the outstanding offer rather than stacking a second one", () => {
+    const offered = offerChessDraw(offerChessDraw(freshStarted(), "host"), "guest");
+
+    expect(offered.drawOfferBy).toBe("guest");
+  });
+
+  it("refuses to record a draw offer on a finished game", () => {
+    const mate = playSequence(FOOLS_MATE);
+
+    expect(() => offerChessDraw(mate.state, "host")).toThrow("Game already finished");
+  });
+
+  it("does not allow accepting your own draw offer", () => {
+    // Acceptance settles the database row and the wager, so the route owns it
+    // (see the 400 case in the draw route's own test). The symmetric rule the
+    // domain does own is that you cannot answer your own offer at all:
+    // declining it yourself would silently retract a pending offer the
+    // opponent may already be responding to.
+    const offered = offerChessDraw(freshStarted(), "host");
+
+    expect(() => declineChessDraw(offered, "host")).toThrow(
+      "Cannot decline your own draw offer",
+    );
+  });
+
+  it("clears the offer when the opponent declines", () => {
+    const offered = offerChessDraw(freshStarted(), "host");
+    const declined = declineChessDraw(offered, "guest");
+
+    expect(declined.drawOfferBy).toBeNull();
+  });
+
+  it("throws when declining with nothing outstanding", () => {
+    expect(() => declineChessDraw(freshStarted(), "guest")).toThrow("No draw offer");
+  });
+
+  it("clears a pending draw offer after a legal move", () => {
+    const offered = offerChessDraw(freshStarted(), "guest");
+    const moved = applyChessMove(offered, { from: "e2", to: "e4" }, "host", at(1));
+
+    expect(moved.state.drawOfferBy).toBeNull();
   });
 });

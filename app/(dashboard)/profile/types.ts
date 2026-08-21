@@ -4,6 +4,16 @@ export type UserBadge = {
   badge: { name: string; description: string | null };
 };
 
+export type ArcadeChampionship = {
+  id: string;
+  gameType: "TYPING" | "REACTION" | "VISUAL_MEMORY" | "SEQUENCE_MEMORY";
+  scope: "COMPANY" | "DEPARTMENT";
+  departmentNameSnapshot: string | null;
+  weekStart: string;
+  primaryScore: number;
+  secondaryScore: number | null;
+};
+
 export type ShoutoutEntry = {
   id: string;
   post: {

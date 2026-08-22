@@ -5,6 +5,7 @@ import {
   declineChessDraw,
   deriveChessOutcome,
   getChessClock,
+  getChessTimeoutOutcome,
   initChess,
   offerChessDraw,
   rehydrateChess,
@@ -439,6 +440,82 @@ describe("chess clock expiry", () => {
         new Date("2026-08-22T00:05:00.001Z"),
       ),
     ).toThrow("Clock expired");
+  });
+});
+
+// --- Step 7: timeout settlement --------------------------------------------
+
+describe("getChessTimeoutOutcome", () => {
+  it("maps an expired White clock to a guest win", () => {
+    const started = freshStarted();
+
+    expect(
+      getChessTimeoutOutcome(started, new Date("2026-08-22T00:05:00.001Z")),
+    ).toMatchObject({ winner: "guest", expired: "host" });
+  });
+
+  it("maps an expired Black clock to a host win", () => {
+    const afterWhite = applyChessMove(
+      freshStarted(),
+      { from: "e2", to: "e4" },
+      "host",
+      at(2),
+    );
+
+    expect(getChessTimeoutOutcome(afterWhite.state, at(2 + 301))).toMatchObject({
+      winner: "host",
+      expired: "guest",
+    });
+  });
+
+  it("returns null when neither clock expired", () => {
+    expect(getChessTimeoutOutcome(freshStarted(), at(10))).toBeNull();
+  });
+
+  it("returns null on a game that has already ended", () => {
+    // The move route already froze the clock on checkmate, so a late timeout
+    // claim must not be able to re-decide a finished game.
+    const mate = playSequence(FOOLS_MATE);
+
+    expect(getChessTimeoutOutcome(mate.state, at(9999))).toBeNull();
+  });
+
+  it("returns null before the clock has been started", () => {
+    expect(getChessTimeoutOutcome(initChess({ timeControlMinutes: 5 }), at(9999))).toBeNull();
+  });
+
+  /**
+   * These two are what the timeout route persists as the final clock: the
+   * expired side must read exactly 0 and the winner must keep the time they
+   * had banked, so neither keeps counting down after settlement.
+   */
+  it("carries the frozen clock for the settling route to persist", () => {
+    const started = freshStarted();
+
+    expect(getChessTimeoutOutcome(started, new Date("2026-08-22T00:05:00.001Z"))).toEqual({
+      winner: "guest",
+      expired: "host",
+      whiteMs: 0,
+      blackMs: 300_000,
+    });
+  });
+
+  it("leaves the waiting side's bank untouched when the mover flags", () => {
+    // White spends 2s, then Black sits until Black's own bank runs out: White
+    // must be frozen at the 298s they had left, not at zero.
+    const afterWhite = applyChessMove(
+      freshStarted(),
+      { from: "e2", to: "e4" },
+      "host",
+      at(2),
+    );
+
+    expect(getChessTimeoutOutcome(afterWhite.state, at(2 + 301))).toEqual({
+      winner: "host",
+      expired: "guest",
+      whiteMs: 298_000,
+      blackMs: 0,
+    });
   });
 });
 

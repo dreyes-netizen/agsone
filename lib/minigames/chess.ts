@@ -157,6 +157,35 @@ export function getChessClock(state: ChessState, now: Date): ChessClock {
 }
 
 /**
+ * Decides whether a clock has run out at `now`, and if so who that hands the
+ * game to.
+ *
+ * The frozen `whiteMs`/`blackMs` come from the very same `getChessClock` read
+ * that made the expiry decision, and are returned alongside the winner so the
+ * settling route persists exactly the clock it judged — not a second reading
+ * taken a few milliseconds later. Written into the final state (together with
+ * `turnStartedAt: null`) they leave the flagged side showing 0 and the winner
+ * showing the time they actually had banked.
+ *
+ * Returns `null` — meaning "do not settle" — for a game that has not started,
+ * one already finished, or one where the side on move still has time.
+ */
+export function getChessTimeoutOutcome(
+  state: ChessState,
+  now: Date,
+): { winner: ChessRole; expired: ChessRole; whiteMs: number; blackMs: number } | null {
+  const clock = getChessClock(state, now);
+  if (clock.expiredRole === null) return null;
+
+  return {
+    winner: clock.expiredRole === WHITE_ROLE ? BLACK_ROLE : WHITE_ROLE,
+    expired: clock.expiredRole,
+    whiteMs: clock.whiteMs,
+    blackMs: clock.blackMs,
+  };
+}
+
+/**
  * Rebuilds a `chess.js` instance by REPLAYING the persisted move list.
  *
  * Loading the FEN alone would be shorter but would silently lose the position

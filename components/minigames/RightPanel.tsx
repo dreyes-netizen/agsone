@@ -19,6 +19,15 @@ function WaitingDots() {
   return <span aria-hidden="true">{"·".repeat(tick + 1)}</span>;
 }
 
+// Chess has its own piece-color vocabulary (White/Black) instead of the
+// generic X/O·number-token labels the other five games share.
+function sideLabel(session: Session, role: "host" | "guest"): string {
+  if (session.gameType === "CHESS") {
+    return role === "host" ? "Host · White" : "Guest · Black";
+  }
+  return role === "host" ? "Host · X / ●1" : "Guest · O / ●2";
+}
+
 export function RightPanel({
   session,
   onForfeit,
@@ -91,7 +100,7 @@ export function RightPanel({
             ) : session.status === "ACTIVE" ? (
               <p className="text-xs text-gray-500">Waiting <WaitingDots /></p>
             ) : (
-              <p className="text-xs text-gray-500">{session.myRole === "host" ? "Host · X / ●1" : "Guest · O / ●2"}</p>
+              <p className="text-xs text-gray-500">{sideLabel(session, session.myRole === "host" ? "host" : "guest")}</p>
             )}
           </div>
           <span className="text-xs text-navy-600 font-semibold bg-navy-50 px-2 py-0.5 rounded-full shrink-0">You</span>
@@ -120,7 +129,7 @@ export function RightPanel({
             ) : session.status === "ACTIVE" ? (
               <p className="text-xs text-gray-500">Waiting <WaitingDots /></p>
             ) : (
-              <p className="text-xs text-gray-500">{session.myRole === "host" ? "Guest · O / ●2" : "Host · X / ●1"}</p>
+              <p className="text-xs text-gray-500">{sideLabel(session, session.myRole === "host" ? "guest" : "host")}</p>
             )}
           </div>
         </div>

@@ -56,6 +56,16 @@ export const HOW_TO_PLAY: Record<string, { title: string; rules: { heading: stri
       { heading: "Winning", text: "The player who collects the most matched pairs when all 16 cards are cleared wins. A draw is possible!" },
     ],
   },
+  CHESS: {
+    title: "Chess",
+    rules: [
+      { heading: "Goal", text: "Checkmate the opponent's king. Host plays White and moves first, Guest plays Black." },
+      { heading: "The clock", text: "Games are 5 or 10 minutes with no increment. Your clock only runs on your turn — run out of time and you lose, even mid-game." },
+      { heading: "Draws", text: "Stalemate, threefold repetition, the fifty-move rule, and insufficient material all end the game as a draw. Either player can offer a draw at any time." },
+      { heading: "Promotion", text: "Move a pawn to the last rank and choose Queen, Rook, Bishop, or Knight to promote it." },
+      { heading: "Wagers", text: "If the game ends in a draw and points were wagered, each player's own wager is refunded." },
+    ],
+  },
 };
 
 export function HowToPlayModal({ gameType, onClose }: { gameType: string; onClose: () => void }) {

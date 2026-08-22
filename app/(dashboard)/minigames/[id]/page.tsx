@@ -19,6 +19,7 @@ import { RPSBoard } from "@/components/minigames/boards/RPSBoard";
 import { DnBBoard } from "@/components/minigames/boards/DnBBoard";
 import { BSBoard } from "@/components/minigames/boards/BSBoard";
 import { MemoryBoard } from "@/components/minigames/boards/MemoryBoard";
+import { GAME_TYPE_LABELS } from "@/lib/constants/gameTypes";
 import type { Session } from "@/components/minigames/types";
 
 // Both closed/hidden by default — split into their own chunks instead of
@@ -31,15 +32,22 @@ const GameResultOverlay = dynamic(
   () => import("@/components/minigames/GameResultOverlay").then((m) => m.GameResultOverlay),
   { ssr: false },
 );
-
-const GAME_LABELS: Record<string, string> = {
-  TIC_TAC_TOE: "Tic-Tac-Toe",
-  CONNECT_FOUR: "Connect Four",
-  RPS: "Rock Paper Scissors",
-  DOTS_AND_BOXES: "Dots & Boxes",
-  BATTLESHIP: "Battleship",
-  MEMORY: "Memory",
-};
+// Chess pulls in `react-chessboard` + `chess.js` — keep it out of every other
+// game's bundle by lazy-loading it, same as the modals above.
+const ChessBoard = dynamic(
+  () => import("@/components/minigames/boards/ChessBoard").then((m) => m.ChessBoard),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        role="status"
+        className="min-h-[320px] flex items-center justify-center text-sm text-gray-500"
+      >
+        Loading chess board…
+      </div>
+    ),
+  },
+);
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -116,8 +124,8 @@ export default function MinigameSessionPage() {
       .catch((err) => console.error("head-to-head stats fetch failed", err));
   }, [session?.status, session?.guest?.id, session?.host?.id]);
 
-  async function makeMove(data: unknown) {
-    if (moving || !session) return;
+  async function makeMove(data: unknown): Promise<boolean> {
+    if (moving || !session) return false;
     setMoving(true);
     try {
       const res = await apiFetch<{ data: Session }>(`/api/minigames/sessions/${id}/move`, {
@@ -126,9 +134,11 @@ export default function MinigameSessionPage() {
       });
       setSession(res.data);
       sounds.move();
+      return true;
     } catch (e: unknown) {
       const msg = (e as Error).message || "Invalid move";
       if (!msg.includes("Not your turn")) showMoveError(msg);
+      return false;
     } finally {
       setMoving(false);
     }
@@ -197,7 +207,7 @@ export default function MinigameSessionPage() {
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Lobby
         </button>
-        <h1 className="text-xl font-bold text-gray-900 flex-1">{GAME_LABELS[session.gameType] ?? session.gameType}</h1>
+        <h1 className="text-xl font-bold text-gray-900 flex-1">{GAME_TYPE_LABELS[session.gameType] ?? session.gameType}</h1>
         <button
           onClick={() => setShowHelp(true)}
           aria-label="How to play"
@@ -250,6 +260,7 @@ export default function MinigameSessionPage() {
               {session.gameType === "DOTS_AND_BOXES" && <DnBBoard    session={session} onMove={makeMove} />}
               {session.gameType === "BATTLESHIP"     && <BSBoard     session={session} onMove={makeMove} />}
               {session.gameType === "MEMORY"         && <MemoryBoard session={session} onMove={makeMove} />}
+              {session.gameType === "CHESS"          && <ChessBoard  session={session} onMove={makeMove} apiFetch={apiFetch} onSessionRefresh={fetchSession} />}
             </>
           )}
         </div>

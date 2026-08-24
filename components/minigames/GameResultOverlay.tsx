@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { RefreshCw, Check, AlertCircle } from "lucide-react";
+import { GAME_TYPE_LABELS } from "@/lib/constants/gameTypes";
 
 type Player = { id: string; displayName: string; avatarUrl: string | null };
 
@@ -16,15 +17,6 @@ type Session = {
   host: Player;
   guest: Player | null;
   myRole: "host" | "guest" | "spectator";
-};
-
-const GAME_LABELS: Record<string, string> = {
-  TIC_TAC_TOE: "Tic-Tac-Toe",
-  CONNECT_FOUR: "Connect Four",
-  RPS: "Rock Paper Scissors",
-  DOTS_AND_BOXES: "Dots & Boxes",
-  BATTLESHIP: "Battleship",
-  MEMORY: "Memory",
 };
 
 type Props = {
@@ -116,7 +108,7 @@ export function GameResultOverlay({ session, myId, h2h, onNavigate }: Props) {
         <div className="text-7xl mb-4" aria-hidden="true">{emoji}</div>
         <h2 className="text-3xl font-black text-white mb-1">{title}</h2>
         <p className="text-sm text-white/60 mb-2">
-          {GAME_LABELS[session.gameType] ?? session.gameType}
+          {GAME_TYPE_LABELS[session.gameType] ?? session.gameType}
         </p>
         {pointsLabel && (
           <p className={`text-xl font-bold mb-2 ${pointsColor}`}>{pointsLabel}</p>

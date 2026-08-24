@@ -29,7 +29,7 @@ export function MultiplayerGamePicker({ selected, onSelect }: Props) {
           }`}
         >
           <game.icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span className="truncate">{game.label}</span>
+          <span className="min-w-0 truncate">{game.label}</span>
           {game.badge && (
             <span
               className={`ml-auto shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${

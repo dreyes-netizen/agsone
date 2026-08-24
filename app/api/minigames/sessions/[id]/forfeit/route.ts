@@ -5,6 +5,32 @@ import { createNotification } from "@/lib/helpers/createNotification";
 import { gameLabel } from "@/lib/constants/gameLabels";
 import { broadcastMany } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { getChessClock, type ChessRole, type ChessState } from "@/lib/minigames/chess";
+
+/**
+ * Builds the terminal Chess state for a forfeit, with both clocks frozen at
+ * the reading taken the instant the forfeit landed.
+ *
+ * Mirrors `timeout/route.ts`'s `buildFinalState`: `getChessClock` gives us
+ * the CURRENT bank for both sides (accounting for whatever time the side to
+ * move had already burned), not zero — a forfeit is not a timeout, so the
+ * forfeiting side's clock should show what it actually had left, not "00:00".
+ * `turnStartedAt: null` stops the clock from continuing to tick down on a
+ * later page load; `endReason: "forfeit"` is what tells the board (and any
+ * future viewer) this was a forfeit, not a timeout.
+ */
+function buildForfeitChessState(state: ChessState, winner: ChessRole): ChessState {
+  const clock = getChessClock(state, new Date());
+  return {
+    ...state,
+    drawOfferBy: null,
+    endReason: "forfeit",
+    winner,
+    turnStartedAt: null,
+    whiteMs: clock.whiteMs,
+    blackMs: clock.blackMs,
+  };
+}
 
 export async function POST(
   req: NextRequest,
@@ -33,12 +59,34 @@ export async function POST(
 
   const winnerId = isHost ? session.guestId : session.hostId;
 
+  // Chess carries a clock in `state`. Every other game type has nothing there
+  // that needs freezing on forfeit, so only Chess gets a `state` write here —
+  // adding a no-op `state` for the other 6 games would just be extra risk.
+  const chessStateUpdate =
+    session.gameType === "CHESS"
+      ? {
+          state: JSON.parse(
+            JSON.stringify(
+              buildForfeitChessState(
+                session.state as unknown as ChessState,
+                isHost ? "guest" : "host",
+              ),
+            ),
+          ),
+        }
+      : {};
+
   // Atomically flip ACTIVE -> FINISHED. If count === 0 another request (a
   // finishing move, or a concurrent forfeit) already ended the game, so we
   // must NOT run the payout again — otherwise the pot is awarded twice.
+  //
+  // For Chess, the status flip and the terminal `state` write happen in this
+  // SAME update on purpose — the same invariant the draw/timeout routes rely
+  // on: "status === ACTIVE implies state.endReason === null" must transition
+  // atomically, never as two separate writes.
   const finishRes = await prisma.gameSession.updateMany({
     where: { id, status: "ACTIVE" },
-    data: { status: "FINISHED", winnerId, currentTurn: null },
+    data: { status: "FINISHED", winnerId, currentTurn: null, ...chessStateUpdate },
   });
   if (finishRes.count === 0) {
     return NextResponse.json({ error: "Game not active" }, { status: 409 });

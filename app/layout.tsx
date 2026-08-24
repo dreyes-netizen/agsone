@@ -32,6 +32,10 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   icons: {
+    // Explicitly setting `icons` here overrides Next's file-convention
+    // auto-detection of app/icon.png, so it must be listed alongside apple
+    // or the browser gets no <link rel="icon"> at all.
+    icon: "/icon.png",
     apple: "/apple-touch-icon.png",
   },
 };

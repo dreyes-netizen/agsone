@@ -91,6 +91,11 @@ export type ChessMoveResult = {
   move: ChessMoveRecord;
 };
 
+/** `timeControlMinutes: 0` is the "no limit" game — its clock never runs. */
+export function isChessUntimed(state: ChessState): boolean {
+  return state.timeControlMinutes === 0;
+}
+
 /** Fresh state for a new session. The clock deliberately does NOT start here. */
 export function initChess(settings: ChessSettings): ChessState {
   const bankMs = settings.timeControlMinutes * 60_000;
@@ -115,9 +120,13 @@ export function initChess(settings: ChessSettings): ChessState {
  * Starts White's clock. Called once, when the guest joins and the session goes
  * ACTIVE — never from `initChess`, because a session can sit in a lobby for
  * minutes before an opponent arrives. Idempotent.
+ *
+ * A no-limit game (`timeControlMinutes: 0`) never starts a clock at all: every
+ * bank is 0, so ticking it down would flag a side on their very first move.
  */
 export function startChessClock(state: ChessState, now: Date): ChessState {
   if (state.turnStartedAt !== null || state.endReason !== null) return state;
+  if (isChessUntimed(state)) return state;
   return { ...state, turnStartedAt: now.toISOString() };
 }
 
@@ -334,10 +343,12 @@ export function applyChessMove(
       ...(record.promotion ? { promotion: record.promotion } : {}),
     },
     // The mover's bank pays for the time they just spent; the opponent's
-    // clock starts from `now`.
+    // clock starts from `now`. A no-limit game keeps both banks untouched and
+    // never restarts `turnStartedAt` — there is nothing to bill.
     whiteMs: role === WHITE_ROLE ? clock.whiteMs : state.whiteMs,
     blackMs: role === BLACK_ROLE ? clock.blackMs : state.blackMs,
-    turnStartedAt: endReason === null ? now.toISOString() : null,
+    turnStartedAt:
+      endReason === null && !isChessUntimed(state) ? now.toISOString() : null,
     // Any pending offer dies the moment a move is played.
     drawOfferBy: null,
     endReason,

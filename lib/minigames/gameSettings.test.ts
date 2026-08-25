@@ -14,6 +14,12 @@ describe("parseGameSettings", () => {
     ).toEqual({ timeControlMinutes: 10 });
   });
 
+  it("accepts no-limit chess", () => {
+    expect(
+      parseGameSettings("CHESS", { timeControlMinutes: 0 }),
+    ).toEqual({ timeControlMinutes: 0 });
+  });
+
   it("rejects arbitrary chess time controls", () => {
     expect(() =>
       parseGameSettings("CHESS", { timeControlMinutes: 30 }),

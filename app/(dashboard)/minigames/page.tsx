@@ -48,7 +48,7 @@ export default function MinigamesPage() {
   const [selectedGame, setSelectedGame] = useState<GameTypeKey>("RPS");
   const [creating, setCreating] = useState(false);
   const [wager, setWager] = useState(0);
-  const [chessTimeControl, setChessTimeControl] = useState<5 | 10>(5);
+  const [chessTimeControl, setChessTimeControl] = useState<5 | 10 | 0>(5);
   const [joining, setJoining] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);

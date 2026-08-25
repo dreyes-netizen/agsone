@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Chess, type Square } from "chess.js";
 import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
-import { activeChessRole, getChessClock, type ChessRole, type ChessState } from "@/lib/minigames/chess";
+import { activeChessRole, getChessClock, isChessUntimed, type ChessRole, type ChessState } from "@/lib/minigames/chess";
 import type { useApiClient } from "@/lib/hooks/useApiClient";
 import { ChessClock } from "./ChessClock";
 import { ChessPromotionPicker } from "./ChessPromotionPicker";
@@ -72,15 +72,18 @@ export function ChessBoard({ session, onMove, apiFetch, onSessionRefresh }: Prop
     to: string;
   } | null>(null);
 
+  const untimed = isChessUntimed(chessState);
+
   // Local ticking clock, display-only. `nowMs` never gets written back
   // anywhere — the actual remaining-time math is delegated to the shared
-  // pure `getChessClock`, imported from the same module the server uses.
+  // pure `getChessClock`, imported from the same module the server uses. A
+  // no-limit game's clock never moves, so there is nothing to tick.
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    if (session.status !== "ACTIVE") return;
+    if (session.status !== "ACTIVE" || untimed) return;
     const timer = window.setInterval(() => setNowMs(Date.now()), 250);
     return () => window.clearInterval(timer);
-  }, [session.status]);
+  }, [session.status, untimed]);
 
   const clock = useMemo(
     () => getChessClock(chessState, new Date(nowMs)),
@@ -233,6 +236,7 @@ export function ChessBoard({ session, onMove, apiFetch, onSessionRefresh }: Prop
           label={labelFor(topRole)}
           ms={msFor(topRole)}
           active={session.status === "ACTIVE" && activeRole === topRole}
+          unlimited={untimed}
         />
       </div>
 
@@ -262,6 +266,7 @@ export function ChessBoard({ session, onMove, apiFetch, onSessionRefresh }: Prop
           label={labelFor(bottomRole)}
           ms={msFor(bottomRole)}
           active={session.status === "ACTIVE" && activeRole === bottomRole}
+          unlimited={untimed}
         />
       </div>
 

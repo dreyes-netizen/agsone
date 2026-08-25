@@ -28,6 +28,8 @@ type ChessClockProps = {
   label: string;
   ms: number;
   active: boolean;
+  /** No-limit game — render "∞" instead of a countdown that never runs. */
+  unlimited?: boolean;
 };
 
 /**
@@ -37,7 +39,7 @@ type ChessClockProps = {
  * screen-reader users. The label + value are always available on demand via
  * the stable `aria-label` instead.
  */
-export function ChessClock({ label, ms, active }: ChessClockProps) {
+export function ChessClock({ label, ms, active, unlimited = false }: ChessClockProps) {
   return (
     <div
       aria-label={`${label} clock`}
@@ -55,7 +57,7 @@ export function ChessClock({ label, ms, active }: ChessClockProps) {
           active ? "text-navy-700" : "text-gray-700"
         }`}
       >
-        {formatChessClock(ms)}
+        {unlimited ? "∞" : formatChessClock(ms)}
       </span>
     </div>
   );

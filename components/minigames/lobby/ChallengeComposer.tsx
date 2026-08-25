@@ -9,8 +9,8 @@ type Props = {
   gameType: GameTypeKey;
   wager: number;
   onWagerChange: (wager: number) => void;
-  chessTimeControl: 5 | 10;
-  onChessTimeControlChange: (minutes: 5 | 10) => void;
+  chessTimeControl: 5 | 10 | 0;
+  onChessTimeControlChange: (minutes: 5 | 10 | 0) => void;
   creating: boolean;
   onCreate: () => void;
   onShowHelp: () => void;
@@ -52,7 +52,7 @@ export function ChallengeComposer({
         <div>
           <p className="text-xs font-medium text-gray-500 mb-2" id="time-control-label">Time control</p>
           <div className="flex gap-2" role="group" aria-labelledby="time-control-label">
-            {([5, 10] as const).map((minutes) => (
+            {([5, 10, 0] as const).map((minutes) => (
               <button
                 key={minutes}
                 type="button"
@@ -64,7 +64,7 @@ export function ChallengeComposer({
                     : "border-gray-200 text-gray-600 hover:border-gray-400"
                 }`}
               >
-                {minutes} min
+                {minutes === 0 ? "No limit" : `${minutes} min`}
               </button>
             ))}
           </div>

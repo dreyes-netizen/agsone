@@ -36,7 +36,7 @@ function sessionMeta(session: Session): string {
     if (typeof minutes !== "number" || !Number.isFinite(minutes)) {
       return "Chess · Quick · Free";
     }
-    return `Chess · ${minutes} min · ${wagerText}`;
+    return `Chess · ${minutes === 0 ? "No limit" : `${minutes} min`} · ${wagerText}`;
   }
 
   return `${GAME_LABEL[session.gameType]} · ${wagerText}`;

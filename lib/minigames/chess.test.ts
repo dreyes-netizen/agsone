@@ -7,6 +7,7 @@ import {
   getChessClock,
   getChessTimeoutOutcome,
   initChess,
+  isChessUntimed,
   offerChessDraw,
   rehydrateChess,
   startChessClock,
@@ -192,6 +193,58 @@ describe("chess state", () => {
       blackMs: 300_000,
       expiredRole: null,
     });
+  });
+});
+
+// --- Free time: the no-limit game (timeControlMinutes: 0) ------------------
+// Agents (and slow human players) were running out of time on the 5/10-minute
+// controls mid-game. `0` opts a session out of the clock entirely rather than
+// tuning the bank size — nobody times out, ever.
+
+describe("chess untimed games", () => {
+  it("initializes with a zero bank and is reported as untimed", () => {
+    const state = initChess({ timeControlMinutes: 0 });
+
+    expect(state.whiteMs).toBe(0);
+    expect(state.blackMs).toBe(0);
+    expect(isChessUntimed(state)).toBe(true);
+  });
+
+  it("never starts the clock when the session activates", () => {
+    const created = initChess({ timeControlMinutes: 0 });
+    const started = startChessClock(created, new Date(T0));
+
+    expect(started.turnStartedAt).toBeNull();
+  });
+
+  it("never restarts the clock as moves are played", () => {
+    const started = startChessClock(initChess({ timeControlMinutes: 0 }), new Date(T0));
+    const afterWhite = applyChessMove(started, { from: "e2", to: "e4" }, "host", at(500));
+    const afterBlack = applyChessMove(afterWhite.state, { from: "e7", to: "e5" }, "guest", at(1000));
+
+    expect(afterWhite.state.turnStartedAt).toBeNull();
+    expect(afterBlack.state.turnStartedAt).toBeNull();
+    expect(afterBlack.state.whiteMs).toBe(0);
+    expect(afterBlack.state.blackMs).toBe(0);
+  });
+
+  it("never reports an expired clock, no matter how much wall time passes", () => {
+    const started = startChessClock(initChess({ timeControlMinutes: 0 }), new Date(T0));
+
+    expect(getChessClock(started, at(999_999))).toEqual({
+      whiteMs: 0,
+      blackMs: 0,
+      expiredRole: null,
+    });
+    expect(getChessTimeoutOutcome(started, at(999_999))).toBeNull();
+  });
+
+  it("never rejects a move for a stale clock", () => {
+    const started = startChessClock(initChess({ timeControlMinutes: 0 }), new Date(T0));
+
+    expect(() =>
+      applyChessMove(started, { from: "e2", to: "e4" }, "host", at(999_999)),
+    ).not.toThrow();
   });
 });
 

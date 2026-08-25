@@ -19,7 +19,9 @@ import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
  *   Employee ID       — Used to match and update existing employees (e.g. 1001)
  *
  * OPTIONAL COLUMNS (updated on every upload if present):
- *   First Name        — Combined with Last Name to set the display name
+ *   First Name        — Combined with Last Name to set the display name.
+ *                       This overrides any name the employee set themselves —
+ *                       the roster is the source of truth for names.
  *   Last Name         — Combined with First Name to set the display name
  *   Middle Name       — Accepted but not stored (can be left in the file)
  *   Birthday          — Date of birth (used for birthday milestone rewards)
@@ -46,6 +48,10 @@ import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 type ActiveRow = {
   email: string;
   displayName: string;
+  // Null when the row has no First/Last Name data at all, so an existing
+  // employee's roster-sourced name is left alone rather than overwritten
+  // with the email-fallback display name.
+  rosterName: string | null;
   hireDate: Date | null;
   birthday: Date | null;
   departmentName: string | null;
@@ -117,14 +123,15 @@ export async function POST(req: NextRequest) {
       } else {
         const firstName = (row["First Name"] as string | null)?.trim() ?? "";
         const lastName = (row["Last Name"] as string | null)?.trim() ?? "";
-        const displayName = `${firstName} ${lastName}`.trim() || email;
+        const rosterName = `${firstName} ${lastName}`.trim() || null;
+        const displayName = rosterName ?? email;
         const hireDateRaw = row["Hire Date"];
         const hireDate = hireDateRaw instanceof Date ? hireDateRaw : null;
         const birthdayRaw = row["Birthday"];
         const birthday = birthdayRaw instanceof Date ? birthdayRaw : null;
         const departmentName = (row["Department"] as string | null)?.trim() ?? null;
         const employeeId = ((row["Employee #"] ?? row["Employee ID"]) as string | null)?.trim() || null;
-        activeRows.push({ email, displayName, hireDate, birthday, departmentName, employeeId });
+        activeRows.push({ email, displayName, rosterName, hireDate, birthday, departmentName, employeeId });
       }
     }
 
@@ -264,17 +271,21 @@ export async function POST(req: NextRequest) {
             ? (deptByName.get(row.departmentName.toLowerCase()) ?? null)
             : null;
           if (row.birthday) birthdaysUpdated++;
-          return Prisma.sql`(${userId}::text, ${departmentId}::text, ${row.birthday}::timestamp, ${row.hireDate}::timestamp, ${row.employeeId}::text)`;
+          return Prisma.sql`(${userId}::text, ${departmentId}::text, ${row.birthday}::timestamp, ${row.hireDate}::timestamp, ${row.employeeId}::text, ${row.rosterName}::text)`;
         });
 
+        // displayName is reset to the roster's First/Last Name on every sync
+        // that has name data for the row — this is HR's source of truth, and
+        // deliberately overrides any name an employee edited during onboarding.
         await tx.$executeRaw`
           UPDATE "User" AS u
           SET
             "departmentId" = v."departmentId",
             "birthday"     = COALESCE(v."birthday", u."birthday"),
             "hireDate"     = COALESCE(v."hireDate", u."hireDate"),
-            "employeeId"   = COALESCE(v."employeeId", u."employeeId")
-          FROM (VALUES ${Prisma.join(valueRows)}) AS v(id, "departmentId", "birthday", "hireDate", "employeeId")
+            "employeeId"   = COALESCE(v."employeeId", u."employeeId"),
+            "displayName"  = COALESCE(v."displayName", u."displayName")
+          FROM (VALUES ${Prisma.join(valueRows)}) AS v(id, "departmentId", "birthday", "hireDate", "employeeId", "displayName")
           WHERE u.id = v.id
         `;
       }

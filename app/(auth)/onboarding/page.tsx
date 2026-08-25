@@ -16,7 +16,6 @@ export default function OnboardingPage() {
   const { user: authUser, loading: authLoading, dbUser, refreshProfile } = useAuth();
   const { apiFetch } = useApiClient();
 
-  const [displayName, setDisplayName] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [birthday, setBirthday] = useState("");
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -33,7 +32,6 @@ export default function OnboardingPage() {
     if (authLoading || !authUser) return;
     // Compiler forbids a bare synchronous setState in an effect body.
     queueMicrotask(() => {
-      setDisplayName(dbUser?.displayName ?? authUser.displayName ?? "");
       if (dbUser?.department?.id) setDepartmentId(dbUser.department.id);
       if (dbUser?.birthday) setBirthday(dbUser.birthday.slice(0, 10));
     });
@@ -51,7 +49,6 @@ export default function OnboardingPage() {
       await apiFetch("/api/auth/onboarding", {
         method: "PATCH",
         body: JSON.stringify({
-          displayName,
           ...(departmentId ? { departmentId } : {}),
           ...(birthday ? { birthday } : {}),
         }),
@@ -96,20 +93,13 @@ export default function OnboardingPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label htmlFor="displayName" className="block text-sm font-medium text-zinc-700">
-                Display Name
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                minLength={2}
-                aria-required="true"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus-visible:border-navy-400 transition"
-                placeholder="Your name"
-              />
+              <span className="block text-sm font-medium text-zinc-700">Name</span>
+              <p className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 bg-zinc-50 text-sm text-zinc-900">
+                {dbUser?.displayName ?? authUser?.displayName}
+              </p>
+              <p className="text-xs text-zinc-500">
+                This comes from the HR roster. Contact HR if it needs to be corrected.
+              </p>
             </div>
 
             {!dbUser?.department && (

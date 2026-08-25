@@ -6,7 +6,6 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
 const schema = z.object({
-  displayName: z.string().min(2).max(100),
   departmentId: z.string().uuid().optional(),
   birthday: z.string().optional(),
 });
@@ -21,7 +20,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { displayName, departmentId, birthday } = parsed.data;
+  const { departmentId, birthday } = parsed.data;
 
   if (departmentId) {
     const dept = await prisma.department.findUnique({ where: { id: departmentId } });
@@ -33,7 +32,6 @@ export async function PATCH(req: NextRequest) {
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      displayName,
       ...(departmentId ? { departmentId } : {}),
       onboardingComplete: true,
       ...(birthday ? { birthday: new Date(birthday) } : {}),

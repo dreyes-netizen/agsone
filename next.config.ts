@@ -128,6 +128,17 @@ const nextConfig: NextConfig = {
         destination: "/login",
         permanent: false,
       },
+      // /login is a public path, so Proxy never runs on it (see the allowlist
+      // matcher in proxy.ts) and the page itself has no already-signed-in
+      // check — an employee who bookmarked /login got the sign-in screen again
+      // on every visit despite holding a live session. Same cookie test as "/",
+      // in the same routing-layer step, so it costs no invocation either.
+      {
+        source: "/login",
+        has: [{ type: "cookie", key: "firebase-token" }],
+        destination: "/feed",
+        permanent: false,
+      },
     ];
   },
   async headers() {

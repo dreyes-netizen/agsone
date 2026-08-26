@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Loader2, Trophy, Medal } from "lucide-react";
+import Link from "next/link";
+import { Star, Loader2, Trophy } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { RankBadge } from "@/components/leaderboard/RankBadge";
+import { UserAvatar } from "@/components/leaderboard/UserAvatar";
 
 type Entry = {
   userId: string;
@@ -35,40 +38,6 @@ type Achiever = {
   label: string;
   achievedAt: string;
 };
-
-function Avatar({ name, url, size = "md" }: { name: string; url: string | null; size?: "sm" | "md" | "lg" }) {
-  const [errored, setErrored] = useState(false);
-  const cls = size === "lg" ? "w-16 h-16 text-2xl" : size === "sm" ? "w-9 h-9 text-xs" : "w-11 h-11 text-sm";
-  if (url && !errored) return <img src={url} alt={name} className={`${cls} rounded-full object-cover shrink-0`} onError={() => setErrored(true)} />;
-  return (
-    <div className={`${cls} rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white font-bold shrink-0`}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
-function RankBadge({ rank }: { rank: number }) {
-  if (rank === 1) return (
-    <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center shrink-0" aria-label="Rank 1">
-      <Trophy className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />
-    </div>
-  );
-  if (rank === 2) return (
-    <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0" aria-label="Rank 2">
-      <Medal className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" />
-    </div>
-  );
-  if (rank === 3) return (
-    <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center shrink-0" aria-label="Rank 3">
-      <Medal className="w-3.5 h-3.5 text-orange-400" aria-hidden="true" />
-    </div>
-  );
-  return (
-    <span className="w-7 text-center text-xs font-semibold text-gray-500 shrink-0" aria-label={`Rank ${rank}`}>
-      {rank}
-    </span>
-  );
-}
 
 export default function LeaderboardPage() {
   const { user, dbUser, loading: authLoading } = useAuth();
@@ -245,11 +214,14 @@ export default function LeaderboardPage() {
                       aria-current={e.isCurrentUser ? "true" : undefined}
                     >
                       <RankBadge rank={rank} />
-                      <Avatar name={e.displayName} url={e.avatarUrl} />
+                      <UserAvatar name={e.displayName} url={e.avatarUrl} />
                       <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm truncate ${e.isCurrentUser ? "text-navy-800 font-semibold" : "text-gray-900"}`}>
+                        <Link
+                          href={`/employees/${e.userId}`}
+                          className={`block max-w-full truncate font-medium text-sm rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-600 ${e.isCurrentUser ? "text-navy-800 font-semibold" : "text-gray-900"}`}
+                        >
                           {e.isCurrentUser ? `${e.displayName} (You)` : e.displayName}
-                        </p>
+                        </Link>
                         {e.department && <p className="text-xs text-gray-500 truncate">{e.department}</p>}
                       </div>
                       <span className={`font-bold text-sm tabular-nums shrink-0 ${rank === 1 ? "text-amber-600" : rank <= 3 ? "text-gray-700" : "text-navy-600"}`}>
@@ -366,7 +338,7 @@ export default function LeaderboardPage() {
               <div className="divide-y divide-gray-50">
                 {achievers.map((a, i) => (
                   <div key={`${a.userId}-${i}`} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
-                    <Avatar name={a.displayName} url={a.avatarUrl} size="sm" />
+                    <UserAvatar name={a.displayName} url={a.avatarUrl} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-gray-800 truncate">{a.displayName}</p>
                       <p className="text-[10px] text-gray-500 truncate">{a.label}</p>

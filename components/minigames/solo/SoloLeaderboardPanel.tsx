@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Crown, Loader2, Trophy } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
+import { PlayerNameButton } from "@/components/leaderboard/PlayerNameButton";
+import { RankBadge } from "@/components/leaderboard/RankBadge";
+import { UserAvatar } from "@/components/leaderboard/UserAvatar";
 import { SOLO_GAME_REGISTRY } from "@/lib/minigames/solo/registry";
 import type {
   SoloGameType,
@@ -120,7 +123,12 @@ export function createSoloChampionRequestLifecycle<T>(
   };
 }
 
-export function SoloLeaderboardPanel() {
+export function SoloLeaderboardPanel({
+  onSelectPlayer,
+}: {
+  /** Opens the shared player-record card owned by the stats page. */
+  onSelectPlayer?: (userId: string) => void;
+}) {
   const { user, dbUser, loading: authLoading } = useAuth();
   const { apiFetch } = useApiClient();
   const [gameType, setGameType] = useState<SoloGameType>("TYPING");
@@ -291,6 +299,7 @@ export function SoloLeaderboardPanel() {
         boardError={boardError}
         currentUserId={currentUserId}
         currentUserName={currentUserName}
+        onSelectPlayer={onSelectPlayer}
       />
     </section>
   );
@@ -308,6 +317,7 @@ export function SoloLeaderboardResults({
   boardError,
   currentUserId,
   currentUserName,
+  onSelectPlayer,
 }: {
   gameType: SoloGameType;
   period: SoloRankPeriod;
@@ -320,6 +330,7 @@ export function SoloLeaderboardResults({
   boardError: string | null;
   currentUserId: string | undefined;
   currentUserName: string;
+  onSelectPlayer?: (userId: string) => void;
 }) {
   const game = SOLO_GAME_REGISTRY[gameType];
   const { topRows, pinnedCurrentUser } = splitVisibleSoloRows(
@@ -387,6 +398,9 @@ export function SoloLeaderboardResults({
             No valid ranked runs yet. Be the first!
           </p>
         ) : (
+          // The pinned "your position" row is part of this same list rather
+          // than a second <ol> in a sibling <div> — one list keeps the ranking
+          // semantics (and the screen-reader item count) intact.
           <ol
             aria-label={`${game.label} rankings`}
             className="divide-y divide-gray-100"
@@ -398,24 +412,20 @@ export function SoloLeaderboardResults({
                 gameType={gameType}
                 currentUserId={currentUserId}
                 currentUserName={currentUserName}
+                onSelectPlayer={onSelectPlayer}
               />
             ))}
-          </ol>
-        )}
-        {pinnedCurrentUser && (
-          <div className="border-t border-dashed border-gray-300 bg-navy-50 px-4 py-1 sm:px-5">
-            <p className="py-2 text-xs font-medium text-navy-700">
-              Your current position
-            </p>
-            <ol>
+            {pinnedCurrentUser && (
               <RankingRow
                 entry={pinnedCurrentUser}
                 gameType={gameType}
                 currentUserId={currentUserId}
                 currentUserName={currentUserName}
+                onSelectPlayer={onSelectPlayer}
+                caption="Your current position"
               />
-            </ol>
-          </div>
+            )}
+          </ol>
         )}
       </div>
       <div className="rounded-xl border border-table-border bg-white p-4 sm:p-5">
@@ -433,22 +443,29 @@ export function SoloLeaderboardResults({
             {champions.slice(0, 6).map((champion) => (
               <li
                 key={champion.id}
-                className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                className="flex items-center gap-2.5 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700"
               >
-                <p className="font-semibold text-gray-900">
-                  {champion.user.displayName}
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  {SOLO_GAME_REGISTRY[champion.gameType]?.label ??
-                    champion.gameType}{" "}
-                  ·{" "}
-                  {formatSoloResult(
-                    champion.gameType,
-                    champion.primaryScore,
-                    champion.secondaryScore,
-                  )}{" "}
-                  · week of {formatWeek(champion.weekStart)}
-                </p>
+                <UserAvatar
+                  name={champion.user.displayName}
+                  url={champion.user.avatarUrl}
+                  size="sm"
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-gray-900">
+                    {champion.user.displayName}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {SOLO_GAME_REGISTRY[champion.gameType]?.label ??
+                      champion.gameType}{" "}
+                    ·{" "}
+                    {formatSoloResult(
+                      champion.gameType,
+                      champion.primaryScore,
+                      champion.secondaryScore,
+                    )}{" "}
+                    · week of {formatWeek(champion.weekStart)}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
@@ -496,33 +513,56 @@ function RankingRow({
   gameType,
   currentUserId,
   currentUserName,
+  onSelectPlayer,
+  caption,
 }: {
   entry: SoloLeaderboardEntry;
   gameType: SoloGameType;
   currentUserId: string | undefined;
   currentUserName: string;
+  onSelectPlayer?: (userId: string) => void;
+  /** Set on the pinned "your position" row to label why it's separated. */
+  caption?: string;
 }) {
   const isCurrentUser = entry.userId === currentUserId;
   const secondary = formatSoloSecondaryScore(gameType, entry.secondaryScore);
+  const displayName = isCurrentUser ? currentUserName : entry.displayName;
   return (
     <li
-      aria-label={`Rank ${entry.rank}: ${isCurrentUser ? currentUserName : entry.displayName}, ${formatSoloResult(gameType, entry.primaryScore, entry.secondaryScore)}`}
-      className={`grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-sm sm:px-5 ${isCurrentUser ? "bg-navy-50" : ""}`}
+      aria-current={isCurrentUser ? "true" : undefined}
+      aria-label={`Rank ${entry.rank}: ${displayName}, ${formatSoloResult(gameType, entry.primaryScore, entry.secondaryScore)}`}
+      className={`transition-colors ${caption ? "border-t border-dashed border-gray-300" : ""} ${isCurrentUser ? "bg-navy-50" : "hover:bg-gray-50"}`}
     >
-      <span className="font-bold tabular-nums text-gray-500">
-        #{entry.rank}
-      </span>
-      <span className="min-w-0 truncate font-medium text-gray-900">
-        {isCurrentUser ? `${currentUserName} (You)` : entry.displayName}
-      </span>
-      <span className="text-right font-bold tabular-nums text-navy-700">
-        {formatSoloScore(gameType, entry.primaryScore)}
-        {secondary && (
-          <small className="block text-xs font-medium text-gray-500">
-            {secondary}
-          </small>
-        )}
-      </span>
+      {caption && (
+        <p className="px-4 pt-2 text-xs font-medium text-navy-700 sm:px-5">
+          {caption}
+        </p>
+      )}
+      <div className="flex items-center gap-3 px-4 py-3 text-sm sm:px-5">
+        <RankBadge rank={entry.rank} />
+        <UserAvatar name={displayName} url={entry.avatarUrl} size="sm" />
+        <div className="min-w-0 flex-1">
+          {onSelectPlayer ? (
+            <PlayerNameButton
+              name={displayName}
+              isCurrentUser={isCurrentUser}
+              onClick={() => onSelectPlayer(entry.userId)}
+            />
+          ) : (
+            <span className="block truncate font-medium text-gray-900">
+              {isCurrentUser ? `${displayName} (You)` : displayName}
+            </span>
+          )}
+        </div>
+        <span className="text-right font-bold tabular-nums text-navy-700">
+          {formatSoloScore(gameType, entry.primaryScore)}
+          {secondary && (
+            <small className="block text-xs font-medium text-gray-500">
+              {secondary}
+            </small>
+          )}
+        </span>
+      </div>
     </li>
   );
 }

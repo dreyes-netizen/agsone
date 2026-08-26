@@ -4,12 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
-import { Trophy, Flame, Medal, Loader2, Gamepad2 } from "lucide-react";
+import { Trophy, Flame, Loader2, Gamepad2 } from "lucide-react";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 import { GAME_TYPE_LABELS, GAME_TYPE_ICONS } from "@/lib/constants/gameTypes";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { SoloLeaderboardPanel } from "@/components/minigames/solo/SoloLeaderboardPanel";
+import { PlayerRecordDialog } from "@/components/minigames/PlayerRecordDialog";
+import { PlayerNameButton } from "@/components/leaderboard/PlayerNameButton";
+import { RankBadge } from "@/components/leaderboard/RankBadge";
+import { UserAvatar } from "@/components/leaderboard/UserAvatar";
 
 const GAME_LABEL = GAME_TYPE_LABELS;
 
@@ -48,41 +52,6 @@ type LeaderEntry = {
   winRate: number;
   isCurrentUser: boolean;
 };
-
-const rankColors: Record<number, string> = {
-  1: "text-yellow-500",
-  2: "text-gray-500",
-  3: "text-orange-500",
-};
-
-function Avatar({
-  name,
-  url,
-  size = "md",
-}: {
-  name: string;
-  url: string | null;
-  size?: "sm" | "md";
-}) {
-  const [errored, setErrored] = useState(false);
-  const cls = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
-  if (url && !errored)
-    return (
-      <img
-        src={url}
-        alt={name}
-        className={`${cls} rounded-full object-cover shrink-0`}
-        onError={() => setErrored(true)}
-      />
-    );
-  return (
-    <div
-      className={`${cls} rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold shrink-0`}
-    >
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
 
 const outcomeStyle: Record<string, { label: string; cls: string }> = {
   win: { label: "Won", cls: "text-emerald-600 bg-emerald-50" },
@@ -212,6 +181,8 @@ export default function MinigamesStatsPage() {
   const [extraHistory, setExtraHistory] = useState<HistoryItem[]>([]);
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  // The player whose record card is open, shared by both leaderboard tabs.
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   function loadStats() {
     return apiFetch<{ data: Stats }>("/api/minigames/stats")
@@ -412,30 +383,23 @@ export default function MinigamesStatsPage() {
                   {board.map((e) => (
                     <li
                       key={e.userId}
+                      aria-current={e.isCurrentUser ? "true" : undefined}
                       aria-label={`Rank ${e.rank}: ${e.displayName}, ${e.wins} wins, ${e.winRate}% win rate`}
-                      className={`flex items-center gap-3 px-5 py-3 ${e.isCurrentUser ? "bg-navy-50 border-l-2 border-navy-500" : "border-l-2 border-transparent"}`}
+                      className={`flex items-center gap-3 px-5 py-3 transition-colors ${e.isCurrentUser ? "bg-navy-50 border-l-2 border-navy-500" : "border-l-2 border-transparent hover:bg-gray-50"}`}
                     >
-                      <span
-                        className={`w-7 text-center font-bold text-sm tabular-nums ${rankColors[e.rank] ?? "text-gray-500"}`}
-                      >
-                        {e.rank <= 3 ? (
-                          <Medal
-                            className={`w-4 h-4 inline ${rankColors[e.rank]}`}
-                          />
-                        ) : (
-                          `#${e.rank}`
-                        )}
-                      </span>
-                      <Avatar name={e.displayName} url={e.avatarUrl} />
+                      <RankBadge rank={e.rank} />
+                      <UserAvatar name={e.displayName} url={e.avatarUrl} />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 truncate">
-                          {e.isCurrentUser
-                            ? `${e.displayName} (You)`
-                            : e.displayName}
-                        </p>
-                        <p className="text-xs text-gray-500">
+                        <PlayerNameButton
+                          name={e.displayName}
+                          isCurrentUser={e.isCurrentUser}
+                          onClick={() => setSelectedUserId(e.userId)}
+                          className="text-sm"
+                        />
+                        <p className="text-xs text-gray-500 truncate">
                           {e.wins}W · {e.losses}L
                           {e.draws > 0 ? ` · ${e.draws}D` : ""}
+                          {e.department ? ` · ${e.department}` : ""}
                         </p>
                       </div>
                       <span className="font-bold text-navy-600 text-sm tabular-nums">
@@ -516,8 +480,15 @@ export default function MinigamesStatsPage() {
         )}
       </MinigameStatsTabPanel>
       <MinigameStatsTabPanel view="solo" activeView={view}>
-        {view === "solo" && <SoloLeaderboardPanel />}
+        {view === "solo" && (
+          <SoloLeaderboardPanel onSelectPlayer={setSelectedUserId} />
+        )}
       </MinigameStatsTabPanel>
+
+      <PlayerRecordDialog
+        userId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+      />
     </div>
   );
 }

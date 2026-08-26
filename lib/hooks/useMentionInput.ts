@@ -74,6 +74,18 @@ export function useMentionInput(employees: MentionEmployee[]) {
   }
 
   /**
+   * Register a mention that was seeded programmatically rather than chosen from
+   * the dropdown, so encode() still turns it into a token.
+   *
+   * Needed because `picked` is the only thing encode() trusts — a reply-to-reply
+   * that prefills "@Their Name" into the draft would otherwise stay plain text
+   * and notify nobody, silently.
+   */
+  function prime(emp: MentionEmployee) {
+    setPicked((prev) => ({ ...prev, [emp.displayName]: emp.id }));
+  }
+
+  /**
    * Rewrite picked names into `@[Name|id]` tokens. Longest name first so
    * "Ana Cruz" is not partially consumed by a shorter "Ana".
    */
@@ -97,7 +109,7 @@ export function useMentionInput(employees: MentionEmployee[]) {
     setQuery(null);
   }
 
-  return { open, results, activeIndex, setActiveIndex, detect, select, encode, reset, close };
+  return { open, results, activeIndex, setActiveIndex, detect, select, prime, encode, reset, close };
 }
 
 export type MentionInput = ReturnType<typeof useMentionInput>;

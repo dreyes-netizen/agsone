@@ -3,10 +3,9 @@
 import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { CommentList, CommentComposer } from "@/components/feed/CommentThread";
-import type { CommentItem, FeedPost } from "@/lib/types/feed";
+import type { CommentItem, FeedPost, ReplyTarget } from "@/lib/types/feed";
 import type { GifResult } from "@/lib/giphy/client";
 
-type ReplyTarget = { postId: string; commentId: string; displayName: string } | null;
 type EditingPost = { id: string; title: string; content: string };
 
 /**

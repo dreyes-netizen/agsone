@@ -10,6 +10,7 @@ import { seedGifCache, type GifResult } from "@/lib/giphy/client";
 import type {
   FeedPost,
   ReplyItem,
+  ReplyTarget,
   CommentItem,
   UserProfile,
   LeaderboardEntry,
@@ -78,7 +79,7 @@ export function useFeedActions() {
   const [commentsLoadingMore, setCommentsLoadingMore] = useState<Record<string, boolean>>({});
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
   const [commentSending, setCommentSending] = useState<Record<string, boolean>>({});
-  const [replyingTo, setReplyingTo] = useState<{ postId: string; commentId: string; displayName: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<ReplyTarget>(null);
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
   const [replySending, setReplySending] = useState<Record<string, boolean>>({});
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
@@ -556,6 +557,9 @@ export function useFeedActions() {
     }));
     setReplyDraft((prev) => ({ ...prev, [parentId]: "" }));
     setReplyingTo(null);
+    // Replying from a collapsed thread would otherwise drop the new reply out of
+    // sight — it lands in c.replies, which isn't rendered until expanded.
+    setExpandedReplies((prev) => ({ ...prev, [parentId]: true }));
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p)));
     try {
       const res = await apiFetch<{ data: ReplyItem }>(`/api/feed/${postId}/comments`, {

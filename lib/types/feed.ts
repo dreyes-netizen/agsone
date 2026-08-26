@@ -73,6 +73,28 @@ export type CommentItem = {
   replies: ReplyItem[];
 };
 
+/**
+ * The open reply composer's target.
+ *
+ * `commentId` is ALWAYS the top-level comment id, never a reply's own id:
+ * threading is capped at two levels Facebook-style, so replying to a reply
+ * files the new comment under the same top-level parent and identifies who
+ * is being answered with an @mention instead of nesting deeper. That keeps
+ * every fixed-depth walk over the comment tree (findCommentById, the
+ * optimistic cache patches, gifIdsOf) correct without becoming recursive.
+ *
+ * Declared here rather than in a component because CommentThread,
+ * PostViewerSidebar, MediaViewer and useFeedActions all pass it through.
+ */
+export type ReplyTarget = {
+  postId: string;
+  commentId: string;
+  /** Who is being replied to — drives the composer placeholder. */
+  displayName: string;
+  /** Set only when replying to a reply: seeds an @mention of that reply's author. */
+  mentionUserId?: string;
+} | null;
+
 export type UserProfile = {
   pointsBalance: number;
   level: number;

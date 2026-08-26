@@ -15,9 +15,7 @@ import { getReactionSummary } from "@/lib/helpers/reactionSummary";
 import { timeAgo } from "@/lib/helpers/timeAgo";
 import { useGifResolution, type GifMapEntry } from "@/lib/hooks/useGifResolution";
 import type { GifResult } from "@/lib/giphy/client";
-import type { CommentItem, ReplyItem } from "@/lib/types/feed";
-
-type ReplyTarget = { postId: string; commentId: string; displayName: string } | null;
+import type { CommentItem, ReplyItem, ReplyTarget } from "@/lib/types/feed";
 
 type ListProps = {
   postId: string;
@@ -193,6 +191,18 @@ export function CommentList({
     onSetReplyingTo(target);
     setReplyGif(null);
     setReplyPickerOpenFor(null);
+    if (!target?.mentionUserId) return;
+    // Replying to a reply: seed "@Their Name" so the flattened reply still says
+    // who it answers. prime() registers the id so encode() tokenises it at send
+    // — without that the text would look like a mention but notify nobody.
+    replyMention.prime({ id: target.mentionUserId, displayName: target.displayName });
+    const draft = replyDraft[target.commentId] ?? "";
+    const token = `@${target.displayName} `;
+    if (!draft.trim()) onReplyDraftChange(target.commentId, token);
+    // Never clobber text already typed — append instead, and only once.
+    else if (!draft.includes(`@${target.displayName}`)) {
+      onReplyDraftChange(target.commentId, `${draft.trimEnd()} ${token}`);
+    }
   }
 
   function pickReplyMention(commentId: string, emp: MentionEmployee) {
@@ -214,8 +224,8 @@ export function CommentList({
       {loading && (
         <div className="space-y-3 animate-pulse">
           {[1, 2].map((i) => (
-            <div key={i} className="flex gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
+            <div key={i} className="flex items-start gap-2.5">
+              <div className="w-10 h-10 rounded-full bg-gray-100 shrink-0" />
               <div className="flex-1 space-y-1.5">
                 <div className="h-3 bg-gray-100 rounded w-1/4" />
                 <div className="h-3 bg-gray-100 rounded w-3/4" />
@@ -240,7 +250,7 @@ export function CommentList({
         const { total: cTotal, topEmojis: cTopEmojis } = getReactionSummary(c.reactions);
         return (
         <div key={c.id}>
-          <div className="flex gap-2.5">
+          <div className="flex items-start gap-2.5">
             <button
               type="button"
               onClick={() => goToProfile(c.authorId)}
@@ -280,7 +290,10 @@ export function CommentList({
                 <button
                   onClick={() =>
                     startReply(
-                      replyingTo?.commentId === c.id
+                      // Only toggles shut when the open box is *this* plain reply.
+                      // If a reply-to-reply box is open on the same thread, this
+                      // switches the target back to the comment instead of closing.
+                      replyingTo?.commentId === c.id && !replyingTo?.mentionUserId
                         ? null
                         : { postId, commentId: c.id, displayName: c.author.displayName }
                     )
@@ -308,12 +321,92 @@ export function CommentList({
                   </button>
                 )}
               </div>
+              {expandedReplies[c.id] && c.replies.length > 0 && (
+                <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
+                  {c.replies.map((r) => {
+                    const { total: rTotal, topEmojis: rTopEmojis } = getReactionSummary(r.reactions);
+                    return (
+                    <div key={r.id} className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => goToProfile(r.authorId)}
+                        className="shrink-0 hover:opacity-80 transition-opacity"
+                        aria-label={`View ${r.author.displayName}'s profile`}
+                      >
+                        <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="xs" />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
+                          <button
+                            type="button"
+                            onClick={() => goToProfile(r.authorId)}
+                            className="text-xs font-semibold text-gray-900 hover:underline transition-colors"
+                          >
+                            {r.author.displayName}
+                          </button>
+                          <CommentBody item={r} resolvedGif={r.gifId ? gifMap[r.gifId] : undefined} />
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 pl-1">
+                          <span className="text-[11px] text-gray-500">{timeAgo(r.createdAt)}</span>
+                          <ReactionBar
+                            myReactions={r.myReactions}
+                            onReact={(emoji) => onReactToComment(postId, r.id, emoji, c.id)}
+                            variant="compact"
+                          />
+                          {rTotal > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenCommentReactions(postId, r.id)}
+                              className="text-[11px] text-gray-500 hover:underline"
+                              aria-label={`${rTotal} ${rTotal === 1 ? "reaction" : "reactions"} — view who reacted`}
+                            >
+                              <span aria-hidden="true">{rTopEmojis.join("")}</span> {rTotal}
+                            </button>
+                          )}
+                          <button
+                            onClick={() =>
+                              startReply(
+                                // Same reply already targeted? Toggle the box shut.
+                                replyingTo?.commentId === c.id && replyingTo?.mentionUserId === r.authorId
+                                  ? null
+                                  : {
+                                      postId,
+                                      // c.id, not r.id — a reply-to-reply is filed under
+                                      // the same top-level comment (see ReplyTarget).
+                                      commentId: c.id,
+                                      displayName: r.author.displayName,
+                                      mentionUserId: r.authorId,
+                                    }
+                              )
+                            }
+                            className="text-[11px] font-semibold text-gray-500 hover:text-navy-600 transition-colors"
+                          >
+                            Reply
+                          </button>
+                          {(r.authorId === dbUserId || isModerator) && (
+                            <button
+                              onClick={() => onDeleteComment(postId, r.id, c.id)}
+                              className="text-[11px] font-semibold text-gray-500 hover:text-red-500 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Rendered after the replies list, not before it: the box should
+                  appear at the end of the thread you're joining, whether you hit
+                  Reply on the comment or on one of its replies. */}
               {replyingTo?.commentId === c.id && (
                 <div className="mt-2">
                   {replyGif && (
                     <AttachedGifPreview gif={replyGif} onRemove={() => setReplyGif(null)} />
                   )}
-                  <div className="flex gap-2">
+                  <div className="flex items-start gap-2">
                     <Avatar name={currentUserName} url={currentUserAvatar} size="sm" />
                     <div className="flex-1 flex gap-2">
                       <div className="relative flex-1">
@@ -325,7 +418,7 @@ export function CommentList({
                           ref={replyRef}
                           autoFocus
                           rows={1}
-                          placeholder={`Reply to ${c.author.displayName}…`}
+                          placeholder={`Reply to ${replyingTo?.displayName ?? c.author.displayName}…`}
                           value={replyDraft[c.id] ?? ""}
                           onChange={(e) => {
                             onReplyDraftChange(c.id, e.target.value);
@@ -361,63 +454,6 @@ export function CommentList({
                     onClose={() => setReplyPickerOpenFor(null)}
                     onSelect={setReplyGif}
                   />
-                </div>
-              )}
-              {expandedReplies[c.id] && c.replies.length > 0 && (
-                <div className="mt-2 space-y-2 pl-2 border-l-2 border-gray-100">
-                  {c.replies.map((r) => {
-                    const { total: rTotal, topEmojis: rTopEmojis } = getReactionSummary(r.reactions);
-                    return (
-                    <div key={r.id} className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => goToProfile(r.authorId)}
-                        className="shrink-0 hover:opacity-80 transition-opacity"
-                        aria-label={`View ${r.author.displayName}'s profile`}
-                      >
-                        <Avatar name={r.author.displayName} url={r.author.avatarUrl} size="sm" />
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="bg-gray-50 rounded-2xl px-3.5 py-2.5">
-                          <button
-                            type="button"
-                            onClick={() => goToProfile(r.authorId)}
-                            className="text-xs font-semibold text-gray-900 hover:underline transition-colors"
-                          >
-                            {r.author.displayName}
-                          </button>
-                          <CommentBody item={r} resolvedGif={r.gifId ? gifMap[r.gifId] : undefined} />
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 pl-1">
-                          <span className="text-[11px] text-gray-500">{timeAgo(r.createdAt)}</span>
-                          <ReactionBar
-                            myReactions={r.myReactions}
-                            onReact={(emoji) => onReactToComment(postId, r.id, emoji, c.id)}
-                            variant="compact"
-                          />
-                          {rTotal > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenCommentReactions(postId, r.id)}
-                              className="text-[11px] text-gray-500 hover:underline"
-                              aria-label={`${rTotal} ${rTotal === 1 ? "reaction" : "reactions"} — view who reacted`}
-                            >
-                              <span aria-hidden="true">{rTopEmojis.join("")}</span> {rTotal}
-                            </button>
-                          )}
-                          {(r.authorId === dbUserId || isModerator) && (
-                            <button
-                              onClick={() => onDeleteComment(postId, r.id, c.id)}
-                              className="text-[11px] font-semibold text-gray-500 hover:text-red-500 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
                 </div>
               )}
             </div>

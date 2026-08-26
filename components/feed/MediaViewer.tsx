@@ -6,9 +6,8 @@ import { X } from "lucide-react";
 import { MediaCanvas, type MediaCanvasHandle } from "@/components/feed/MediaCanvas";
 import { PostViewerSidebar } from "@/components/feed/PostViewerSidebar";
 import type { GifResult } from "@/lib/giphy/client";
-import type { CommentItem, FeedPost } from "@/lib/types/feed";
+import type { CommentItem, FeedPost, ReplyTarget } from "@/lib/types/feed";
 
-type ReplyTarget = { postId: string; commentId: string; displayName: string } | null;
 type EditingPost = { id: string; title: string; content: string };
 
 /**

@@ -1,10 +1,16 @@
 "use client";
 
-import { Clock, Paperclip } from "lucide-react";
+import { AlertTriangle, Clock, Paperclip } from "lucide-react";
 import type { HrRequestType } from "@/lib/constants/hrRequests";
 
 /**
- * The turnaround note and attachment reminders for the selected request type.
+ * The warning, turnaround note and attachment reminders for the selected
+ * request type.
+ *
+ * The warning exists because resigned employees have no AGS One access at
+ * all: final pay, clearance and BIR 2316 are only reachable here while still
+ * employed, so someone serving their notice period needs to be told to file
+ * before that access disappears.
  *
  * The attachment list exists because Gmail's compose URL cannot carry files —
  * the draft opens with the message filled in but nothing attached, and a COE or
@@ -13,10 +19,19 @@ import type { HrRequestType } from "@/lib/constants/hrRequests";
  */
 export function HrRequestGuidance({ type }: { type: HrRequestType }) {
   const attachments = type.attachments ?? [];
-  if (!type.turnaround && attachments.length === 0) return null;
+  if (!type.warning && !type.turnaround && attachments.length === 0) return null;
 
   return (
     <div className="space-y-2">
+      {type.warning && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+          <p className="flex items-start gap-2 text-xs font-medium text-red-800">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+            <span>{type.warning}</span>
+          </p>
+        </div>
+      )}
+
       {type.turnaround && (
         <p className="flex items-start gap-2 text-xs text-gray-600">
           <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-400" aria-hidden="true" />

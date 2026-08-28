@@ -1,9 +1,9 @@
 import { findHrRequestType } from "@/lib/constants/hrRequests";
 
 /**
- * Keeps a half-filled HR request across a refresh. A leave application or an
- * SSS loan query takes real effort to fill in, and losing it to a stray reload
- * is the kind of thing that sends people back to writing a bare email.
+ * Keeps a half-filled HR request across a refresh. An SSS loan query or a COE
+ * with several fields takes real effort to fill in, and losing it to a stray
+ * reload is the kind of thing that sends people back to writing a bare email.
  *
  * Every read and write is wrapped: `localStorage` throws outright in Safari
  * private mode and on quota, and a crashed HR page is a far worse outcome than

@@ -63,6 +63,11 @@ export type HrRequestType = {
   /** Plain-language SLA, shown on the form and appended to the email. */
   readonly turnaround?: string;
   /**
+   * A caution shown above the fields — e.g. that AGS One access ends at
+   * resignation, so this must be filed before that happens.
+   */
+  readonly warning?: string;
+  /**
    * Gmail's compose URL cannot carry attachments, so these are reminders for
    * the employee to attach files themselves before sending.
    */
@@ -95,135 +100,6 @@ const PATIENT_OPTIONS: readonly HrFieldOption[] = [
   { value: "self", label: "Myself" },
   { value: "dependent", label: "A dependent" },
 ];
-
-const LEAVE_ATTENDANCE: HrRequestCategory = {
-  id: "leave",
-  label: "Leave & Attendance",
-  types: [
-    {
-      id: "leave_application",
-      label: "Leave Application",
-      tag: "LEAVE",
-      summaryFieldId: "leave_type",
-      turnaround: "File planned leave at least 3 working days ahead.",
-      fields: [
-        {
-          id: "leave_type",
-          label: "Type of leave",
-          kind: "select",
-          required: true,
-          options: [
-            { value: "vacation", label: "Vacation Leave" },
-            { value: "sick", label: "Sick Leave" },
-            { value: "emergency", label: "Emergency Leave" },
-            { value: "bereavement", label: "Bereavement Leave" },
-            { value: "maternity", label: "Maternity Leave" },
-            { value: "paternity", label: "Paternity Leave" },
-            { value: "solo_parent", label: "Solo Parent Leave" },
-            { value: "sil", label: "Service Incentive Leave" },
-            { value: "unpaid", label: "Unpaid Leave" },
-          ],
-        },
-        { id: "start_date", label: "First day of leave", kind: "date", required: true },
-        { id: "end_date", label: "Last day of leave", kind: "date", required: true },
-        { id: "days", label: "Number of days", kind: "number", required: false, min: 0, max: 365 },
-        { id: "reliever", label: "Who will cover your work?", kind: "text", required: false, maxLength: 150 },
-        { id: "reason", label: "Reason", kind: "textarea", required: false, rows: 3, maxLength: 500 },
-      ],
-    },
-    {
-      id: "leave_balance",
-      label: "Leave Balance Inquiry",
-      tag: "LEAVE",
-      summaryFieldId: "leave_type",
-      fields: [
-        {
-          id: "leave_type",
-          label: "Which balance?",
-          kind: "select",
-          required: true,
-          options: [
-            { value: "all", label: "All leave credits" },
-            { value: "vacation", label: "Vacation Leave" },
-            { value: "sick", label: "Sick Leave" },
-            { value: "sil", label: "Service Incentive Leave" },
-          ],
-        },
-        { id: "as_of", label: "As of date", kind: "date", required: false },
-      ],
-    },
-    {
-      id: "attendance_correction",
-      label: "Attendance Correction",
-      tag: "ATTENDANCE",
-      summaryFieldId: "issue",
-      turnaround: "Corrections are applied within the current payroll cutoff.",
-      fields: [
-        { id: "date", label: "Date affected", kind: "date", required: true },
-        {
-          id: "issue",
-          label: "What went wrong?",
-          kind: "select",
-          required: true,
-          options: [
-            { value: "missed_in", label: "Missed time-in" },
-            { value: "missed_out", label: "Missed time-out" },
-            { value: "wrong_shift", label: "Wrong shift recorded" },
-            { value: "not_reflected", label: "Not reflected at all" },
-            { value: "ot_not_credited", label: "Overtime not credited" },
-            { value: "wrongly_absent", label: "Marked absent but present" },
-          ],
-        },
-        { id: "actual_time_in", label: "Actual time in", kind: "text", required: false, maxLength: 30, placeholder: "e.g. 8:02 AM" },
-        { id: "actual_time_out", label: "Actual time out", kind: "text", required: false, maxLength: 30, placeholder: "e.g. 5:15 PM" },
-      ],
-    },
-    {
-      id: "overtime_undertime",
-      label: "Overtime / Undertime Concern",
-      tag: "ATTENDANCE",
-      summaryFieldId: "concern",
-      fields: [
-        { id: "date", label: "Date affected", kind: "date", required: true },
-        {
-          id: "concern",
-          label: "What's the concern?",
-          kind: "select",
-          required: true,
-          options: [
-            { value: "ot_unpaid", label: "Overtime not paid" },
-            { value: "ot_unapproved", label: "Overtime not approved" },
-            { value: "undertime", label: "Undertime deduction" },
-            { value: "restday", label: "Rest day / holiday work not credited" },
-          ],
-        },
-        { id: "hours", label: "Number of hours", kind: "number", required: false, min: 0, max: 300 },
-      ],
-    },
-    {
-      id: "schedule_change",
-      label: "Schedule Change / Shift Swap",
-      tag: "ATTENDANCE",
-      fields: [
-        { id: "effective_date", label: "Effective date", kind: "date", required: true },
-        { id: "current_schedule", label: "Current schedule", kind: "text", required: false, maxLength: 100, placeholder: "e.g. 9:00 AM – 6:00 PM" },
-        { id: "requested_schedule", label: "Requested schedule", kind: "text", required: true, maxLength: 100 },
-        { id: "swap_with", label: "Swapping with (if applicable)", kind: "text", required: false, maxLength: 100 },
-        { id: "reason", label: "Reason", kind: "textarea", required: false, rows: 3, maxLength: 500 },
-      ],
-    },
-    {
-      id: "wfh_request",
-      label: "Work-From-Home Request",
-      tag: "ATTENDANCE",
-      fields: [
-        { id: "start_date", label: "From", kind: "date", required: true },
-        { id: "end_date", label: "Until", kind: "date", required: false },
-        { id: "reason", label: "Reason", kind: "textarea", required: true, rows: 3, maxLength: 500 },
-      ],
-    },
-  ],
-};
 
 const PAYROLL_PAYSLIP: HrRequestCategory = {
   id: "payroll",
@@ -263,13 +139,24 @@ const PAYROLL_PAYSLIP: HrRequestCategory = {
       ],
     },
     {
-      id: "payslip_copy",
-      label: "Payslip Copy Request",
+      id: "overtime_undertime",
+      label: "Overtime / Undertime Concern",
       tag: "PAYROLL",
+      summaryFieldId: "concern",
       fields: [
-        { id: "pay_period", label: "Pay period(s) needed", kind: "text", required: true, maxLength: 100 },
-        { id: "copy_type", label: "Copy needed", kind: "select", required: false, options: COPY_TYPE_OPTIONS },
-        { id: "purpose", label: "Purpose", kind: "text", required: false, maxLength: 150 },
+        { id: "date", label: "Date affected", kind: "date", required: true },
+        {
+          id: "concern",
+          label: "What's the concern?",
+          kind: "select",
+          required: true,
+          options: [
+            { value: "ot_unpaid", label: "Overtime not paid" },
+            { value: "undertime", label: "Undertime deduction" },
+            { value: "restday", label: "Rest day / holiday work not credited" },
+          ],
+        },
+        { id: "hours", label: "Number of hours", kind: "number", required: false, min: 0, max: 300 },
       ],
     },
     {
@@ -299,6 +186,7 @@ const PAYROLL_PAYSLIP: HrRequestCategory = {
       tag: "PAYROLL",
       summaryFieldId: "concern",
       turnaround: "Final pay is released within 30 days of clearance, per DOLE guidelines.",
+      warning: "File this before your last day — AGS One access ends when you leave. After that, email HR directly at hr@allianceglobalsolutions.com.",
       fields: [
         { id: "last_day", label: "Last day of employment", kind: "date", required: false },
         {
@@ -619,6 +507,7 @@ const GOVERNMENT_BENEFITS: HrRequestCategory = {
       label: "BIR — Form 2316",
       tag: "BIR",
       turnaround: "BIR 2316 copies are released within 5 working days.",
+      warning: "File this before your last day — AGS One access ends when you leave. After that, email HR directly at hr@allianceglobalsolutions.com.",
       fields: [
         { id: "year", label: "Taxable year", kind: "text", required: true, maxLength: 10, placeholder: "e.g. 2025" },
         { id: "copy_type", label: "Copy needed", kind: "select", required: false, options: COPY_TYPE_OPTIONS },
@@ -748,6 +637,7 @@ const RECORDS_CERTIFICATES: HrRequestCategory = {
       label: "Clearance / Turnover Document",
       tag: "DOC",
       summaryFieldId: "purpose",
+      warning: "File this before your last day — AGS One access ends when you leave. After that, email HR directly at hr@allianceglobalsolutions.com.",
       fields: [
         { id: "last_day", label: "Last day of employment", kind: "date", required: false },
         {
@@ -1001,7 +891,6 @@ const GENERAL: HrRequestCategory = {
 };
 
 export const HR_REQUEST_CATEGORIES: readonly HrRequestCategory[] = [
-  LEAVE_ATTENDANCE,
   PAYROLL_PAYSLIP,
   GOVERNMENT_BENEFITS,
   RECORDS_CERTIFICATES,
@@ -1034,15 +923,32 @@ export function findHrCategory(id: string): HrRequestCategory | null {
 }
 
 /**
+ * Requests AGS One deliberately does NOT take, because another system or
+ * person already owns them. Shown as a standing notice on the compose page —
+ * above the picker, not behind a category choice — so someone hunting for
+ * "Leave" and not finding it sees where it actually lives instead of routing
+ * around the gap through General HR Question, which is the exact round-trip
+ * this feature exists to eliminate.
+ */
+export type HrElsewhere = { readonly what: string; readonly where: string };
+
+export const HR_HANDLED_ELSEWHERE: readonly HrElsewhere[] = [
+  { what: "Filing leave and checking leave balances", where: "Sprout" },
+  { what: "Attendance corrections and missed time-in/out", where: "Sprout" },
+  { what: "Shift changes and schedule swaps", where: "your team lead" },
+  { what: "Getting a copy of your payslip", where: "Sprout" },
+];
+
+/**
  * The one-tap shortcuts above the dropdowns — the requests HR reports receiving
  * most. Deliberately short: a long chip row would defeat the point of having a
  * structured catalog underneath it.
  */
 export const HR_QUICK_PICK_IDS = [
-  "leave_application",
   "coe",
   "payslip_concern",
   "sss_salary_loan",
+  "pagibig_mpl",
   "update_personal_info",
   "general_hr_question",
 ] as const;

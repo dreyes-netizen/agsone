@@ -19,9 +19,25 @@ import {
 import { HrRequestPicker } from "./components/HrRequestPicker";
 import { HrRequestField } from "./components/HrRequestField";
 import { HrRequestGuidance } from "./components/HrRequestGuidance";
+import { HandledElsewhere } from "./components/HandledElsewhere";
 import { MyHrRequests } from "./components/MyHrRequests";
 import { newClientRef } from "./lib/clientRef";
 import { loadDraft, saveDraft, clearDraft } from "./lib/draftStorage";
+
+/**
+ * A Gmail draft that has been opened but not yet confirmed as sent. Holds the
+ * exact values that were composed into that draft — not a pointer back to the
+ * live form — so that if the employee edits a field after opening the window,
+ * the row logged on confirmation still matches the email that was actually
+ * opened rather than whatever the form says by the time they click confirm.
+ */
+type PendingRequest = {
+  ref: string;
+  url: string;
+  typeId: string;
+  values: Record<string, string>;
+  notes: string;
+};
 
 export default function EmailHrPage() {
   const { dbUser } = useAuth();
@@ -34,8 +50,8 @@ export default function EmailHrPage() {
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<HrFieldErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitting, setSubmitting] = useState(false);
-  const [draftUrl, setDraftUrl] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState<PendingRequest | null>(null);
   const [restored, setRestored] = useState(false);
 
   const category = categoryId ? findHrCategory(categoryId) : null;
@@ -92,7 +108,7 @@ export default function EmailHrPage() {
     setNotes("");
     setErrors({});
     setTouched(new Set());
-    setDraftUrl(null);
+    setPending(null);
   }
 
   function handleCategoryChange(nextCategoryId: string) {
@@ -106,7 +122,7 @@ export default function EmailHrPage() {
     setTypeId(nextTypeId);
     setErrors({});
     setTouched(new Set());
-    setDraftUrl(null);
+    setPending(null);
 
     // Carry over any answer the new type also asks for, so switching between
     // two document requests doesn't re-ask for the same "needed by" date.
@@ -145,11 +161,17 @@ export default function EmailHrPage() {
    * NOT async, deliberately. `window.open` is blocked unless it runs in the
    * same synchronous turn as the click — a single `await` before it forfeits
    * the user gesture and the draft silently never opens. So the Gmail window
-   * goes first and the tracking POST follows: the email is what the employee
-   * came for, the row is bookkeeping, and bookkeeping must never gate it.
+   * goes first.
+   *
+   * Nothing is logged here. Opening a draft and closing the tab used to file
+   * a tracked request anyway — including for things like Resignation and
+   * Promotion / Salary Review, where a request nobody actually sent showing
+   * up in HR's queue is a trust problem, not just a bookkeeping one. The row
+   * is only written once the employee confirms they sent the email, in
+   * `handleConfirmSent` below.
    */
   function handleSubmit() {
-    if (!type || !category || submitting) return;
+    if (!type || !category) return;
 
     const result = validateHrRequestFields(type, values);
     if (!result.ok) {
@@ -171,29 +193,51 @@ export default function EmailHrPage() {
     const url = buildGmailComposeUrl({ to: HR_EMAIL, subject, body });
 
     window.open(url, "_blank", "noopener,noreferrer");
-    // Kept regardless of whether the popup actually opened: `window.open` with
-    // "noopener" returns null even on success, so blocking cannot be detected.
-    // The anchor rendered below is a fresh gesture and can never be blocked.
-    setDraftUrl(url);
-    setSubmitting(true);
+    // Captures the exact values that went into this draft, not a pointer back
+    // to the live form: if the employee keeps editing after opening the
+    // window, the row logged on confirmation must still match the email that
+    // was actually opened, not whatever the form says by the time they confirm.
+    setPending({ ref, url, typeId: type.id, values: result.cleaned, notes });
+  }
+
+  /** "Yes, I sent it" — this is the only place that writes an HrRequest row. */
+  function handleConfirmSent() {
+    if (!pending || confirming) return;
+    setConfirming(true);
 
     apiFetch("/api/hr-requests", {
       method: "POST",
-      body: JSON.stringify({ clientRef: ref, typeId: type.id, fields: result.cleaned, notes }),
+      body: JSON.stringify({
+        clientRef: pending.ref,
+        typeId: pending.typeId,
+        fields: pending.values,
+        notes: pending.notes,
+      }),
     })
       .then(() => {
         clearDraft();
         setRestored(false);
-        toast.success("Draft opened in Gmail — review and send it");
+        setPending(null);
+        resetForm();
+        setCategoryId("");
+        toast.success("Logged — HR has been notified");
       })
       .catch((err: unknown) => {
+        // The panel (and its Retry-shaped confirm button) stays open: the
+        // `clientRef` unique constraint makes a repeat POST idempotent, so
+        // clicking again is always safe.
         toast.error(
           err instanceof Error
-            ? `Draft opened, but we couldn't log it: ${err.message}`
-            : "Draft opened, but we couldn't log it",
+            ? `Sent, but we couldn't log it: ${err.message}`
+            : "Sent, but we couldn't log it",
         );
       })
-      .finally(() => setSubmitting(false));
+      .finally(() => setConfirming(false));
+  }
+
+  /** "Not yet" — dismiss the confirmation; the form keeps its answers. */
+  function handleNotYetSent() {
+    setPending(null);
   }
 
   const tabClass = (active: boolean) =>
@@ -268,6 +312,8 @@ export default function EmailHrPage() {
               </div>
             </div>
 
+            <HandledElsewhere />
+
             <HrRequestPicker
               categoryId={categoryId}
               typeId={typeId}
@@ -329,8 +375,7 @@ export default function EmailHrPage() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting}
-                    aria-busy={submitting}
+                    disabled={confirming}
                     className="inline-flex items-center gap-2 bg-command-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
                   >
                     <Mail className="w-4 h-4" aria-hidden="true" />
@@ -354,19 +399,48 @@ export default function EmailHrPage() {
                   )}
                 </div>
 
-                {draftUrl && (
-                  <p className="text-xs text-gray-500">
-                    Draft didn&apos;t open?{" "}
-                    <a
-                      href={draftUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-navy-700 hover:underline"
-                    >
-                      Open it in Gmail
-                    </a>
-                    .
-                  </p>
+                {pending && (
+                  <div
+                    role="status"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 space-y-2"
+                  >
+                    <p className="text-sm font-medium text-gray-800">Did you send it to HR?</p>
+                    <p className="text-xs text-gray-500">
+                      Nothing is logged in AGS One until you confirm you actually sent the
+                      email.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleConfirmSent}
+                        disabled={confirming}
+                        aria-busy={confirming}
+                        className="bg-command-black text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900"
+                      >
+                        Yes, I sent it
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNotYetSent}
+                        disabled={confirming}
+                        className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-100 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                      >
+                        Not yet
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 pt-1">
+                      Draft didn&apos;t open?{" "}
+                      <a
+                        href={pending.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-navy-700 hover:underline"
+                      >
+                        Open it in Gmail
+                      </a>
+                      .
+                    </p>
+                  </div>
                 )}
               </div>
             )}

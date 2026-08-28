@@ -213,12 +213,12 @@ describe("composeHrRequest", () => {
   });
 
   it("uses only \\n, so the Gmail draft doesn't gain stray carriage returns", () => {
-    const { type, category } = resolve("leave_application");
+    const { type, category } = resolve("resignation");
     const { body } = composeHrRequest({
       profile,
       category,
       type,
-      values: { leave_type: "sick", start_date: "2026-09-01", end_date: "2026-09-03" },
+      values: { last_day: "2026-09-30", notice_date: "2026-09-01" },
       ref: "HRQ-10",
     });
     expect(body).not.toContain("\r");

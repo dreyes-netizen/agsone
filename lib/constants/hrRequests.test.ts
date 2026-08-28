@@ -3,6 +3,7 @@ import {
   HR_REQUEST_CATEGORIES,
   HR_QUICK_PICK_IDS,
   HR_QUICK_PICKS,
+  HR_HANDLED_ELSEWHERE,
   findHrRequestType,
   findHrCategoryForType,
   findHrCategory,
@@ -93,12 +94,50 @@ describe("HR request catalog integrity", () => {
     }
   });
 
-  it("covers the four request groups HR asked for", () => {
+  it("covers the request groups HR asked for", () => {
     const ids = HR_REQUEST_CATEGORIES.map((c) => c.id);
-    expect(ids).toContain("leave");
     expect(ids).toContain("payroll");
     expect(ids).toContain("gov_benefits");
     expect(ids).toContain("documents");
+  });
+
+  it("does not offer leave, attendance, shift or WFH filing — those are Sprout/TL-owned", () => {
+    const ids = HR_REQUEST_CATEGORIES.map((c) => c.id);
+    expect(ids).not.toContain("leave");
+    for (const removed of [
+      "leave_application",
+      "leave_balance",
+      "attendance_correction",
+      "schedule_change",
+      "wfh_request",
+      "payslip_copy",
+    ]) {
+      expect(findHrRequestType(removed), `"${removed}" should no longer resolve`).toBeNull();
+    }
+  });
+
+  it("keeps overtime/undertime as a payroll concern, without the TL-owned approval option", () => {
+    const type = typeById("overtime_undertime");
+    expect(findHrCategoryForType("overtime_undertime")?.id).toBe("payroll");
+    expect(type.tag).toBe("PAYROLL");
+    const concern = type.fields.find((f) => f.id === "concern");
+    expect(concern?.options?.map((o) => o.value)).not.toContain("ot_unapproved");
+  });
+
+  it("documents where requests AGS One doesn't take actually belong", () => {
+    expect(HR_HANDLED_ELSEWHERE.length).toBeGreaterThan(0);
+    for (const item of HR_HANDLED_ELSEWHERE) {
+      expect(item.what.trim()).not.toBe("");
+      expect(item.where.trim()).not.toBe("");
+    }
+  });
+
+  it("warns offboarding requests that AGS One access ends at resignation", () => {
+    for (const id of ["final_pay", "bir_2316", "clearance"]) {
+      const warning = typeById(id).warning;
+      expect(warning, `"${id}" should carry an access-ending warning`).toBeTruthy();
+      expect(warning).toMatch(/last day/i);
+    }
   });
 
   it("offers SSS, Pag-IBIG, PhilHealth and BIR requests", () => {
@@ -139,7 +178,8 @@ function typeTagsIn(categoryId: string): string[] {
 describe("validateHrRequestFields", () => {
   const coe = typeById("coe");
   const payslip = typeById("payslip_concern");
-  const leave = typeById("leave_application");
+  const resignation = typeById("resignation");
+  const hmoLoa = typeById("hmo_loa");
 
   it("accepts a valid submission and returns trimmed values", () => {
     const result = validateHrRequestFields(coe, {
@@ -229,22 +269,20 @@ describe("validateHrRequestFields", () => {
   });
 
   describe("dates", () => {
-    const base = { leave_type: "vacation", end_date: "2026-03-02" };
-
     it("accepts a real ISO date", () => {
-      const result = validateHrRequestFields(leave, { ...base, start_date: "2026-02-28" });
+      const result = validateHrRequestFields(resignation, { last_day: "2026-09-30" });
       expect(result.ok).toBe(true);
     });
 
     it("rejects a calendar-impossible date", () => {
-      const result = validateHrRequestFields(leave, { ...base, start_date: "2026-02-30" });
+      const result = validateHrRequestFields(resignation, { last_day: "2026-02-30" });
       expect(result.ok).toBe(false);
       if (result.ok) throw new Error("expected failure");
-      expect(result.errors.start_date).toBe("First day of leave must be a valid date");
+      expect(result.errors.last_day).toBe("Intended last day must be a valid date");
     });
 
     it("rejects a non-ISO format", () => {
-      const result = validateHrRequestFields(leave, { ...base, start_date: "28/02/2026" });
+      const result = validateHrRequestFields(resignation, { last_day: "28/02/2026" });
       expect(result.ok).toBe(false);
     });
   });
@@ -261,9 +299,9 @@ describe("validateHrRequestFields", () => {
   });
 
   it("collects every failing field at once rather than stopping at the first", () => {
-    const result = validateHrRequestFields(leave, { leave_type: "not_a_type" });
+    const result = validateHrRequestFields(hmoLoa, {});
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected failure");
-    expect(Object.keys(result.errors).sort()).toEqual(["end_date", "leave_type", "start_date"]);
+    expect(Object.keys(result.errors).sort()).toEqual(["patient", "provider"]);
   });
 });

@@ -17,6 +17,7 @@ export const realtimeTopics = {
   food: "food",
   medicine: "medicine",
   medicineRequests: "medicine:requests",
+  hrRequests: "hr-requests",
   settings: "settings",
   documents: "documents",
   orgChart: "org-chart",
@@ -30,5 +31,6 @@ export const realtimeTopics = {
   profile: (userId: string) => `profile:${userId}`,
   redemptionsUser: (userId: string) => `redemptions:user:${userId}`,
   medicineUser: (userId: string) => `medicine:user:${userId}`,
+  hrRequestsUser: (userId: string) => `hr-requests:user:${userId}`,
   notificationPreferences: (userId: string) => `notification-preferences:${userId}`,
 } as const;

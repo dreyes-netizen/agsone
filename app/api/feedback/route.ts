@@ -8,11 +8,7 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { confidentialRealtimeTopic } from "@/lib/realtime/confidentialTopics";
 import { notifyRole, ADMIN_ROLES } from "@/lib/helpers/notifyRole";
-
-// Static distribution list, kept as a belt-and-braces channel alongside the
-// in-app notification below. It does not track who holds HR_ADMIN, so it should
-// not be the only delivery path — see the notifyRole call in POST.
-const HR_EMAILS = "hr.ags@allianceglobalsolutions.com, hr@allianceglobalsolutions.com";
+import { HR_EMAILS_HEADER } from "@/lib/constants/hr";
 
 const createSchema = z.object({
   category: z.enum([
@@ -73,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   const submitterName = parsed.data.isAnonymous ? null : (feedback.author?.displayName ?? null);
   sendMail({
-    to: HR_EMAILS,
+    to: HR_EMAILS_HEADER,
     ...newWhistleblowerEmail(parsed.data.category, parsed.data.title, parsed.data.body, parsed.data.isAnonymous, submitterName),
   }).catch((err) => console.error("whistleblower notify email failed", err));
 

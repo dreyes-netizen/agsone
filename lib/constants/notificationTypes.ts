@@ -152,6 +152,15 @@ export const NOTIFICATION_TYPES = {
     toggleable: false,
     defaults: { inApp: true, push: true },
   },
+  HR_REQUEST_UPDATED: {
+    label: "HR request updated",
+    description: "When HR moves your request forward or completes it",
+    group: "Requests & Approvals",
+    audience: "everyone",
+    href: () => "/email-hr?tab=mine",
+    toggleable: false, // outcome of the user's own request — never silent
+    defaults: { inApp: true, push: true },
+  },
   MEDICINE_APPROVED: {
     label: "Medicine request approved",
     description: "When your medicine request is approved for pickup",
@@ -360,6 +369,16 @@ export const NOTIFICATION_TYPES = {
   },
 
   // ─── Admin queues ────────────────────────────────────────────────────────
+  HR_REQUEST_SUBMITTED: {
+    label: "New HR request",
+    description: "When an employee files a request from the Email HR page",
+    group: "Admin",
+    audience: "admin",
+    href: () => "/admin/hr-requests",
+    toggleable: true,
+    defaults: { inApp: true, push: false },
+    groupKey: () => "queue:hr-request",
+  },
   MEDICINE_REQUESTED: {
     label: "New medicine request",
     description: "When an employee requests medicine and it needs approval",

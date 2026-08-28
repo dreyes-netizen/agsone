@@ -6,14 +6,28 @@ import { auth } from "@/lib/firebase/client";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
 import { realtimeTopics } from "@/lib/realtime/topics";
 
+/**
+ * Mirrors PROFILE_SELECT (lib/auth/profileSelect.ts) minus the stripped
+ * `isActive`. Several of these fields have always crossed the wire but were
+ * missing from this type, so consumers couldn't reach them without a cast —
+ * `email`, `avatarUrl`, `hireDate`, `bio` and `skills` are that backfill.
+ * Dates arrive as JSON strings, not Date objects.
+ */
 type DbProfile = {
   id: string;
   displayName: string;
+  email: string;
+  avatarUrl: string | null;
   role: "EMPLOYEE" | "MANAGER" | "HR_ADMIN" | "SUPER_ADMIN";
   pointsBalance: number;
   level: number;
   onboardingComplete: boolean;
   birthday: string | null;
+  hireDate: string | null;
+  bio: string | null;
+  skills: string[];
+  employeeId: string | null;
+  position: string | null;
   department: { id: string; name: string } | null;
 };
 

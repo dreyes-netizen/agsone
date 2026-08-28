@@ -25,6 +25,11 @@ export const PROFILE_SELECT = {
   hireDate: true,
   bio: true,
   skills: true,
+  // Read by the Email HR request composer: an SSS/Pag-IBIG/BIR query is matched
+  // against an agency record by employee number, so including it in the request
+  // saves HR a lookup on every one.
+  employeeId: true,
+  position: true,
   isActive: true,
   department: { select: { id: true, name: true } },
   userBadges: {

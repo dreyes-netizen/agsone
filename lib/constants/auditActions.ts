@@ -35,6 +35,9 @@ export const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   // Medicine
   MEDICINE_REQUEST_STATUS:  { label: "Medicine Decision",   color: "bg-amber-100 text-amber-700" },
 
+  // HR requests
+  HR_REQUEST_STATUS:        { label: "HR Request Decision", color: "bg-amber-100 text-amber-700" },
+
   // Content
   DELETE_POST:               { label: "Delete Post",         color: "bg-red-100 text-red-700" },
   DELETE_COMMENT:            { label: "Delete Comment",      color: "bg-red-100 text-red-700" },

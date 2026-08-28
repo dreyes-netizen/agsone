@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, FileText, Pill, Menu, ShieldAlert, Network, IdCard, BookText } from "lucide-react";
+import { Users, Award, LayoutDashboard, LogOut, ShoppingBag, ClipboardList, Building2, FileText, Pill, Menu, ShieldAlert, Network, IdCard, BookText, Inbox } from "lucide-react";
 import { WhistleIcon } from "@/components/icons/WhistleIcon";
 import { auth } from "@/lib/firebase/client";
 import { signOut } from "firebase/auth";
@@ -37,6 +37,7 @@ const navGroups = [
       { href: "/admin/feedback",    label: "Whistleblower", icon: WhistleIcon },
       { href: "/admin/documents",   label: "Documents",    icon: FileText },
       { href: "/admin/medicine",    label: "Medicine",     icon: Pill },
+      { href: "/admin/hr-requests", label: "HR Requests",  icon: Inbox },
       { href: "/admin/audit",       label: "Audit Log",    icon: ShieldAlert },
     ],
   },

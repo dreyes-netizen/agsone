@@ -92,6 +92,12 @@ enum MedicineRequestStatus {
   REJECTED
 }
 
+enum HrRequestStatus {
+  NEW
+  IN_PROGRESS
+  DONE
+}
+
 enum MedicineCategory {
   PAIN_RELIEF
   COUGH_COLD
@@ -217,6 +223,8 @@ model User {
   medicineItems        MedicineItem[]         @relation("MedicineItemsCreated")
   medicineRequests     MedicineRequest[]      @relation("MedicineRequestsMade")
   medicineApprovals    MedicineRequest[]      @relation("MedicineRequestsApproved")
+  hrRequests           HrRequest[]            @relation("HrRequestsMade")
+  hrRequestsHandled    HrRequest[]            @relation("HrRequestsHandled")
   gameSessionsHosted   GameSession[]          @relation("GameSessionHost")
   gameSessionsJoined   GameSession[]          @relation("GameSessionGuest")
   gameSessionsWon      GameSession[]          @relation("GameSessionWinner")
@@ -793,4 +801,52 @@ model GameSession {
 
   @@index([status, hostId])
   @@index([guestId])
+}
+
+/// A request filed from the Email HR page. The employee still sends the email
+/// themselves through Gmail; this row is the tracked copy so HR works a queue
+/// instead of an inbox, and so a request has a status the employee can see.
+model HrRequest {
+  id     String @id @default(uuid())
+  userId String
+
+  /// Generated client-side before the Gmail window opens, so the row and the
+  /// draft that was actually composed share one traceable code. Unique, which
+  /// also makes POST idempotent: a double-click or a retry hits P2002 and
+  /// returns the existing row rather than filing a duplicate ticket.
+  clientRef String @unique
+
+  /// Catalog slugs from lib/constants/hrRequests.ts, not foreign keys — the
+  /// catalog lives in code so it can be edited without a migration.
+  categoryId String
+  typeId     String
+  tag        String
+
+  /// The rendered email, stored verbatim rather than re-derived from the
+  /// catalog at read time. Catalog labels will be edited; this row has to stay
+  /// a faithful record of what the employee actually sent.
+  subject String
+  body    String
+
+  /// Structured mirror of the same answers, keyed by HrField.id, so the admin
+  /// board can render columns and filters without parsing `body`.
+  fields Json    @default("{}")
+  notes  String?
+
+  catalogVersion Int @default(1)
+
+  status      HrRequestStatus @default(NEW)
+  handledById String?
+  handledAt   DateTime?
+  adminNote   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User  @relation("HrRequestsMade", fields: [userId], references: [id])
+  handledBy User? @relation("HrRequestsHandled", fields: [handledById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@index([typeId, createdAt])
 }

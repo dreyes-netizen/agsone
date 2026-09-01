@@ -15,6 +15,7 @@ import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
 import { PollVotersDialog } from "@/components/feed/PollVotersDialog";
+import { AccountTagDropdown } from "@/components/feed/AccountTagDropdown";
 import { findCommentById } from "@/lib/helpers/commentTree";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
@@ -99,6 +100,9 @@ export default function FeedPage() {
     deptOnly, setDeptOnly,
     mentionQuery,
     mentionResults,
+    accounts,
+    accountTag,
+    ensureAccountsLoaded,
     imageFiles,
     imagePreviews,
     uploading,
@@ -140,6 +144,7 @@ export default function FeedPage() {
     autoResize,
     handleComposerChange,
     insertMention,
+    insertAccount,
     toggleReaction,
     toggleCommentReaction,
   } = useFeedActions();
@@ -450,7 +455,7 @@ export default function FeedPage() {
                       role="option"
                       aria-selected={false}
                       onMouseDown={(e) => { e.preventDefault(); insertMention(emp); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-navy-50 transition-colors text-left"
                     >
                       <Avatar name={emp.displayName} url={emp.avatarUrl} size="sm" />
                       <span className="text-sm font-medium text-gray-900">{emp.displayName}</span>
@@ -458,6 +463,7 @@ export default function FeedPage() {
                   ))}
                 </div>
               )}
+              <AccountTagDropdown accountTag={accountTag} onSelect={insertAccount} />
             </div>
           </div>
 

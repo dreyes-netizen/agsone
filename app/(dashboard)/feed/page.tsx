@@ -832,6 +832,8 @@ export default function FeedPage() {
                       onSubmitComment={submitComment}
                       employees={employees}
                       onNeedEmployees={ensureEmployeesLoaded}
+                      accounts={accounts}
+                      onNeedAccounts={ensureAccountsLoaded}
                       autoResize={autoResize}
                       wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                     />
@@ -911,6 +913,8 @@ export default function FeedPage() {
                     onSubmitComment={submitComment}
                     employees={employees}
                     onNeedEmployees={ensureEmployeesLoaded}
+                    accounts={accounts}
+                    onNeedAccounts={ensureAccountsLoaded}
                     autoResize={autoResize}
                     wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                   />

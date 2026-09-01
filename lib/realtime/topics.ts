@@ -12,6 +12,7 @@ export const realtimeTopics = {
   pointsTransactions: "points:transactions",
   employees: "employees",
   departments: "departments",
+  accounts: "accounts",
   rewards: "rewards",
   redemptionsAdmin: "redemptions:admin",
   food: "food",

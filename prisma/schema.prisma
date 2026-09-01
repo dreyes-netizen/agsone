@@ -144,6 +144,12 @@ model Department {
   weeklyChampions  ArcadeWeeklyChampion[]
 }
 
+model Account {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
 model PointOfContact {
   id          String   @id @default(uuid())
   userId      String

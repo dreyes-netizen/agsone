@@ -55,8 +55,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (!employee) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Mirrors the Top Performers exclusions (/api/leaderboard) so the two
+  // rank numbers never disagree: only active EMPLOYEE-role users count.
   const rank = await prisma.user.count({
-    where: { pointsBalance: { gt: employee.pointsBalance }, isActive: true },
+    where: { pointsBalance: { gt: employee.pointsBalance }, isActive: true, role: "EMPLOYEE" },
   }) + 1;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to omit from publicFields

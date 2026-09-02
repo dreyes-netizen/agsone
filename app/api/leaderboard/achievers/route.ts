@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       badge: { select: { name: true } },
     },
     orderBy: { awardedAt: "desc" },
-    take: 5,
+    take: 15,
   });
 
   const data = badges.map((b) => ({

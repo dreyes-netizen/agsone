@@ -61,6 +61,8 @@ export default function LeaderboardPage() {
   const profileLoading = authLoading || !dbUser;
   const [achievers, setAchievers] = useState<Achiever[]>([]);
   const [achieversLoading, setAchieversLoading] = useState(true);
+  const [achieversExpanded, setAchieversExpanded] = useState(false);
+  const ACHIEVERS_COLLAPSED_COUNT = 5;
 
   function loadDepartments() {
     apiFetch<{ data: Department[] }>("/api/departments")
@@ -335,18 +337,29 @@ export default function LeaderboardPage() {
             ) : achievers.length === 0 ? (
               <p className="text-xs text-gray-500 text-center py-6">No recent achievements</p>
             ) : (
-              <div className="divide-y divide-gray-50">
-                {achievers.map((a, i) => (
-                  <div key={`${a.userId}-${i}`} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
-                    <UserAvatar name={a.displayName} url={a.avatarUrl} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{a.displayName}</p>
-                      <p className="text-[10px] text-gray-500 truncate">{a.label}</p>
+              <>
+                <div className="divide-y divide-gray-50">
+                  {(achieversExpanded ? achievers : achievers.slice(0, ACHIEVERS_COLLAPSED_COUNT)).map((a, i) => (
+                    <div key={`${a.userId}-${i}`} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                      <UserAvatar name={a.displayName} url={a.avatarUrl} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{a.displayName}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{a.label}</p>
+                      </div>
+                      <span className="text-[10px] text-gray-500 shrink-0">{timeAgo(a.achievedAt)}</span>
                     </div>
-                    <span className="text-[10px] text-gray-500 shrink-0">{timeAgo(a.achievedAt)}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                {achievers.length > ACHIEVERS_COLLAPSED_COUNT && (
+                  <button
+                    type="button"
+                    onClick={() => setAchieversExpanded((v) => !v)}
+                    className="w-full text-center text-xs font-medium text-navy-600 hover:text-navy-700 hover:bg-gray-50/60 transition-colors py-2.5 border-t border-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-navy-500"
+                  >
+                    {achieversExpanded ? "Show less" : `See more (${achievers.length - ACHIEVERS_COLLAPSED_COUNT})`}
+                  </button>
+                )}
+              </>
             )}
           </div>
 

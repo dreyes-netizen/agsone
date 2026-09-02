@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const isAdmin = user.role === "HR_ADMIN" || user.role === "MANAGER";
+  const isAdmin = user.role === "HR_ADMIN" || user.role === "MANAGER" || user.role === "SUPER_ADMIN";
   const scopeToUser = requestedUserId ?? (isAdmin ? null : user.id);
   const where = scopeToUser ? { toUserId: scopeToUser } : {};
 

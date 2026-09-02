@@ -21,6 +21,7 @@ const navGroups = [
     items: [
       { href: "/admin/employees",   label: "Employees",    icon: Users },
       { href: "/admin/departments", label: "Departments",  icon: Building2 },
+      { href: "/admin/accounts",    label: "Accounts",     icon: Building2 },
     ],
   },
   {

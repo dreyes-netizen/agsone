@@ -66,3 +66,13 @@ Client-side, all authenticated requests go through `apiFetch`/`streamFetch` (`li
 ## Feature history
 
 `docs/superpowers/plans/` and `docs/superpowers/specs/` contain the plan + design doc for most major features (food board, shoutouts, milestone rewards, feedback, department challenges, AI assistant, medicine section, minigames polish, etc.), dated. Check there for the reasoning behind a feature's shape before assuming current behavior is incidental.
+
+## Git Workflow
+
+**Never push directly to `main`.** All work happens on a feature branch (`feat/*`, `fix/*`) and lands via a pull request — always open a PR for review, even for small changes. If work was started directly on `main`, branch off before committing.
+
+## Local verification vs. production data
+
+`DATABASE_URL`/`DIRECT_URL` in `.env.local` point at the project's single Supabase Postgres instance — there is no separate local/staging database, so `npm run dev` on `localhost:3010` reads and writes real production data even though it's served locally. Keep this in mind for any live browser verification: create only the minimum test data needed, and delete it (via the app's own UI) in the same session once verification is done — don't leave test accounts/posts/comments behind in production.
+
+Because it's the same database, anything created from local dev on an unmerged branch is **immediately visible on the live production site** to real employees, rendered by whatever code is *actually deployed* on `main` — not by the branch you're testing. A feature that's correct on your branch can still render broken in production (e.g. an unparsed raw token) simply because production hasn't shipped that rendering logic yet. That's expected, not a bug — but it means test posts/comments are genuinely live and user-visible for as long as they exist, so clean up promptly.

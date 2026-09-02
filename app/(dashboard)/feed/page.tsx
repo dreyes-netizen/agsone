@@ -15,6 +15,7 @@ import { PostBody } from "@/components/feed/PostBody";
 import { PostEngagement } from "@/components/feed/PostEngagement";
 import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
 import { PollVotersDialog } from "@/components/feed/PollVotersDialog";
+import { AccountTagDropdown } from "@/components/feed/AccountTagDropdown";
 import { findCommentById } from "@/lib/helpers/commentTree";
 import { useFeedActions } from "@/lib/hooks/useFeedActions";
 import {
@@ -99,6 +100,9 @@ export default function FeedPage() {
     deptOnly, setDeptOnly,
     mentionQuery,
     mentionResults,
+    accounts,
+    accountTag,
+    ensureAccountsLoaded,
     imageFiles,
     imagePreviews,
     uploading,
@@ -140,6 +144,7 @@ export default function FeedPage() {
     autoResize,
     handleComposerChange,
     insertMention,
+    insertAccount,
     toggleReaction,
     toggleCommentReaction,
   } = useFeedActions();
@@ -450,7 +455,7 @@ export default function FeedPage() {
                       role="option"
                       aria-selected={false}
                       onMouseDown={(e) => { e.preventDefault(); insertMention(emp); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-navy-50 transition-colors text-left"
                     >
                       <Avatar name={emp.displayName} url={emp.avatarUrl} size="sm" />
                       <span className="text-sm font-medium text-gray-900">{emp.displayName}</span>
@@ -458,6 +463,11 @@ export default function FeedPage() {
                   ))}
                 </div>
               )}
+              <AccountTagDropdown
+                accountTag={accountTag}
+                onSelect={insertAccount}
+                className="absolute z-30 top-full left-0 mt-1 w-full max-w-64 max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg py-1"
+              />
             </div>
           </div>
 
@@ -826,6 +836,8 @@ export default function FeedPage() {
                       onSubmitComment={submitComment}
                       employees={employees}
                       onNeedEmployees={ensureEmployeesLoaded}
+                      accounts={accounts}
+                      onNeedAccounts={ensureAccountsLoaded}
                       autoResize={autoResize}
                       wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                     />
@@ -905,6 +917,8 @@ export default function FeedPage() {
                     onSubmitComment={submitComment}
                     employees={employees}
                     onNeedEmployees={ensureEmployeesLoaded}
+                    accounts={accounts}
+                    onNeedAccounts={ensureAccountsLoaded}
                     autoResize={autoResize}
                     wrapperClassName="mt-3 pt-3 border-t border-black/5 space-y-4"
                   />

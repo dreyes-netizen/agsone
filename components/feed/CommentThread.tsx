@@ -7,6 +7,8 @@ import { Avatar } from "./Avatar";
 import { MentionDropdown } from "./MentionDropdown";
 import { PostMentionText } from "./PostMentionText";
 import { useMentionInput, hasMentionTrigger, type MentionEmployee, type MentionInput } from "@/lib/hooks/useMentionInput";
+import { useAccountTagInput, hasAccountTagTrigger, type AccountEntity, type AccountTagInput } from "@/lib/hooks/useAccountTagInput";
+import { AccountTagDropdown } from "@/components/feed/AccountTagDropdown";
 import { GifButton } from "./GifButton";
 import { GifPicker } from "./GifPicker";
 import { GifCommentMedia } from "./GifCommentMedia";
@@ -45,6 +47,10 @@ type ListProps = {
   employees?: MentionEmployee[];
   /** Called the first time an @ is typed, so the roster can load on demand. */
   onNeedEmployees?: () => void;
+  /** Account tag candidates. Omit to disable #account tagging in replies. */
+  accounts?: AccountEntity[];
+  /** Called the first time a # is typed, so the account list can load on demand. */
+  onNeedAccounts?: () => void;
   onToggleExpandedReplies: (commentId: string) => void;
   onDeleteComment: (postId: string, commentId: string, parentId?: string) => void;
   autoResize: (el: HTMLTextAreaElement) => void;
@@ -83,6 +89,44 @@ function handleMentionKeyDown(
     e.preventDefault();
     e.stopPropagation();
     mention.close();
+  }
+}
+
+/**
+ * Same as handleMentionKeyDown, for the # account-tag dropdown. Kept as a
+ * separate function rather than a shared generic, mirroring how
+ * useAccountTagInput mirrors useMentionInput rather than generalizing (see
+ * the design spec's Alternatives Considered section).
+ *
+ * Safe to call unconditionally alongside handleMentionKeyDown on the same
+ * keydown event: detect()'s trigger regexes for @ and # are mutually
+ * exclusive on the text immediately before the caret, so mention.open and
+ * accountTag.open can never both be true at once -- at most one of the two
+ * handlers actually acts on any given keystroke.
+ */
+function handleAccountTagKeyDown(
+  e: React.KeyboardEvent<HTMLTextAreaElement>,
+  accountTag: AccountTagInput,
+  onPick: (acct: AccountEntity) => void,
+) {
+  if (!accountTag.open) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    accountTag.setActiveIndex((accountTag.activeIndex + 1) % accountTag.results.length);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    accountTag.setActiveIndex((accountTag.activeIndex - 1 + accountTag.results.length) % accountTag.results.length);
+  } else if (e.key === "Enter" || e.key === "Tab") {
+    const chosen = accountTag.results[accountTag.activeIndex];
+    if (chosen) {
+      e.preventDefault();
+      onPick(chosen);
+    }
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    accountTag.close();
   }
 }
 
@@ -173,6 +217,8 @@ export function CommentList({
   className,
   employees = [],
   onNeedEmployees,
+  accounts = [],
+  onNeedAccounts,
 }: ListProps) {
   const router = useRouter();
   const goToProfile = (id: string) => router.push(`/employees/${id}`);
@@ -182,6 +228,7 @@ export function CommentList({
   // One instance is enough: only a single reply box is open at a time
   // (replyingTo is a single target, not a set).
   const replyMention = useMentionInput(employees);
+  const replyAccountTag = useAccountTagInput(accounts);
   // Batch-resolve every GIF referenced anywhere in this list in one call,
   // rather than one GIPHY round trip per comment.
   const gifIds = useMemo(() => gifIdsOf(comments), [comments]);
@@ -213,9 +260,19 @@ export function CommentList({
     setTimeout(() => el?.focus(), 0);
   }
 
+  function pickReplyAccount(commentId: string, acct: AccountEntity) {
+    const el = replyRef.current;
+    const draft = replyDraft[commentId] ?? "";
+    const cursor = el?.selectionStart ?? draft.length;
+    onReplyDraftChange(commentId, replyAccountTag.select(draft, cursor, acct));
+    setTimeout(() => el?.focus(), 0);
+  }
+
   function submitReply(commentId: string) {
-    onSubmitReply(postId, commentId, replyGif ?? undefined, replyMention.encode(replyDraft[commentId] ?? ""));
+    const encoded = replyAccountTag.encode(replyMention.encode(replyDraft[commentId] ?? ""));
+    onSubmitReply(postId, commentId, replyGif ?? undefined, encoded);
     replyMention.reset();
+    replyAccountTag.reset();
     setReplyGif(null);
   }
 
@@ -414,6 +471,10 @@ export function CommentList({
                           mention={replyMention}
                           onSelect={(emp) => pickReplyMention(c.id, emp)}
                         />
+                        <AccountTagDropdown
+                          accountTag={replyAccountTag}
+                          onSelect={(acct) => pickReplyAccount(c.id, acct)}
+                        />
                         <textarea
                           ref={replyRef}
                           autoFocus
@@ -424,17 +485,23 @@ export function CommentList({
                             onReplyDraftChange(c.id, e.target.value);
                             const cur = e.target.selectionStart ?? e.target.value.length;
                             if (hasMentionTrigger(e.target.value, cur)) onNeedEmployees?.();
+                            if (hasAccountTagTrigger(e.target.value, cur)) onNeedAccounts?.();
                             replyMention.detect(e.target.value, cur);
+                            replyAccountTag.detect(e.target.value, cur);
                             autoResize(e.target);
                           }}
                           onKeyDown={(e) => {
-                            // The mention handler swallows Escape while its list
-                            // is open, so dismissing the list doesn't also
-                            // discard the reply draft.
+                            // The mention/account-tag handlers swallow Escape
+                            // while their list is open, so dismissing a list
+                            // doesn't also discard the reply draft. At most one
+                            // of the two can be open at once (see
+                            // handleAccountTagKeyDown's doc comment), so calling
+                            // both unconditionally is safe.
                             handleMentionKeyDown(e, replyMention, (emp) => pickReplyMention(c.id, emp));
+                            handleAccountTagKeyDown(e, replyAccountTag, (acct) => pickReplyAccount(c.id, acct));
                             if (!e.defaultPrevented && e.key === "Escape") startReply(null);
                           }}
-                          onBlur={replyMention.close}
+                          onBlur={() => { replyMention.close(); replyAccountTag.close(); }}
                           className="w-full text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
                         />
                       </div>
@@ -477,6 +544,8 @@ export function CommentComposer({
   currentUserAvatar,
   employees = [],
   onNeedEmployees,
+  accounts = [],
+  onNeedAccounts,
   onCommentDraftChange,
   onSubmitComment,
   autoResize,
@@ -491,6 +560,10 @@ export function CommentComposer({
   employees?: MentionEmployee[];
   /** Called the first time an @ is typed, so the roster can load on demand. */
   onNeedEmployees?: () => void;
+  /** Account tag candidates. Omit to disable #account tagging for this composer. */
+  accounts?: AccountEntity[];
+  /** Called the first time a # is typed, so the account list can load on demand. */
+  onNeedAccounts?: () => void;
   onCommentDraftChange: (postId: string, value: string) => void;
   onSubmitComment: (postId: string, gif?: GifResult, encodedContent?: string) => void;
   autoResize: (el: HTMLTextAreaElement) => void;
@@ -500,6 +573,7 @@ export function CommentComposer({
   const [pickerOpen, setPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mention = useMentionInput(employees);
+  const accountTag = useAccountTagInput(accounts);
 
   const draft = commentDraft[postId] ?? "";
 
@@ -510,12 +584,21 @@ export function CommentComposer({
     setTimeout(() => el?.focus(), 0);
   }
 
+  function pickAccount(acct: AccountEntity) {
+    const el = textareaRef.current;
+    const cursor = el?.selectionStart ?? draft.length;
+    onCommentDraftChange(postId, accountTag.select(draft, cursor, acct));
+    setTimeout(() => el?.focus(), 0);
+  }
+
   function submit() {
-    // Encode picked names into @[Name|id] tokens at send time. The parent owns
-    // the draft string, so the encoded text is handed over rather than written
-    // back into state first — a setState round trip would race the submit.
-    onSubmitComment(postId, gif ?? undefined, mention.encode(draft));
+    // Encode picked names into @[Name|id] and #[Name|id] tokens at send time.
+    // The parent owns the draft string, so the encoded text is handed over
+    // rather than written back into state first — a setState round trip
+    // would race the submit.
+    onSubmitComment(postId, gif ?? undefined, accountTag.encode(mention.encode(draft)));
     mention.reset();
+    accountTag.reset();
     setGif(null);
   }
 
@@ -527,6 +610,7 @@ export function CommentComposer({
         <div className="flex-1 flex gap-2">
           <div className="relative flex-1">
             <MentionDropdown mention={mention} onSelect={pick} />
+            <AccountTagDropdown accountTag={accountTag} onSelect={pickAccount} />
             <textarea
               ref={textareaRef}
               rows={1}
@@ -536,11 +620,16 @@ export function CommentComposer({
                 onCommentDraftChange(postId, e.target.value);
                 const cur = e.target.selectionStart ?? e.target.value.length;
                 if (hasMentionTrigger(e.target.value, cur)) onNeedEmployees?.();
+                if (hasAccountTagTrigger(e.target.value, cur)) onNeedAccounts?.();
                 mention.detect(e.target.value, cur);
+                accountTag.detect(e.target.value, cur);
                 autoResize(e.target);
               }}
-              onKeyDown={(e) => handleMentionKeyDown(e, mention, pick)}
-              onBlur={mention.close}
+              onKeyDown={(e) => {
+                handleMentionKeyDown(e, mention, pick);
+                handleAccountTagKeyDown(e, accountTag, pickAccount);
+              }}
+              onBlur={() => { mention.close(); accountTag.close(); }}
               className="w-full text-sm bg-white border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all resize-none overflow-hidden"
             />
           </div>
@@ -594,6 +683,8 @@ export function CommentThread({
   wrapperClassName,
   employees = [],
   onNeedEmployees,
+  accounts = [],
+  onNeedAccounts,
 }: ListProps & {
   commentDraft: Record<string, string>;
   commentSending: Record<string, boolean>;
@@ -628,6 +719,8 @@ export function CommentThread({
         autoResize={autoResize}
         employees={employees}
         onNeedEmployees={onNeedEmployees}
+        accounts={accounts}
+        onNeedAccounts={onNeedAccounts}
       />
       <CommentComposer
         postId={postId}
@@ -640,6 +733,8 @@ export function CommentThread({
         autoResize={autoResize}
         employees={employees}
         onNeedEmployees={onNeedEmployees}
+        accounts={accounts}
+        onNeedAccounts={onNeedAccounts}
       />
     </div>
   );

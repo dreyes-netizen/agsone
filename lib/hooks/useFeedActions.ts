@@ -18,6 +18,7 @@ import type {
   PollOption,
 } from "@/lib/types/feed";
 import { realtimeTopics } from "@/lib/realtime/topics";
+import { useAccountTagInput, type AccountEntity } from "@/lib/hooks/useAccountTagInput";
 
 // Turn stored "@[Name|id]" tokens back into "@Name" for editing, keeping a name→id map
 function decodeMentions(content: string): { text: string; map: Record<string, string> } {
@@ -105,6 +106,8 @@ export function useFeedActions() {
   const recipientSearchRef = useRef<HTMLDivElement>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
   const [employees, setEmployees] = useState<{ id: string; displayName: string; avatarUrl: string | null }[]>([]);
+  const [accounts, setAccounts] = useState<AccountEntity[]>([]);
+  const accountTag = useAccountTagInput(accounts);
   const profile: UserProfile | null = dbUser
     ? {
         pointsBalance: dbUser.pointsBalance,
@@ -196,6 +199,23 @@ export function useFeedActions() {
     if (!composeExpanded) return;
     ensureEmployeesLoaded();
   }, [composeExpanded, ensureEmployeesLoaded]);
+
+  const accountsLoading = useRef(false);
+  const ensureAccountsLoaded = useCallback(() => {
+    if (authLoading || !user || accounts.length > 0 || accountsLoading.current) return;
+    accountsLoading.current = true;
+    apiFetch<{ data: AccountEntity[] }>("/api/accounts")
+      .then((res) => setAccounts(res.data))
+      .catch((err) => {
+        accountsLoading.current = false;
+        console.error("accounts fetch failed", err);
+      });
+  }, [authLoading, user, accounts.length, apiFetch]);
+
+  useEffect(() => {
+    if (!composeExpanded) return;
+    ensureAccountsLoaded();
+  }, [composeExpanded, ensureAccountsLoaded]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -360,7 +380,7 @@ export function useFeedActions() {
             body: JSON.stringify({ title, content, type, flair: selectedFlair, imageUrls, deptOnly }),
           });
         }
-        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false);
+        setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false); accountTag.reset();
       }
 
       setNewPost("");
@@ -748,6 +768,7 @@ export function useFeedActions() {
     } else {
       setMentionQuery(null);
     }
+    accountTag.detect(value, cursor);
   }
 
   function insertMention(emp: { id: string; displayName: string }) {
@@ -761,6 +782,12 @@ export function useFeedActions() {
     setTimeout(() => composerRef.current?.focus(), 0);
   }
 
+  function insertAccount(acct: AccountEntity) {
+    const cursor = composerRef.current?.selectionStart ?? newPost.length;
+    setNewPost(accountTag.select(newPost, cursor, acct));
+    setTimeout(() => composerRef.current?.focus(), 0);
+  }
+
   function buildContent(text: string): string {
     // Replace @Name → @[Name|id] sorted longest-first to avoid partial matches
     const entries = Object.entries(mentionMap).sort((a, b) => b[0].length - a[0].length);
@@ -769,7 +796,7 @@ export function useFeedActions() {
       const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       result = result.replace(new RegExp(`@${escaped}`, "g"), `@[${name}|${id}]`);
     }
-    return result;
+    return accountTag.encode(result);
   }
 
   const mentionResults = mentionQuery !== null
@@ -895,6 +922,9 @@ export function useFeedActions() {
     deptOnly, setDeptOnly,
     mentionQuery,
     mentionResults,
+    accounts,
+    accountTag,
+    ensureAccountsLoaded,
     imageFiles,
     imagePreviews,
     uploading,
@@ -941,6 +971,7 @@ export function useFeedActions() {
     autoResize,
     handleComposerChange,
     insertMention,
+    insertAccount,
     toggleReaction,
     toggleCommentReaction,
   };

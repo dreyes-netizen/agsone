@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { notifyRole, ADMIN_ROLES } from "@/lib/helpers/notifyRole";
+import { MAX_MEDICINE_QUANTITY_PER_REQUEST } from "@/lib/constants/medicineRequestLimits";
 
 export async function POST(
   req: NextRequest,
@@ -22,6 +23,12 @@ export async function POST(
     // body may be empty — default to 1
   }
   if (quantity < 1) quantity = 1;
+  if (quantity > MAX_MEDICINE_QUANTITY_PER_REQUEST) {
+    return NextResponse.json(
+      { error: `You can request up to ${MAX_MEDICINE_QUANTITY_PER_REQUEST} per request` },
+      { status: 400 }
+    );
+  }
 
   const [medicine, existing] = await Promise.all([
     prisma.medicineItem.findUnique({

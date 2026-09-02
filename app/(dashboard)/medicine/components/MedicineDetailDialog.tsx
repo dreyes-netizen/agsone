@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { MedicineImage } from "./MedicineImage";
 import { MEDICINE_CATEGORY_LABEL } from "@/lib/constants/medicineCategories";
 import { getStockState } from "../lib/medicineAvailability";
+import { MAX_MEDICINE_QUANTITY_PER_REQUEST } from "@/lib/constants/medicineRequestLimits";
 import type { Medicine } from "../types";
 
 type Stage = "view" | "confirm" | "success";
@@ -34,6 +35,7 @@ export function MedicineDetailDialog({ medicine, pending, startConfirming, onClo
 
   const stock = getStockState(medicine.stockQuantity);
   const canRequest = !stock.outOfStock && !pending;
+  const maxQuantity = Math.min(medicine.stockQuantity, MAX_MEDICINE_QUANTITY_PER_REQUEST);
 
   async function handleSubmit() {
     if (!medicine) return;
@@ -119,15 +121,17 @@ export function MedicineDetailDialog({ medicine, pending, startConfirming, onClo
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity((q) => Math.min(medicine.stockQuantity, q + 1))}
-                    disabled={quantity >= medicine.stockQuantity}
+                    onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
+                    disabled={quantity >= maxQuantity}
                     aria-label="Increase quantity"
                     className="w-11 h-11 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-center text-xs text-gray-500">{medicine.stockQuantity} available</p>
+                <p className="text-center text-xs text-gray-500">
+                  {medicine.stockQuantity} available &middot; limit {MAX_MEDICINE_QUANTITY_PER_REQUEST} per request
+                </p>
 
                 {error && (
                   <p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">

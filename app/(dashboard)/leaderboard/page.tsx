@@ -19,6 +19,7 @@ type Entry = {
   points: number;
   level?: number;
   isCurrentUser: boolean;
+  rank: number;
 };
 
 type Department = { id: string; name: string };
@@ -44,7 +45,7 @@ export default function LeaderboardPage() {
   const { apiFetch } = useApiClient();
 
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [period, setPeriod] = useState<"monthly" | "alltime">("monthly");
+  const [period, setPeriod] = useState<"monthly" | "alltime">("alltime");
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentId, setDepartmentId] = useState<string | "ALL">("ALL");
@@ -119,7 +120,7 @@ export default function LeaderboardPage() {
 
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const avgPoints = entries.length > 0 ? Math.round(totalPoints / entries.length) : 0;
-  const myRank = entries.findIndex((e) => e.isCurrentUser) + 1;
+  const myRank = entries.find((e) => e.isCurrentUser)?.rank ?? 0;
 
   const topDepts = (() => {
     const map = new Map<string, number>();
@@ -203,7 +204,6 @@ export default function LeaderboardPage() {
             ) : (
               <ul aria-label="Leaderboard rankings" className="divide-y divide-gray-100">
                 {entries.map((e, i) => {
-                  const rank = i + 1;
                   return (
                     <li
                       key={e.userId}
@@ -213,7 +213,7 @@ export default function LeaderboardPage() {
                       style={{ animationDelay: `${Math.min(i * 25, 400)}ms` }}
                       aria-current={e.isCurrentUser ? "true" : undefined}
                     >
-                      <RankBadge rank={rank} />
+                      <RankBadge rank={e.rank} />
                       <UserAvatar name={e.displayName} url={e.avatarUrl} />
                       <div className="flex-1 min-w-0">
                         <Link
@@ -224,7 +224,7 @@ export default function LeaderboardPage() {
                         </Link>
                         {e.department && <p className="text-xs text-gray-500 truncate">{e.department}</p>}
                       </div>
-                      <span className={`font-bold text-sm tabular-nums shrink-0 ${rank === 1 ? "text-amber-600" : rank <= 3 ? "text-gray-700" : "text-navy-600"}`}>
+                      <span className={`font-bold text-sm tabular-nums shrink-0 ${e.rank === 1 ? "text-amber-600" : e.rank <= 3 ? "text-gray-700" : "text-navy-600"}`}>
                         {e.points.toLocaleString()} pts
                       </span>
                     </li>

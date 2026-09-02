@@ -87,6 +87,15 @@ export function AttendanceAwardPanel(props: AttendanceAwardPanelProps) {
               <p className="text-xs text-gray-500 font-mono">{attendanceResult.skipped.notFound.join(", ")}</p>
             </div>
           )}
+          {attendanceResult.skipped.ineligibleRole.length > 0 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
+              <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <XCircle className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                Not eligible — managers and above don&apos;t receive perfect attendance points ({attendanceResult.skipped.ineligibleRole.length})
+              </p>
+              <p className="text-xs text-gray-500">{attendanceResult.skipped.ineligibleRole.join(", ")}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

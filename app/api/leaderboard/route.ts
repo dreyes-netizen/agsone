@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth/verifyAuth";
 import { prisma } from "@/lib/prisma/client";
+import { withCompetitionRank } from "@/lib/helpers/competitionRank";
 
 export async function GET(req: NextRequest) {
   const user = await verifyAuth(req);
@@ -24,28 +25,24 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
-    let userIds = result.map((r) => r.toUserId);
-
-    if (departmentId) {
-      const deptUsers = await prisma.user.findMany({
-        where: { departmentId },
-        select: { id: true },
-      });
-      const deptUserIdSet = new Set(deptUsers.map((u) => u.id));
-      userIds = userIds.filter((id) => deptUserIdSet.has(id));
-    }
+    const userIds = result.map((r) => r.toUserId);
 
     const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
+      where: {
+        id: { in: userIds },
+        isActive: true,
+        role: "EMPLOYEE",
+        ...(departmentId ? { departmentId } : {}),
+      },
       select: { id: true, displayName: true, avatarUrl: true, department: { select: { name: true } } },
     });
 
+    const activeUserIdSet = new Set(users.map((u) => u.id));
     const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
 
-    const filteredResult = result.filter((r) => userIds.includes(r.toUserId));
+    const filteredResult = result.filter((r) => activeUserIdSet.has(r.toUserId) && (r._sum.amount ?? 0) > 0);
 
-    const entries = filteredResult.map((r, i) => ({
-      rank: i + 1,
+    const entries = filteredResult.map((r) => ({
       userId: r.toUserId,
       displayName: userMap[r.toUserId]?.displayName ?? "Unknown",
       avatarUrl: userMap[r.toUserId]?.avatarUrl ?? null,
@@ -54,12 +51,12 @@ export async function GET(req: NextRequest) {
       isCurrentUser: r.toUserId === user.id,
     }));
 
-    return NextResponse.json({ data: entries, period });
+    return NextResponse.json({ data: withCompetitionRank(entries), period });
   }
 
   // All-time: rank by pointsBalance
   const users = await prisma.user.findMany({
-    where: departmentId ? { departmentId } : {},
+    where: { isActive: true, role: "EMPLOYEE", pointsBalance: { gt: 0 }, ...(departmentId ? { departmentId } : {}) },
     orderBy: { pointsBalance: "desc" },
     take: 50,
     select: {
@@ -72,8 +69,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const entries = users.map((u, i) => ({
-    rank: i + 1,
+  const entries = users.map((u) => ({
     userId: u.id,
     displayName: u.displayName,
     avatarUrl: u.avatarUrl,
@@ -83,5 +79,5 @@ export async function GET(req: NextRequest) {
     isCurrentUser: u.id === user.id,
   }));
 
-  return NextResponse.json({ data: entries, period });
+  return NextResponse.json({ data: withCompetitionRank(entries), period });
 }

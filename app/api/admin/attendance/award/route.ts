@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (perfectRows.length === 0) {
-    return NextResponse.json({ data: { awarded: 0, skipped: { notFound: [], alreadyAwarded: [] } } });
+    return NextResponse.json({ data: { awarded: 0, skipped: { notFound: [], alreadyAwarded: [], ineligibleRole: [] } } });
   }
 
   const employeeIds = perfectRows
@@ -79,11 +79,18 @@ export async function POST(req: NextRequest) {
   // Match Employee IDs to DB users
   const dbUsers = await prisma.user.findMany({
     where: { employeeId: { in: employeeIds }, isActive: true },
-    select: { id: true, displayName: true, email: true, pointsBalance: true, employeeId: true },
+    select: { id: true, displayName: true, email: true, pointsBalance: true, employeeId: true, role: true },
   });
   const dbUserMap = new Map(dbUsers.map((u) => [u.employeeId!, u]));
   const notFound = employeeIds.filter((id) => !dbUserMap.has(id));
-  const foundUserIds = dbUsers.map((u) => u.id);
+
+  // Perfect attendance (manual §2.1) is an individual-contributor reward —
+  // managers and above are budgeted/awarded through other categories, not
+  // this one, so exclude them here rather than relying on a manual deduction
+  // after the fact.
+  const ineligibleRole = dbUsers.filter((u) => u.role !== "EMPLOYEE");
+  const eligibleUsers = dbUsers.filter((u) => u.role === "EMPLOYEE");
+  const foundUserIds = eligibleUsers.map((u) => u.id);
 
   // Duplicate guard: skip users already awarded PERFECT_ATTENDANCE this month
   const alreadyAwardedTx = await prisma.pointTransaction.findMany({
@@ -96,14 +103,15 @@ export async function POST(req: NextRequest) {
   });
   const alreadyAwardedSet = new Set(alreadyAwardedTx.map((t) => t.toUserId));
 
-  const toAward = dbUsers.filter((u) => !alreadyAwardedSet.has(u.id));
-  const alreadyAwardedNames = dbUsers
+  const toAward = eligibleUsers.filter((u) => !alreadyAwardedSet.has(u.id));
+  const alreadyAwardedNames = eligibleUsers
     .filter((u) => alreadyAwardedSet.has(u.id))
     .map((u) => u.displayName);
+  const ineligibleRoleNames = ineligibleRole.map((u) => u.displayName);
 
   if (toAward.length === 0) {
     return NextResponse.json({
-      data: { awarded: 0, skipped: { notFound, alreadyAwarded: alreadyAwardedNames } },
+      data: { awarded: 0, skipped: { notFound, alreadyAwarded: alreadyAwardedNames, ineligibleRole: ineligibleRoleNames } },
     });
   }
 
@@ -199,7 +207,7 @@ export async function POST(req: NextRequest) {
     data: {
       awarded: toAward.length,
       awardedNames: toAward.map((u) => u.displayName),
-      skipped: { notFound, alreadyAwarded: alreadyAwardedNames },
+      skipped: { notFound, alreadyAwarded: alreadyAwardedNames, ineligibleRole: ineligibleRoleNames },
     },
   });
 }

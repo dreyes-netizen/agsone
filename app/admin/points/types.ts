@@ -23,7 +23,7 @@ export type Budget = { isExempt: boolean; used: number; remaining: number; total
 export type AttendanceResult = {
   awarded: number;
   awardedNames?: string[];
-  skipped: { notFound: string[]; alreadyAwarded: string[] };
+  skipped: { notFound: string[]; alreadyAwarded: string[]; ineligibleRole: string[] };
 };
 
 export type EmployeePickerResponse = { data: (Employee & { role: string })[] };

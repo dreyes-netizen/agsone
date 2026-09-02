@@ -463,7 +463,11 @@ export default function FeedPage() {
                   ))}
                 </div>
               )}
-              <AccountTagDropdown accountTag={accountTag} onSelect={insertAccount} />
+              <AccountTagDropdown
+                accountTag={accountTag}
+                onSelect={insertAccount}
+                className="absolute z-30 top-full left-0 mt-1 w-full max-w-64 max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg py-1"
+              />
             </div>
           </div>
 

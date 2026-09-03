@@ -389,6 +389,10 @@ model SocialPost {
   referenceId String?
   imageUrl    String?
   imageUrls   String[]
+  // A single Cloudinary video URL. Deliberately not folded into imageUrls:
+  // the render path branches on media type, and a post is photos OR one
+  // video, never both. Poster frame is derived from this URL, not stored.
+  videoUrl    String?
   isPinned    Boolean  @default(false)
   flair       String   @default("CASUAL")
   isAnonymous Boolean  @default(false) // POLL only — hides voter identity even from the author

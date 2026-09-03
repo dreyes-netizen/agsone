@@ -81,4 +81,15 @@ describe("PATCH /api/feed/[id] — edit — Alexa moderation", () => {
     expect(res.status).toBe(200);
     expect(doubles.postUpdate).toHaveBeenCalledTimes(1);
   });
+
+  it("returns 429 when the moderation rate limit is exceeded", async () => {
+    doubles.verifyAuth.mockResolvedValue(EMPLOYEE);
+    doubles.postFindUnique.mockResolvedValue({ authorId: "emp-1" });
+    doubles.checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0 });
+
+    const res = await PATCH(req({ title: "Edited", content: "all good" }), params);
+
+    expect(res.status).toBe(429);
+    expect(doubles.moderateContent).not.toHaveBeenCalled();
+  });
 });

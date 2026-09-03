@@ -149,7 +149,10 @@ export async function POST(req: NextRequest) {
   const parsed = postSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  await checkRateLimit(user.id, "moderation");
+  const rateLimit = await checkRateLimit(user.id, "moderation");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "You're posting too quickly. Please slow down." }, { status: 429 });
+  }
   const moderation = await moderateContent({
     title: parsed.data.title ?? null,
     body: parsed.data.content,

@@ -61,7 +61,10 @@ export async function moderateContent({ title, body, gifId }: ModerateInput): Pr
     if (!raw) return { blocked: false };
 
     const parsed = JSON.parse(raw) as { blocked?: unknown; reason?: unknown };
-    if (typeof parsed.blocked !== "boolean") return { blocked: false };
+    if (typeof parsed.blocked !== "boolean") {
+      console.error("[moderateContent] Alexa response missing valid 'blocked' field, failing open:", parsed);
+      return { blocked: false };
+    }
 
     return {
       blocked: parsed.blocked,

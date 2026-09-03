@@ -103,4 +103,14 @@ describe("POST /api/feed/[id]/comments — Alexa moderation", () => {
     expect(res.status).toBe(201);
     expect(doubles.commentCreate).toHaveBeenCalledTimes(1);
   });
+
+  it("returns 429 when the moderation rate limit is exceeded", async () => {
+    doubles.verifyAuth.mockResolvedValue(EMPLOYEE);
+    doubles.checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0 });
+
+    const res = await POST(req({ content: "nice one", commentType: "TEXT" }), params);
+
+    expect(res.status).toBe(429);
+    expect(doubles.moderateContent).not.toHaveBeenCalled();
+  });
 });

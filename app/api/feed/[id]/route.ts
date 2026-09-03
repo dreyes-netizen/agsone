@@ -89,7 +89,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await checkRateLimit(user.id, "moderation");
+    const rateLimit = await checkRateLimit(user.id, "moderation");
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "You're posting too quickly. Please slow down." }, { status: 429 });
+    }
     const moderation = await moderateContent({
       title: parsed.data.title ?? null,
       body: parsed.data.content ?? null,

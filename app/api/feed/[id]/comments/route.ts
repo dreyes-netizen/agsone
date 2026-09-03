@@ -183,7 +183,10 @@ export async function POST(
     return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
   }
 
-  await checkRateLimit(user.id, "moderation");
+  const rateLimit = await checkRateLimit(user.id, "moderation");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "You're posting too quickly. Please slow down." }, { status: 429 });
+  }
   const moderation = await moderateContent({
     body: content ?? null,
     gifId: commentType === "GIF" ? gifId ?? null : null,

@@ -5,6 +5,8 @@ import { z } from "zod";
 import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
+import { moderateContent } from "@/lib/guardrails/moderation";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 
 type Params = { params: Promise<{ id: string; commentId: string }> };
 
@@ -25,6 +27,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   });
   if (!comment) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (comment.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  await checkRateLimit(user.id, "moderation");
+  const moderation = await moderateContent({ body: parsed.data.content });
+  if (moderation.blocked) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "ALEXA_BLOCKED_COMMENT",
+      entityType: "SocialComment",
+      entityId: commentId,
+      before: { content: parsed.data.content, reason: moderation.reason },
+    });
+    return NextResponse.json(
+      { error: `Alexa: ${moderation.reason ?? "This doesn't meet our community guidelines."} Please revise and try again.` },
+      { status: 400 }
+    );
+  }
 
   const updated = await prisma.socialComment.update({
     where: { id: commentId },

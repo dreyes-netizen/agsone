@@ -387,8 +387,8 @@ export function useFeedActions() {
       if (composerRef.current) composerRef.current.style.height = "auto";
       clearImages();
       await load();
-    } catch {
-      setPostToast("Something went wrong. Please try again.");
+    } catch (err) {
+      setPostToast(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setTimeout(() => setPostToast(null), 4000);
     } finally {
       setPosting(false);
@@ -538,13 +538,14 @@ export function useFeedActions() {
         ...prev,
         [postId]: (prev[postId] ?? []).map((c) => (c.id === optimisticId ? res.data : c)),
       }));
-    } catch {
+    } catch (err) {
       setCommentsCache((prev) => ({
         ...prev,
         [postId]: (prev[postId] ?? []).filter((c) => c.id !== optimisticId),
       }));
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
       setCommentDraft((prev) => ({ ...prev, [postId]: content }));
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setCommentSending((prev) => ({ ...prev, [postId]: false }));
     }
@@ -600,7 +601,7 @@ export function useFeedActions() {
             : c
         ),
       }));
-    } catch {
+    } catch (err) {
       setCommentsCache((prev) => ({
         ...prev,
         [postId]: (prev[postId] ?? []).map((c) =>
@@ -609,6 +610,7 @@ export function useFeedActions() {
       }));
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
       setReplyDraft((prev) => ({ ...prev, [parentId]: content }));
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setReplySending((prev) => ({ ...prev, [parentId]: false }));
     }
@@ -651,6 +653,7 @@ export function useFeedActions() {
     const { id, content, isReply, parentId } = editingComment;
     const trimmed = content.trim();
     if (!trimmed) return;
+    const previousCache = commentsCache;
 
     if (isReply && parentId) {
       setCommentsCache((prev) => ({
@@ -668,10 +671,15 @@ export function useFeedActions() {
       }));
     }
     setEditingComment(null);
-    await apiFetch(`/api/feed/${postId}/comments/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ content: trimmed }),
-    });
+    try {
+      await apiFetch(`/api/feed/${postId}/comments/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ content: trimmed }),
+      });
+    } catch (err) {
+      setCommentsCache(previousCache);
+      toast.error(err instanceof Error ? err.message : "Failed to save changes");
+    }
   }
 
   function startEditPost(post: FeedPost) {

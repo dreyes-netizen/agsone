@@ -8,6 +8,7 @@ import { realtimeTopics } from "@/lib/realtime/topics";
 import { FLAIR_IDS } from "@/lib/flairs";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 import { resolveMentionRecipients, stripMentionTokens } from "@/lib/helpers/parseMentions";
+import { isOwnCloudinaryVideoUrl } from "@/lib/cloudinary/videoUrl";
 
 const PAGE_SIZE = 15;
 
@@ -109,6 +110,18 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// A post carries photos OR one video, never both — the render path branches on
+// media type. The URL is re-checked against our own Cloudinary cloud because it
+// arrives from the client and ends up in a <video src>; a signed upload is the
+// only way to obtain one that passes.
+const videoUrlField = z
+  .string()
+  .url()
+  .refine((u) => isOwnCloudinaryVideoUrl(u, process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME), {
+    message: "Video must be an uploaded Cloudinary video",
+  })
+  .optional();
+
 const postSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.enum(["UPDATE", "ACHIEVEMENT", "CELEBRATION", "ANNOUNCEMENT"]),
@@ -116,6 +129,7 @@ const postSchema = z.discriminatedUnion("type", [
     content: z.string().min(1).max(1000),
     flair: z.enum(FLAIR_IDS),
     imageUrls: z.array(z.string().url()).max(4).optional(),
+    videoUrl: videoUrlField,
     deptOnly: z.boolean().optional(),
   }),
   z.object({
@@ -125,6 +139,7 @@ const postSchema = z.discriminatedUnion("type", [
     flair: z.enum(FLAIR_IDS),
     options: z.array(z.string().min(1).max(200)).min(2).max(4),
     imageUrls: z.array(z.string().url()).max(4).optional(),
+    videoUrl: videoUrlField,
     deptOnly: z.boolean().optional(),
     isAnonymous: z.boolean().optional().default(false),
   }),
@@ -134,6 +149,7 @@ const postSchema = z.discriminatedUnion("type", [
     content: z.string().min(1).max(500),
     recipientIds: z.array(z.string().uuid()).min(1).max(10),
     imageUrls: z.array(z.string().url()).max(4).optional(),
+    videoUrl: videoUrlField,
     deptOnly: z.boolean().optional(),
   }),
 ]);
@@ -155,6 +171,7 @@ export async function POST(req: NextRequest) {
         type: "POLL",
         flair: parsed.data.flair,
         imageUrls: parsed.data.imageUrls ?? [],
+        videoUrl: parsed.data.videoUrl ?? null,
         departmentId: parsed.data.deptOnly ? user.departmentId : null,
         isAnonymous: parsed.data.isAnonymous,
         pollOptions: {
@@ -182,6 +199,7 @@ export async function POST(req: NextRequest) {
         type: "SHOUTOUT",
         flair: "RECOGNITION",
         imageUrls: parsed.data.imageUrls ?? [],
+        videoUrl: parsed.data.videoUrl ?? null,
         departmentId: parsed.data.deptOnly ? user.departmentId : null,
         shoutoutRecipients: {
           create: parsed.data.recipientIds.map((userId) => ({ userId })),
@@ -221,6 +239,7 @@ export async function POST(req: NextRequest) {
       type: parsed.data.type,
       flair: parsed.data.flair,
       imageUrls: parsed.data.imageUrls ?? [],
+      videoUrl: parsed.data.videoUrl ?? null,
       departmentId: parsed.data.deptOnly ? user.departmentId : null,
     },
     include: { author: { select: { displayName: true, avatarUrl: true } } },

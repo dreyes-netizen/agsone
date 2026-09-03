@@ -11,6 +11,7 @@ export type FeedPost = {
   title: string | null;
   content: string;
   imageUrls: string[];
+  videoUrl: string | null;
   createdAt: string;
   isPinned: boolean;
   flair: string;

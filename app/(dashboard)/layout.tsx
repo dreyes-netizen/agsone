@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationsController } from "@/components/notifications/NotificationsController";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { useOnlinePresence } from "@/lib/hooks/useOnlinePresence";
 
 // AllyWidget statically pulls in react-markdown + remark-gfm (~163 KB) but
 // renders nothing until the user opens it — load it lazily, client-only, so
@@ -107,10 +108,23 @@ function NavGroup({ label, icon: Icon, items, pathname }: { label: string; icon:
   );
 }
 
+function OnlineIndicator({ count }: { count: number | null }) {
+  if (count === null) return null;
+  return (
+    <div className="px-4 py-2">
+      <div className="flex items-center gap-1.5 text-[11px] text-emerald-300/90">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+        <span>{count} online</span>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
   const { user, dbUser } = useAuth();
+  const { count: onlineCount } = useOnlinePresence();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -196,6 +210,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <div className="mx-4 border-t border-white/[0.07]" />
+
+      <OnlineIndicator count={onlineCount} />
 
       {/* User footer */}
       <div className="p-3">

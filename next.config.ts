@@ -39,6 +39,10 @@ const securityHeaders = [
         // directly from their CDN, never proxied/re-hosted by us
         "https://*.giphy.com",
       ].join(" "),
+      // Video/audio — <video src> is governed by media-src, NOT img-src; with
+      // no media-src it falls back to default-src 'self' and Cloudinary video
+      // is blocked with no visible error.
+      "media-src 'self' blob: https://res.cloudinary.com",
       // API connections — Firebase, Supabase realtime, Cloudinary, AI APIs
       [
         "connect-src 'self'",

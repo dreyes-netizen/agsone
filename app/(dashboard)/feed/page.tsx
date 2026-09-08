@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Send, ImagePlus, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2, EyeOff } from "lucide-react";
+import { Send, ImagePlus, Clapperboard, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2, EyeOff } from "lucide-react";
 import { FLAIRS } from "@/lib/flairs";
 import { PostImages, imageGridClasses } from "@/components/feed/PostImages";
+import { PostVideo } from "@/components/feed/PostVideo";
 import { FeedSidebar } from "@/components/feed/FeedSidebar";
 import { Avatar } from "@/components/feed/Avatar";
 import { CommentThread } from "@/components/feed/CommentThread";
@@ -17,7 +18,7 @@ import { ReactionDetailsDialog } from "@/components/feed/ReactionDetailsDialog";
 import { PollVotersDialog } from "@/components/feed/PollVotersDialog";
 import { AccountTagDropdown } from "@/components/feed/AccountTagDropdown";
 import { findCommentById } from "@/lib/helpers/commentTree";
-import { useFeedActions } from "@/lib/hooks/useFeedActions";
+import { useFeedActions, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS } from "@/lib/hooks/useFeedActions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,6 +106,11 @@ export default function FeedPage() {
     ensureAccountsLoaded,
     imageFiles,
     imagePreviews,
+    videoFile,
+    videoPreview,
+    videoInputRef,
+    handleVideoSelect,
+    clearVideo,
     uploading,
     lightbox, setLightbox,
     postToast,
@@ -498,6 +504,21 @@ export default function FeedPage() {
             );
           })()}
 
+          {/* Video preview — a local object URL, so this plays without any upload */}
+          {videoPreview && (
+            <div className="relative w-full sm:w-[60%] rounded-lg overflow-hidden bg-black">
+              <video src={videoPreview} className="w-full max-h-64" controls playsInline />
+              <button
+                type="button"
+                aria-label="Remove video"
+                onClick={clearVideo}
+                className="absolute top-1 right-1 w-5 h-5 bg-gray-900/70 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors z-10"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
           {/* Flair picker */}
           {!shoutoutMode && <div className="space-y-1.5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -597,11 +618,29 @@ export default function FeedPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={imageFiles.length >= 4}
+              disabled={imageFiles.length >= 4 || !!videoFile}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all bg-white border-gray-200 text-gray-600 hover:border-navy-300 hover:text-navy-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ImagePlus className="w-3.5 h-3.5" />
               {imageFiles.length > 0 ? `${imageFiles.length}/4 photos` : "Photo"}
+            </button>
+            {/* Hidden video input */}
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm"
+              className="hidden"
+              onChange={handleVideoSelect}
+            />
+            <button
+              type="button"
+              onClick={() => videoInputRef.current?.click()}
+              disabled={imageFiles.length > 0 || !!videoFile}
+              title={`Max ${MAX_VIDEO_SECONDS}s, ${MAX_VIDEO_BYTES / 1024 / 1024} MB`}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all bg-white border-gray-200 text-gray-600 hover:border-navy-300 hover:text-navy-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Clapperboard className="w-3.5 h-3.5" />
+              {videoFile ? "1 video" : "Video"}
             </button>
             <button
               type="button"
@@ -704,7 +743,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          {(shoutoutMode ? recipients.length > 0 : (newPost.trim() || imageFiles.length > 0)) && (
+          {(shoutoutMode ? recipients.length > 0 : (newPost.trim() || imageFiles.length > 0 || !!videoFile)) && (
             <div className="flex items-center justify-between">
               {shoutoutMode
                 ? (recipients.length === 0 && <p className="text-xs text-red-400 font-medium">Choose a colleague to recognize</p>)
@@ -795,6 +834,9 @@ export default function FeedPage() {
                 {post.imageUrls?.length > 0 && (
                   <PostImages urls={post.imageUrls} authorName={post.author.displayName} onOpen={(index) => setLightbox({ postId: post.id, images: post.imageUrls, index })} />
                 )}
+                {post.videoUrl && (
+                  <PostVideo url={post.videoUrl} authorName={post.author.displayName} />
+                )}
 
                 <div className="px-5 pt-3 pb-4">
                   <PostEngagement
@@ -874,6 +916,9 @@ export default function FeedPage() {
                   authorName={post.author.displayName}
                   onOpen={(index) => setLightbox({ postId: post.id, images: post.imageUrls, index })}
                 />
+              )}
+              {post.videoUrl && (
+                <PostVideo url={post.videoUrl} authorName={post.author.displayName} />
               )}
 
               <div className="px-4 sm:px-5 pt-3 pb-4 sm:pb-5">

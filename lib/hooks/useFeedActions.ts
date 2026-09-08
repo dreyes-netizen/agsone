@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { useRealtimeChannel } from "@/lib/hooks/useRealtimeChannel";
-import { uploadToCloudinary } from "@/lib/cloudinary/upload";
+import { uploadToCloudinary, uploadVideoToCloudinary } from "@/lib/cloudinary/upload";
 import { seedGifCache, type GifResult } from "@/lib/giphy/client";
 import type {
   FeedPost,
@@ -39,6 +39,31 @@ function encodeMentions(text: string, map: Record<string, string>): string {
     result = result.replace(new RegExp(`@${escaped}`, "g"), `@[${name}|${id}]`);
   }
   return result;
+}
+
+// Cloudinary's Free plan hard-rejects anything over 100 MB, and the rejection
+// surfaces as an opaque upload failure. Capping well below that means the
+// user gets our message instead. 60s at 720p keeps a clip in single-digit MB
+// once transcoded — bandwidth is the recurring cost, so length is the lever.
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const MAX_VIDEO_SECONDS = 60;
+
+/**
+ * Reads a local video's duration without uploading it, by pointing a detached
+ * <video> at an object URL and waiting for its metadata. Resolves to null if
+ * the browser can't decode the file — we let those through to Cloudinary
+ * rather than blocking on a check we couldn't perform.
+ */
+export function readVideoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const el = document.createElement("video");
+    const done = (v: number | null) => { URL.revokeObjectURL(url); resolve(v); };
+    el.preload = "metadata";
+    el.onloadedmetadata = () => done(Number.isFinite(el.duration) ? el.duration : null);
+    el.onerror = () => done(null);
+    el.src = url;
+  });
 }
 
 export function autoResize(el: HTMLTextAreaElement) {
@@ -93,12 +118,15 @@ export function useFeedActions() {
   const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState<{ postId: string; images: string[]; index: number } | null>(null);
   const [postToast, setPostToast] = useState<string | null>(null);
   const [commentDeleteTarget, setCommentDeleteTarget] = useState<{ postId: string; commentId: string; parentId?: string } | null>(null);
   const [postDeleteTarget, setPostDeleteTarget] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editMentionMapRef = useRef<Record<string, string>>({});
@@ -297,6 +325,7 @@ export function useFeedActions() {
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).slice(0, 4);
     if (!files.length) return;
+    clearVideo();
     setImageFiles((prev) => {
       const combined = [...prev, ...files].slice(0, 4);
       setImagePreviews(combined.map((f) => URL.createObjectURL(f)));
@@ -318,6 +347,43 @@ export function useFeedActions() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  function showError(msg: string) {
+    setPostToast(msg);
+    setTimeout(() => setPostToast(null), 5000);
+  }
+
+  async function handleVideoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset immediately so picking the same file twice still fires onChange.
+    if (videoInputRef.current) videoInputRef.current.value = "";
+    if (!file) return;
+
+    if (file.size > MAX_VIDEO_BYTES) {
+      const mb = (file.size / 1024 / 1024).toFixed(0);
+      showError(`That video is ${mb} MB. Please keep it under ${MAX_VIDEO_BYTES / 1024 / 1024} MB — try trimming it or recording at a lower resolution.`);
+      return;
+    }
+
+    const duration = await readVideoDuration(file);
+    if (duration !== null && duration > MAX_VIDEO_SECONDS) {
+      showError(`That video is ${Math.round(duration)} seconds. Please keep it under ${MAX_VIDEO_SECONDS} seconds.`);
+      return;
+    }
+
+    // A post is photos OR one video, never both.
+    clearImages();
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+  }
+
+  function clearVideo() {
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoFile(null);
+    setVideoPreview(null);
+    if (videoInputRef.current) videoInputRef.current.value = "";
+  }
+
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();
 
@@ -337,9 +403,14 @@ export function useFeedActions() {
     setPosting(true);
     try {
       let imageUrls: string[] = [];
+      let videoUrl: string | undefined;
       if (imageFiles.length > 0) {
         setUploading(true);
         imageUrls = await Promise.all(imageFiles.map((f) => uploadToCloudinary(f, token!)));
+        setUploading(false);
+      } else if (videoFile) {
+        setUploading(true);
+        videoUrl = await uploadVideoToCloudinary(videoFile, token!);
         setUploading(false);
       }
 
@@ -352,6 +423,7 @@ export function useFeedActions() {
             content: newPost.trim(),
             recipientIds: recipients.map((r) => r.id),
             imageUrls,
+            videoUrl,
             deptOnly: shoutoutDeptOnly,
           }),
         });
@@ -365,7 +437,7 @@ export function useFeedActions() {
           const opts = pollOptions.map((o) => o.trim()).filter(Boolean);
           await apiFetch("/api/feed", {
             method: "POST",
-            body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls, deptOnly, isAnonymous: pollAnonymous }),
+            body: JSON.stringify({ title, content, type: "POLL", flair: selectedFlair, options: opts, imageUrls, videoUrl, deptOnly, isAnonymous: pollAnonymous }),
           });
           setPollMode(false); setPollOptions(["", ""]); setPollAnonymous(false);
         } else {
@@ -377,7 +449,7 @@ export function useFeedActions() {
             : "UPDATE";
           await apiFetch("/api/feed", {
             method: "POST",
-            body: JSON.stringify({ title, content, type, flair: selectedFlair, imageUrls, deptOnly }),
+            body: JSON.stringify({ title, content, type, flair: selectedFlair, imageUrls, videoUrl, deptOnly }),
           });
         }
         setPostTitle(""); setSelectedFlair(null); setDeptOnly(false); setMentionMap({}); setShowAllFlairs(false); setComposeExpanded(false); accountTag.reset();
@@ -386,6 +458,7 @@ export function useFeedActions() {
       setNewPost("");
       if (composerRef.current) composerRef.current.style.height = "auto";
       clearImages();
+      clearVideo();
       await load();
     } catch (err) {
       setPostToast(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -934,6 +1007,11 @@ export function useFeedActions() {
     accountTag,
     ensureAccountsLoaded,
     imageFiles,
+    videoFile,
+    videoPreview,
+    videoInputRef,
+    handleVideoSelect,
+    clearVideo,
     imagePreviews,
     uploading,
     lightbox, setLightbox,

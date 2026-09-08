@@ -111,7 +111,7 @@ function NavGroup({ label, icon: Icon, items, pathname }: { label: string; icon:
 function OnlineIndicator({ count }: { count: number | null }) {
   if (count === null) return null;
   return (
-    <div className="px-4 py-2">
+    <div className="hidden lg:block px-3 py-2">
       <div className="flex items-center gap-1.5 text-[11px] text-emerald-300/90">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
         <span>{count} online</span>

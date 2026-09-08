@@ -48,7 +48,11 @@ export function useOnlinePresence(): { count: number | null } {
 
   useEffect(() => {
     if (!userId) return;
-    heartbeat().catch((err) => console.error("[useOnlinePresence] heartbeat failed", err));
+    // Compiler forbids a bare synchronous setState in an effect body — see
+    // docs/superpowers/plans/2026-08-06-lint-a11y-xlsx-hardening.md.
+    queueMicrotask(() => {
+      heartbeat().catch((err) => console.error("[useOnlinePresence] heartbeat failed", err));
+    });
   }, [userId, heartbeat]);
 
   useVisibleInterval(

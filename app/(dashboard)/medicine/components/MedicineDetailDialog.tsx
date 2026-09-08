@@ -172,6 +172,7 @@ export function MedicineDetailDialog({ medicine, pending, startConfirming, onClo
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">Request submitted</h3>
                   <p className="text-sm text-gray-500 mt-1">Your &ldquo;{medicine.name}&rdquo; request has been sent for review.</p>
+                  <p className="text-sm text-gray-500 mt-1">Once approved, please collect it from HR or the medicine cabinet.</p>
                 </div>
                 <div className="flex gap-3 pt-1">
                   <button

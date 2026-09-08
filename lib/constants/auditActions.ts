@@ -41,6 +41,8 @@ export const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   // Content
   DELETE_POST:               { label: "Delete Post",         color: "bg-red-100 text-red-700" },
   DELETE_COMMENT:            { label: "Delete Comment",      color: "bg-red-100 text-red-700" },
+  ALEXA_BLOCKED_POST:        { label: "Alexa Blocked Post",    color: "bg-red-100 text-red-700" },
+  ALEXA_BLOCKED_COMMENT:     { label: "Alexa Blocked Comment", color: "bg-red-100 text-red-700" },
 
   // System
   UPDATE_FEEDBACK_STATUS:    { label: "Feedback Status",     color: "bg-slate-100 text-slate-700" },

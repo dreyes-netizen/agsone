@@ -8,6 +8,9 @@ import { GIF_PROVIDERS, GIF_ID_PATTERN } from "@/lib/constants/gif";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 import { createNotification } from "@/lib/helpers/createNotification";
 import { resolveMentionRecipients, stripMentionTokens } from "@/lib/helpers/parseMentions";
+import { moderateContent } from "@/lib/guardrails/moderation";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 
 const authorSelect = { id: true, displayName: true, avatarUrl: true };
 
@@ -178,6 +181,28 @@ export async function POST(
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
   if (parentId && (!parent || parent.postId !== id)) {
     return NextResponse.json({ error: "Invalid parent comment" }, { status: 400 });
+  }
+
+  const rateLimit = await checkRateLimit(user.id, "moderation");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "You're posting too quickly. Please slow down." }, { status: 429 });
+  }
+  const moderation = await moderateContent({
+    body: content ?? null,
+    gifId: commentType === "GIF" ? gifId ?? null : null,
+  });
+  if (moderation.blocked) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "ALEXA_BLOCKED_COMMENT",
+      entityType: "SocialComment",
+      entityId: "n/a",
+      before: { postId: id, parentId: parentId ?? null, content, commentType, gifId, reason: moderation.reason },
+    });
+    return NextResponse.json(
+      { error: `Alexa: ${moderation.reason ?? "This doesn't meet our community guidelines."} Please revise and try again.` },
+      { status: 400 }
+    );
   }
 
   const comment = await prisma.socialComment.create({

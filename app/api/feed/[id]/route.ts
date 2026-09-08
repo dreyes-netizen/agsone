@@ -6,6 +6,8 @@ import { scheduleBroadcast } from "@/lib/realtime/broadcast";
 import { realtimeTopics } from "@/lib/realtime/topics";
 import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
+import { moderateContent } from "@/lib/guardrails/moderation";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
 
 const editSchema = z.object({
   title: z.string().max(120).nullable().optional(),
@@ -85,6 +87,28 @@ export async function PATCH(
     const isAdmin = user.role === "HR_ADMIN" || user.role === "SUPER_ADMIN";
     if (post.authorId !== user.id && !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const rateLimit = await checkRateLimit(user.id, "moderation");
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "You're posting too quickly. Please slow down." }, { status: 429 });
+    }
+    const moderation = await moderateContent({
+      title: parsed.data.title ?? null,
+      body: parsed.data.content ?? null,
+    });
+    if (moderation.blocked) {
+      await writeAuditLog({
+        actorId: user.id,
+        action: "ALEXA_BLOCKED_POST",
+        entityType: "SocialPost",
+        entityId: id,
+        before: { title: parsed.data.title, content: parsed.data.content, reason: moderation.reason },
+      });
+      return NextResponse.json(
+        { error: `Alexa: ${moderation.reason ?? "This doesn't meet our community guidelines."} Please revise and try again.` },
+        { status: 400 }
+      );
     }
 
     const updated = await prisma.socialPost.update({

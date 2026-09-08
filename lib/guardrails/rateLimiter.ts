@@ -22,6 +22,10 @@ const SCOPE_CONFIG = {
   // Deliberately not a hard cap on anything the user can see: exceeding it
   // silently drops the notification, and Realtime still updates the open board.
   notify: { limit: 2, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
+  // Every post/comment create-or-edit now triggers a paid OpenAI call via
+  // Alexa (lib/guardrails/moderation.ts) -- generous enough for normal Feed
+  // use, tight enough to blunt cost/abuse from a scripted spam attempt.
+  moderation: { limit: 60, window: "5 m" as const, windowMs: 5 * 60 * 1000 },
 } satisfies Record<string, { limit: number; window: `${number} ${"s" | "m" | "h" | "d"}`; windowMs: number }>;
 
 export type RateLimitScope = keyof typeof SCOPE_CONFIG;

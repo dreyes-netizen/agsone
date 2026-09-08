@@ -8,6 +8,9 @@ import { realtimeTopics } from "@/lib/realtime/topics";
 import { FLAIR_IDS } from "@/lib/flairs";
 import { postVisibilityWhere } from "@/lib/helpers/postVisibility";
 import { resolveMentionRecipients, stripMentionTokens } from "@/lib/helpers/parseMentions";
+import { moderateContent } from "@/lib/guardrails/moderation";
+import { checkRateLimit } from "@/lib/guardrails/rateLimiter";
+import { writeAuditLog } from "@/lib/helpers/writeAuditLog";
 import { isOwnCloudinaryVideoUrl } from "@/lib/cloudinary/videoUrl";
 
 const PAGE_SIZE = 15;
@@ -161,6 +164,28 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = postSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+
+  const rateLimit = await checkRateLimit(user.id, "moderation");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "You're posting too quickly. Please slow down." }, { status: 429 });
+  }
+  const moderation = await moderateContent({
+    title: parsed.data.title ?? null,
+    body: parsed.data.content,
+  });
+  if (moderation.blocked) {
+    await writeAuditLog({
+      actorId: user.id,
+      action: "ALEXA_BLOCKED_POST",
+      entityType: "SocialPost",
+      entityId: "n/a",
+      before: { title: parsed.data.title ?? null, content: parsed.data.content, reason: moderation.reason },
+    });
+    return NextResponse.json(
+      { error: `Alexa: ${moderation.reason ?? "This doesn't meet our community guidelines."} Please revise and try again.` },
+      { status: 400 }
+    );
+  }
 
   if (parsed.data.type === "POLL") {
     const post = await prisma.socialPost.create({

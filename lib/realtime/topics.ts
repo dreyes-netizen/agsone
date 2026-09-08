@@ -28,9 +28,6 @@ export const realtimeTopics = {
   adminAnalytics: "admin:analytics",
   adminAudit: "admin:audit",
   minigameStats: "minigames:stats",
-
-  // Backs a Supabase Realtime *Presence* channel (a synced roster), not a
-  // broadcast ping like every other topic above — see useOnlinePresence.
   onlinePresence: "presence:online-users",
 
   profile: (userId: string) => `profile:${userId}`,

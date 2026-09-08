@@ -28,6 +28,7 @@ export const realtimeTopics = {
   adminAnalytics: "admin:analytics",
   adminAudit: "admin:audit",
   minigameStats: "minigames:stats",
+  onlinePresence: "presence:online-users",
 
   profile: (userId: string) => `profile:${userId}`,
   redemptionsUser: (userId: string) => `redemptions:user:${userId}`,

@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const doubles = vi.hoisted(() => ({
   create: vi.fn(),
+  getOpenAIClient: vi.fn(),
 }));
 
 vi.mock("@/lib/openai/client", () => ({
-  openai: { chat: { completions: { create: doubles.create } } },
+  getOpenAIClient: doubles.getOpenAIClient,
 }));
 
 import { moderateContent } from "./moderation";
@@ -16,6 +17,7 @@ function completionWith(json: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  doubles.getOpenAIClient.mockReturnValue({ chat: { completions: { create: doubles.create } } });
 });
 
 describe("moderateContent", () => {
@@ -50,6 +52,16 @@ describe("moderateContent", () => {
 
   it("fails open when the API call throws", async () => {
     doubles.create.mockRejectedValue(new Error("network error"));
+    const result = await moderateContent({ body: "some content" });
+    expect(result).toEqual({ blocked: false });
+  });
+
+  it("fails open when the OpenAI client fails to construct (e.g. missing API key)", async () => {
+    // Mirrors the real SDK: it throws synchronously in its constructor when
+    // no apiKey is configured, not when a request is made.
+    doubles.getOpenAIClient.mockImplementation(() => {
+      throw new Error("Missing credentials. Please pass an apiKey...");
+    });
     const result = await moderateContent({ body: "some content" });
     expect(result).toEqual({ blocked: false });
   });

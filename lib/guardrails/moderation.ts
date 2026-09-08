@@ -1,4 +1,4 @@
-import { openai } from "@/lib/openai/client";
+import { getOpenAIClient } from "@/lib/openai/client";
 
 export type ModerationResult = { blocked: boolean; reason?: string };
 
@@ -47,7 +47,7 @@ export async function moderateContent({ title, body, gifId }: ModerateInput): Pr
   if (gifId) content.push({ type: "image_url", image_url: { url: `https://media.giphy.com/media/${gifId}/giphy.gif` } });
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       max_tokens: 150,

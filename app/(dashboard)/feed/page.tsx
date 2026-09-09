@@ -698,6 +698,10 @@ export default function FeedPage() {
                 placeholder="Paste a URL…"
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
               />
               <input
@@ -815,7 +819,7 @@ export default function FeedPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setPollAnonymous(false); setShowAllFlairs(false); clearImages(); }}
+                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setPollAnonymous(false); setShowAllFlairs(false); clearImages(); setLinkPanelOpen(false); setLinkUrl(""); setLinkLabel(""); }}
                   className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 transition-colors"
                 >
                   Cancel

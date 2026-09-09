@@ -32,7 +32,7 @@ export function PostMentionText({
   onMentionClick: (userId: string) => void;
 }) {
   const parts = content.split(
-    /(@\[[^|]+\|[^\]]+\]|#\[[^|]+\|[^\]]+\]|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/\S+)/g
+    /(@\[[^|]+\|[^\]]+\]|#\[[^|]+\|[^\]]+\]|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/\S+)/gi
   );
   return (
     <>
@@ -64,7 +64,7 @@ export function PostMentionText({
             </span>
           );
         }
-        const labeledLinkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+        const labeledLinkMatch = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/i);
         if (labeledLinkMatch) {
           const [, label, url] = labeledLinkMatch;
           return (
@@ -73,7 +73,7 @@ export function PostMentionText({
             </a>
           );
         }
-        const bareUrlMatch = part.match(/^(https?:\/\/\S+)$/);
+        const bareUrlMatch = part.match(/^(https?:\/\/\S+)$/i);
         if (bareUrlMatch) {
           const url = bareUrlMatch[1];
           return (

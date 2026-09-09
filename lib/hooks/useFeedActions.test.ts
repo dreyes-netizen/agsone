@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Mock the Firebase client module since it can't initialize in Node environment
+vi.mock("@/lib/firebase/client", () => ({
+  auth: {},
+}));
+
 import { buildLinkToken } from "./useFeedActions";
 
 describe("buildLinkToken", () => {

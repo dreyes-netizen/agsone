@@ -57,4 +57,29 @@ describe("PostMentionText", () => {
     expect(html).toContain("Flyland Recovery");
     expect(html).not.toContain("<a");
   });
+
+  it("renders a [label](url) link with an uppercase protocol as a clickable link", () => {
+    const html = renderToStaticMarkup(
+      createElement(PostMentionText, {
+        content: "[Survey](HTTPS://example.com)",
+        onMentionClick: noop,
+      })
+    );
+    expect(html).toContain('href="HTTPS://example.com"');
+    expect(html).toContain(">Survey<");
+    expect(html).not.toContain("[Survey]");
+  });
+
+  it("only links the trailing https:// substring, never the leading javascript: prefix", () => {
+    const html = renderToStaticMarkup(
+      createElement(PostMentionText, {
+        content: "click javascript:alert(1)//https://evil.com now",
+        onMentionClick: noop,
+      })
+    );
+    const anchorCount = (html.match(/<a /g) ?? []).length;
+    expect(anchorCount).toBe(1);
+    expect(html).toContain('href="https://evil.com"');
+    expect(html).not.toContain('href="javascript:');
+  });
 });

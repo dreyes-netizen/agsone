@@ -41,6 +41,19 @@ function encodeMentions(text: string, map: Record<string, string>): string {
   return result;
 }
 
+// Builds the stored form of a link inserted via the composer's "Add Link"
+// control: `[label](url)` when a label is given, or just the bare url
+// (which PostMentionText auto-linkifies on its own) when it's not -- so the
+// renderer never needs to special-case the two. A stray "]" is stripped
+// from the label since it would prematurely close the markdown token when
+// rendered (PostMentionText's label pattern is "anything but ]").
+export function buildLinkToken(url: string, label: string): string {
+  const trimmedUrl = url.trim();
+  const normalizedUrl = /^https?:\/\//i.test(trimmedUrl) ? trimmedUrl : `https://${trimmedUrl}`;
+  const cleanLabel = label.trim().replace(/\]/g, "");
+  return cleanLabel ? `[${cleanLabel}](${normalizedUrl})` : normalizedUrl;
+}
+
 // Cloudinary's Free plan hard-rejects anything over 100 MB, and the rejection
 // surfaces as an opaque upload failure. Capping well below that means the
 // user gets our message instead. 60s at 720p keeps a clip in single-digit MB
@@ -91,6 +104,9 @@ export function useFeedActions() {
   const [pollMode, setPollMode] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [pollAnonymous, setPollAnonymous] = useState(false);
+  const [linkPanelOpen, setLinkPanelOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
   const [shoutoutMode, setShoutoutMode] = useState(false);
   const [shoutoutTitle, setShoutoutTitle] = useState("");
   const [shoutoutDeptOnly, setShoutoutDeptOnly] = useState(false);
@@ -459,6 +475,7 @@ export function useFeedActions() {
       if (composerRef.current) composerRef.current.style.height = "auto";
       clearImages();
       clearVideo();
+      setLinkPanelOpen(false); setLinkUrl(""); setLinkLabel("");
       await load();
     } catch (err) {
       setPostToast(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -869,6 +886,19 @@ export function useFeedActions() {
     setTimeout(() => composerRef.current?.focus(), 0);
   }
 
+  function insertLink() {
+    if (!linkUrl.trim()) return;
+    const token = buildLinkToken(linkUrl, linkLabel);
+    const cursor = composerRef.current?.selectionStart ?? newPost.length;
+    const before = newPost.slice(0, cursor);
+    const after = newPost.slice(cursor);
+    setNewPost(`${before}${token}${after}`);
+    setLinkPanelOpen(false);
+    setLinkUrl("");
+    setLinkLabel("");
+    setTimeout(() => composerRef.current?.focus(), 0);
+  }
+
   function buildContent(text: string): string {
     // Replace @Name → @[Name|id] sorted longest-first to avoid partial matches
     const entries = Object.entries(mentionMap).sort((a, b) => b[0].length - a[0].length);
@@ -979,6 +1009,9 @@ export function useFeedActions() {
     pollMode, setPollMode,
     pollOptions, setPollOptions,
     pollAnonymous, setPollAnonymous,
+    linkPanelOpen, setLinkPanelOpen,
+    linkUrl, setLinkUrl,
+    linkLabel, setLinkLabel,
     shoutoutMode, setShoutoutMode,
     shoutoutTitle, setShoutoutTitle,
     shoutoutDeptOnly, setShoutoutDeptOnly,
@@ -1058,6 +1091,7 @@ export function useFeedActions() {
     handleComposerChange,
     insertMention,
     insertAccount,
+    insertLink,
     toggleReaction,
     toggleCommentReaction,
   };

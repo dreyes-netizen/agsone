@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { Send, ImagePlus, Clapperboard, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2, EyeOff } from "lucide-react";
+import { Send, ImagePlus, Clapperboard, X, Megaphone, BarChart2, Sparkles, Star, Gamepad2, ShoppingBag, AlertCircle, Loader2, Cake, Building2, EyeOff, Link2 } from "lucide-react";
 import { FLAIRS } from "@/lib/flairs";
 import { PostImages, imageGridClasses } from "@/components/feed/PostImages";
 import { PostVideo } from "@/components/feed/PostVideo";
@@ -77,6 +77,9 @@ export default function FeedPage() {
     pollMode, setPollMode,
     pollOptions, setPollOptions,
     pollAnonymous, setPollAnonymous,
+    linkPanelOpen, setLinkPanelOpen,
+    linkUrl, setLinkUrl,
+    linkLabel, setLinkLabel,
     shoutoutMode, setShoutoutMode,
     shoutoutTitle, setShoutoutTitle,
     shoutoutDeptOnly, setShoutoutDeptOnly,
@@ -151,6 +154,7 @@ export default function FeedPage() {
     handleComposerChange,
     insertMention,
     insertAccount,
+    insertLink,
     toggleReaction,
     toggleCommentReaction,
   } = useFeedActions();
@@ -674,7 +678,58 @@ export default function FeedPage() {
             >
               <Sparkles className="w-3.5 h-3.5" /> Shoutout
             </button>
+            <button
+              type="button"
+              onClick={() => setLinkPanelOpen((prev) => !prev)}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                linkPanelOpen
+                  ? "bg-command-black border-command-black text-white"
+                  : "bg-white border-gray-200 text-gray-600 hover:border-navy-300 hover:text-navy-600"
+              }`}
+            >
+              <Link2 className="w-3.5 h-3.5" /> Add Link
+            </button>
           </div>
+
+          {linkPanelOpen && (
+            <div className="space-y-2 pl-1">
+              <input
+                type="text"
+                placeholder="Paste a URL…"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
+              />
+              <input
+                type="text"
+                placeholder={'Link text (optional) — e.g. "Complete the survey here"'}
+                value={linkLabel}
+                onChange={(e) => setLinkLabel(e.target.value)}
+                className="w-full text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500/30 focus:border-navy-400 placeholder:text-gray-500 transition-all"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={insertLink}
+                  disabled={!linkUrl.trim()}
+                  className="flex items-center gap-1.5 bg-command-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Insert
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLinkPanelOpen(false); setLinkUrl(""); setLinkLabel(""); }}
+                  className="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1.5 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {pollMode && (
             <div className="space-y-2 pl-1">
@@ -764,7 +819,7 @@ export default function FeedPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setPollAnonymous(false); setShowAllFlairs(false); clearImages(); }}
+                  onClick={() => { setComposeExpanded(false); setNewPost(""); setPostTitle(""); setSelectedFlair(null); setShoutoutMode(false); setRecipients([]); setPollMode(false); setPollAnonymous(false); setShowAllFlairs(false); clearImages(); setLinkPanelOpen(false); setLinkUrl(""); setLinkLabel(""); }}
                   className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 transition-colors"
                 >
                   Cancel

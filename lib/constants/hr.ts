@@ -1,6 +1,9 @@
 // HR inbox used by the Email HR feature and Points of Contact fallback.
 export const HR_EMAIL = "hr@allianceglobalsolutions.com";
 
+// Cc'd on every Gmail draft the Email HR feature opens, alongside HR_EMAIL.
+export const HR_DRAFT_CC = "r.febrero@allianceglobalsolutions.com";
+
 // The request catalog that replaced the old flat COMMON_HR_REQUESTS subject
 // presets lives in lib/constants/hrRequests.ts — those six strings only ever
 // set a subject line, so HR had to ask for the details on every request.

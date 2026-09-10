@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useApiClient } from "@/lib/hooks/useApiClient";
 import { buildGmailComposeUrl } from "@/lib/email/gmailCompose";
 import { composeHrRequest } from "@/lib/email/composeHrRequest";
-import { HR_EMAIL } from "@/lib/constants/hr";
+import { HR_EMAIL, HR_DRAFT_CC } from "@/lib/constants/hr";
 import {
   findHrCategory,
   findHrCategoryForType,
@@ -190,7 +190,7 @@ export default function EmailHrPage() {
       notes,
       ref,
     });
-    const url = buildGmailComposeUrl({ to: HR_EMAIL, subject, body });
+    const url = buildGmailComposeUrl({ to: HR_EMAIL, cc: HR_DRAFT_CC, subject, body });
 
     window.open(url, "_blank", "noopener,noreferrer");
     // Captures the exact values that went into this draft, not a pointer back
@@ -251,7 +251,7 @@ export default function EmailHrPage() {
         <h1 className="text-2xl font-bold text-gray-900">Email HR</h1>
         <p className="text-gray-500 text-sm mt-1">
           Pick what you need and we&apos;ll write the email for you. It opens as a pre-filled Gmail
-          draft to {HR_EMAIL} — you review and send it yourself.
+          draft to {HR_EMAIL} (cc {HR_DRAFT_CC}) — you review and send it yourself.
         </p>
       </div>
 

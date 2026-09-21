@@ -605,7 +605,7 @@ export function useFeedActions() {
       gifId: gif?.id ?? null,
       createdAt: new Date().toISOString(),
       authorId: user?.uid ?? "",
-      author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
+      author: { displayName: user?.displayName ?? "You", avatarUrl: dbUser?.avatarUrl ?? null },
       replies: [],
       reactions: {},
       myReactions: [],
@@ -655,7 +655,7 @@ export function useFeedActions() {
       createdAt: new Date().toISOString(),
       parentId,
       authorId: user?.uid ?? "",
-      author: { displayName: user?.displayName ?? "You", avatarUrl: user?.photoURL ?? null },
+      author: { displayName: user?.displayName ?? "You", avatarUrl: dbUser?.avatarUrl ?? null },
       reactions: {},
       myReactions: [],
     };

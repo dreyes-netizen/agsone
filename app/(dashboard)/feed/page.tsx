@@ -191,7 +191,7 @@ export default function FeedPage() {
   // card sees — no separate store, no refetch needed to stay in sync.
   const lightboxPost = lightbox ? posts.find((p) => p.id === lightbox.postId) ?? null : null;
   const currentUserMeta = dbUser
-    ? { id: dbUser.id, displayName: dbUser.displayName, avatarUrl: user?.photoURL ?? null, department: dbUser.department?.name ?? null }
+    ? { id: dbUser.id, displayName: dbUser.displayName, avatarUrl: dbUser.avatarUrl ?? null, department: dbUser.department?.name ?? null }
     : null;
 
   const pinnedItems = posts
@@ -364,7 +364,7 @@ export default function FeedPage() {
             className="flex items-center gap-3 w-full text-left"
             aria-label="Write a post"
           >
-            <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
+            <Avatar name={user?.displayName ?? "?"} url={dbUser?.avatarUrl ?? null} size="md" />
             <span className="flex-1 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 hover:border-gray-300 hover:bg-white transition-all">
               What&apos;s on your mind?
             </span>
@@ -372,7 +372,7 @@ export default function FeedPage() {
         )}
         <form onSubmit={handlePost} className={composeExpanded ? "space-y-3" : "hidden"}>
           <div className="flex items-start gap-3">
-            <Avatar name={user?.displayName ?? "?"} url={user?.photoURL ?? null} size="md" />
+            <Avatar name={user?.displayName ?? "?"} url={dbUser?.avatarUrl ?? null} size="md" />
             <div className="flex-1 relative space-y-2">
               {!shoutoutMode && (
                 <input
@@ -916,7 +916,7 @@ export default function FeedPage() {
                       commentDraft={commentDraft}
                       commentSending={commentSending}
                       currentUserName={user?.displayName ?? "?"}
-                      currentUserAvatar={user?.photoURL ?? null}
+                      currentUserAvatar={dbUser?.avatarUrl ?? null}
                       dbUserId={dbUser?.id}
                       isModerator={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
                       onSetReplyingTo={setReplyingTo}
@@ -1000,7 +1000,7 @@ export default function FeedPage() {
                     commentDraft={commentDraft}
                     commentSending={commentSending}
                     currentUserName={user?.displayName ?? "?"}
-                    currentUserAvatar={user?.photoURL ?? null}
+                    currentUserAvatar={dbUser?.avatarUrl ?? null}
                     dbUserId={dbUser?.id}
                     isModerator={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
                     onSetReplyingTo={setReplyingTo}
@@ -1080,7 +1080,7 @@ export default function FeedPage() {
         commentDraft={commentDraft}
         commentSending={commentSending}
         currentUserName={user?.displayName ?? "?"}
-        currentUserAvatar={user?.photoURL ?? null}
+        currentUserAvatar={dbUser?.avatarUrl ?? null}
         dbUserId={dbUser?.id}
         isModerator={dbUser?.role === "HR_ADMIN" || dbUser?.role === "SUPER_ADMIN"}
         onSetReplyingTo={setReplyingTo}

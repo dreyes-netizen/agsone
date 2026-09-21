@@ -17,9 +17,10 @@ type SearchResult = {
 };
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
-  if (url) {
+  const [errored, setErrored] = useState(false);
+  if (url && !errored) {
     return (
-      <img src={url} alt={name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+      <img src={url} alt={name} className="w-9 h-9 rounded-full object-cover shrink-0" onError={() => setErrored(true)} />
     );
   }
   return (

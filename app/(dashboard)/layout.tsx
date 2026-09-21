@@ -127,6 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { count: onlineCount } = useOnlinePresence();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [avatarErrored, setAvatarErrored] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
@@ -217,8 +218,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="p-3">
         <div className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-white/5 transition-colors group cursor-default">
           <div className="relative shrink-0">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt={user.displayName ?? ""} className="w-9 h-9 rounded-full object-cover" />
+            {dbUser?.avatarUrl && !avatarErrored ? (
+              <img
+                src={dbUser.avatarUrl}
+                alt={user?.displayName ?? ""}
+                className="w-9 h-9 rounded-full object-cover"
+                onError={() => setAvatarErrored(true)}
+              />
             ) : (
               <div className="w-9 h-9 rounded-full bg-navy-500 flex items-center justify-center text-xs font-bold text-white">
                 {initials}

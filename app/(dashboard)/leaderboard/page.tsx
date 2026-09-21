@@ -54,7 +54,7 @@ export default function LeaderboardPage() {
         pointsBalance: dbUser.pointsBalance,
         level: dbUser.level,
         displayName: dbUser.displayName,
-        avatarUrl: user?.photoURL ?? null,
+        avatarUrl: dbUser.avatarUrl ?? null,
         department: dbUser.department,
       }
     : null;

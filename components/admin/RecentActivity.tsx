@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ActionBadge } from "@/components/admin/ActionBadge";
 import { timeAgo } from "@/lib/helpers/timeAgo";
@@ -14,6 +17,17 @@ const TONE_CLASS: Record<string, string> = {
   negative: "font-medium text-red-600",
 };
 
+function ActorAvatar({ url, name }: { url: string | null; name: string }) {
+  const [errored, setErrored] = useState(false);
+  return (
+    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
+      {url && !errored
+        ? <img src={url} alt={name} className="w-full h-full object-cover" onError={() => setErrored(true)} />
+        : name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 export function RecentActivity({ entries }: { entries: AuditEntry[] }) {
   return (
     <div className="bg-white rounded-card border border-table-border overflow-hidden">
@@ -29,11 +43,7 @@ export function RecentActivity({ entries }: { entries: AuditEntry[] }) {
             const segments = auditSummary(entry);
             return (
               <li key={entry.id} className="flex items-start gap-3 px-4 py-2.5">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
-                  {entry.actor.avatarUrl
-                    ? <img src={entry.actor.avatarUrl} alt={entry.actor.displayName} className="w-full h-full object-cover" />
-                    : entry.actor.displayName.charAt(0).toUpperCase()}
-                </div>
+                <ActorAvatar url={entry.actor.avatarUrl} name={entry.actor.displayName} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-gray-900">{entry.actor.displayName}</span>
